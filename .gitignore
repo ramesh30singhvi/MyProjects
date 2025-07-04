@@ -3,3 +3,6 @@
 ################################################################################
 
 /Sharp/.vs
+/CellarPass/CPReservationApi.WebApi/Properties
+/CellarPass/CPReservationApi.WebApi/appsettings.Development.json
+/CellarPass/CPReservationApi.WebApi/appsettings.json
