@@ -1,0 +1,52 @@
+<div class="set-section-modal">
+    <div class="modal-header">
+        <h4 class="modal-title" id="modal-basic-title">Set Sections</h4>
+        <button type="button" class="close" aria-label="Close" (click)="activeModal.dismiss()">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+
+    <div class="modal-body">
+
+        <div class="groups-section">
+            <div #sectionContainer class="sections-container" [dragula]="SECTIONS" [(dragulaModel)]="formSections">
+
+                <div #sections *ngFor="let formSection of formSections; let i=index" class="field-item-box">
+                    <i class="icon icon-drag">
+                        <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24">
+                        <path 
+                            fill="currentColor" 
+                            d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2s.9-2 2-2s2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2s-2 .9-2 2s.9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2z"/>
+                        </svg>
+                    </i>
+                    <input type="text" [(ngModel)]="formSection.name" placeholder="Enter section name" (ngModelChange)="valueChanged($event)"/>
+                    <button type="button" class="btn-delete" (click)="onDeleteSectionClick(i)"><i class="icon icon-delete"></i></button>
+                </div>
+                
+            </div>
+
+            <div class="error" *ngIf="errors && errors['sections']">
+                {{errors['sections']}}
+            </div>
+
+            <div>
+                <button type="button" class="btn btn-white add-section-btn" (click)="onAddSectionClick()">
+                    <i class="icon icon-plus"></i>
+                    Add section
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-dark btn-close" (click)="activeModal.dismiss()">Cancel</button>
+        <button type="submit" 
+            class="btn btn-default btn-save" 
+            style="position: relative; z-index: 1;"  
+            (click)="onSaveClick()">
+                Save
+            <ngx-spinner name="criteriaSubheaderEditSpinner" bdColor="rgba(20,81,150,1)" size="small" color="#fff" [type]="spinnerType" [fullScreen]="false"></ngx-spinner>
+        </button>
+    </div>
+</div>

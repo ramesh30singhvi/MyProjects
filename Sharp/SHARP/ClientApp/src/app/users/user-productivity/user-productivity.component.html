@@ -1,0 +1,79 @@
+<div class="modal-header">
+  <h4 class="modal-title" id="modal-basic-title">
+    Generate Productivity Excel
+  </h4>
+  <button
+    type="button"
+    class="close"
+    aria-label="Close"
+    (click)="activeModal.dismiss()"
+  >
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+<div class="modal-body" style="position: relative">
+  <div class="form-inline date-range-picker">
+    <div class="form-group" [ngClass]="{ 'ng-has-value': fromDate }">
+      <label class="placeholder">Date</label>
+      <input
+        name="datepicker"
+        placeholder=""
+        class="form-control date-range"
+        ngbDatepicker
+        #datepicker="ngbDatepicker"
+        [autoClose]="'outside'"
+        (dateSelect)="onDateSelection($event)"
+        [displayMonths]="3"
+        [dayTemplate]="t"
+        outsideDays="hidden"
+        [startDate]="fromDate!"
+        [maxDate]="maxDate"
+        tabindex="-1"
+        [value]="rangeFormat(fromDate, toDate)"
+        (click)="datepicker.toggle()"
+        firstDayOfWeek="7"
+        readonly
+      />
+      <button
+        class="btn btn-datepicker-icon calendar"
+        (click)="datepicker.toggle()"
+        type="button"
+      >
+        <i class="fa icon-calendar"></i>
+      </button>
+      <ng-template #t let-date let-focused="focused">
+        <span
+          class="custom-day"
+          [class.focused]="focused"
+          [class.range]="isRange(date)"
+          [class.faded]="isHovered(date) || isInside(date)"
+          (mouseenter)="hoveredDate = date"
+          (mouseleave)="hoveredDate = null"
+        >
+          {{ date.day }}
+        </span>
+      </ng-template>
+    </div>
+  </div>
+</div>
+<div class="modal-footer">
+  <button
+    type="button"
+    class="btn btn-outline-dark btn-close"
+    (click)="activeModal.dismiss()"
+  >
+    Cancel
+  </button>
+
+  <div style="position: relative">
+    <button
+      type="button"
+      class="btn btn-default btn-download"
+      style="position: relative; z-index: 1"
+      [disabled]="!fromDate || !toDate"
+      (click)="onDownloadClick()"
+    >
+      Download
+    </button>
+  </div>
+</div>

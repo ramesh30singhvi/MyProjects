@@ -1,0 +1,341 @@
+<div class="page-wrapper dashboard-wrapper">
+  <div class="header-wrapper d-flex justify-content-between mr-4">
+    <h4>Criteria Reports</h4>
+  </div>
+
+  <div class="body-wrapper custom-scroll">
+    <div class="row filter-fields">
+      <!-- Organizations -->
+      <div class="col-lg-2 organization-wrapper">
+        <div class="form-group custom-select-box">
+          <label>Organization</label>
+          <ng-select
+            #organization
+            [items]="organizations"
+            bindLabel="name"
+            (change)="onOrganizationChanged($event)"
+            [(ngModel)]="selectedOrganization"
+            [clearable]="true"
+            [multiple]="false"
+            placeholder="Select Organization"
+            [closeOnSelect]="true"
+            [searchable]="false"
+            (open)="onOrganizationDropdownOpened()"
+            class="dashboard-multiple-select"
+          >
+            <ng-template ng-header-tmp>
+              <input
+                (input)="organization.filter($event.target.value)"
+                placeholder="Search"
+                style="width: 100%; line-height: 24px; border: none"
+                type="text"
+              />
+            </ng-template>
+            <ng-template ng-multi-label-tmp let-items="items" let-clear="clear">
+              <div class="ng-value-wrapper">
+                <div class="ng-value" *ngFor="let item of items">
+                  <span
+                    class="ng-value-icon left"
+                    (click)="clear(item)"
+                    aria-hidden="true"
+                    >×</span
+                  >
+                  <span class="ng-value-label">{{ item.name }}</span>
+                </div>
+              </div>
+            </ng-template>
+            <ng-template ng-option-tmp let-item="item">
+              <div class="ng-select-option-label">{{ item.name }}</div>
+            </ng-template>
+          </ng-select>
+        </div>
+      </div>
+
+      <!-- Facilities -->
+      <div class="col-lg-2 facility-wrapper">
+        <div class="form-group custom-select-box">
+          <label>Facility</label>
+          <ng-select
+            #facility
+            [items]="facilities"
+            bindLabel="name"
+            (change)="onFacilityChanged($event)"
+            [(ngModel)]="selectedFacilities"
+            [clearable]="true"
+            [multiple]="true"
+            placeholder="Select Facility"
+            [closeOnSelect]="true"
+            [searchable]="false"
+            class="dashboard-multiple-select"
+          >
+            <ng-template ng-header-tmp>
+              <input
+                (input)="facility.filter($event.target.value)"
+                placeholder="Search"
+                style="width: 100%; line-height: 24px; border: none"
+                type="text"
+              />
+            </ng-template>
+            <ng-template ng-multi-label-tmp let-items="items" let-clear="clear">
+              <div class="ng-value-wrapper">
+                <div class="ng-value" *ngFor="let item of items">
+                  <span
+                    class="ng-value-icon left"
+                    (click)="clear(item)"
+                    aria-hidden="true"
+                    >×</span
+                  >
+                  <span class="ng-value-label">{{ item.name }}</span>
+                </div>
+              </div>
+            </ng-template>
+            <ng-template ng-option-tmp let-item="item">
+              <div class="ng-select-option-label">{{ item.name }}</div>
+            </ng-template>
+          </ng-select>
+        </div>
+      </div>
+
+      <!-- Audit date -->
+      <div class="col-lg-2">
+        <label class="placeholder">Audit date</label>
+        <div class="date-range-picker">
+          <div
+            class="form-group-range-picker"
+            [ngClass]="{ 'ng-has-value': fromAuditDate }"
+          >
+            <input
+              name="auditDatepicker"
+              placeholder=""
+              class="form-control date-range"
+              ngbDatepicker
+              #auditDatepicker="ngbDatepicker"
+              [autoClose]="'outside'"
+              (dateSelect)="onAuditDateSelection($event)"
+              [displayMonths]="2"
+              [dayTemplate]="at"
+              outsideDays="hidden"
+              [startDate]="fromAuditDate!"
+              tabindex="-1"
+              [value]="rangeFormat(fromAuditDate, toAuditDate)"
+              (click)="auditDatepicker.toggle()"
+              firstDayOfWeek="7"
+              readonly
+            />
+            <button
+              class="btn btn-datepicker-icon calendar"
+              (click)="auditDatepicker.toggle()"
+              type="button"
+            >
+              <i class="fa icon-calendar"></i>
+            </button>
+            <ng-template #at let-date let-focused="focused">
+              <span
+                class="custom-day"
+                [class.focused]="focused"
+                [class.range]="isAuditRange(date)"
+                [class.faded]="isAuditRange(date) || isAuditInside(date)"
+                (mouseenter)="auditHoveredDate = date"
+                (mouseleave)="auditHoveredDate = null"
+              >
+                {{ date.day }}
+              </span>
+            </ng-template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filtered Date Range -->
+      <div class="col-lg-2">
+        <label class="placeholder">Filtered Date Range</label>
+        <div class="date-range-picker">
+          <div
+            class="form-group-range-picker"
+            [ngClass]="{ 'ng-has-value': fromDate }"
+          >
+            <input
+              name="datepicker"
+              placeholder=""
+              class="form-control date-range"
+              ngbDatepicker
+              #datepicker="ngbDatepicker"
+              [autoClose]="'outside'"
+              (dateSelect)="onDateSelection($event)"
+              [displayMonths]="2"
+              [dayTemplate]="t"
+              outsideDays="hidden"
+              [startDate]="fromDate!"
+              tabindex="-1"
+              [value]="rangeFormat(fromDate, toDate)"
+              (click)="datepicker.toggle()"
+              firstDayOfWeek="7"
+              readonly
+            />
+            <button
+              class="btn btn-datepicker-icon calendar"
+              (click)="datepicker.toggle()"
+              type="button"
+            >
+              <i class="fa icon-calendar"></i>
+            </button>
+            <ng-template #t let-date let-focused="focused">
+              <span
+                class="custom-day"
+                [class.focused]="focused"
+                [class.range]="isRange(date)"
+                [class.faded]="isHovered(date) || isInside(date)"
+                (mouseenter)="hoveredDate = date"
+                (mouseleave)="hoveredDate = null"
+              >
+                {{ date.day }}
+              </span>
+            </ng-template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Forms -->
+      <div class="col-lg-4 facility-wrapper">
+        <div class="form-group custom-select-box">
+          <label>Audit name</label>
+          <ng-select
+            #form
+            [items]="forms"
+            bindLabel="name"
+            [(ngModel)]="selectedForms"
+            (change)="onFormSelected($event)"
+            [clearable]="true"
+            [multiple]="true"
+            placeholder="Select Audit Forms"
+            [closeOnSelect]="true"
+            [searchable]="false"
+            class="dashboard-multiple-select"
+          >
+            <ng-template ng-header-tmp>
+              <input
+                (input)="form.filter($event.target.value)"
+                placeholder="Search"
+                style="width: 100%; line-height: 24px; border: none"
+                type="text"
+              />
+            </ng-template>
+            <ng-template ng-multi-label-tmp let-items="items" let-clear="clear">
+              <div class="ng-value-wrapper">
+                <div class="ng-value" *ngFor="let item of items">
+                  <span
+                    class="ng-value-icon left"
+                    (click)="clear(item)"
+                    aria-hidden="true"
+                    >×</span
+                  >
+                  <span class="ng-value-label">{{ item.name }}</span>
+                </div>
+              </div>
+            </ng-template>
+            <ng-template ng-option-tmp let-item="item">
+              <div class="ng-select-option-label">{{ item.name }}</div>
+            </ng-template>
+          </ng-select>
+        </div>
+      </div>
+
+      <!-- Questions -->
+      <div class="col-lg-6 facility-wrapper">
+        <div class="form-group custom-select-box">
+          <label>Criteria identified</label>
+          <ng-select
+            #form
+            [items]="questions"
+            bindLabel="name"
+            [(ngModel)]="selectedQuestions"
+            [clearable]="true"
+            (change)="onCriteriaSelected($event)"
+            [multiple]="true"
+            placeholder="Select criteria"
+            [closeOnSelect]="true"
+            [searchable]="false"
+            class="dashboard-multiple-select"
+          >
+            <ng-template ng-header-tmp>
+              <input
+                (input)="form.filter($event.target.value)"
+                placeholder="Search"
+                style="width: 100%; line-height: 24px; border: none"
+                type="text"
+              />
+            </ng-template>
+            <ng-template ng-multi-label-tmp let-items="items" let-clear="clear">
+              <div class="ng-value-wrapper">
+                <div class="ng-value" *ngFor="let item of items">
+                  <span
+                    class="ng-value-icon left"
+                    (click)="clear(item)"
+                    aria-hidden="true"
+                    >×</span
+                  >
+                  <span class="ng-value-label">{{ item.name }}</span>
+                </div>
+              </div>
+            </ng-template>
+            <ng-template ng-option-tmp let-item="item">
+              <div class="ng-select-option-label">{{ item.name }}</div>
+            </ng-template>
+          </ng-select>
+        </div>
+      </div>
+
+      <div class="col-lg-2 facility-wrapper">
+        <div class="form-group custom-select-box">
+          <label>Compliant residents</label>
+          <ng-select
+            #form
+            [items]="compliantResidentsAnswers"
+            bindLabel="name"
+            [(ngModel)]="selectedCompliantResidentsAnswer"
+            [clearable]="false"
+            [multiple]="false"
+            [closeOnSelect]="true"
+            [searchable]="false"
+            class="dashboard-multiple-select"
+          >
+            <ng-template ng-multi-label-tmp let-items="items" let-clear="clear">
+              <div class="ng-value-wrapper">
+                <div class="ng-value" *ngFor="let item of items">
+                  <span
+                    class="ng-value-icon left"
+                    (click)="clear(item)"
+                    aria-hidden="true"
+                    >×</span
+                  >
+                  <span class="ng-value-label">{{ item.name }}</span>
+                </div>
+              </div>
+            </ng-template>
+            <ng-template ng-option-tmp let-item="item">
+              <div class="ng-select-option-label">{{ item.name }}</div>
+            </ng-template>
+          </ng-select>
+        </div>
+      </div>
+
+      <div class="col-lg-2">
+        <div class="form-group custom-select-box">
+          <label>&nbsp;</label>
+          <div class="time-frame-wrapper action-panel">
+            <button
+              (click)="downloadReport()"
+              [disabled]="!canGenerate"
+              class="btn btn-info btn-md shadow-none btn-new"
+            >
+              Generate & Download Report
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="line"></div>
+
+    <div class="data-wrapper row"></div>
+  </div>
+</div>

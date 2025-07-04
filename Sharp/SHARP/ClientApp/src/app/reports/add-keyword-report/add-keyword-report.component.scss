@@ -1,0 +1,281 @@
+@import "./src/assets/scss/pacs/scss/custom-mixins";
+
+.input-keyword-section {
+  .action-buttons {
+    padding: 10px;
+    border-bottom: 1px solid #EEF2F5;
+    height: 75px;
+
+    .add-keyword-btn {
+      color: #fff;
+      background-color: #145196;
+      border-radius: 6px;
+      margin: 10px;
+    }
+  }
+
+  .left-buttons {
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+
+  .form-fields {
+    box-shadow: 0 21px 20px -10px rgb(0 0 0 / 8%);
+  }
+
+  .btn-right-arrow {
+    width: 38px;
+    height: 38px;
+    margin-left: 10px;
+    margin-right: 10px;
+    font-size: 22px;
+  }
+
+  .p-lr-20 {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  /* style for default select*/
+  select.asc-select {
+    -webkit-appearance: none;
+    appearance: none;
+    z-index: 10;
+    position: relative;
+    background: transparent !important;
+    padding-right: 40px !important;
+    border: 1px solid #EAECEF;
+    border-radius: 6px;
+  }
+
+  .select-wrapper {
+    display: flex;
+    background: #ffffff;
+    position: relative;
+    align-items: center;
+    z-index: 1;
+
+    .select-arrow {
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 38px;
+      margin-left: -36px;
+      font-size: 22px;
+      z-index: 1;
+    }
+  }
+
+  .ng-select {
+    width: 200px;
+  }
+
+  .header {
+    width: calc(100% - 8px);
+    background-color: #fff;
+    height: 24px;
+    position: absolute;
+    top: 1px;
+    border-radius: 4px;
+    left: 1px;
+  }
+
+  #description {
+    max-height: 100px;
+    resize: none;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+      background: #fff;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 1ex;
+      -webkit-border-radius: 1ex;
+    }
+  }
+
+  label[for="resident"] {
+    top: 15px;
+  }
+
+  .error {
+    color: #80172a;
+    font-size: 12px;
+    position: absolute;
+  }
+
+  .date-time-wrapper {
+    display: flex;
+
+    .date {
+      width: 50%;
+
+      .date-field {
+        display: flex;
+
+        input /*:placeholder-shown*/ {
+          padding: 1rem 1rem 0rem 1rem;
+        }
+        /*input:placeholder-shown +*/ .placeholder {
+          @include font (#909BA8, 12px, 14px, 'HelveticaRegular');
+          transform: translateY(-10px) translateX(-5px) scale(0.75) !important;
+        }
+      }
+
+      .btn-datepicker-icon.calendar {
+        margin-left: -50px;
+        position: relative;
+        z-index: 10;
+        border: none;
+        font-size: 22px;
+        background-color: transparent;
+      }
+    }
+
+    .time {
+      width: 50%;
+      position: relative;
+      border: 1px solid #EAECEF;
+      height: 57px;
+
+      .time-wrapper {
+        margin-top: 17px;
+
+        .ngb-tp-input {
+          border: none;
+        }
+
+        .form-control:disabled, .form-control[readonly] {
+          background-color: transparent;
+        }
+      }
+
+      .ngx-timepicker {
+        border: 1px solid #EAECEF;
+        border-radius: 4px;
+        padding: 1rem 1rem 0rem 0rem;
+        position: relative;
+
+        ngx-material-timepicker-toggle {
+          position: absolute;
+          top: 11px;
+          right: 10px;
+        }
+
+        &.ngx-timepicker--disabled {
+          background: #ffffff;
+        }
+      }
+
+      .clear-time {
+        position: absolute;
+        right: 85px;
+        top: 28px;
+      }
+
+      .placeholder {
+        color: #909BA8;
+        font-size: 12px;
+        letter-spacing: 0;
+        //line-height: 14px;
+        font-family: "HelveticaRegular";
+        transform: translateY(-50px) translateX(10px) scale(0.75) !important;
+        position: absolute;
+      }
+    }
+  }
+}
+
+.add-keyword-modal {
+
+  .modal-content {
+    border-radius: 12px;
+    width: 450px;
+
+    .modal-header {
+      align-items: center;
+    }
+
+    .close {
+      height: 39px;
+      width: 39px;
+      border: 1px solid #e9ecef;
+      border-radius: 4px;
+      padding: 0px;
+      margin: 0px;
+      font-weight: 300;
+      font-size: 30px;
+    }
+
+    .error {
+      color: #80172a;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    .btn-close,
+    .btn-add-keyword {
+      border: 1px solid #e9ecef;
+      border-radius: 4px;
+    }
+
+    .btn-add-keyword {
+      background-color: #145196;
+    }
+
+    .date-range-picker {
+      background-color: #fff;
+      cursor: pointer;
+      width: 100%;
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+      min-height: 58px;
+
+      .form-group {
+        position: relative;
+      }
+
+      .placeholder {
+        position: absolute;
+        left: 10px;
+        color: #9d9d9d;
+      }
+
+      .ng-has-value .placeholder {
+        top: 0;
+        font-size: 12px;
+      }
+
+      .ng-has-value .form-control.date-range {
+        bottom: -10px;
+        position: relative;
+      }
+
+      .form-control.date-range {
+        background-color: transparent;
+        width: 400px;
+        border: none;
+        border-radius: 6px;
+        height: 40px;
+        cursor: pointer;
+      }
+
+      .form-control[disabled].date-range {
+        background-color: #f9f9f9;
+        cursor: default;
+      }
+
+      .btn-datepicker-icon.calendar {
+        position: absolute;
+        z-index: 10;
+        border: none;
+        right: -10px
+      }
+    }
+  }
+}

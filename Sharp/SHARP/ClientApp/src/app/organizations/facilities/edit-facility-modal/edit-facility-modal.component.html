@@ -1,0 +1,144 @@
+<div class="edit-facility-modal">
+    <div class="modal-header">
+        <h4 class="modal-title" id="modal-basic-title">{{title}}</h4>
+        <button type="button" class="close" aria-label="Close" (click)="activeModal.dismiss()">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+
+    <div class="modal-body">
+
+        <form [formGroup]="facilityForm" novalidate>
+            
+            <div class="form-group">
+                <div class="floating-input">
+                    <input #facilityName
+                        formControlName="facilityName"
+                        type="text"
+                        class="input form-control form-control-lg"
+                        placeholder=" "
+                        (ngModelChange)="onNameChanged()"
+                        (focusout)="onNamefocusout($event)">
+                    <label for="facilityName" class="placeholder">Name</label>
+                    <span *ngIf="facilityForm.controls['facilityName'].value" 
+                        class="btn-clear"
+                        (click)="facilityForm.controls['facilityName'].reset()">&times;
+                    </span>
+                </div>
+                
+                <div class="error" *ngIf="facilityForm.controls['facilityName'].invalid && facilityForm.controls['facilityName'].touched">
+                    'Name' must not be empty.
+                </div>
+                <div class="error" *ngIf="errors && errors['Name']">
+                    {{errors['Name']}}
+                </div>
+            </div>
+
+            <div class="form-group floating-select-box">
+                <ng-select #organization
+                    formControlName="organization"
+                    [items]="organizations$ | async" 
+                    bindLabel="name"
+                    placeholder="Organization">
+                </ng-select>
+                <div class="error" *ngIf="facilityForm.controls['organization'].invalid && facilityForm.controls['organization'].touched">
+                    'Organization' must not be empty.
+                </div>
+            </div>
+
+            <div class="form-group floating-select-box">
+                <ng-select #timeZone
+                    formControlName="timeZone"
+                    [items]="timeZones$ | async" 
+                    bindLabel="name"
+                    placeholder="Time Zone">
+                </ng-select>
+                <div class="error" *ngIf="facilityForm.controls['timeZone'].invalid && facilityForm.controls['timeZone'].touched">
+                    'Time Zone' must not be empty.
+                </div>
+            </div>
+
+            <div class="form-group recipients">
+                <div class="floating-tag-input">
+                    <tag-input #inputRecipient
+                                [formControlName]="'emailRecipients'"
+                                [inputId]="'inputRecipient'"
+
+                                [identifyBy]="'email'"
+                                [displayBy]="'email'"
+                                
+                                [editable]="true"
+
+                                placeholder="Enter email recipient"
+                                secondaryPlaceholder="Email Recipients"
+
+                                [addOnPaste]="true"
+                                [addOnBlur]="true"
+
+                                [asyncValidators]="asyncValidators"
+                                [errorMessages]="asyncErrorMessages"
+                                
+                                theme="minimal">
+                    </tag-input>
+                    <span *ngIf="facilityForm.controls['emailRecipients'].value" 
+                        class="btn-clear"
+                        (click)="facilityForm.controls['emailRecipients'].reset()">&times;
+                    </span>
+                </div>
+
+                <div class="error" *ngIf="hasEmailError()">
+                    {{getEmailError()}}
+                </div>
+            </div>
+
+
+            <div class="form-group">
+              <div class="floating-input">
+                <input #facilityLegalName
+                       formControlName="facilityLegalName"
+                       type="text"
+                       class="input form-control form-control-lg"
+                       placeholder=" "
+                       (ngModelChange)="onLegalNameChanged()">
+                <label for="facilityLegalName" class="placeholder">Legal Name</label>
+                <span *ngIf="facilityForm.controls['facilityLegalName'].value"
+                      class="btn-clear"
+                      (click)="facilityForm.controls['facilityLegalName'].reset()">
+                  &times;
+                </span>
+              </div>
+
+              <div class="error" *ngIf="facilityForm.controls['facilityLegalName'].invalid && facilityForm.controls['facilityLegalName'].touched">
+                'Legal Name' must not be empty.
+              </div>
+              <div class="error" *ngIf="errors && errors['LegalName']">
+                {{errors['LegalName']}}
+              </div>
+            </div>
+
+            <div class="form-group">
+                <ng-select
+                    id="status"
+                    formControlName="status"
+                    [items]="statuses"
+                    bindLabel="name"
+                    [clearable]="false">
+                </ng-select>
+            </div>
+
+        </form>
+
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-dark btn-close" (click)="activeModal.dismiss()">Cancel</button>
+        <button type="submit" 
+            class="btn btn-default btn-save" 
+            style="position: relative; z-index: 1;" 
+            [disabled]="facilityForm?.invalid" 
+            (click)="onSaveClick()">
+            {{actionButtonLabel}}
+            <ngx-spinner name="facilityEditSpinner" bdColor="rgba(20,81,150,1)" size="small" color="#fff" [type]="spinnerType" [fullScreen]="false"></ngx-spinner>
+        </button>
+    </div>
+</div>

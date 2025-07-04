@@ -1,0 +1,62 @@
+.schedule-form-modal {
+    .modal-body {
+        .form-name-wrapper{
+            .form-label {
+                height: 14px;
+                width: 80px;
+                color: #909BA8;
+                font-size: 12px;
+                letter-spacing: 0;
+                line-height: 14px;
+            }
+
+            .form-name {
+                height: 19px;
+                color: #54667A;
+                font-size: 16px;
+                font-weight: 500;
+                letter-spacing: 0;
+                line-height: 19px;
+            }
+        }
+
+        .button-wrapper {
+            margin-top: 15px;
+
+            .btn-triggered,
+            .btn-scheduled {
+              border: 1px solid #EAECEF;
+              border-radius: 6px;
+              background-color: #FFFFFF;
+              padding: 7px 14px;
+              width: 50%;
+
+              &.active {
+                color: #FFFFFF;
+                background-color: #54667A;
+              }
+
+              &.near {
+                right: 160px;
+              }
+
+              &.far {
+                right: 303px;
+              }
+            }
+          }
+
+          .scheduled-section {
+              margin-top: 15px;
+
+              .floating-input {
+                input:focus + .placeholder,
+                input:-webkit-autofill + .placeholder,
+                input:not(:placeholder-shown) + .placeholder {
+                  transform: translateY(-10px) translateX(-5px) scale(1) !important;
+                }
+              }
+          }
+    }
+    
+}

@@ -1,0 +1,94 @@
+<div class="modal-header">
+  <h4 class="modal-title" *ngIf="id == undefined" id="modal-basic-title">
+    Add {{ type }}
+  </h4>
+  <h4 class="modal-title" *ngIf="id != undefined" id="modal-basic-title">
+    Edit {{ type }}
+  </h4>
+</div>
+
+<div class="modal-body">
+  <div class="form-group">
+    <label class="label p-0 text-dark">Name:</label>
+    <input
+      class="form-control"
+      placeholder="Name"
+      [(ngModel)]="name"
+      (ngModelChange)="onNameChanged()"
+      required
+    />
+    <label *ngIf="showKeyword" class="label p-0 mt-3 text-dark"
+      >Keyword for PDF Upload:</label
+    >
+    <input
+      *ngIf="showKeyword"
+      class="form-control"
+      placeholder="Keyword"
+      [(ngModel)]="keyword"
+      (ngModelChange)="onKeywordChanged()"
+      required
+    />
+
+    <label *ngIf="showKeyword" class="label p-0 mt-3 text-dark">Form</label>
+    <ng-select
+      #form
+      *ngIf="showKeyword"
+      [items]="availableForms"
+      [virtualScroll]="true"
+      bindLabel="name"
+      appendTo="body"
+      [(ngModel)]="selectedForm"
+      [closeOnSelect]="true"
+      class="dashboard-multiple-select"
+    >
+    <ng-template ng-header-tmp>
+      <input
+        style="width: 100%; line-height: 24px; border: none"
+        type="text"
+        placeholder="Search"
+        (input)="form.filter($event.target.value)"
+      />
+    </ng-template>
+
+    <ng-template ng-multi-label-tmp let-items="items" let-clear="clear">
+      <div class="ng-value-wrapper">
+        <div class="ng-value" *ngFor="let item of items">
+          <span
+            class="ng-value-icon left"
+            (click)="clear(item)"
+            aria-hidden="true"
+            >×</span
+          >
+          <span class="ng-value-label">{{ item.name }}</span>
+        </div>
+      </div>
+    </ng-template>
+    <ng-template ng-option-tmp let-item="item">
+      <div class="ng-select-option-label">{{ item.name }}</div>
+    </ng-template>
+
+    </ng-select>
+
+    <div *ngIf="errorMessage">
+      <span class="error-message">
+        {{ errorMessage }}
+      </span>
+    </div>
+  </div>
+</div>
+
+<div class="modal-footer">
+  <button
+    type="button"
+    class="btn btn-outline-dark btn-close"
+    (click)="activeModal.dismiss()"
+  >
+    Cancel
+  </button>
+
+  <div style="position: relative">
+    <button type="button" class="btn btn-default btn-download" (click)="save()">
+      Save
+    </button>
+  </div>
+</div>

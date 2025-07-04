@@ -1,0 +1,11 @@
+<div class="actions-renderer">   
+    <div class="actions-wrapper" *ngFor="let action of actions">
+        <button
+          (click)="onActionClick(action.id)"
+          class="btn action-button"
+          [ngClass]="action.classes"
+          [disabled]="disabled">
+            {{action.label}}
+        </button>
+    </div>
+</div>

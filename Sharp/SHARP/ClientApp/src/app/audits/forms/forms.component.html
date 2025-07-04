@@ -1,0 +1,396 @@
+<div class="page-wrapper audit-new-wrapper">
+  <div class="row breadcrumb-header">
+    <div class="col-12 col-md-6 d-flex flex-wrap align-items-start justify-content-start">
+      <h4 class="title">Audits</h4>
+      <span *ngIf="audit?.id" class="description">
+        <span class="status"
+              [style.background-color]="status?.color"
+              placement="bottom"
+              [ngbTooltip]="audit?.reason">{{ status?.label }}</span>
+        <span>
+          Audited By {{ audit?.submittedByUser?.fullName }} on
+          {{ audit?.submittedDate | date : "MM/dd/yyyy hh:mm a" }}
+        </span>
+        <span *ngIf="audit?.state == 2"
+              class="status"
+              style="margin-left: 10px"
+              [style.background-color]="'#f62d5124'"
+              [style.color]="'#f62d51'"
+              placement="bottom">Inactive</span>
+      </span>
+    </div>
+    <div class="col-12 col-md-6 d-flex flex-wrap flex-md-nowrap align-items-center justify-content-start justify-content-md-end">
+      <div *ngIf="audit?.id"
+           [ngClass]="'btn-group ml-2'"
+           ngbDropdown
+           role="group"
+           aria-label="Button group with nested dropdown">
+        <button class="btn three-dots-btn" style="z-index: 0" ngbDropdownToggle>
+          <i class="fas fa-ellipsis-v"></i>
+        </button>
+        <div class="dropdown-menu menu-index three-dots-menu"
+             ngbDropdownMenu
+             style="z-index: 20">
+          <h6 class="dropdown-header three-dots-header">Form Options</h6>
+          <div class="dropdown-divider"></div>
+          <button ngbDropdownItem
+                  *ngIf="audit?.state == 1 && isAuditor"
+                  class="btn dropdown-item three-dots-item"
+                  style="align-items: center"
+                  (click)="onDuplicateAuditClick(audit?.id); $event.stopPropagation()">
+            <i class="icon icon-copy three-dots-icon"></i>
+            <span>Duplicate</span>
+          </button>
+          <button ngbDropdownItem
+                  *ngIf="audit?.state == 1 && (isReviewer || isAdmin)"
+                  class="btn dropdown-item three-dots-item"
+                  style="align-items: center"
+                  (click)="onArchiveAuditClick(audit?.id); $event.stopPropagation()">
+            <i class="icon icon-box-add three-dots-icon"></i>
+            <span>Archive</span>
+          </button>
+          <button ngbDropdownItem
+                  *ngIf="audit?.state == 2 && (isReviewer || isAdmin)"
+                  class="btn dropdown-item three-dots-item"
+                  style="align-items: center"
+                  (click)="onUnarchiveAuditClick(audit?.id); $event.stopPropagation()">
+            <i class="icon icon-box-remove three-dots-icon"></i>
+            <span>Unarchive</span>
+          </button>
+          <button ngbDropdownItem
+                  *ngIf="audit?.state == 1 && (isReviewer || isAdmin)"
+                  class="btn dropdown-item three-dots-item"
+                  style="align-items: center"
+                  (click)="onDeleteAuditClick(audit?.id); $event.stopPropagation()">
+            <i class="icon icon-bin2 three-dots-icon"></i>
+            <span>Delete</span>
+          </button>
+          <button ngbDropdownItem
+                  *ngIf="audit?.state == 3 && isAdmin"
+                  class="btn dropdown-item three-dots-item"
+                  style="align-items: center"
+                  (click)="onUndeleteAuditClick(audit?.id); $event.stopPropagation()">
+            <i class="icon icon-undo three-dots-icon"></i>
+            <span>Undelete</span>
+          </button>
+        </div>
+      </div>
+      <ng-container *ngIf="audit?.state == 1">
+        <button class="btn btn-white"
+                *ngIf="status?.id === 6 && haveRightToViewPdf && audit?.reportTypeId == 1"
+                (click)="onDownloadPdfClick()">
+          <span class="icon-download"></span>
+          Download PDF
+        </button>
+
+        <button class="btn btn-white"
+                *ngIf="status?.id === 6 && haveRightToViewPdf && audit?.reportTypeId == 2"
+                (click)="onDownloadExcelClick()">
+          <span class="icon-download"></span>
+          Download Excel
+        </button>
+
+        <app-audit-status-buttons *ngIf="audit?.id && status"
+                                  [auditId]="audit?.id"
+                                  [auditUserId]="audit?.submittedByUser?.userId"
+                                  [currentStatus]="status?.id"
+                                  [auditTypeName]="audit?.form?.auditType.name"
+                                  (onStatusChanged)="handleSetAuditStatusSuccess($event)"
+                                  [disabled]="!audit.isReadyForNextStatus">
+        </app-audit-status-buttons>
+
+        <button class="btn btn-white"
+                *ngIf="!audit?.id"
+                [disabled]="
+            !isEditable ||
+            !audit.organization ||
+            !audit.facility ||
+            !audit.form ||
+            !fromDate
+          "
+                (click)="onSaveClick()">
+          Create
+        </button>
+        <button class="btn btn-white"
+                *ngIf="
+            audit?.id &&
+            (audit?.form?.auditType.name === 'Criteria' ||
+              audit?.form?.auditType.name === 'MDS') &&
+            isEditable &&
+            status?.id !== statuses.Triggered.id &&
+            status?.id !== statuses.Duplicated.id
+          "
+                [disabled]="!isEditable || !fromDate"
+                (click)="onSaveClick()">
+          Save
+        </button>
+        <button class="btn btn-white"
+                *ngIf="
+            status?.id === statuses.Triggered.id ||
+            status?.id === statuses.Duplicated.id
+          "
+                [disabled]="!fromDate"
+                (click)="onSaveDuplicatedAuditClick()">
+          Create
+        </button>
+      </ng-container>
+    </div>
+  </div>
+
+  <div class="row audit-fields">
+    <div class="field organization-wrapper">
+      <div class="form-group custom-select-box">
+        <label>Organization</label>
+        <ng-select #organizations
+                   [items]="organizations$ | async"
+                   bindLabel="name"
+                   [(ngModel)]="audit.organization"
+                   (change)="onOrganizationChanged($event)"
+                   [disabled]="audit?.id || !isEditable">
+        </ng-select>
+        <div *ngIf="errors && errors['OrganizationId']">
+          <span class="error-message"
+                *ngFor="let error of errors['OrganizationId']">
+            {{ error }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="field facility-wrapper">
+      <div class="form-group custom-select-box">
+        <label>Facility</label>
+        <ng-select #facilities
+                   [items]="facilities$ | async"
+                   bindLabel="name"
+                   [(ngModel)]="audit.facility"
+                   (change)="onFacilityChanged($event)"
+                   [disabled]="audit?.id || !facilities || !isEditable">
+        </ng-select>
+        <div *ngIf="errors && errors['FacilityId']">
+          <span class="error-message"
+                *ngFor="let error of errors['FacilityId']">
+            {{ error }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="field form-wrapper">
+      <div class="form-group custom-select-box">
+        <label>Form</label>
+        <ng-select #forms
+                   [items]="forms$ | async"
+                   bindLabel="name"
+                   [(ngModel)]="audit.form"
+                   (change)="onFormChanged($event)"
+                   [disabled]="audit?.id || !forms || !isEditable">
+        </ng-select>
+        <div *ngIf="errors && errors['FormVersionId']">
+          <span class="error-message"
+                *ngFor="let error of errors['FormVersionId']">
+            {{ error }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="field date-column-wrapper">
+      <div class="form-group">
+        <label>Filtered Date</label>
+        <form class="form-inline">
+          <div class="form-group">
+            <input name="datepicker"
+                   placeholder="mm.dd.yyyy - mm.dd.yyyy"
+                   class="form-control date-range"
+                   ngbDatepicker
+                   #datepicker="ngbDatepicker"
+                   [autoClose]="'outside'"
+                   (dateSelect)="onDateSelection($event)"
+                   [displayMonths]="2"
+                   [dayTemplate]="t"
+                   outsideDays="hidden"
+                   [startDate]="fromDate!"
+                   tabindex="-1"
+                   [value]="rangeFormat(fromDate, toDate)"
+                   (click)="datepicker.toggle()"
+                   [maxDate]="maxDate"
+                   firstDayOfWeek="7"
+                   [disabled]="
+                (audit?.id || !audit.facility || !audit.form || !isEditable) &&
+                !canEditTriggeredAudit
+              "
+                   readonly />
+            <button class="btn btn-datepicker-icon calendar"
+                    (click)="datepicker.toggle()"
+                    type="button"
+                    [disabled]="
+                (audit?.id || !audit.facility || !audit.form || !isEditable) &&
+                !canEditTriggeredAudit
+              ">
+              <i class="fa icon-calendar"></i>
+            </button>
+            <ng-template #t let-date let-focused="focused">
+              <span class="custom-day"
+                    [class.focused]="focused"
+                    [class.range]="isRange(date)"
+                    [class.faded]="isHovered(date) || isInside(date)"
+                    (mouseenter)="hoveredDate = date"
+                    (mouseleave)="hoveredDate = null">
+                {{ date.day }}
+              </span>
+            </ng-template>
+          </div>
+        </form>
+        <div *ngIf="errors && errors['IncidentDateFrom']">
+          <span class="error-message"
+                *ngFor="let error of errors['IncidentDateFrom']">
+            {{ error }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <ng-container *ngIf="
+        (audit.form?.auditType.name === 'Criteria' ||
+          audit.form?.auditType.name === 'MDS') &&
+        audit.id
+      ">
+      <div class="field room-column-wrapper">
+        <div class="form-group">
+          <label><i class="icon icon-svg"></i>Room #</label>
+          <input #room="ngModel"
+                 class="form-control room-control"
+                 [(ngModel)]="audit.room"
+                 [disabled]="!isEditable && !canEditTriggeredAudit"
+                 (ngModelChange)="onRoomChanged($event)"
+                 (change)="audit.room = audit.room?.trim()" />
+          <div class="error-message" *ngIf="errors && errors['Room']">
+            <span *ngFor="let error of errors['Room']">
+              {{ error }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field resident-wrapper">
+        <div class="form-group">
+          <label><i class="icon icon-svg"></i>Resident Name</label>
+          <div class="ng-autocompletec">
+            <ng-autocomplete [data]="residents"
+                             [initialValue]="audit.resident"
+                             [minQueryLength]="3"
+                             [searchKeyword]="keyword"
+                             (selected)="selectEvent($event)"
+                             (inputChanged)="onChangeSearch($event)"
+                             [itemTemplate]="itemTemplate"
+                             [disabled]="!isEditable && !canEditTriggeredAudit">
+            </ng-autocomplete>
+
+            <ng-template #itemTemplate let-item>
+              <a [innerHTML]="item.residentName"></a>
+            </ng-template>
+
+            <ng-template #notFoundTemplate let-notFound>
+              <div [innerHTML]="notFound"></div>
+            </ng-template>
+          </div>
+          <!-- <input
+        #resident="ngModel"
+        class="form-control resident-control"
+        [(ngModel)]="audit.resident"
+        [disabled]="!isEditable && !canEditTriggeredAudit"
+        (ngModelChange)="onResidentChanged($event)"
+        (change)="audit.resident = audit.resident?.trim()"
+      /> -->
+          <div class="error-message" *ngIf="errors && errors['Resident']">
+            <span *ngFor="let error of errors['Resident']">
+              {{ error }}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="field highalert" *ngIf="hasHighAlert">
+        <input type="checkbox" [checked]="useHighAlert" (change)='changeHighAlert($event.target.checked);' [disabled]="!isEditable" />
+        <span style="margin-left:5px">
+          <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
+          High Alert
+        </span>
+      </div>
+    </ng-container>
+  </div>
+  <div class="row highalert-fields">
+    <ng-container *ngIf="useHighAlert">
+
+      <div class="field high-alert-categories-wrapper">
+        <div class="form-group custom-select-box">
+          <label><i class="icon icon-svg"></i>High Alert Category</label>
+          <ng-select #highAlertCategories
+                     [items]="highAlertCategories$ | async"
+                     bindLabel="name"
+                     [(ngModel)]="audit.highAlertCategory"
+                     (change)="onHighAlertCategroryChanged($event)"
+                     [disabled]=" !isEditable">
+          </ng-select>
+
+          <div class="error-message" *ngIf="errors && errors['HighAlertCategory']">
+            <span>
+              Please select the category
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field high-alert-description-column-wrapper">
+        <div class="form-group">
+          <label><i class="icon icon-svg"></i>High Alert Description</label>
+          <textarea id="highAlertDescription"
+                    class="input form-control" [disabled]=" !isEditable"
+                    (ngModelChange)="onChangeDescription($event)"
+                    [(ngModel)]="audit.highAlertDescription">
+          </textarea>
+
+          <div class="error-message" *ngIf="errors && errors['HighAlertDescription']">
+            <span>
+              Please enter the description
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field high-alert-notes-column-wrapper">
+        <div class="form-group">
+          <label>High Alert Notes</label>
+          <textarea id="highAlertNotes"
+                    class="input form-control" [disabled]=" !isEditable"
+                   
+                    [(ngModel)]="audit.highAlertNotes">
+          </textarea>
+        </div>
+      </div>
+
+    </ng-container>
+  </div>
+  <ng-container [ngSwitch]="audit.form?.auditType.name">
+    <ng-container *ngSwitchCase="'24 hour keyword'">
+      <app-twenty-hour-keywords></app-twenty-hour-keywords>
+    </ng-container>
+    <ng-container *ngSwitchCase="'Criteria'">
+      <app-criteria #criteriaComponent
+                    [subHeaders]="subHeaders"
+                    [subHeaderForm]="subHeaderForm"
+                    [audit]="audit"
+                    [criteriaFormDetails]="criteriaFormDetails"
+                    (onCriteriaAuditChanged)="handleCriteriaAuditChanged($event)"
+                    (onCriteriaAnswerCommentFocusout)="handleCriteriaAnswerCommentFocusout($event)"></app-criteria>
+    </ng-container>
+    <ng-container *ngSwitchCase="'Tracker'">
+      <app-tracker [audit]="audit"></app-tracker>
+    </ng-container>
+    <ng-container *ngSwitchCase="'MDS'">
+      <app-mds [sectionForms]="sectionForms"
+               [audit]="audit"
+               [mdsFormDetails]="mdsFormDetails"></app-mds>
+    </ng-container>
+  </ng-container>
+</div>

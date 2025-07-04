@@ -1,0 +1,145 @@
+<form [formGroup]="form">
+
+  <div  *ngIf="showHighAlert">
+    <input type="checkbox" [disabled]="form?.disabled" [(ngModel)]="useHighAlert" (change)="onHighAlertChanged($event)"   [ngModelOptions]="{ standalone: true }" />
+    <span style="margin-left:5px">
+      <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
+      High Alert
+    </span>
+  </div>
+  <div class="dynamic-fields row" [ngClass]="getColumnsClass()">
+    <div class="field px-2"
+         [class]="field.controlType"
+         *ngFor="let field of fields">
+      <div class="form-group">
+        <label class="field-label" [attr.for]="field.key">
+          <i *ngIf="field.required" class="icon icon-svg"></i>
+          {{ field.label }}
+        </label>
+
+        <ng-container [ngSwitch]="field.controlType">
+          <input *ngSwitchCase="'textbox'"
+                 [id]="field.key"
+                 [formControlName]="field.key"
+                 type="text"  (ngModelChange)="onChangeField(field.label,$event)"
+                 class="form-control textbox"
+                 autocomplete="off" />
+
+          <div class="editor" *ngSwitchCase="'textarea'">
+            <ngx-editor-menu class="editor-menu"
+                             [editor]="field.editor"
+                             [toolbar]="toolbar"
+                             [colorPresets]="colorPresets"
+                             [disabled]="form.disabled">
+            </ngx-editor-menu>
+            <ngx-editor [editor]="field.editor"
+                        [outputFormat]="'html'"
+                        [formControlName]="field.key"
+                        [placeholder]="'Type here...'">
+            </ngx-editor>
+          </div>
+
+          <ng-container *ngSwitchCase="'datePicker'">
+            <div class="date-picker-wrapper">
+              <input ngbDatepicker
+                     #d="ngbDatepicker"
+                     [id]="field.key"
+                     [formControlName]="field.key"
+                     type="text"
+                     class="form-control"
+                     placeholder="mm.dd.yyyy"
+                     (click)="d.toggle()"
+                     firstDayOfWeek="7"
+                     readonly />
+
+              <button type="button"
+                      class="btn btn-datepicker-icon calendar"
+                      (click)="d.toggle()"
+                      [disabled]="form.disabled">
+                <i class="icon icon-calendar"></i>
+              </button>
+            </div>
+          </ng-container>
+
+          <div *ngSwitchCase="'checkbox'"
+               class="btn-group-toggle"
+               data-toggle="buttons">
+            <label ngbButtonLabel class="btn field-check-label">
+              <input ngbButton
+                     type="checkbox"
+                     [formControlName]="field.key"
+                     [value]="field.value"
+                     class="btn-check" />
+            </label>
+          </div>
+
+          <div ngbRadioGroup
+               [formControlName]="field.key"
+               *ngSwitchCase="'singleToggle'"
+               class="btn-group btn-group-toggle"
+               role="group"
+               data-toggle="buttons">
+            <ng-container *ngFor="let option of field.options">
+              <label ngbButtonLabel class="btn btn-label">
+                <input ngbButton
+                       type="radio"
+                       class="btn-check"
+                       [value]="option.id"
+                       [id]="option.id"
+                       autocomplete="off" />
+                {{ option.value }}
+              </label>
+            </ng-container>
+          </div>
+
+          <div ngbRadioGroup
+               [formGroup]="form.value[field.key]"
+               *ngSwitchCase="'multipleToggle'"
+               class="btn-group btn-group-toggle"
+               role="group"
+               data-toggle="buttons">
+            <ng-container *ngFor="let option of field.options">
+              <label ngbButtonLabel class="btn btn-label">
+                <input ngbButton
+                       type="checkbox"
+                       class="btn-check"
+                       [formControlName]="option.id"
+                       [id]="option.id"
+                       autocomplete="off" />
+                {{ option.value }}
+              </label>
+            </ng-container>
+          </div>
+
+          <ng-select *ngSwitchCase="'singleDropdown'"
+                     [id]="field.key"
+                     [formControlName]="field.key"
+                     [items]="field.options"
+                     bindLabel="value"
+                     class="single-select">
+          </ng-select>
+
+          <ng-select *ngSwitchCase="'multipleDropdown'"
+                     [id]="field.key"
+                     [formControlName]="field.key"
+                     [items]="field.options"
+                     bindLabel="value"
+                     [multiple]="true"
+                     [closeOnSelect]="false"
+                     class="multiple-select">
+          </ng-select>
+        </ng-container>
+
+        <div class="error"
+             *ngIf="
+            field.showError &&
+            form.controls[field.key].invalid &&
+            form.controls[field.key].touched
+          ">
+          This field is required
+        </div>
+      </div>
+    </div>
+  </div>
+
+</form>

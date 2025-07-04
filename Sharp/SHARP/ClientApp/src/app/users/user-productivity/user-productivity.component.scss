@@ -1,0 +1,137 @@
+.generate-excel-modal {
+  .modal-content {
+    border-radius: 12px;
+    width: 450px;
+
+    .modal-header {
+      align-items: center;
+    }
+
+    .close {
+      height: 39px;
+      width: 39px;
+      border: 1px solid #e9ecef;
+      border-radius: 4px;
+      padding: 0px;
+      margin: 0px;
+      font-weight: 300;
+      font-size: 30px;
+    }
+
+    .error {
+      color: #80172a;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+
+    .btn-close,
+    .btn-download {
+      border: 1px solid #e9ecef;
+      border-radius: 4px;
+    }
+
+    .btn-download {
+      background-color: #145196;
+    }
+
+    .date-range-picker {
+      background-color: #fff;
+      cursor: pointer;
+      width: 100%;
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+      min-height: 58px;
+
+      .form-group {
+        position: relative;
+      }
+
+      .placeholder {
+        position: absolute;
+        left: 10px;
+        color: #9d9d9d;
+      }
+
+      .ng-has-value .placeholder {
+        top: 0;
+        font-size: 12px;
+      }
+
+      .ng-has-value .form-control.date-range {
+        bottom: -10px;
+        position: relative;
+      }
+
+      .form-control.date-range {
+        background-color: transparent;
+        width: 400px;
+        border: none;
+        border-radius: 6px;
+        height: 40px;
+        cursor: pointer;
+      }
+
+      .form-control[disabled].date-range {
+        background-color: #f9f9f9;
+        cursor: default;
+      }
+
+      .btn-datepicker-icon.calendar {
+        position: absolute;
+        z-index: 10;
+        border: none;
+        right: -10px;
+      }
+    }
+
+    .custom-day {
+      text-align: center;
+      padding: 0.185rem 0.25rem;
+      display: inline-block;
+      height: 2rem;
+      width: 2rem;
+    }
+    .custom-day.focused {
+      background-color: #e6e6e6;
+    }
+    .custom-day.range,
+    .custom-day:hover {
+      background-color: rgb(2, 117, 216);
+      color: white;
+    }
+    .custom-day.faded {
+      background-color: rgba(2, 117, 216, 0.5);
+    }
+
+    .ng-select-container {
+      height: 58px !important;
+    }
+
+    .ng-select .ng-has-value .ng-placeholder {
+      display: block;
+      font-size: 12px;
+      position: absolute;
+      top: 10px;
+    }
+
+    .ng-select .ng-has-value .ng-value {
+      position: absolute;
+      bottom: 5px;
+      width: 83%;
+    }
+
+    .ng-select.ng-select-single
+      .ng-select-container
+      .ng-value-container
+      .ng-input {
+      top: auto;
+    }
+
+    .ng-select.ng-select-single
+      .ng-select-container.ng-has-value
+      .ng-value-container
+      .ng-input {
+      bottom: 5px;
+    }
+  }
+}

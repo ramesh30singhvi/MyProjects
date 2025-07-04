@@ -1,0 +1,18 @@
+<div class="status-wrapper">
+  <span [style.color]="status?.color">
+  {{status?.label}}
+  </span>
+  <div ngbDropdown #reasonDropdown="ngbDropdown" class="d-inline-block reason-dropdown" autoClose="outside">
+      <button class="reason-button" [ngClass]="reason ? 'btn' : 'd-none'" ngbDropdownToggle>
+          <i class="icon-info"></i>
+      </button>
+      <div ngbDropdownMenu class="reason-wrapper">
+          <div class="reason-header">
+            Reason
+          </div>        
+          <div class="reason-info">            
+              {{reason}}
+          </div>
+        </div>
+  </div>
+</div>

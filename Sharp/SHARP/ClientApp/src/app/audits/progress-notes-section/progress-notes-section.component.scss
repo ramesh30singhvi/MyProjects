@@ -1,0 +1,135 @@
+.progress-notes-wrapper {
+    padding: 10px;
+    height: calc(100vh - 313px);
+    overflow-y: scroll;
+
+    &::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+        background: #fff;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 1ex;
+        -webkit-border-radius: 1ex;
+    }
+}
+
+.action-buttons {
+    padding: 10px 10px 10px 20px;
+    border-bottom: 1px solid #EEF2F5;
+    height: 75px;
+
+    .left-side {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        font-weight: 600;
+        font-size: 18px;
+        letter-spacing: 0;
+        line-height: 21px;
+    }
+    
+    .left-side.keyword {
+        color: #007AFF;
+    }
+
+    .right-side {
+        display: flex;
+        justify-content: right;
+    }
+
+    .btn-arrow {
+        width: 38px;
+        height: 38px;
+        margin-left: 10px;
+        margin-right: 10px;
+        font-size: 22px;
+    }
+
+    .counter {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+.no-keywords-found {
+    text-align: center;
+    padding: 10px;
+}
+
+mark.keyword {
+    padding: 0.3em;
+    background-color: #DBF1FE;
+    color: #007AFF;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover {
+        background-color: #007CFF;
+        color: #FFF;
+    }
+}
+
+mark.keyword.active {
+    background-color: #007CFF;
+    color: #FFF;
+}
+
+mark.keyword-part {
+    padding: 0.3em;
+    background-color: #bdbdbd;
+    color: #565454;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover {
+        background-color: #747474;
+        color: #FFF;
+    }
+}
+
+mark.keyword-part.active {
+    background-color: #747474;
+    color: #FFF;
+}
+
+mark.keyword-wrapper {
+    padding: 0.3em;
+    background-color: #DBF1FE;
+    border-radius: 6px;
+
+    .keyword {
+        padding-left: 0.1em;
+        padding-right: 0.1em;
+    }
+}
+
+.progress-note {
+    border-bottom: 1px solid #EEF2F5;
+    padding: 10px;
+
+    .note-info {
+        font-size: 14px;
+        letter-spacing: 0;
+        line-height: 16px;
+
+        label {
+            color: #909BA8;
+            margin-bottom: 0.2rem;
+        }
+
+        div {
+            color: #263237;
+        }       
+    }
+    
+    .progress-note-text {
+        color: #263237;
+        font-size: 16px;
+        letter-spacing: 0;
+        line-height: 26px;
+    }
+}

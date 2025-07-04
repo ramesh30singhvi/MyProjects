@@ -1,0 +1,60 @@
+.dashboard-input-wrapper {
+  height: 100%;
+
+  h4 {
+    padding: 25px 30px 25px 30px;
+    color: #263237;
+    font-family: "HelveticaBold";
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 26px;
+    margin-bottom: 0;
+    height: 76px;
+  }
+  .body-wrapper {
+    height: calc(100% - 64px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-width: 1150px;
+  }
+
+  .data-wrapper {
+    display: flex;
+    margin-top: 20px;
+    margin-left: 30px;
+    margin-right: 30px;
+  }
+  .card {
+    display: flex;
+    flex-direction: column;
+    word-wrap: break-word;
+    background-color: #fff;
+    background-clip: border-box;
+    border: 1px solid #eaecef;
+    border-radius: 12px;
+    width: 100%;
+    padding: 16px;
+  }
+  table {
+    font-size: 0.8rem;
+  }
+  .btn-edit {
+    height: 32px;
+  }
+  .btn-white {
+    margin: 3px;
+  }
+  .table-bordered{
+    border:1px solid #000000;
+  }
+  .table thead th {
+    border: 2px solid #000000;
+  }
+  .table tbody td {
+    border: 1px solid #000000;
+  }
+  .table tfoot td {
+    border: 2px solid #000000;
+  }
+}

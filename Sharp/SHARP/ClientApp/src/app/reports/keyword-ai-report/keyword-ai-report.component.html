@@ -1,0 +1,40 @@
+<div class="page-wrapper keyword-ai-report-wrapper">
+  <div class="header-wrapper d-flex justify-content-between mr-4">
+    <h4 *ngIf="state == 1">AI Audits</h4>
+    <h4 *ngIf="state == 3">AI Audits Deleted</h4>
+    <div class="action-panel">
+      <button *ngIf="(isReviewer || isAdmin || isAuditor) && state == 1" class="btn btn-new btn-info" (click)="onCreateAiReport()">
+        Create AI Keyword Report
+      </button>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+    <div class="overflow-hidden">
+      <ag-grid-angular style="width: 100%; height: 90%;"
+                       id="keywordAIReportGrid"
+                       [ngClass]="'ag-theme-alpine'"
+                       [rowHeight]="70"
+                       [columnDefs]="columns"
+                       [rowModelType]="rowModelType"
+                       [rowBuffer]="rowBuffer"
+                       [cacheOverflowSize]="cacheOverflowSize"
+                       [cacheBlockSize]="cacheBlockSize"
+                       [maxConcurrentDatasourceRequests]="maxConcurrentDatasourceRequests"
+                       [infiniteInitialRowCount]="infiniteInitialRowCount"
+                       [maxBlocksInCache]="maxBlocksInCache"
+                       (gridReady)="onGridReady($event)"
+                       [defaultColDef]="defaultColumn"
+                       [frameworkComponents]="frameworkComponents"
+                       [components]="components"
+                       (rowDoubleClicked)="onRowClicked($event)"
+                       (filterChanged)="onFilterChanged($event)"
+                       (columnVisible)="onColumnVisible($event)"
+                       (columnMoved)="onColumnMoved($event)"
+                       (columnResized)="onColumnResized($event)"
+                       (sortChanged)="onSortChanged($event)">
+      </ag-grid-angular>
+    </div>
+  </div>
+
+</div>

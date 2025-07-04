@@ -1,0 +1,20 @@
+<div class="modal-header">
+  <h4 class="modal-title" id="modal-basic-title">Disapprove audit</h4>
+  <button type="button" class="close" aria-label="Close" (click)="activeModal.dismiss()">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+<div class="modal-body">
+  <form [formGroup]="reasonForm" novalidate>
+    <div>
+      <textarea id="reason" class="reason" formControlName="reason" mdInput rows="4"></textarea>
+      <div class="error" *ngIf="reasonForm.controls['reason'].invalid && reasonForm.controls['reason'].touched">
+        'Reason' must not be empty.
+      </div>
+    </div>    
+  </form>  
+</div>
+<div class="modal-footer">
+  <button type="button" class="btn btn-outline-dark btn-close" (click)="activeModal.dismiss()">Close</button>
+  <button type="button" class="btn btn-default btn-save" (click)="save()" [disabled]="reasonForm?.invalid">Save</button>
+</div>

@@ -1,0 +1,63 @@
+.page-wrapper {
+    height: 100%;
+  
+    h4 {
+      padding: 24px 30px 23px 30px;
+      color: #263237;
+      font-size: 22px;
+      font-weight: bold;
+      height: 72px;
+    }
+
+    .container-fluid {
+        padding-top: 0 !important;
+        height: calc(100vh - 144px);
+    
+        > div {
+          border: 1px solid #EAECEF;
+          border-radius: 6px;
+          height: 100%;
+        }
+    }
+
+    .btn-new {
+      margin: 0;
+    }
+
+    .generate-pdf-btn {
+      margin: 0 10px;
+
+      >i {
+        font-size: 22px;
+        margin-right: 10px;
+      }
+    }
+
+    .refresh-btn {
+      margin: 0;
+      border: 1px solid #EAECEF;
+      border-radius: 6px;
+      color: #54667A;
+      height: 38px;
+      margin-right: 10px;
+
+      >span,
+      >i {
+        font-size: 22px;
+      }
+    }
+
+    .collumns-btn {
+      margin-left: 10px;
+    }
+
+    .request-toolbar {
+      margin: 0;
+    }
+
+    .grid-config-wrappper {
+      display: flex;
+      align-items: center;
+      justify-content: right;
+    }
+}  

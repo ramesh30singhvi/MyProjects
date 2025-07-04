@@ -1,0 +1,30 @@
+
+.modal-header {
+  align-items: center;
+}
+
+.close {
+  height: 39px;
+  width: 39px;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 0px;
+  margin: 0px;
+  font-weight: 300;
+  font-size: 30px;
+}
+
+.btn-close,
+.btn-save {
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+}
+
+.btn-save {
+  background-color: #145196;
+}
+
+.error {
+  color: #80172a;
+  font-size: 12px;
+}

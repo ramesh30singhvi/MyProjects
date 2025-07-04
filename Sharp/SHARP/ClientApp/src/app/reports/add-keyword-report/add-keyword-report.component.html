@@ -1,0 +1,132 @@
+<div class="modal-header">
+  <h4 class="modal-title" id="modal-basic-title">Add keyword to Report</h4>
+  <button type="button" class="close" aria-label="Close" (click)="activeModal.dismiss()">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+<div class="modal-body" style="position: relative;">
+  <form class="input-keyword-section"
+        [formGroup]="keywordForm"
+        novalidate
+        (ngSubmit)="onAddKeyword()">
+    <div class="col-12 form-fields p-20">
+      <div class="form-group floating-input mb-3 password">
+        <input id="customKeyword"
+               formControlName="customKeyword"
+               type="text"
+               class="input form-control form-control-lg"
+               placeholder=" "
+               autocomplete="off" />
+        <label for="customKeyword" class="placeholder">New Keyword*</label>
+        <div class="error"
+             *ngIf="
+          keywordForm.controls['customKeyword'].invalid &&
+          keywordForm.controls['customKeyword'].touched
+        ">
+          'Keyword' must not be empty.
+        </div>
+      </div>
+    </div>
+    <div class="form-group floating-input mb-3 password">
+      <input id="resident"
+             formControlName="resident"
+             type="text"
+             class="input form-control form-control-lg"
+             placeholder=" "
+             autocomplete="off" />
+      <label for="resident" class="placeholder">Resident</label>
+      <div class="error"
+           *ngIf="
+          keywordForm.controls['resident'].invalid &&
+          keywordForm.controls['resident'].touched
+        ">
+        'Resident' must not be empty.
+      </div>
+    </div>
+
+    <div class="date-time-wrapper">
+      <div class="form-group mb-3 date">
+        <div class="floating-input date-field">
+          <input class="form-control input form-control-lg"
+                 placeholder="MM.DD.YYYY"
+                 name="datepicker"
+                 formControlName="date"
+                 ngbDatepicker
+                 #datepicker="ngbDatepicker"
+                 autocomplete="off"
+                 [minDate]="minDate"
+                 [maxDate]="maxDate"
+                 firstDayOfWeek="7" />
+          <label for="datepicker" class="placeholder">Date</label>
+          <button class="btn btn-datepicker-icon calendar"
+                  (click)="datepicker.toggle()"
+                  type="button"
+                  [disabled]="
+              keywordForm.disabled || keywordForm.controls['date'].disabled
+            ">
+            <i class="fa icon-calendar"></i>
+          </button>
+        </div>
+
+        <div class="error"
+             *ngIf="
+            keywordForm.controls['date'].invalid &&
+            keywordForm.controls['date'].touched
+          ">
+          'Date' must not be empty.
+        </div>
+      </div>
+
+      <div class="form-group mb-3 time">
+        <div class="time-wrapper">
+          <ngb-timepicker formControlName="time"></ngb-timepicker>
+          <div class="d-flex align-items-center clear-time"
+               role="button"
+               *ngIf="keywordForm.controls['time'].value"
+               (click)="keywordForm.controls['time'].setValue(null)">
+            <span class="icon icon-close"></span>
+          </div>
+          <label for="time" class="placeholder">Time</label>
+          <div class="error"
+               *ngIf="
+              keywordForm.controls['time'].invalid &&
+              keywordForm.controls['time'].touched
+            ">
+            'Time' must not be empty.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="floating-area">
+      <div class="header"></div>
+      <textarea id="report"
+                formControlName="report"
+                class="input form-control"
+                placeholder=" ">
+      </textarea>
+      <label for="report" class="placeholder">Report</label>
+      <div class="error"
+           *ngIf="
+          keywordForm.controls['report'].invalid &&
+          keywordForm.controls['report'].touched
+        ">
+        'Report' must not be empty.
+      </div>
+    </div>
+   </form>
+</div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-dark btn-close" (click)="activeModal.dismiss()">Cancel</button>
+
+    <div style="position: relative;">
+      <button type="button"
+              class="btn btn-default btn-add-keyword"
+              style="position: relative; z-index: 1;"
+              [disabled]="keywordForm.invalid" 
+              (click)="onAddKeyword()">
+        Add
+      </button>
+    </div>
+
+  </div>

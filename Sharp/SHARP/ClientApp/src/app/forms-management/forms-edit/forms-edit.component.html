@@ -1,0 +1,291 @@
+<div class="page-wrapper form-new-wrapper" style="height: 100%">
+  <div class="row breadcrumb-header">
+    <div
+      class="col-12 col-md-8 d-flex flex-wrap align-items-center justify-content-start"
+    >
+      <h4 *ngIf="!addEditForm?.id" class="title">New Form</h4>
+      <h4 *ngIf="addEditForm?.id" class="title">{{ addEditForm.name }}</h4>
+      <span *ngIf="addEditForm?.id" class="description">
+        <span
+          class="status"
+          [style.background-color]="status?.bgColor"
+          [style.color]="status?.txtColor"
+          placement="bottom"
+          >{{ status?.label }}</span
+        >
+        <span
+          *ngIf="formVersion?.form?.isActive"
+          class="status"
+          [style.background-color]="'#c5f6cb'"
+          [style.color]="'#3ac34a'"
+          placement="bottom"
+          >Active</span
+        >
+        <span
+          *ngIf="!formVersion?.form?.isActive"
+          class="status"
+          [style.background-color]="'#f62d5124'"
+          [style.color]="'#f62d51'"
+          placement="bottom"
+          >Inactive</span
+        >
+        <span *ngIf="formVersion?.createdBy?.fullName"
+          >Created By {{ formVersion?.createdBy?.fullName }} on
+          {{ formVersion?.createdDate | date : "MM/dd/yyyy hh:mm a" }}</span
+        >
+        <span *ngIf="!formVersion?.createdBy?.fullName">Was imported</span>
+      </span>
+    </div>
+    <div
+      class="col-12 col-md-4 d-flex flex-wrap flex-md-nowrap align-items-center justify-content-start justify-content-md-end"
+    >
+      <div
+        *ngIf="addEditForm?.id"
+        [ngClass]="'btn-group ml-2'"
+        ngbDropdown
+        role="group"
+        aria-label="Button group with nested dropdown"
+      >
+        <button class="btn three-dots-btn" style="z-index: 0" ngbDropdownToggle>
+          <i class="fas fa-ellipsis-v"></i>
+        </button>
+        <div
+          class="dropdown-menu menu-index three-dots-menu"
+          ngbDropdownMenu
+          style="z-index: 10"
+        >
+          <h6 class="dropdown-header three-dots-header">Form Options</h6>
+          <div class="dropdown-divider"></div>
+          <button
+            ngbDropdownItem
+            *ngIf="formVersion?.form?.isActive"
+            class="btn dropdown-item three-dots-item"
+            style="align-items: center"
+            (click)="onArchiveFormClick(); $event.stopPropagation()"
+          >
+            <i class="icon icon-box-add three-dots-icon"></i>
+            <span>Archive</span>
+          </button>
+          <button
+            ngbDropdownItem
+            *ngIf="!formVersion?.form?.isActive"
+            class="btn dropdown-item three-dots-item"
+            style="align-items: center"
+            (click)="onUnarchiveFormClick(); $event.stopPropagation()"
+          >
+            <i class="icon icon-box-remove three-dots-icon"></i>
+            <span>Unarchive</span>
+          </button>
+          <button
+            *ngIf="formVersion?.status === formStatuses.Draft.id"
+            class="btn dropdown-item three-dots-item"
+            (click)="onDeleteClick()"
+            [disabled]="formVersion?.status !== formStatuses.Draft.id"
+          >
+            <i class="fas icon-delete three-dots-icon"></i>
+            Delete Draft
+          </button>
+          <button
+            ngbDropdownItem
+            *ngIf="formVersion?.form?.isActive"
+            class="btn dropdown-item three-dots-item"
+            style="align-items: center"
+            (click)="onEditFormClick(formId); $event.stopPropagation()"
+          >
+            <i class="icon icon-pencil three-dots-icon"></i>
+            <span>Edit Name</span>
+          </button>
+        </div>
+      </div>
+
+      <button
+        class="btn btn-white btn-action"
+        *ngIf="!addEditForm?.id"
+        [disabled]="
+          !addEditForm?.organization ||
+          !addEditForm?.auditType ||
+          !addEditForm?.name
+        "
+        (click)="onCreateClick()"
+      >
+        Create
+      </button>
+      <button
+        class="btn btn-white btn-action"
+        *ngIf="
+          addEditForm?.id && formVersion?.status === formStatuses.Published.id
+        "
+        (click)="onEditClick()"
+      >
+        Edit
+      </button>
+
+      <div
+        *ngIf="addEditForm?.id && hasFormVersions()"
+        [ngClass]="'btn-group'"
+        ngbDropdown
+        role="group"
+        aria-label="Button group with nested dropdown"
+      >
+        <button
+          class="btn btn-white btn-action"
+          style="z-index: 0"
+          ngbDropdownToggle
+        >
+          Form Version History
+        </button>
+        <div
+          class="dropdown-menu menu-index three-dots-menu"
+          ngbDropdownMenu
+          style="z-index: 10"
+        >
+          <h6 class="dropdown-header three-dots-header">Form Versions</h6>
+          <div class="dropdown-divider"></div>
+          <button
+            *ngFor="let version of formVersions; index as i; trackBy: trackByFn"
+            ngbDropdownItem
+            class="btn dropdown-item three-dots-item"
+            style="align-items: center"
+            (click)="goToFormVersion(version); $event.stopPropagation()"
+          >
+            <i class="icon icon-loop2 three-dots-icon"></i>
+            <span [class.selected]="formVersion.id == version.id"
+              >Version {{ version.version }}</span
+            >
+          </button>
+        </div>
+      </div>
+      <button
+        class="btn btn-dark-blue btn-action"
+        *ngIf="addEditForm?.id && formVersion?.status === formStatuses.Draft.id"
+        (click)="onPublishClick()"
+      >
+        Publish
+      </button>
+    </div>
+  </div>
+
+  <div class="row" style="padding-left: 30px; padding-right: 30px">
+    <div class="col-2">
+      <div class="form-group custom-select-box">
+        <label>Organization</label>
+        <ng-select #organizations
+                   [items]="organizations$ | async"
+                   bindLabel="name"
+                   [(ngModel)]="addEditForm.organization"
+                   [disabled]="addEditForm?.id"
+                   (change)="onOrganizationChanged($event)">
+        </ng-select>
+        <div *ngIf="errors && errors['OrganizationId']">
+          <span class="error-message"
+                *ngFor="let error of errors['OrganizationId']">
+            {{ error }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-2">
+      <div class="form-group custom-select-box">
+        <label>Audit Type</label>
+        <ng-select #facilities
+                   [items]="auditTypes$ | async"
+                   bindLabel="name"
+                   [(ngModel)]="addEditForm.auditType"
+                   [disabled]="addEditForm?.id">
+        </ng-select>
+        <div *ngIf="errors && errors['AuditTypeId']">
+          <span class="error-message"
+                *ngFor="let error of errors['AuditTypeId']">
+            {{ error }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-3" *ngIf="!addEditForm?.id">
+      <div class="form-group">
+        <label>Form Name</label>
+        <input class="form-control"
+               [(ngModel)]="addEditForm.name"
+               [disabled]="addEditForm?.id"
+               (ngModelChange)="onNameChanged($event)" />
+        <div *ngIf="errors && errors['Name']">
+          <span class="error-message" *ngFor="let error of errors['Name']">
+            {{ error }}
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="col-2">
+      <div class="form-group w-75">
+        <label>High Alert</label><br />
+        <div class="btn-group btn-group-toggle" ngbRadioGroup>
+          <label ngbButtonLabel [ngClass]="getHighAlertClass(false)">
+            <input ngbButton type="radio" (value)="addEditForm.useHighAlert" (change)="onHighAlertValueChanged($event)" [disabled]="addEditForm?.id && formVersion?.status !== formStatuses.Draft.id">
+            No
+          </label>
+          <label ngbButtonLabel [ngClass]="getHighAlertClass(true)">
+            <input ngbButton type="radio" (value)="addEditForm.useHighAlert" (change)="onHighAlertValueChanged($event)" [disabled]="addEditForm?.id && formVersion?.status !== formStatuses.Draft.id">
+            Yes
+          </label>
+
+        </div>
+      </div>
+    </div>
+    <div class="col-2">
+      <div class="form-group">
+        <label>Target AHT Per Resident</label><br />
+        <input class="form-control" type="number"
+               [(ngModel)]="addEditForm.AHTime"
+               [disabled]="addEditForm?.id && formVersion?.status !== formStatuses.Draft.id && isAdmin" />
+
+      </div>
+    </div>
+    <div class="col-2" *ngIf="addEditForm?.auditType?.name == 'Criteria'">
+      <div class="form-group">
+        <label>Disable Compliance Summary</label>
+        <ng-select #disableCompliance
+                   [items]="yesOrNo"
+                   bindLabel="name"
+                   bindValue="id"
+                   [clearable]="false"
+                   [disabled]="formVersion?.status === formStatuses.Published.id"
+                   [(ngModel)]="addEditForm.disableCompliance">
+        </ng-select>
+      </div>
+    </div>
+    <div class="col-2" *ngIf="addEditForm?.auditType?.name == 'Criteria'">
+      <div class="form-group">
+        <label>Allow Empty Comments</label>
+        <ng-select #allowEmptyComment
+                   [items]="yesOrNo"
+                   bindLabel="name"
+                   bindValue="id"
+                   [clearable]="false"
+                   [disabled]="formVersion?.status === formStatuses.Published.id"
+                   [(ngModel)]="addEditForm.allowEmptyComment">
+        </ng-select>
+      </div>
+    </div>
+  </div>
+      <ng-container [ngSwitch]="addEditForm.auditType?.name">
+        <ng-container *ngSwitchCase="'24 hour keyword'">
+          <app-keyword-form [formVersion]="formVersion"
+                            [keywords]="keywords"></app-keyword-form>
+        </ng-container>
+        <ng-container *ngSwitchCase="'Criteria'">
+          <app-criteria-form [formVersion]="formVersion"
+                             [questionGroups]="questionGroups"
+                             [formFields]="formFields"></app-criteria-form>
+        </ng-container>
+        <ng-container *ngSwitchCase="'Tracker'">
+          <app-tracker-form [formVersion]="formVersion"
+                            [questions]="trackerQuestions"></app-tracker-form>
+        </ng-container>
+        <ng-container *ngSwitchCase="'MDS'">
+          <app-mds-form [formVersion]="formVersion"
+                        [sections]="sections"></app-mds-form>
+        </ng-container>
+      </ng-container>
+    </div>

@@ -1,0 +1,163 @@
+<div class="tracker-wrapper">
+  <div class="col-4 bg-white form">
+    <div class="section-header">
+      <h4>Questions</h4>
+    </div>
+    <div class="container">
+      <app-dynamic-form-control
+        class="w-100" [showHighAlert]="showHighAlert" [useHighAlert]="trackerUseHighAlert"
+        [fields]="questions" (highAlertChanged)="useHighAlert($event)" (residentNameChanged)="OnResidentNameChanged($event)"
+        [form]="trackerForm"
+      ></app-dynamic-form-control>
+      <div *ngIf="trackerUseHighAlert" class="highAlertSection" [formGroup]="highAlertForm">
+
+        <div class="field form-wrapper">
+          <div class="form-group">
+            <label for="highAlertCategory" class="placeholder"><i class="icon icon-svg"></i>High Alert Category</label>
+            <ng-select #highAlertCategories
+                       [items]="highAlertCategories$ | async"
+                       bindLabel="name" formControlName="highAlertCategory"
+                       [(ngModel)]="selectedHighAlertCategory"
+                       [ngModelOptions]="{ standalone: true }"
+                       [disabled]="audit?.id ||  !isEditable">
+            </ng-select>
+            <div class="error" *ngIf="errors && errors['HighAlertCategory']">
+              <span>
+                Please select the category
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="field form-wrapper">
+          <div class="form-group">
+            <label><i class="icon icon-svg"></i>High Alert Description</label>
+            <textarea id="highAlertDescription"
+                      formControlName="highAlertDescription"
+                      class="input form-control"  ngDefaultControl 
+                      placeholder=" " [(ngModel)]="selectedDescription"
+                      [disabled]="audit?.id || !isEditable">  
+              </textarea>
+          </div>
+        </div>
+
+        <div class="field form-wrapper">
+          <div class="form-group">
+            <label>High Alert Notes</label>
+            <textarea id="highAlertNotes"
+                      formControlName="highAlertNotes"
+                      class="input form-control"
+                      placeholder=" "  [(ngModel)]="selectedNotes"
+                      [disabled]="audit?.id || !isEditable">
+            </textarea>
+          </div>
+        </div>
+      </div>
+      <div class="footer">
+          <button type="button"
+                  class="btn btn-white clear-button"
+                  (click)="onClearClick()">
+            Clear
+          </button>
+          <button class="btn add-btn"
+                  [disabled]="!isFormValid() || !isEditable"
+                  (click)="submit()">
+            {{ submitButtonTitle }}
+          </button>
+        </div>
+      </div>
+  </div>
+  <div class="col-8 bg-white table mx-2">
+    <div class="d-flex w-100 justify-content-between">
+      <h4 class="name">Captured Data</h4>
+      <h4 class="name" *ngIf="hasComplianceQuestions">
+        Total compliance {{ getTotalCompliance | number : "1.0-0" }}%
+      </h4>
+    </div>
+
+    <div class="data-wrapper">
+      <div class="header">
+        <div class="del-column"></div>
+        <div class="num-column">#</div>
+        <div
+          class="header-column"
+          *ngFor="let keyword of keywords; let i = index"
+          (click)="onHeaderColumnClick(keyword.id)"
+        >
+          <span>{{ keyword.question }}</span>
+          <i
+            *ngIf="keyword.sortOrder"
+            [ngClass]="{
+              'icon-arrow-up2': keyword.sortOrder === 'asc',
+              'icon-arrow-down2': keyword.sortOrder === 'desc'
+            }"
+          ></i>
+        </div>
+        <div
+          *ngIf="hasComplianceQuestions"
+          class="header-column font-weight-bold"
+        >
+          Compliance Questions
+        </div>
+        <div
+          *ngIf="hasComplianceQuestions"
+          class="header-column font-weight-bold"
+        >
+          Total Compliance
+        </div>
+      </div>
+      <div class="body">
+        <ng-container *ngFor="let group of pivotAnswerGroups; index as i">
+          <div class="data-row" (click)="onTrackerAswersGroupClick(group)">
+            <div class="del-column">
+              <div
+                class="answers-remove"
+                *ngIf="isEditable"
+                (click)="
+                  onAnswersDeleteClick(group.GroupId); $event.stopPropagation()
+                "
+              >
+                <span class="icon-delete"></span>
+              </div>
+            </div>
+            <div class="num-column">
+              {{ i + 1 }}
+            </div>
+            <div class="column" *ngFor="let keyword of keywords; index as i">
+              <span
+                *ngIf="
+                  keyword?.trackerOption?.fieldType?.id !==
+                  fieldTypes.textArea.id
+                "
+                class="value"
+                [ngClass]="{
+                  'no-answer':
+                    group[keyword.id].formattedAnswer?.toLowerCase() == 'no'
+                }"
+                >{{ group[keyword.id].formattedAnswer }}</span
+              >
+              <span
+                *ngIf="
+                  keyword?.trackerOption?.fieldType?.id ===
+                  fieldTypes.textArea.id
+                "
+                class="value"
+                [ngClass]="{
+                  'no-answer':
+                    group[keyword.id].formattedAnswer?.toLowerCase() == 'no'
+                }"
+                [innerHTML]="group[keyword.id].formattedAnswer | safeHtml"
+              ></span>
+            </div>
+            <div *ngIf="hasComplianceQuestions" class="column">
+              {{ getTotalComplianceQuestions }}
+            </div>
+            <div *ngIf="hasComplianceQuestions" class="column">
+              {{ getGroupCompliance(group) | number : "1.0-0" }}%
+            </div>
+          </div>
+        </ng-container>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,56 @@
+<div class="page-wrapper">
+    <div class="header-wrapper d-flex justify-content-between mr-4">
+        <h4>Report Requests</h4>
+    
+        <div class="action-panel">
+            <!-- <button *ngIf="isAuditor" [routerLink]="['/audits/new']" class="btn btn-new btn-info btn-md shadow-none">
+                <span class="icon-plus"></span> New Audit
+            </button> -->
+        </div>
+      </div>
+
+    <div class="container-fluid request-container">
+        <div class="overflow-hidden">
+            <div class="card request-toolbar">
+                <div class="card-body">  
+                  <div class="grid-config-wrappper">
+                    <button class="btn btn-white refresh-btn" (click)="onRefreshClick()">
+                        <i class="icon-loop2"></i>
+                    </button>
+
+                    <button *ngIf="haveRightToViewPdf" class="btn btn-white generate-pdf-btn" (click)="onGeneratePdfClick()">
+                        <i class="icon-download1"></i>
+                        Generate PDF
+                    </button>
+
+                    <app-grid-columns class="collumns-btn" [gridApi]="gridApi" [gridColumnApi]="gridColumnApi"></app-grid-columns>
+                  </div>
+                </div>
+              </div>
+            <div class="card" style="height:90%">
+                <ag-grid-angular
+                    style="width: 100%; height: 100%;"
+                    id="reportRequestsGrid"
+                    class="ag-theme-alpine"
+                    [headerHeight]="48"
+                    [rowHeight]="70"
+                    [columnDefs]="columns"
+                    [rowModelType]="rowModelType"
+                    [rowBuffer]="rowBuffer"
+                    [cacheOverflowSize]="cacheOverflowSize"
+                    [cacheBlockSize]="cacheBlockSize"
+                    [maxConcurrentDatasourceRequests]="maxConcurrentDatasourceRequests"
+                    [infiniteInitialRowCount]="infiniteInitialRowCount"
+                    [maxBlocksInCache]="maxBlocksInCache"
+                    (gridReady)="onGridReady($event)"
+                    [defaultColDef]="defaultColumn"
+                    [frameworkComponents]="frameworkComponents"
+                    (filterChanged)="onFilterChanged($event)"
+                    (columnVisible)="onColumnVisible($event)"
+                    (columnMoved)="onColumnMoved($event)"
+                    (sortChanged)="onSortChanged($event)">
+                </ag-grid-angular>
+            </div>
+        </div>        
+    </div>
+</div>

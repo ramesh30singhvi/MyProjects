@@ -1,0 +1,160 @@
+<!-- ============================================================== -->
+<!-- Main wrapper - style you can find in pages.scss -->
+<!-- ============================================================== -->
+
+<div
+  id="main-wrapper"
+  [ngClass]="{ 'show-sidebar': showMobileMenu }"
+  [dir]="options.dir"
+  [attr.data-theme]="options.theme"
+  [attr.data-layout]="options.layout"
+  [attr.data-sidebartype]="options.sidebartype"
+  [attr.data-sidebar-position]="options.sidebarpos"
+  [attr.data-header-position]="options.headerpos"
+  [attr.data-boxed-layout]="options.boxed"
+  class="homepage"
+  style="
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    box-sizing: border-box;
+    -webkit-overflow-scrolling: touch;
+  "
+>
+  <!-- ============================================================== -->
+  <!-- Topbar header - style you can find in topbar.scss -->
+  <!-- ============================================================== -->
+  <header
+    class="topbar"
+    [attr.data-navbarbg]="options.navbarbg"
+    style="background: white"
+  >
+    <nav
+      class="d-flex top-navbar navbar-expand-lg navbar-light"
+      style="background: white"
+    >
+      <div
+        class="navbar-header d-flex"
+        [ngClass]="expandLogo ? 'expand-logo' : ''"
+        [attr.data-logobg]="options.logobg"
+      >
+        <!-- ============================================================== -->
+        <!-- Logo -->
+        <!-- ============================================================== -->
+        <a class="navbar-brand" href="/">
+          <!-- Logo icon -->
+          <b class="logo-icon">
+            <!--You can put here icon as well // <i class="wi wi-sunset"></i> //-->
+            <!-- Dark Logo icon -->
+            <img
+              src="assets/images/logo-icon.png"
+              alt="homepage"
+              class="logo dark-logo"
+            />
+            <!-- Light Logo icon -->
+            <!-- <img src="assets/images/logo-light-icon.png" alt="homepage" class="light-logo" /> -->
+          </b>
+          <!--End Logo icon -->
+          <!-- Logo text -->
+          <span class="logo-text">
+            <!-- dark Logo text -->
+            <img
+              src="assets/images/logo-text.png"
+              alt="homepage"
+              class="dark-logo"
+            />
+            <!-- Light Logo text -->
+            <!--            <img src="assets/images/logo-light-text.png" class="light-logo" alt="homepage" />-->
+          </span>
+        </a>
+        <!-- This is for the sidebar toggle which is visible on mobile only -->
+        <a
+          (click)="showMobileMenu = !showMobileMenu"
+          class="nav-toggler waves-effect waves-light d-block d-lg-none"
+          href="javascript:void(0)"
+        >
+          <i [ngClass]="showMobileMenu ? 'ti-close' : 'ti-menu'"></i>
+        </a>
+        <a
+          (click)="toggleSidebarType()"
+          class="nav-toggler waves-effect waves-light d-none d-lg-block"
+          href="javascript:void(0)"
+        >
+          <i class="ti-menu"></i>
+        </a>
+
+        <!-- ============================================================== -->
+        <!-- End Logo -->
+        <!-- ============================================================== -->
+        <!-- ============================================================== -->
+        <!-- Toggle which is visible on mobile only -->
+        <!-- ============================================================== -->
+      </div>
+      <!-- ============================================================== -->
+      <!-- End Logo -->
+      <!-- ============================================================== -->
+      <div
+        class="navbar-collapse collapse show"
+        id="navbarSupportedContent"
+        [attr.data-navbarbg]="options.navbarbg"
+        style="background: white"
+      >
+        <ngx-spinner
+          bdColor="rgba(0,0,0,0)"
+          size="medium"
+          color="#545454"
+          [type]="spinnerType"
+          [fullScreen]="false"
+        ></ngx-spinner>
+        <!-- Horizontal Header -->
+        <div
+          *ngIf="options.layout === 'horizontal'; else vheader"
+          class="w-100"
+        >
+          <app-horizontal-navigation class="w-100 d-flex align-items-center">
+          </app-horizontal-navigation>
+        </div>
+
+        <!-- Vertical Header -->
+        <ng-template #vheader>
+          <div class="w-100">
+            <app-vertical-navigation
+              (toggleSidebar)="toggleSidebarType()"
+              settings="VerticalNavigationComponentSettings"
+            >
+            </app-vertical-navigation>
+          </div>
+        </ng-template>
+      </div>
+    </nav>
+  </header>
+  <!-- ============================================================== -->
+  <!-- Left Sidebar - style you can find in sidebar.scss  -->
+  <!-- ============================================================== -->
+  <aside
+    *ngIf="withSidebar"
+    class="left-sidebar"
+    [attr.data-sidebarbg]="options.sidebarbg"
+    [attr.data-sidebartype]="options.sidebartype"
+    (mouseover)="Logo()"
+    (mouseout)="Logo()"
+  >
+    <!-- Sidebar scroll-->
+    <div *ngIf="options.layout === 'horizontal'; else vlayout">
+      <app-horizontal-sidebar></app-horizontal-sidebar>
+    </div>
+
+    <!-- Horizontal Header -->
+    <ng-template #vlayout>
+      <div class="scroll-sidebar" [perfectScrollbar]="config">
+        <app-vertical-sidebar
+          [showClass]="showMobileMenu"
+          (notify)="handleClick($event)"
+        >
+        </app-vertical-sidebar>
+      </div>
+    </ng-template>
+    <!-- End Sidebar scroll-->
+  </aside>
+  <router-outlet></router-outlet>
+</div>

@@ -1,0 +1,22 @@
+<div class="page-wrapper">
+  <div class="header-wrapper d-flex justify-content-between mr-4">
+    <h4>{{report?.name}}</h4>
+
+    <div class="action-panel">
+      <button class="btn btn-white" (click)="handlePrintClick()">
+        <span class="icon-download"></span>
+        Download
+      </button>
+    </div>
+  </div>
+
+  <div class="container-fluid request-container">
+    <div class="overflow-hidden">
+      <div class="card" style="height:100%">
+        <cider-tableau reportUrl="{{report.reportUrl}}" *ngIf="report">
+        </cider-tableau>
+      </div>
+    </div>
+  </div>
+</div>
+

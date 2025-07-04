@@ -1,0 +1,44 @@
+.actions-renderer {
+    display: flex;
+    
+    .action-button {
+        border: 1px solid #EAECEF;
+        border-radius: 6px;
+        background-color: #FFFFFF;
+        padding: 8px 10px;
+        //color: #54667A;
+        font-size: 14px;
+        letter-spacing: 0;
+        line-height: 16px;
+        //font-family: "HelveticaBold";
+        height: 39px;
+
+        &:hover {
+            background-color: #EAECEF;
+        }
+
+        &.green {
+            background-color: #34C759;
+            color: #fff;
+        }
+        
+        &.red {
+            background-color: #FF2D55;
+            color: #fff;
+        }
+        
+        &.blue {
+            background-color: #145196;
+            color: #fff;
+        }
+        
+        &.white {
+            background-color: #fff;
+            color: #000;
+        }
+    }
+}
+
+.modal-content {
+    border-radius: 4px;
+}

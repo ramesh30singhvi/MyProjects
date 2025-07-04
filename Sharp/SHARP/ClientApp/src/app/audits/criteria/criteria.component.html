@@ -1,0 +1,187 @@
+<div class="criteria-wrapper">
+  <div class="sub-headers-wrapper">
+    <app-dynamic-form-control [fields]="subHeaders" [form]="subHeaderForm"></app-dynamic-form-control>
+  </div>
+
+  <div class="question-wrapper">
+    <div class="col-9 bg-white form">
+      <h4 class="name">{{audit?.form.name}}</h4>
+      <div class="header">
+        <div class="number">  
+          #
+        </div>
+        <div class="question">
+          Question
+        </div>
+        <div class="answer">
+          Answer
+        </div>
+        <div class="comment">
+          Comments
+        </div>
+        <div class="action">
+        </div>
+      </div>
+      <div class="body">
+        <ng-container *ngFor="let group of questionGroups">
+          <div class="group-header" *ngIf="group.name">{{group.name}}</div>
+          
+          <ng-contaner *ngFor="let question of group.questions; index as i">
+            <div class="row">
+              <div class="number">
+                {{i + 1}}
+              </div>
+              <div class="question">
+                {{question.value}}
+              </div>
+              <div class="answer">
+                <div class="btn-group btn-group-toggle" ngbRadioGroup [(ngModel)]="question.answer.value" [disabled]="!audit.id || !isEditable">
+                  <label ngbButtonLabel [ngClass]="getAnswerClass(question, 'no')">
+                    <input ngbButton type="radio" value="no" (change)="onAnswerValueChanged(question)">
+                    No
+                  </label>
+                  <label ngbButtonLabel [ngClass]="getAnswerClass(question, 'yes')">
+                    <input ngbButton type="radio" value="yes" (change)="onAnswerValueChanged(question)">
+                    Yes
+                  </label>
+                  <label ngbButtonLabel *ngIf="question.criteriaOption?.showNA" [ngClass]="getAnswerClass(question, 'na')">
+                    <input ngbButton type="radio" value="na" (change)="onAnswerValueChanged(question)">
+                    N/A
+                  </label>
+                </div>
+              </div>
+              <div class="comment">
+                  <div class="editor">
+                    <ngx-editor-menu 
+                      class="editor-menu" 
+                      [editor]="getQuestionEditor(question.id)" 
+                      [toolbar]="toolbar"                      
+                      [disabled]="!audit.id || !isEditable"
+                      [colorPresets]="colorPresets">
+                    </ngx-editor-menu>
+                    <ngx-editor 
+                      [editor]="getQuestionEditor(question.id)" 
+                      [outputFormat]="'html'"
+                      [ngModel]="question.answer.auditorComment" 
+                      (ngModelChange)="onAnswerCommentChanged($event, question.answer)"
+                      (focusout)="onAnswerCommentFocusout($event, question)"
+                      [placeholder]="'Type here...'" 
+                      [disabled]="!audit.id || !isEditable">
+                    </ngx-editor>
+                  </div>
+              </div>
+              <div class="action">
+                <button class="btn btn-delete" (click)="onClear(question)" [disabled]="!audit.id || !isEditable">
+                  <i class="icon icon-delete"></i>
+                </button>
+              </div>
+            </div>
+  
+            <div class="row" *ngFor="let subQuestion of question.subQuestions; index as j">
+              <div class="number">
+                <span class="icon child-level">
+                  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 512 512">
+                    <g transform="rotate(90 256 256)">
+                      <path fill="currentColor" d="M80 384v32h216V78.627l84.687 84.687l22.626-22.628L280 17.373L156.687 140.686l22.626 22.628L264 78.627V384H80z"/></g>
+                  </svg>
+                </span>
+                {{i + 1}}.{{j + 1}}
+              </div>
+              <div class="question">
+                {{subQuestion.value}}
+              </div>
+              <div class="answer">
+                <div class="btn-group btn-group-toggle" ngbRadioGroup [(ngModel)]="subQuestion.answer.value" [disabled]="!audit.id || !isEditable || question.answer?.value !== 'yes'">
+                  <label ngbButtonLabel [ngClass]="getAnswerClass(subQuestion, 'no')">
+                    <input ngbButton 
+                      type="radio" 
+                      value="no" 
+                      (change)="onAnswerValueChanged(subQuestion)" 
+                      [disabled]="!audit.id || !isEditable || question.answer?.value !== 'yes'">
+                    No
+                  </label>
+                  <label ngbButtonLabel [ngClass]="getAnswerClass(subQuestion, 'yes')">
+                    <input ngbButton 
+                      type="radio" 
+                      value="yes" 
+                      (change)="onAnswerValueChanged(subQuestion)"
+                      [disabled]="!audit.id || !isEditable || question.answer?.value !== 'yes'">
+                    Yes
+                  </label>
+                  <label ngbButtonLabel *ngIf="subQuestion.criteriaOption?.showNA" [ngClass]="getAnswerClass(subQuestion, 'na')">
+                    <input ngbButton
+                      type="radio" 
+                      value="na" 
+                      (change)="onAnswerValueChanged(subQuestion)"
+                      [disabled]="!audit.id || !isEditable || question.answer?.value !== 'yes'">
+                    N/A
+                  </label>
+                </div>
+              </div>
+              <div class="comment">
+                  <div class="editor">
+                    <ngx-editor-menu 
+                      class="editor-menu" 
+                      [editor]="getQuestionEditor(subQuestion.id)" 
+                      [toolbar]="toolbar"
+                      [colorPresets]="colorPresets"
+                      [disabled]="!audit.id || !isEditable || question.answer?.value !== 'yes'">
+                    </ngx-editor-menu>
+                    <ngx-editor 
+                      [editor]="getQuestionEditor(subQuestion.id)" 
+                      [outputFormat]="'html'"
+                      [ngModel]="subQuestion.answer.auditorComment"
+                      (ngModelChange)="onAnswerCommentChanged($event, subQuestion.answer)"
+                      [placeholder]="'Type here...'" 
+                      [disabled]="!audit.id || !isEditable || question.answer?.value !== 'yes'">
+                    </ngx-editor>
+                  </div>
+              </div>
+              <div class="action">
+                <button class="btn btn-delete" (click)="onClear(subQuestion)" [disabled]="!audit.id || !isEditable || question.answer?.value !== 'yes'">
+                  <i class="icon icon-delete"></i>
+                </button>
+              </div>
+            </div>
+          </ng-contaner>
+  
+        </ng-container>
+      </div>
+    </div>
+  
+    <div class="col-3 pl-4">
+      <div class="bg-white compliance">
+        <h4>Calculations</h4>
+        <div class="container pl-3">
+          <div class="row section">
+            <div class="col-11 section-name">Total Questions</div>
+            <div class="col-1 section-value">{{totalQuestionCount}}</div>
+          </div>
+          <div class="row section" *ngIf="audit?.form.disableCompliance==0">
+            <div class="col-11 section-name">Compliance Questions</div>
+            <div class="col-1 section-value">{{complianceQuestionCount}}</div>
+          </div>
+          <div class="row section">
+            <div class="col-11 section-name">Yes</div>
+            <div class="col-1 section-value">{{audit?.totalYES ?? 0}}</div>
+          </div>
+          <div class="row section">
+            <div class="col-11 section-name">No</div>
+            <div class="col-1 section-value">{{audit?.totalNO ?? 0}}</div>
+          </div>
+          <div class="row section">
+            <div class="col-11 section-name">N/A</div>
+            <div class="col-1 section-value">{{audit?.totalNA ?? 0}}</div>
+          </div>
+          <div class="total-compliance"  *ngIf="audit?.form.disableCompliance==0">
+            <div class="row p-3">
+              <div class="col-10 compliance-label">Total compliance</div>
+              <div class="col-2 compliance-value">{{audit?.totalCompliance ?? 0 | number: '1.0-0'}}%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+</div>

@@ -1,0 +1,19 @@
+<app-audit-status-buttons
+  [auditId]="auditId"
+  [auditUserId]="auditUserId"
+  [currentStatus]="status"
+  [auditTypeName]="auditType"
+  (onStatusChanged)="handleSetAuditStatusSuccess()"
+  [disabled]="!isReadyForNextStatus">
+</app-audit-status-buttons>
+
+<div *ngIf="status === 6 && haveRightToViewPdf">
+  <button class="btn btn-white" (click)="onDownloadPdfClick()" *ngIf="reportTypeId == 1">
+    <span class="icon-download"></span>
+    Download PDF
+  </button>
+  <button class="btn btn-white" (click)="onDownloadExcelClick()" *ngIf="reportTypeId == 2">
+    <span class="icon-download"></span>
+    Download Excel
+  </button>
+</div>

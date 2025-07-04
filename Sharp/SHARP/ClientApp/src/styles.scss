@@ -1,0 +1,17 @@
+/* You can add global styles to this file, and also import other style files */
+
+@import url('https://fonts.googleapis.com/css?family=Nunito+Sans:300,400,600,700,800');
+@import "ag-grid-community/dist/styles/ag-grid.css";
+@import "ag-grid-community/dist/styles/ag-theme-alpine.css";
+
+@import "~@ng-select/ng-select/themes/default.theme.css";
+
+@import "../node_modules/ngx-spinner/animations/ball-elastic-dots.css";
+@import "../node_modules/ngx-spinner/animations/ball-pulse.css";
+
+@import '~ngx-toastr/toastr';
+
+@import '~bootstrap/scss/functions';
+@import '~bootstrap/scss/variables';
+@import '~bootstrap/scss/mixins';
+@import '~ngx-toastr/toastr-bs4-alert';

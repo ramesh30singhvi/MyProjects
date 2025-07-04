@@ -1,0 +1,26 @@
+<div class="mds-wrapper">
+  <div class="col-12 bg-white form">
+    <div *ngFor="let sectionForm of sectionForms">
+      <div class="header">
+        <h4>{{ sectionForm.name }}</h4>
+      </div>
+
+      <div class="body">
+        <div *ngFor="let groupForm of sectionForm.groups" class="col-12">
+          <div class="group-header">
+            <strong>{{ groupForm.name }}</strong>
+          </div>
+
+          <div class="row">
+            <app-dynamic-form-control
+              class="w-100"
+              [columns]="2"
+              [fields]="groupForm.questions"
+              [form]="groupForm.form"
+            ></app-dynamic-form-control>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

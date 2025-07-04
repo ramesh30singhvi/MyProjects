@@ -1,0 +1,23 @@
+<div ngbDropdown
+  container="body"
+  [ngClass]="'btn-group ml-2'">
+  <button class="btn btn-outline-primary btn-sm three-dots-btn" ngbDropdownToggle>
+    <i class="fas fa-ellipsis-v"></i>
+  </button>
+  <div ngbDropdownMenu class="dropdown-menu three-dots-menu" style="width: 100px;">
+    <button ngbDropdownItem
+            class="btn dropdown-item three-dots-item"
+            style="align-items: center;"
+            (click)="onEditFacilityClick(facilityId); $event.stopPropagation();">
+      <i class="fas ti-pencil three-dots-icon"></i>
+      <span>Edit</span>
+    </button>
+    <button ngbDropdownItem
+            class="btn dropdown-item three-dots-item"
+            style="align-items: center;"
+            (click)="onAddEmailRecieptFacilityClick(facilityId); $event.stopPropagation();">
+      <i class="fas ti-pencil three-dots-icon"></i>
+      <span>Add Emails</span>
+    </button>
+  </div>
+</div>

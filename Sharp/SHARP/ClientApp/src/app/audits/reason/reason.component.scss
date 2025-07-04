@@ -1,0 +1,45 @@
+.status-wrapper {
+    display: flex;
+    width: 220px;
+
+    .reason-dropdown {
+        margin-left: auto;
+
+        .reason-button {
+            border: solid 1px #EAECEF;
+            border-radius: 4px;
+            width: 39px;
+            height: 39px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #F5F5F5;
+            cursor: pointer;
+        
+            .icon-info {
+                font-size: 20px;
+            }
+        }
+
+        .reason-wrapper {
+            padding: 0;
+            width: 280px;
+            border-radius: 10px;
+
+            .reason-header {
+                display: flex;
+                align-items: center;
+                height: 60px;
+                padding: 20px;
+                border-bottom: solid 1px #E8EEF2;
+            }
+
+            .reason-info {
+                padding: 14px;
+                min-height: 60px;
+                word-break: break-all;
+                white-space: normal;
+            }
+        }
+    }
+}

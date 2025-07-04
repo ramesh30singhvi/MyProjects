@@ -1,0 +1,102 @@
+<div class="page-wrapper portal-report-wrapper">
+  <div class="header-wrapper d-flex justify-content-between mr-4">
+    <h4>Portal Report test Page</h4>
+  </div>
+  <div class="d-flex ml-3">
+    <button class="btn create-btn-report" (click)="migrateAuditToReport()">
+      Migrate Audit To Report
+    </button>
+    <button class="btn create-btn-report" (click)="sendReportsByEmail()">
+      Send Report to email
+    </button>
+    <button class="btn create-btn-report" (click)="downloadReport()">
+      Download Report
+    </button>
+    <button class="btn create-btn-report" (click)="exportFacilityRecipients()">
+      Export Facility Recipients
+    </button>
+    <button class="btn create-btn-report" (click)="deleteReport()">
+     Delete Report
+    </button>
+    <div>
+      <input #passElement type="text" style="width: 100px;" />
+      <button class="btn create-btn-report" (click)="getReportsByPass()">
+        Get Reports
+      </button>
+    </div>
+
+  </div>
+
+
+  <div class="container-fluid homepage-conteiner" style="height: 100%;">
+
+    <div class="row" style="height:100%">
+      <div class="col-12" style="height:100%">
+        <div class="home-row" style="height:100%">
+
+          <div class="card" style="height:100%">
+            <div class="card-body" style="height:100%; width: 100%;">
+
+
+              <ag-grid-angular #agGrid
+                               style="width: 100%; height: calc(100vh - 220px);"
+                               id="portaReportGrid"
+                               class="ag-theme-alpine"
+                               [rowHeight]="70"
+                               [groupHeaderHeight]="75"
+                               [columnDefs]="columnDefs"
+                               [suppressRowClickSelection]="false"
+                               [rowMultiSelectWithClick]="true"
+                               [rowModelType]="rowModelType"
+                               [serverSideStoreType]="serverSideStoreType"
+                               [getContextMenuItems]="getContextMenuItems"
+                               [rowBuffer]="rowBuffer"
+                               [cacheOverflowSize]="cacheOverflowSize"
+                               [cacheBlockSize]="cacheBlockSize"
+                               [maxConcurrentDatasourceRequests]="maxConcurrentDatasourceRequests"
+                               [infiniteInitialRowCount]="infiniteInitialRowCount"
+                               [maxBlocksInCache]="maxBlocksInCache"
+                               [getRowNodeId]="getRowNodeId"
+                               [components]="components"
+                               [rowData]="rowData"
+                               rowSelection="multiple"
+                               [floatingFilter]="false"
+                               [frameworkComponents]="frameworkComponents"
+                               (gridReady)="onGridReady($event)"
+                               (firstDataRendered)="onFirstDataRendered($event)"
+                               [rowClassRules]="rowClassRules"
+                               [defaultColDef]="defaultColDef"
+                        
+                     
+                         
+                               (rowDoubleClicked)="onRowClicked($event)"></ag-grid-angular>
+
+              <!--<ag-grid-angular #agGrid
+                               style="width: 100%; height: calc(100vh - 220px);"
+                               id="portaReportGrid"
+                               class="ag-theme-alpine"
+                               [rowHeight]="70"
+                               [groupHeaderHeight]="75"
+                               [columnDefs]="columnDefs"
+                               [defaultColDef]="defaultColDef"
+                               [suppressRowClickSelection]="true"
+                               [groupSelectsChildren]="true"
+                               [rowSelection]="rowSelection"
+                               [pivotPanelShow]="pivotPanelShow"
+                               [paginationAutoPageSize]="true"
+                               [pagination]="true"
+                               [rowData]="rowData"
+                               rowSelection="multiple"
+                               [frameworkComponents]="frameworkComponents"
+                               (gridReady)="onGridReady($event)"
+                               (firstDataRendered)="onFirstDataRendered($event)"
+                               [rowClassRules]="rowClassRules"
+                               (rowDoubleClicked)="onRowClicked($event)"></ag-grid-angular>-->
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

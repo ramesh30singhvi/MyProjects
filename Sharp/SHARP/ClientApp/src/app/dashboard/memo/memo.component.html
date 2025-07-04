@@ -1,0 +1,36 @@
+<div class="memo-wrapper">
+
+    <div class="memo-header">
+        <span class="memo-title" id="memo-title">Memos</span>
+        <div class="btn-wrapper">
+            <button type="button" class="icon-btn btn-outline-secondary btn-refresh" (click)="onRefreshMemoClick()">
+                <i class="icon-loop2"></i>
+            </button>
+            <button type="button" class="btn-add btn-outline-blue" *ngIf="canAddMemo" (click)="onAddMemoClick()">
+                <i class="icon-plus"></i>
+            </button>
+        </div>        
+    </div>
+
+    <div class="memo-body custom-scroll">
+        <div class="memo-card" *ngFor="let memo of memos;">
+            <div class="memo-left">
+                <div class="memo-creator-initials">{{getUserInitials(memo?.user)}}</div>
+                <div class="memo-actions">
+                    <button type="button" class="btn-edit" *ngIf="canEditMemo(memo)" (click)="onEditMemoClick(memo)">
+                        <i class="icon-pencil"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="memo-right">
+                <div class="memo-creator">
+                    <div class="memo-creator-full-name">{{memo?.user.fullName}}</div>
+                    <div class="memo-created-date">{{formatCreatedDate(memo?.createdDate)}}</div>
+                </div>
+                <div class="memo-organizations">{{getOrganizationsString(memo?.organizations)}}</div>
+                <div class="memo-text">{{memo?.text}}</div>
+            </div>
+        </div>
+    </div>
+
+</div>

@@ -1,0 +1,133 @@
+<div class="auth-wrapper d-flex no-block justify-content-center align-items-center">
+      <div class="auth-box">
+        <div id="loginform" [ngClass]="{'d-none': recoverform || secureCodeForm}">
+          <div class="logo">
+            <span class="db"><img src="assets/images/logo-icon-full.png" alt="logo" class="logo-login dark-logo" /></span>
+            <h5 class="font-medium m-b-20 login-text">Log In</h5>
+          </div>
+          <div *ngIf="msg" class="alert alert-danger alert-danger-message">{{ msg}}</div>
+          <div class="row">
+            <div class="col-12">
+              <form class="form-horizontal m-t-20" id="loginform">
+                <div class="floating-input mb-3 username">
+                  <input id="username" type="text" class="input form-control form-control-lg" placeholder=" " aria-label="Username" (keyup)="onUserPasswordChange()"
+                         aria-describedby="basic-addon1" #u1 (keyup.enter)="login(u1.value, p2.value)">
+                  <label for="username" class="placeholder">Username</label>
+                </div>
+                <div class="floating-input mb-3 password">
+                  <input type="password" class="input form-control form-control-lg" placeholder=" " aria-label="Password" (keyup)="onUserPasswordChange()"
+                         aria-describedby="basic-addon1" #p2 (keyup.enter)="login(u1.value, p2.value)">
+                  <label for="username" class="placeholder">Password</label>
+                  <span class="input-group-text icon-password" id="basic-addon2" (click)="togglePassword()"><i #passwordToggler class="fas fa-eye"></i></span>
+                </div>
+                <div class="form-group row forgot-login">
+                  <div class="col-md-12">
+                      <a (click)="showRecoverForm()" href="javascript:void(0)" id="to-recover" class="forgot-password float-right disabled">
+                        Forgot Password?
+                      </a>
+                  </div>
+                </div>
+                <div class="form-group text-center">
+                  <div class="col-xs-12 p-b-20">                   
+                    <button class="btn btn-block btn-lg btn-info btn-login shadow-none" style="position: relative; z-index: 1;" type="button" (click)="login(u1.value, p2.value)">
+                      Log In
+                      <ngx-spinner bdColor="rgba(20,81,150,1)" size="medium" color="#fff" type="ball-elastic-dots" [fullScreen]="false"></ngx-spinner>
+                    </button>
+                  </div>
+                </div>
+                <div class="form-group m-b-0 m-t-10">
+                  <div class="col-sm-12 text-center form-text-small">
+                    Don't have an account? <a href="mailto:admin@admin.com" class="text-info m-l-5">
+                      <b>
+                        Contact administration
+                      </b>
+                    </a>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+        <div id="recoverform" [ngClass]="{'d-block': recoverform}">
+          <div class="logo">
+            <span class="db"><img class="logo-login" src="assets/images/logo-icon-full.png" alt="logo" /></span>
+            <h5 class="font-medium m-b-20  login-text">Forgot Password</h5>
+          </div>
+          <div class="row m-t-20">
+            <!-- Form -->
+            <form class="col-12">
+              <!-- email -->
+              <div class="form-group row forgot-login">
+                <div class="col-12 username">
+                  <div class="floating-input mb-3 username">
+                    <input id="email" type="email" class="input form-control form-control-lg" placeholder=" " aria-label="Username" (keyup)="onUserPasswordChange()"
+                           aria-describedby="basic-addon1" #u1 (keyup.enter)="login(u1.value, p2.value)">
+                    <label for="email" class="placeholder">Username</label>
+                  </div>
+                 <a href="javascript:void(0)" class="float-right">
+                    Forgot Password?
+                  </a>
+                </div>
+
+              </div>
+              <!-- pwd -->
+              <div class="row m-t-20">
+                <div class="col-12">
+                  <button class="btn btn-block btn-lg btn-login" type="submit" name="action">Reset Password</button>
+                  <a href="javascript:void(0);" (click)="showLoginForm()" class="btn btn-block btn-lg btn-white-bg" type="submit" name="action">Back to Login</a>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div id="securecodeform" [ngClass]="{'d-block': secureCodeForm}">
+          <div class="logo">
+            <span class="db"><img class="logo-login" src="assets/images/logo-icon-full.png" alt="logo" /></span>
+            <h5 class="font-medium m-b-20  login-text">Login</h5>
+          </div>
+          <div class="otp-message" [ngClass]="{'d-none': !secureCodeFormMessage}">
+            An email was sent to your inbox with a one
+            time password. It will expire in 5 minutes.
+          </div>
+          <div *ngIf="msg" class="alert alert-danger">{{ msg }}</div>
+          <div class="row m-t-20">
+            <form class="col-12">
+              <div class="form-group row">
+                <div class="otp-code">
+                  <div class="otp-label">OTP Code</div>
+                  <input
+                    #sc
+                    required=""
+                    placeholder="******"
+                    (keyup.enter)="enterSecureCodeSubmit(sc.value)"
+                    (keyup)="onSecureCodeChange()"
+                    class="form-control border-0 p-0 otp-input"
+                    [value]="code">                    
+                </div>
+              </div>
+              <div class="row m-t-30">
+                <div class="col-12">
+                  <button
+                    class="btn btn-block btn-lg btn-login"
+                    style="position: relative; z-index: 1;"
+                    type="submit"
+                    name="action"
+                    (click)="enterSecureCodeSubmit(sc.value)">
+                    Login
+                    <ngx-spinner bdColor="rgba(20,81,150,1)" size="medium" color="#fff" [type]="spinnerType" [fullScreen]="false"></ngx-spinner>
+                  </button>
+                  <a
+                    href="javascript:void(0);"
+                    (click)="showLoginForm()"
+                    class="btn btn-block btn-lg btn-white-bg"
+                    type="submit"
+                    name="action">
+                    Back to Login
+                  </a>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+</div>

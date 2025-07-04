@@ -1,0 +1,10 @@
+<span
+  class="user-status"
+  [style.color]="status?.color"
+  [style.backgroundColor]="status?.backgroundColor"
+  >{{ status?.label }}</span
+>
+<button class="user-view" (click)="onUserViewClick(userId)">View</button>
+<button class="user-productivity" (click)="onProductivityClicked(userId)">
+  Productivity
+</button>

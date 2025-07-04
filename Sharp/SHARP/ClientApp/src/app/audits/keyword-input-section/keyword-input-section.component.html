@@ -1,0 +1,230 @@
+<form
+  class="input-keyword-section"
+  [formGroup]="keywordForm"
+  novalidate
+  (ngSubmit)="submit()"
+>
+  <div class="d-flex justify-content-between action-buttons">
+    <div class="left-buttons">
+      <div class="d-flex">
+        <div class="select-wrapper m-2">
+          <ng-select
+            #keyword
+            [items]="keywords"
+            bindLabel="name"
+            [(ngModel)]="selectedKeyword"
+            [ngModelOptions]="{ standalone: true }"
+            [clearable]="false"
+            (ngModelChange)="onKeywordChanged($event)"
+            [disabled]="!auditId"
+          >
+          </ng-select>
+        </div>
+      </div>
+      <button
+        class="btn btn-gray-outline btn-right-arrow m-2"
+        type="button"
+        (click)="onPrevKeywordClick()"
+        [disabled]="!auditId"
+      >
+        <span class="icon-go-back"></span>
+      </button>
+      <button
+        class="btn btn-gray-outline btn-right-arrow m-2"
+        type="button"
+        (click)="onNextKeywordClick()"
+        [disabled]="!auditId"
+      >
+        <span class="icon-go-next"></span>
+      </button>
+    </div>
+    <button class="btn btn-white" (click)="clearClick()">Clear</button>
+    <button
+      class="btn add-keyword-btn"
+      [disabled]="!auditId || keywordForm.invalid || !isEditable"
+    >
+      {{ submitButtonTitle }}
+    </button>
+  </div>
+
+  <div class="col-12 form-fields p-20">
+    <div class="form-group floating-input mb-3 password">
+      <input id="customKeyword"
+             formControlName="customKeyword"
+             type="text"
+             class="input form-control form-control-lg"
+             placeholder=" "
+             autocomplete="off" />
+      <label for="customKeyword" class="placeholder">Custom Keyword*</label>
+    </div>
+    <div class="form-group floating-input mb-3 password">
+      <input id="resident"
+             formControlName="resident"
+             type="text"  (ngModelChange)="onChangeResident($event)"
+             class="input form-control form-control-lg"
+             placeholder=" "
+             autocomplete="off" />
+      <label for="resident" class="placeholder">Resident</label>
+      <div class="error"
+           *ngIf="
+          keywordForm.controls['resident'].invalid &&
+          keywordForm.controls['resident'].touched
+        ">
+        'Resident' must not be empty.
+      </div>
+    </div>
+    <div>
+      <input type="checkbox"  [disabled]="keywordForm?.disabled" [(ngModel)]="auditUseHighAlert" (change)="onHighAlertChanged($event)" [ngModelOptions]="{ standalone: true }" />
+      <span style="margin-left:5px">
+        <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
+        High Alert
+      </span>
+    </div>
+    <div class="date-time-wrapper">
+      <div class="form-group mb-3 date">
+        <div class="floating-input date-field">
+          <input class="form-control input form-control-lg"
+                 placeholder="MM.DD.YYYY"
+                 name="datepicker"
+                 formControlName="date"
+                 ngbDatepicker
+                 #datepicker="ngbDatepicker"
+                 autocomplete="off"
+                 [minDate]="minDate"
+                 [maxDate]="maxDate"
+                 firstDayOfWeek="7" />
+          <label for="datepicker" class="placeholder">Date</label>
+          <button class="btn btn-datepicker-icon calendar"
+                  (click)="datepicker.toggle()"
+                  type="button"
+                  [disabled]="
+              keywordForm.disabled || keywordForm.controls['date'].disabled
+            ">
+            <i class="fa icon-calendar"></i>
+          </button>
+        </div>
+
+        <div class="error"
+             *ngIf="
+            keywordForm.controls['date'].invalid &&
+            keywordForm.controls['date'].touched
+          ">
+          'Date' must not be empty.
+        </div>
+      </div>
+
+      <div class="form-group mb-3 time">
+        <div class="time-wrapper">
+          <ngb-timepicker formControlName="time"></ngb-timepicker>
+          <div class="d-flex align-items-center clear-time"
+               role="button" 
+               *ngIf="keywordForm.controls['time'].value"
+               (click)="keywordForm.controls['time'].setValue(null)">
+            <span class="icon icon-close"></span>
+          </div>
+          <label for="time" class="placeholder">Time</label>
+          <div class="error"
+               *ngIf="
+              keywordForm.controls['time'].invalid &&
+              keywordForm.controls['time'].touched
+            ">
+            'Time' must not be empty.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="floating-area">
+      <div class="header"></div>
+      <textarea id="description"
+                formControlName="description"
+                class="input form-control"
+                placeholder=" ">
+      </textarea>
+      <label for="description" class="placeholder">Description</label>
+      <div class="error"
+           *ngIf="
+          keywordForm.controls['description'].invalid &&
+          keywordForm.controls['description'].touched
+        ">
+        'Description' must not be empty.
+      </div>
+    </div>
+    <div *ngIf="auditUseHighAlert" class="highAlertSection">
+      <hr />
+      <div class="field form-wrapper">
+        <div class="form-group">
+          <label for="highAlertCategory"><i class="icon icon-svg"></i>High Alert Category</label>
+
+          <ng-select #highAlertCategories
+                     [items]="highAlertCategories$ | async"
+                     bindLabel="name" formControlName="highAlertCategory"
+                     (change)="onHighAlertCategroryChanged($event)"
+                     [disabled]="audit?.id || !auditUseHighAlert || !isEditable">
+          </ng-select>
+
+          <div class="error" *ngIf="errors && errors['HighAlertCategory']">
+            <span>
+              Please select the category
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field form-wrapper">
+        <div class="form-group">
+          <label for="highAlertDescription"><i class="icon icon-svg"></i>High Alert Description</label>
+          <textarea id="highAlertDescription"
+                    formControlName="highAlertDescription"
+                    (ngModelChange)="onChangeDescription($event)"
+                    class="input form-control"
+                    placeholder=" ">
+        </textarea>
+          <div class="error" *ngIf="errors && errors['HighAlertDescription']">
+            <span>
+              Please enter the description
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field form-wrapper">
+        <div class="form-group">
+          <label for="highAlertNotes">High Alert Notes</label>
+          <textarea id="highAlertNotes"
+                    formControlName="highAlertNotes"
+                    class="input form-control"
+                    placeholder=" ">
+          </textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+<div class="list-keywords p-lr-20">
+  <div
+    class="keywords-item"
+    [class.active]="selectedAuditKeyword?.id === auditKeyword.id"
+    *ngFor="let auditKeyword of matchedKeywords"
+  >
+    <div
+      class="list-keywords-content"
+      (click)="onAuditKeywordClick(auditKeyword)"
+    >
+      <div class="list-keywords-title">
+        {{ auditKeyword?.resident }} - ({{ auditKeyword?.keyword?.name }})
+      </div>
+      <div class="list-keywords-subtitle">
+        {{ auditKeyword?.description }}
+      </div>
+    </div>
+    <div
+      class="list-keywords-remove"
+      *ngIf="isEditable"
+      (click)="onKeywordDeleteClick(auditKeyword.id)"
+    >
+      <span class="icon-delete"></span>
+    </div>
+  </div>
+</div>

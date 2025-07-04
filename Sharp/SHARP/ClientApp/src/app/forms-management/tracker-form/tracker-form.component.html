@@ -1,0 +1,112 @@
+<div class="tracker-wrapper">
+
+    <div class="col-12 bg-white table">
+      <div class="section-header">
+        <h4>Questions</h4>
+        <button class="btn add-tracker-btn" [disabled]="formVersion?.status !== formStatuses.Draft.id" (click)="onAddQuestionClick()">
+          Add Question
+        </button>
+      </div>
+      <div class="data-wrapper">
+        <div class="header-row header">
+          <div class="col col-drag-icon">
+          </div>
+          <div class="col">
+            #
+          </div>
+          <div class="col-3">
+            Question
+          </div>
+          <div class="col-2">
+            Type
+          </div>
+          <div class="col-2">
+            Values
+          </div>
+          <div class="col-1 tracker-option">
+            Compliance
+          </div>
+          <div class="col-1 tracker-option">
+            Quality
+          </div>
+          <div class="col-1 tracker-option">
+            Priority
+          </div>
+          <div class="col-1">
+          </div>
+        </div>
+        <div class="body">
+                      
+        <div class="dragula-container" [dragula]="QUESTIONS" [(dragulaModel)]="questions">
+            
+            <div class="questions-wrapper" *ngFor="let question of questions; index as i">
+            <div class="question-row">
+                <div class="col col-drag-icon" [class.question-handle]="!isFormDisabled">
+                <i class="icon icon-drag" [class.question-handle]="!isFormDisabled">
+                    <svg xmlns="http://www.w3.org/2000/svg" [class.question-handle]="!isFormDisabled" aria-hidden="true" role="img" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24">
+                    <path 
+                        fill="currentColor" 
+                        d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2s.9-2 2-2s2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2s-2 .9-2 2s.9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2z"/>
+                    </svg>
+                </i>
+                </div>
+                <div class="col number" [class.question-handle]="!isFormDisabled">
+                {{i+1}}
+                </div>
+                <div class="col-3" [class.question-handle]="!isFormDisabled">
+                {{question?.question}}
+                </div>
+                <div class="col-2"  [class.question-handle]="!isFormDisabled">
+                {{question?.trackerOption?.fieldType?.name}}
+                </div>
+                <div class="col-2 field-items" [class.question-handle]="!isFormDisabled">
+                    <span class="field-item" *ngFor="let item of question?.trackerOption?.items">
+                        {{item.value}}
+                    </span>
+                </div>
+                <div class="col-1 tracker-option" [class.question-handle]="!isFormDisabled">
+                <i class="icon-checkbox-checked" *ngIf="question?.trackerOption?.compliance"></i>
+                </div>
+                <div class="col-1 tracker-option" [class.question-handle]="!isFormDisabled">
+                <i class="icon-checkbox-checked" *ngIf="question?.trackerOption?.quality"></i>
+                </div>
+                <div class="col-1 tracker-option" [class.question-handle]="!isFormDisabled">
+                <i class="icon-checkbox-checked" *ngIf="question?.trackerOption?.priority"></i>
+                </div>
+                <div class="col-1 actions">
+
+                <div ngbDropdown *ngIf="formVersion?.status === formStatuses.Draft.id"
+                    container="body" 
+                    [ngClass]="'btn-group ml-2'">
+                    <button class="btn btn-outline-primary btn-sm three-dots-btn" ngbDropdownToggle>
+                    <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <div ngbDropdownMenu class="dropdown-menu three-dots-menu">
+                    <button ngbDropdownItem
+                        class="btn dropdown-item three-dots-item" 
+                        (click)="onEditQuestionClick(question); $event.stopPropagation();" 
+                        [disabled]="formVersion?.status !== formStatuses.Draft.id">
+                        <i class="fas ti-pencil three-dots-icon"></i>
+                        <span>Edit</span>
+                    </button>
+                    <button ngbDropdownItem
+                    class="btn dropdown-item three-dots-item"
+                    (click)="onDeleteQuestionClick(question); $event.stopPropagation();"
+                    [disabled]="formVersion?.status !== formStatuses.Draft.id">
+                        <i class="fas icon-delete three-dots-icon"></i>
+                        <span>Delete</span>
+                    </button>
+                    </div>
+                </div>
+
+                </div>
+            </div>
+
+            </div>
+        </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  

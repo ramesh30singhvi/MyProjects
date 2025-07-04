@@ -1,0 +1,54 @@
+<div ngbDropdown container="body" [ngClass]="'btn-group ml-2'">
+  <button
+    class="btn btn-outline-primary btn-sm three-dots-btn"
+    ngbDropdownToggle
+  >
+    <i class="fas fa-ellipsis-v"></i>
+  </button>
+  <div
+    ngbDropdownMenu
+    class="dropdown-menu three-dots-menu"
+    style="width: 200px"
+  >
+    <button
+      ngbDropdownItem
+      *ngIf="isFormActive"
+      class="btn dropdown-item three-dots-item"
+      style="align-items: center"
+      (click)="onArchiveFormClick(formId); $event.stopPropagation()"
+    >
+      <i class="icon icon-box-add three-dots-icon"></i>
+      <span>Archive</span>
+    </button>
+    <button
+      ngbDropdownItem
+      *ngIf="!isFormActive"
+      class="btn dropdown-item three-dots-item"
+      style="align-items: center"
+      (click)="onUnarchiveFormClick(formId); $event.stopPropagation()"
+    >
+      <i class="icon icon-box-remove three-dots-icon"></i>
+      <span>Unarchive</span>
+    </button>
+    <button
+      ngbDropdownItem
+      *ngIf="isFormActive"
+      class="btn dropdown-item three-dots-item"
+      style="align-items: center"
+      (click)="onEditFormClick(formId); $event.stopPropagation()"
+    >
+      <i class="icon icon-pencil three-dots-icon"></i>
+      <span>Edit Name</span>
+    </button>
+    <button
+      ngbDropdownItem
+      *ngIf="isFormActive && auditType == 'MDS'"
+      class="btn dropdown-item three-dots-item"
+      style="align-items: center"
+      (click)="onDuplicateFormClick(formId); $event.stopPropagation()"
+    >
+      <i class="icon icon-copy three-dots-icon"></i>
+      <span>Duplicate</span>
+    </button>
+  </div>
+</div>

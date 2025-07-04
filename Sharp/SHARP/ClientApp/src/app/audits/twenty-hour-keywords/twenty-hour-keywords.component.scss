@@ -1,0 +1,33 @@
+.twenty-hour-keywords {
+  height: calc(100vh - 230px);
+
+  .keyword-input-section,
+  .progress-notes-section {
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    padding: 0;
+    overflow-x: auto;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+      background: #fff;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 1ex;
+      -webkit-border-radius: 1ex;
+    }
+  }
+
+  .keyword-input-section {
+    min-width: 520px;
+    width: 33%;
+  }
+
+  .progress-notes-section {
+    min-width: 675px;
+    width: 67%;
+  }
+}

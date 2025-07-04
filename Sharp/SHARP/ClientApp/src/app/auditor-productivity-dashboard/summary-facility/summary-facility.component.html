@@ -1,0 +1,106 @@
+
+<div class="summary-facility-wrapper" style="height:100%">
+  <div class="container-fluid" style="height:100%">
+    <div class="row filter-fields">
+
+
+      <div class="field organization-wrapper">
+        <div class="form-group custom-select-box">
+          <label>Organization</label>
+          <ng-select #organizations
+                     [items]="organizations$ | async"
+                     bindLabel="name"
+                     (change)="onOrganizationChanged($event)">
+          </ng-select>
+
+        </div>
+      </div>
+      <div class="grid-config-wrappper columns">
+          <app-grid-columns [gridApi]="gridApi_SummaryFacility" [gridColumnApi]="gridColumnApi_SummaryFacility"></app-grid-columns>
+      </div>
+      <div class="form-inline date-range-picker">
+        <div class="form-group" [ngClass]="{ 'ng-has-value': fromDate_SummaryFacility }">
+          <label class="placeholder">Date Processed</label>
+          &nbsp;&nbsp;
+          <input name="datepicker3"
+                 placeholder=""
+                 class="form-control date-range"
+                 ngbDatepicker
+                 #datepicker3="ngbDatepicker"
+                 [autoClose]="'outside'"
+                 (dateSelect)="onDateSelection_SummaryFacility($event)"
+                 [displayMonths]="3"
+                 [dayTemplate]="t_SummaryFacility"
+                 outsideDays="hidden"
+                 [startDate]="fromDate_SummaryFacility!"
+                 [maxDate]="maxDate_SummaryFacility"
+                 tabindex="-1"
+                 [value]="rangeFormat(fromDate_SummaryFacility, toDate_SummaryFacility)"
+                 (click)="datepicker3.toggle()"
+                 firstDayOfWeek="7"
+                 readonly />
+          <button class="btn btn-datepicker-icon calendar"
+                  (click)="datepicker3.toggle()"
+                  type="button">
+            <i class="fa icon-calendar"></i>
+          </button>
+          <ng-template #t_SummaryFacility let-date let-focused="focused">
+            <span class="custom-day"
+                  [class.focused]="focused"
+                  [class.range]="isRange_SummaryFacility(date)"
+                  [class.faded]="isHovered_SummaryFacility(date) || isInside_SummaryFacility(date)"
+                  (mouseenter)="hoveredDate_SummaryFacility = date"
+                  (mouseleave)="hoveredDate_SummaryFacility = null">
+              {{ date.day }}
+            </span>
+          </ng-template>
+        </div>
+        &nbsp;&nbsp;
+        <button type="button"
+                class="btn btn-default btn-download"
+                style="position: relative; z-index: 1"
+                [disabled]="!fromDate_SummaryFacility || !toDate_SummaryFacility"
+                (click)="onSearchClick_SummaryFacility()">
+          Search
+        </button>
+      </div>
+    </div>
+    <div class="row" style="height:100%">
+      <div class="col-12" style="height:100%">
+        <div class="home-row" style="height:100%">
+          <div class="card" style="height:100%">
+            <div class="card-body" style="height:100%; width: 100%;">
+
+
+
+              <ag-grid-angular #agGridSummaryFacility
+                               style="width: 100%; height:  calc(90vh - 220px);"
+                               id="summaryFacilityGrid"
+                               class="ag-theme-alpine"
+                               [rowHeight]="50"
+                               [columnDefs]="columns_SummaryFacility"
+                               [rowModelType]="rowModelType_SummaryFacility"
+                               [rowBuffer]="rowBuffer_SummaryFacility"
+                               [cacheOverflowSize]="cacheOverflowSize_SummaryFacility"
+                               [maxConcurrentDatasourceRequests]="maxConcurrentDatasourceRequests_SummaryFacility"
+                               [infiniteInitialRowCount]="infiniteInitialRowCount_SummaryFacility"
+                               [maxBlocksInCache]="maxBlocksInCache_SummaryFacility"
+                               [cacheBlockSize]="cacheBlockSize_Summary"
+                               [components]="components"
+                               (gridReady)="onGridReady_SummaryFacility($event)"
+                               [defaultColDef]="defaultColumn_SummaryFacility"
+                              
+                               (columnVisible)="onColumnVisible_SummaryFacility($event)"
+                               (columnMoved)="onColumnMoved_SummaryFacility($event)"
+                               (columnResized)="onColumnResized_SummaryFacility($event)"
+                               (sortChanged)="onSortChanged_SummaryFacility($event)">
+              </ag-grid-angular>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      </div>
+    </div>
+  </div>
+

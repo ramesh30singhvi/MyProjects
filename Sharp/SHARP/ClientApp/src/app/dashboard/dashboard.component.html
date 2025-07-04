@@ -1,0 +1,328 @@
+<div class="page-wrapper dashboard-wrapper">
+  <div class="header-wrapper d-flex justify-content-between mr-4">
+    <h4>Dashboard</h4>
+  </div>
+
+  <div class="body-wrapper custom-scroll">
+    <div class="row filter-fields">
+      <div class="field date-wrapper">
+        <div class="form-group custom-select-box">
+          <label>Time frame</label>
+          <div class="time-frame-wrapper">
+            <ng-select
+              #timeFrame
+              [items]="timeFrames"
+              bindLabel="name"
+              (change)="onTimeFrameChanged($event)"
+              [(ngModel)]="selectedTimeFrame"
+              [clearable]="true"
+              [searchable]="false"
+              placeholder="None"
+            >
+            </ng-select>
+            <input
+              ngbDatepicker
+              #datepicker="ngbDatepicker"
+              name="datepicker"
+              class="form-control date-range"
+              [autoClose]="'outside'"
+              (dateSelect)="onDateSelection($event)"
+              (closed)="onApplyCustomRangeFilter()"
+              [displayMonths]="2"
+              [dayTemplate]="t"
+              firstDayOfWeek="7"
+              outsideDays="hidden"
+              [startDate]="fromDate!"
+              tabindex="-1"
+              [value]="rangeFormat(fromDate, toDate)"
+              readonly
+            />
+            <button
+              class="btn-datepicker-icon calendar"
+              (click)="datepicker.toggle()"
+              type="button"
+              *ngIf="selectedTimeFrame?.id === timeFrameEnum.CustomRange"
+            >
+              <i class="fa icon-calendar"></i>
+            </button>
+            <ng-template #t let-date let-focused="focused">
+              <span
+                class="custom-day"
+                [class.focused]="focused"
+                [class.range]="isRange(date)"
+                [class.faded]="isHovered(date) || isInside(date)"
+                (mouseenter)="hoveredDate = date"
+                (mouseleave)="hoveredDate = null"
+              >
+                {{ date.day }}
+              </span>
+            </ng-template>
+          </div>
+        </div>
+      </div>
+
+      <div class="field organization-wrapper">
+        <div class="form-group custom-select-box">
+          <label>Organization</label>
+          <ng-select
+            #organization
+            [items]="organizations"
+            bindLabel="name"
+            (change)="onOrganizationChanged($event)"
+            [(ngModel)]="selectedOrganizations"
+            [clearable]="true"
+            [multiple]="true"
+            placeholder="All Organizations"
+            [closeOnSelect]="false"
+            [searchable]="false"
+            (open)="onOrganizationDropdownOpened()"
+            class="dashboard-multiple-select"
+          >
+            <ng-template ng-header-tmp>
+              <input
+                style="width: 100%; line-height: 24px; border: none"
+                type="text"
+                placeholder="Search"
+                (input)="organization.filter($event.target.value)"
+              />
+            </ng-template>
+            <ng-template ng-multi-label-tmp let-items="items" let-clear="clear">
+              <div class="ng-value-wrapper">
+                <div class="ng-value" *ngFor="let item of items">
+                  <span
+                    class="ng-value-icon left"
+                    (click)="clear(item)"
+                    aria-hidden="true"
+                    >×</span
+                  >
+                  <span class="ng-value-label">{{ item.name }}</span>
+                </div>
+              </div>
+            </ng-template>
+            <ng-template ng-option-tmp let-item="item">
+              <div class="ng-select-option-label">{{ item.name }}</div>
+            </ng-template>
+          </ng-select>
+        </div>
+      </div>
+
+      <div class="field facility-wrapper">
+        <div class="form-group custom-select-box">
+          <label>Facility</label>
+          <ng-select
+            #facility
+            [items]="facilitiesBuffer"
+            [virtualScroll]="true"
+            [loading]="facilityLoading"
+            bindLabel="name"
+            (change)="onFacilityChanged($event)"
+            appendTo="body"
+            (scrollToEnd)="onFacilityScrollToEnd()"
+            (search)="facilitySearch($event)"
+            (open)="onFacilityDropdownOpened()"
+            [multiple]="true"
+            placeholder="All Facilities"
+            [(ngModel)]="selectedFacilities"
+            [closeOnSelect]="false"
+            [searchable]="false"
+            class="dashboard-multiple-select"
+          >
+            <ng-template ng-header-tmp>
+              <input
+                style="width: 100%; line-height: 24px; border: none"
+                type="text"
+                placeholder="Search"
+                (input)="facility.filter($event.target.value)"
+              />
+            </ng-template>
+            <ng-template ng-multi-label-tmp let-items="items" let-clear="clear">
+              <div class="ng-value-wrapper">
+                <div class="ng-value" *ngFor="let item of items">
+                  <span
+                    class="ng-value-icon left"
+                    (click)="clear(item)"
+                    aria-hidden="true"
+                    >×</span
+                  >
+                  <span class="ng-value-label">{{ item.name }}</span>
+                </div>
+              </div>
+            </ng-template>
+            <ng-template ng-option-tmp let-item="item">
+              <div class="ng-select-option-label">{{ item.name }}</div>
+            </ng-template>
+          </ng-select>
+        </div>
+      </div>
+
+      <div class="field form-wrapper">
+        <div class="form-group custom-select-box">
+          <label>Form</label>
+          <ng-select
+            #form
+            [items]="formsBuffer"
+            [virtualScroll]="true"
+            [loading]="formLoading"
+            bindLabel="name"
+            (change)="onFormChanged($event)"
+            appendTo="body"
+            (scrollToEnd)="onFormScrollToEnd()"
+            (search)="formSearch($event)"
+            (open)="onFormDropdownOpened()"
+            [multiple]="true"
+            placeholder="All Forms"
+            [(ngModel)]="selectedForms"
+            [closeOnSelect]="false"
+            [searchable]="false"
+            class="dashboard-multiple-select"
+          >
+            <ng-template ng-header-tmp>
+              <input
+                style="width: 100%; line-height: 24px; border: none"
+                type="text"
+                placeholder="Search"
+                (input)="form.filter($event.target.value)"
+              />
+            </ng-template>
+            <ng-template ng-multi-label-tmp let-items="items" let-clear="clear">
+              <div class="ng-value-wrapper">
+                <div class="ng-value" *ngFor="let item of items">
+                  <span
+                    class="ng-value-icon left"
+                    (click)="clear(item)"
+                    aria-hidden="true"
+                    >×</span
+                  >
+                  <span class="ng-value-label">{{ item.name }}</span>
+                </div>
+              </div>
+            </ng-template>
+            <ng-template ng-option-tmp let-item="item">
+              <div class="ng-select-option-label">{{ item.name }}</div>
+            </ng-template>
+          </ng-select>
+        </div>
+      </div>
+
+      <div class="field due-date-wrapper">
+        <div class="form-group">
+          <label>Due date</label>
+          <div
+            class="btn-group btn-group-toggle"
+            role="group"
+            ngbRadioGroup
+            [(ngModel)]="selectedDueDate"
+          >
+            <label ngbButtonLabel class="btn-label all">
+              <input
+                ngbButton
+                type="radio"
+                class="btn-check"
+                [value]="dueDate.All"
+                (change)="onDueDateClick($event)"
+              />
+              All
+            </label>
+            <label ngbButtonLabel class="btn-label today">
+              <input
+                ngbButton
+                type="radio"
+                class="btn-check"
+                [value]="dueDate.Today"
+                (change)="onDueDateClick($event)"
+              />
+              Today
+              <span class="due-count">{{ auditsDueDateCounts?.today }}</span>
+            </label>
+            <label ngbButtonLabel class="btn-label later">
+              <input
+                ngbButton
+                type="radio"
+                class="btn-check"
+                [value]="dueDate.Later"
+                (change)="onDueDateClick($event)"
+              />
+              Later
+              <span class="due-count">{{ auditsDueDateCounts?.later }}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="line"></div>
+
+    <div class="data-wrapper">
+      <div class="left-wrapper">
+        <div class="status-boxes-wrapper">
+          <div class="row">
+            <ng-contaner
+              *ngFor="let auditKPI of sortedAuditKPIs"
+              class="col-6"
+              role="button"
+              [routerLink]="[
+                '/audits',
+                { filteredByStatus: auditKPI.auditStatus?.id }
+              ]"
+            >
+              <div
+                [style.border-left-color]="auditKPI?.auditStatus?.color"
+                class="card"
+              >
+                <div class="card-body">
+                  <h5 class="card-title">
+                    {{ auditKPI?.auditStatus?.label }}
+                  </h5>
+                  <div class="audit-count">{{ auditKPI?.auditCount }}</div>
+                </div>
+              </div>
+            </ng-contaner>
+          </div>
+        </div>
+
+        <!--<div class="pie-chart-wrapper">
+          <div class="pie-chart-container">
+            <div class="pie-chart-header">
+              <span class="pie-chart-title">Audit Count by Status</span>
+              <button
+                class="btn-white btn-raw-info"
+                type="button"
+                (click)="onRawInfoClick()"
+              >
+                Raw Info
+              </button>
+            </div>
+
+            <div class="pie-chart" *ngIf="isKPIExist">
+              <apx-chart
+                #pieChart
+                [series]="pieChartOptions.series"
+                [chart]="pieChartOptions.chart"
+                [labels]="pieChartOptions.labels"
+                [colors]="pieChartOptions.colors"
+                [responsive]="pieChartOptions.responsive"
+                [legend]="pieChartOptions.legend"
+                [dataLabels]="pieChartOptions.dataLabels"
+                [stroke]="pieChartOptions.stroke"
+                [plotOptions]="pieChartOptions.plotOptions"
+              >
+              </apx-chart>
+            </div>
+            <div class="pie-chart no-data-wrapper" *ngIf="!isKPIExist">
+              No Data
+            </div>
+          </div>
+        </div>-->
+      </div>
+
+      <div class="right-wrapper">
+        <div class="app-memo-wrapper">
+          <app-memo [organizations]="organizations"> </app-memo>
+        </div>
+      </div>
+    </div>
+
+    <div class="line"></div>
+
+  </div>
+</div>

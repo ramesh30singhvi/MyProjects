@@ -1,0 +1,154 @@
+@import "./src/assets/scss/pacs/scss/custom-mixins";
+
+#main-wrapper {
+  overflow-y: auto;
+  background-color: #F7FAFA;
+}
+
+h4.title {
+  margin-bottom: 0px;
+  color: #263237;
+  font-size: 22px;
+  letter-spacing: 0;
+  line-height: 26px;
+  font-family: "HelveticaBold";
+  margin-right: 16px;
+}
+
+.form-new-wrapper {
+  .breadcrumb-header {
+    .page-breadcrumb {
+      min-width: 153px;
+      max-width: 153px;
+    }
+  }
+
+  .status {
+    padding: 2px 7px;
+    border-radius: 4px;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0;
+    line-height: 14px;
+    text-align: center;
+    margin-right: 16px;
+    white-space: nowrap;
+  }
+
+  .description {
+    @include font (#909BA8, 14px, 15px, 'HelveticaRegular');
+    height: 26px;
+    display: flex;
+    align-items: center;
+  }
+
+  .btn-white.btn-action {
+    margin: 0 10px;
+  }
+}
+
+.custom-select-box {
+    .custom-select-box-wrapper {
+      display: flex!important;
+    }
+    .custom-select-box-selector  {
+      margin: 0!important;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      justify-content: flex-start;
+      display: flex !important;
+      flex: 1 1 auto;
+      width: 100%;
+      min-height: 40px;
+    }
+    .custom-select-box-selector:hover {
+      background-color: #ffffff!important;
+    }
+
+    .select-arrow {
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      z-index: 1;
+      cursor: pointer;
+      position: absolute;
+      right: 1px;
+      width: 26px;
+    }
+    .select-options {
+      max-height: 400px;
+      overflow-y: auto;
+      min-width: 100%;
+
+      button:active {
+        background: #009FFB !important;
+      }
+    }
+  }
+
+  .custom-select-box-selector:disabled {
+    opacity: 1;
+  }
+
+  .error-message {
+    color: #d81515;
+    font-size: 11px;
+    font-weight: 400;
+  }
+
+  .form-control:disabled, .form-control[readonly] {
+    background-color: #f9f9f9;
+    opacity: 1;
+}
+
+.icon-delete {
+  font-size: 20px;
+}
+
+.dropdown-item.active, .dropdown-item:active {
+  text-decoration: none;
+  background-color: #e7e7e7;
+}
+
+.btn-dark-blue {
+  color: #fff;
+  background-color: #145196;
+  border-radius: 6px;
+}
+span.selected {
+  font-family: "HelveticaBold";
+}
+
+.btn-group {
+  border: 1px solid #EEF2F5;
+  border-radius: 10px;
+
+  .btn {
+    margin-right: 0 !important;
+  }
+
+  .no-label {
+    background: #FF2D55;
+  }
+
+  .yes-label {
+    background: #34C759;
+  }
+
+  .na-label {
+    background: #54667A;
+  }
+
+  .no-label, .yes-label, .na-label {
+    color: white;
+  }
+
+  label {
+    border-radius: 6px;
+    color: #54667A;
+  }
+}

@@ -1,0 +1,434 @@
+<div class="page-wrapper dashboard-wrapper">
+  <div class="header-wrapper d-flex justify-content-between mr-4">
+    <h4>Quarterly Wound Analysis and Trend</h4>
+  </div>
+
+  <div class="body-wrapper custom-scroll">
+    <div class="row filter-fields">
+      <div class="field organization-wrapper">
+        <div class="form-group custom-select-box">
+          <label>Organization</label>
+          <ng-select
+            #organization
+            [items]="organizations"
+            bindLabel="name"
+            (change)="onOrganizationChanged($event)"
+            [(ngModel)]="selectedOrganization"
+            [clearable]="true"
+            [multiple]="false"
+            placeholder="Select Organization"
+            [closeOnSelect]="true"
+            [searchable]="false"
+            (open)="onOrganizationDropdownOpened()"
+            class="dashboard-multiple-select"
+          >
+            <ng-template ng-header-tmp>
+              <input
+                style="width: 100%; line-height: 24px; border: none"
+                type="text"
+                placeholder="Search"
+                (input)="organization.filter($event.target.value)"
+              />
+            </ng-template>
+            <ng-template ng-multi-label-tmp let-items="items" let-clear="clear">
+              <div class="ng-value-wrapper">
+                <div class="ng-value" *ngFor="let item of items">
+                  <span
+                    class="ng-value-icon left"
+                    (click)="clear(item)"
+                    aria-hidden="true"
+                    >×</span
+                  >
+                  <span class="ng-value-label">{{ item.name }}</span>
+                </div>
+              </div>
+            </ng-template>
+            <ng-template ng-option-tmp let-item="item">
+              <div class="ng-select-option-label">{{ item.name }}</div>
+            </ng-template>
+          </ng-select>
+        </div>
+      </div>
+      <div class="field facility-wrapper">
+        <div class="form-group custom-select-box">
+          <label>Facility</label>
+          <ng-select
+            #facility
+            [items]="facilities"
+            [virtualScroll]="true"
+            bindLabel="name"
+            (change)="onFacilityChanged($event)"
+            appendTo="body"
+            [multiple]="false"
+            placeholder="Select Facility"
+            [(ngModel)]="selectedFacility"
+            [closeOnSelect]="true"
+            [searchable]="false"
+            class="dashboard-multiple-select"
+          >
+            <ng-template ng-header-tmp>
+              <input
+                style="width: 100%; line-height: 24px; border: none"
+                type="text"
+                placeholder="Search"
+                (input)="facility.filter($event.target.value)"
+              />
+            </ng-template>
+            <ng-template ng-multi-label-tmp let-items="items" let-clear="clear">
+              <div class="ng-value-wrapper">
+                <div class="ng-value" *ngFor="let item of items">
+                  <span
+                    class="ng-value-icon left"
+                    (click)="clear(item)"
+                    aria-hidden="true"
+                    >×</span
+                  >
+                  <span class="ng-value-label">{{ item.name }}</span>
+                </div>
+              </div>
+            </ng-template>
+            <ng-template ng-option-tmp let-item="item">
+              <div class="ng-select-option-label">{{ item.name }}</div>
+            </ng-template>
+          </ng-select>
+        </div>
+      </div>
+
+      <div class="field date-wrapper">
+        <div class="form-group custom-select-box">
+          <label>Year</label>
+          <div class="time-frame-wrapper">
+            <ng-select
+              #facility
+              [items]="availableYears"
+              [virtualScroll]="true"
+              bindLabel="name"
+              (change)="onYearChanged($event)"
+              appendTo="body"
+              [multiple]="false"
+              placeholder="Select year"
+              [(ngModel)]="selectedYear"
+              [closeOnSelect]="true"
+              [searchable]="false"
+              class="dashboard-multiple-select"
+            >
+              <ng-template ng-header-tmp>
+                <input
+                  style="width: 100%; line-height: 24px; border: none"
+                  type="text"
+                  placeholder="Search"
+                  (input)="availableYears.filter($event.target.value)"
+                />
+              </ng-template>
+              <ng-template
+                ng-multi-label-tmp
+                let-items="items"
+                let-clear="clear"
+              >
+                <div class="ng-value-wrapper">
+                  <div class="ng-value" *ngFor="let item of items">
+                    <span
+                      class="ng-value-icon left"
+                      (click)="clear(item)"
+                      aria-hidden="true"
+                      >×</span
+                    >
+                    <span class="ng-value-label">{{ item.name }}</span>
+                  </div>
+                </div>
+              </ng-template>
+              <ng-template ng-option-tmp let-item="item">
+                <div class="ng-select-option-label">{{ item.name }}</div>
+              </ng-template>
+            </ng-select>
+          </div>
+        </div>
+      </div>
+      <div class="field date-wrapper">
+        <div class="form-group custom-select-box">
+          <label>Months</label>
+          <div class="time-frame-wrapper">
+            <ng-select
+              #facility
+              [items]="availableMonths"
+              [virtualScroll]="true"
+              bindLabel="name"
+              (change)="onQuarterChanged($event)"
+              appendTo="body"
+              [multiple]="true"
+              placeholder="Select months"
+              [(ngModel)]="selectedMonths"
+              [closeOnSelect]="false"
+              [searchable]="false"
+              class="dashboard-multiple-select"
+            >
+              <ng-template ng-header-tmp>
+                <input
+                  style="width: 100%; line-height: 24px; border: none"
+                  type="text"
+                  placeholder="Search"
+                  (input)="availableMonths.filter($event.target.value)"
+                />
+              </ng-template>
+              <ng-template
+                ng-multi-label-tmp
+                let-items="items"
+                let-clear="clear"
+              >
+                <div class="ng-value-wrapper">
+                  <div class="ng-value" *ngFor="let item of items">
+                    <span
+                      class="ng-value-icon left"
+                      (click)="clear(item)"
+                      aria-hidden="true"
+                      >×</span
+                    >
+                    <span class="ng-value-label">{{ item.name }}</span>
+                  </div>
+                </div>
+              </ng-template>
+              <ng-template ng-option-tmp let-item="item">
+                <div class="ng-select-option-label">{{ item.name }}</div>
+              </ng-template>
+            </ng-select>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="form-group custom-select-box">
+          <label>&nbsp;</label>
+          <div class="time-frame-wrapper action-panel">
+            <button (click)="generateReport()"
+                    [disabled]="!canGenerate"
+                    class="btn btn-info btn-md shadow-none btn-new">
+              Generate report
+            </button>
+
+            <button (click)="downloadPDF()"
+                    [disabled]="!canGenerate"
+                    class="btn btn-info btn-md shadow-none btn-new">
+              Download PDF
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="line"></div>
+
+    <div class="data-wrapper row" *ngIf="woundReport">
+      <div class="card">
+        <div class="card-body">
+          <div class="row col-12">
+            <h4 class="col-12 text-center">
+              Facility {{ this.selectedFacility.name }} Quarterly Wound Analysis
+              and Trend {{ this.getSelectedMonthsName() }}
+              {{ this.selectedYear.name }}
+            </h4>
+
+            <div class="d-flex col-7 justify-content-center">
+              <apx-chart
+                class="w-100"
+                [series]="byMonthChartOptions.series"
+                [chart]="byMonthChartOptions.chart"
+                [xaxis]="byMonthChartOptions.xaxis"
+                [yaxis]="byMonthChartOptions.yaxis"
+                [title]="byMonthChartOptions.title"
+                [plotOptions]="byMonthChartOptions.plotOptions"
+                [labels]="byMonthChartOptions.labels"
+                [colors]="byMonthChartOptions.colors"
+                [legend]="byMonthChartOptions.legend"
+                [dataLabels]="byMonthChartOptions.dataLabels"
+              >
+              </apx-chart>
+            </div>
+
+            <div class="table-responsive col-5">
+              <table class="table table-bordered table-sm">
+                <thead class="thead-light">
+                  <tr>
+                    <th scope="col" class="text-center">Month</th>
+                    <th scope="col" class="text-center">Wound incidents</th>
+                    <th scope="col" class="text-center">In-House Acquired</th>
+                    <th scope="col" class="text-center">Re-Hospitalization</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <ng-container *ngFor="let month of woundReport.byMonths">
+                    <tr>
+                      <td class="text-center">
+                        {{ month.name }}
+                      </td>
+                      <td class="text-center">
+                        {{ month.total }}
+                      </td>
+                      <td class="text-center">
+                        {{ month.inHouseAcquired }}
+                      </td>
+                      <td class="text-center">
+                        {{ month.reHospitalization }}
+                      </td>
+                    </tr>
+                  </ng-container>
+                  <tr>
+                    <td class="text-center">Total</td>
+                    <td class="text-center">
+                      {{ getTotalIncidents() }}
+                    </td>
+                    <td class="text-center">
+                      {{ getTotalInHouseIncidents() }}
+                    </td>
+                    <td class="text-center">
+                      {{ getTotalReHospitalizationIncidents() }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body">
+          <div class="row col-12">
+            <h4 class="col-12 text-center">
+              Summary by Pressure Ulcer Stage
+              {{ this.selectedYear.name }}
+            </h4>
+
+            <div class="d-flex col-7 justify-content-center">
+              <apx-chart
+                class="w-100"
+                [series]="byUlcerChartOptions.series"
+                [chart]="byUlcerChartOptions.chart"
+                [xaxis]="byUlcerChartOptions.xaxis"
+                [yaxis]="byUlcerChartOptions.yaxis"
+                [title]="byUlcerChartOptions.title"
+                [plotOptions]="byUlcerChartOptions.plotOptions"
+                [labels]="byUlcerChartOptions.labels"
+                [colors]="byUlcerChartOptions.colors"
+                [legend]="byUlcerChartOptions.legend"
+                [dataLabels]="byUlcerChartOptions.dataLabels"
+              >
+              </apx-chart>
+            </div>
+
+            <div class="table-responsive col-5">
+              <table class="table table-bordered table-sm">
+                <thead class="thead-light">
+                  <tr>
+                    <th scope="col" class="text-center">
+                      Pressure Ulcer Stage
+                    </th>
+                    <ng-container *ngFor="let month of woundReport.byMonths">
+                      <th scope="col" class="text-center">
+                        {{ month.name }}
+                      </th>
+                    </ng-container>
+                    <th scope="col" class="text-center">Percentage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <ng-container *ngFor="let ulcer of getUlcers()">
+                    <tr>
+                      <td class="text-center">
+                        {{ ulcer.name.replace("Pressure Ulcer", "") }}
+                      </td>
+                      <ng-container *ngFor="let month of woundReport.byMonths">
+                        <th scope="col" class="text-center">
+                          {{ getUlcerCount(month, ulcer) }}
+                        </th>
+                      </ng-container>
+                      <td class="text-center">
+                        {{ getUlcerPercentage(ulcer) | number : "1.0-0" }}%
+                      </td>
+                    </tr>
+                  </ng-container>
+                  <tr>
+                    <td class="text-center">Total</td>
+                    <ng-container *ngFor="let month of woundReport.byMonths">
+                      <th scope="col" class="text-center">
+                        {{ getTotalUlcerByMonth(month) }}
+                      </th>
+                    </ng-container>
+                    <td class="text-center">100%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row col-12">
+        <div class="card col-6">
+          <div class="card-body">
+            <div class="table-responsive col-12">
+              <table class="table table-bordered table-sm">
+                <thead class="thead-light">
+                  <tr>
+                    <th scope="col" class="text-center">
+                      Summary by Skin Types
+                    </th>
+                    <ng-container *ngFor="let month of woundReport.byMonths">
+                      <th scope="col" class="text-center">
+                        {{ month.name }}
+                      </th>
+                    </ng-container>
+                  </tr>
+                </thead>
+                <tbody>
+                  <ng-container *ngFor="let type of getOtherTypes()">
+                    <tr>
+                      <td class="text-center">
+                        {{ type.name }}
+                      </td>
+                      <ng-container *ngFor="let month of woundReport.byMonths">
+                        <th scope="col" class="text-center">
+                          {{ getOtherTypeCount(month, type) }}
+                        </th>
+                      </ng-container>
+                    </tr>
+                  </ng-container>
+                  <tr>
+                    <td class="text-center">Total</td>
+                    <ng-container *ngFor="let month of woundReport.byMonths">
+                      <th scope="col" class="text-center">
+                        {{ getTotalOtherTypeByMonth(month) }}
+                      </th>
+                    </ng-container>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="card col-6"
+          *ngFor="let otherType of byOtherTypesChartOptions"
+        >
+          <div class="card-body">
+            <div class="d-flex justify-content-center col-12">
+              <apx-chart
+                class="w-100"
+                [series]="otherType.series"
+                [chart]="otherType.chart"
+                [xaxis]="otherType.xaxis"
+                [yaxis]="otherType.yaxis"
+                [title]="otherType.title"
+                [plotOptions]="otherType.plotOptions"
+                [labels]="otherType.labels"
+                [colors]="otherType.colors"
+                [legend]="otherType.legend"
+                [dataLabels]="otherType.dataLabels"
+              >
+              </apx-chart>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

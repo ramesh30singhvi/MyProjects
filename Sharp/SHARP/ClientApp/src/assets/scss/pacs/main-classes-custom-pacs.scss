@@ -1,0 +1,134 @@
+@import "scss/custom-mixins";
+
+html, body {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.separator {
+    height: 38px;
+    width: 1px;
+    background-color: #EAECEF;
+    margin: 0 40px;
+}
+
+.change-mode-btn {
+    border: 1px solid #EAECEF;
+    background: none;
+    border-radius: 4px;
+    margin-right: 26px;
+}
+
+.btn-custom-default {
+    border: 1px solid #EAECEF;
+    border-radius: 6px;
+    background-color: #FFFFFF;
+    color: #909BA8;
+    font-family: "HelveticaRegular";
+    font-size: 16px;
+    letter-spacing: 0;
+    line-height: 19px;
+    padding: 10px 14px;
+    i {
+        color: #909BA8;
+        margin-left: 14px;
+    }
+}
+
+#main-wrapper[data-layout=vertical][data-sidebartype=full] {
+    .page-wrapper {
+        //margin-left: 0;
+        padding-top: 64px;
+    }
+}
+
+
+#main-wrapper {
+
+    &.homepage {
+
+        .page-wrapper {
+
+            &.homepage-wrapper {
+
+                .home-row {
+
+                    &.study-page {
+                        border: none;
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+/*------------------------Fix-three-dots-menu------------------------------------*/
+.ag-row {
+    z-index: 0;
+
+    &.ag-row-focus {
+      z-index: 1;
+    }
+}
+/*------------------------End-Fix-three-dots-menu------------------------------*/
+
+.ag-cell-value,
+.ag-group-value {
+    &.button-cell {
+        overflow: visible;
+    }
+}
+
+.ag-root-wrapper-body.ag-layout-normal.ag-focus-managed {
+    height: 100%;
+}
+
+.submit {
+    border-radius: 6px;
+    background-color: #009FFB;
+    color: #FFFFFF;
+    padding: 8px 14px;
+    border: none;
+  }
+
+  .textarea {
+      textarea {
+        padding: 14px 10px;
+        border: 1px solid #EAECEF;
+        border-radius: 6px;
+        background-color: #FFFFFF;
+        resize: none;
+      }
+      textarea::placeholder {
+        @include font (#54667A, 16px,   19px, 'HelveticaRegular');
+      }
+  }
+
+  /*-----------------------Status------------*/
+  .status {
+    &.active {
+      @include status-color (#C5F6CB);
+      @include font (#3AC34A, 12px, 14px, 'HelveticaRegular');
+    }
+    &.active-cell {
+        span {
+            @include font (#3AC34A, 12px, 14px, 'HelveticaRegular');
+            @include status-color (#C5F6CB);
+        }
+    }
+    &.archive{
+        @include status-color (#DDE0E4);
+        @include font (#54667A, 12px, 14px, 'HelveticaRegular');
+    }
+    &.archive-cell {
+        span {
+            @include status-color (#DDE0E4);
+            @include font (#54667A, 12px, 14px, 'HelveticaRegular');
+        }
+    }
+  }
+  /*----------------------Ebd-Status------------*/
+
+/*---------------main-wrapper--------------------------*/

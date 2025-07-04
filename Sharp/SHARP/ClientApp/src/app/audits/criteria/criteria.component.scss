@@ -1,0 +1,296 @@
+.criteria-wrapper {
+  border-top: 1px solid #E8EEF2;
+  padding: 20px 30px;
+  height: calc(100% - 270px);
+
+  overflow-y: auto;
+  margin-left: 0;
+  margin-right: 0;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+    background: #fff;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 1ex;
+    -webkit-border-radius: 1ex;
+  }
+
+  app-dynamic-form-control {
+    .dynamic-fields {
+      display: flex;
+      flex-wrap: wrap;
+    
+      .field {
+        margin-right: 10px;
+      }
+    
+      .textbox {
+        width: 250px;
+      }
+      
+      .singleDropdown {
+        width: 250px;
+      }
+      
+      .multipleDropdown {
+        width: 300px;
+      }
+    }
+  } 
+}
+
+.question-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 1050px;
+
+  .number {
+    width: 70px;
+  }
+
+  .question {
+    width: 40%;
+  }
+
+  .answer {
+    width: 170px;
+    margin-left: 10px;
+    margin-right: 10px;
+  }
+
+  .comment {
+    width: 40%;
+
+    button {
+      border: 1px solid #EAECEF;
+      border-radius: 4px;
+    }
+
+  }
+  .action {
+    width: 40px;
+    margin-left: 10px;
+    margin-right: 10px;
+  }
+}
+
+.form {
+  border: 1px solid #EEF2F5;
+  border-radius: 10px;
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+
+  .header {
+    display: flex;
+    background: #F8FBFB;
+    color: #909BA8;
+    border-top: 1px solid #EEF2F5;
+    border-bottom: 1px solid #EEF2F5;
+    padding: 10px 10px 10px 20px;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .body {
+    height: 100%;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+      background: #fff;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 1ex;
+      -webkit-border-radius: 1ex;
+    }
+
+    .row {
+      border-bottom: 1px solid #E8EEF2;
+      padding: 20px 10px 20px 20px;
+      margin-left: 0;
+      margin-right: 0;
+      flex-wrap: nowrap;
+
+      > div {
+        display: flex;
+        align-items: center;
+      }
+
+      .number {
+        color: #263237;
+        opacity: 50%;
+      }
+
+      .btn-group {
+        border: 1px solid #EEF2F5;
+        border-radius: 10px;
+
+        .btn {
+          margin-right: 0 !important;
+        }
+
+        .no-label {
+          background: #FF2D55;
+        }
+
+        .yes-label {
+          background: #34C759;
+        }
+
+        .na-label {
+          background: #54667A;
+        }
+
+        .no-label, .yes-label, .na-label {
+          color: white;
+        }
+
+        label {
+          border-radius: 6px;
+          color: #54667A;
+        }
+      }
+
+      input[type=text] {
+        border: 1px solid #EAECEF;
+        border-radius: 6px;
+        color: #54667A;
+      }
+
+      .form-control:disabled,
+      .form-control[readonly] {
+        background-color: transparent;
+        opacity: 0.8;
+    }
+      
+      .btn-delete {
+        border: 1px solid #EAECEF;
+        border-radius: 4px;
+        min-width: 38px;
+        min-height: 38px;
+        font-size: 22px;
+        padding: 0;
+        line-height: 0;
+
+        &:not([disabled]):hover {
+          background-color: #efefef;
+        }
+      }
+
+      .editor {
+        width: 100%;
+
+        .NgxEditor__MenuBar {
+          border-radius: 4px 4px 0 0;
+          border: 1px solid rgba(0,0,0,.2);
+          border-bottom: none;
+        }
+
+        .NgxEditor {
+          border-radius: 0 0 4px 4px;
+
+          .NgxEditor__Content {
+            max-height: 150px;
+            overflow-y: auto;
+            overflow-wrap: anywhere;
+
+            p {
+              margin: 0;
+            }
+
+            &::-webkit-scrollbar {
+              width: 6px;
+              height: 6px;
+              background: #fff;
+            }
+          
+            &::-webkit-scrollbar-thumb {
+              background: #c1c1c1;
+              border-radius: 1ex;
+              -webkit-border-radius: 1ex;
+            }
+          }
+
+          .NgxEditor__Content--Disabled {
+            user-select: auto;
+            pointer-events: all;
+          }
+        }        
+
+        b, strong {
+          font-weight: bold;
+        }
+      }
+    }
+
+    .group-header {
+      background: #FCFDFD;
+      font-size: 12px;
+      color: #909BA8;
+      padding: 5px 20px;
+      border-bottom: 1px solid #E8EEF2;
+    }
+  }
+}
+
+.compliance {
+  border-radius: 10px;
+
+  > div {
+    border-top: 1px solid #EEF2F5;
+  }
+
+  .total-compliance, .section {
+    padding: 15px 0;
+  }
+
+  .section {
+    border-bottom: 1px solid #E8EEF2;
+    margin: 0 !important;
+
+    > div {
+      padding: 0 !important;
+    }
+
+    .section-name {
+      color: #909BA8;
+    }
+
+    .section-value {
+      color: #263237;
+    }
+  }
+
+  .total-compliance {
+    > div {
+      background-color: #F8FBFB;
+      border-radius: 10px;
+      margin: 0 !important;
+
+      > div {
+        padding: 0 !important;
+      }
+
+      .compliance-label {
+        color: #909BA8;
+      }
+
+      compliance-value {
+        color: #263237;
+      }
+    }
+  }
+}
+
+h4 {
+  font-weight: bold;
+  color: #263237;
+  padding: 20px 15px;
+  margin-bottom: 0 !important;
+}

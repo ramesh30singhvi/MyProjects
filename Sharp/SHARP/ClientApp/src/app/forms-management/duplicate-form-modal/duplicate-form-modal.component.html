@@ -1,0 +1,130 @@
+<div class="modal-header">
+  <h4 class="modal-title">Duplicate Form</h4>
+  <div class="close" (click)="onClose()">
+    <div>
+      <svg
+        width="22px"
+        height="22px"
+        viewBox="0 0 22 22"
+        version="1.1"
+        xmlns="http://www.w3.org/2000/svg"
+        xmlns:xlink="http://www.w3.org/1999/xlink"
+      >
+        <title>1D28CDBB-B026-4859-B571-979653331709</title>
+        <g
+          id="Settings"
+          stroke="none"
+          stroke-width="1"
+          fill="none"
+          fill-rule="evenodd"
+        >
+          <g
+            id="Settings-/-User-Management-/-Add"
+            transform="translate(-985.000000, -210.000000)"
+          >
+            <rect fill="#F8FBFB" x="0" y="0" width="1680" height="1024"></rect>
+            <rect
+              id="Rectangle"
+              stroke="#EAECEF"
+              fill="#FFFFFF"
+              x="270.5"
+              y="165.5"
+              width="1379"
+              height="827"
+              rx="10"
+            ></rect>
+            <rect
+              id="Rectangle"
+              x="270"
+              y="165"
+              width="1380"
+              height="70"
+            ></rect>
+            <rect
+              id="Rectangle"
+              fill-opacity="0.3"
+              fill="#54667A"
+              x="0"
+              y="0"
+              width="1680"
+              height="1024"
+            ></rect>
+            <g id="Group-3" transform="translate(645.000000, 186.000000)">
+              <rect
+                id="Rectangle"
+                fill="#FFFFFF"
+                x="0"
+                y="0"
+                width="390"
+                height="629"
+                rx="10"
+              ></rect>
+              <path
+                d="M10,0 L380,0 C385.522847,-1.01453063e-15 390,4.4771525 390,10 L390,70 L390,70 L0,70 L0,10 C-6.76353751e-16,4.4771525 4.4771525,-6.09089673e-15 10,0 Z"
+                id="Rectangle"
+                fill="#FFFFFF"
+              ></path>
+              <g
+                id="buttons-/-icon"
+                transform="translate(332.000000, 16.000000)"
+              >
+                <rect
+                  id="Rectangle"
+                  stroke="#EAECEF"
+                  x="0"
+                  y="0"
+                  width="38"
+                  height="38"
+                  rx="4"
+                ></rect>
+                <g
+                  id="close_black_24dp-(2)"
+                  transform="translate(8.000000, 8.000000)"
+                >
+                  <polygon id="Path" points="0 0 22 0 22 22 0 22"></polygon>
+                  <polygon
+                    id="Path"
+                    fill="#54667A"
+                    points="17.4166667 5.87583333 16.1241667 4.58333333 11 9.7075 5.87583333 4.58333333 4.58333333 5.87583333 9.7075 11 4.58333333 16.1241667 5.87583333 17.4166667 11 12.2925 16.1241667 17.4166667 17.4166667 16.1241667 12.2925 11"
+                  ></polygon>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </svg>
+    </div>
+  </div>
+</div>
+<div class="modal-body">
+  <div class="form-group">
+    <label>To Organization</label>
+    <ng-select
+      #organizations
+      [items]="organizations$ | async"
+      bindLabel="name"
+      [(ngModel)]="organization"
+    >
+    </ng-select>
+    <div *ngIf="errors && errors['FormName']">
+      <span class="error-message" *ngFor="let error of errors['FormName']">
+        {{ error }}
+      </span>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message-wrapper">
+    <span class="error-message">
+      {{ errorMessage }}
+    </span>
+  </div>
+</div>
+
+<div class="modal-footer">
+  <button type="button" class="btn btn-default btn-cancel" (click)="onClose()">
+    Cancel
+  </button>
+  <button type="button" class="btn btn-default btn-save" (click)="onSave()">
+    Save
+  </button>
+</div>

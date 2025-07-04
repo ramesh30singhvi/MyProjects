@@ -1,0 +1,288 @@
+@import "./src/assets/scss/pacs/scss/custom-mixins";
+.input-keyword-section {
+
+  .action-buttons {
+    padding: 10px;
+    border-bottom: 1px solid #EEF2F5;
+    height: 75px;
+
+    .add-keyword-btn {
+      color: #fff;
+      background-color: #145196;
+      border-radius: 6px;
+      margin: 10px;
+    }
+  }
+
+  .left-buttons {
+    flex: 1;
+    display: flex;
+    align-items: center;
+  }
+
+  .form-fields {
+    box-shadow: 0 21px 20px -10px rgb(0 0 0 / 8%);
+  }
+
+  .btn-right-arrow {
+    width: 38px;
+    height: 38px;
+    margin-left: 10px;
+    margin-right: 10px;
+    font-size: 22px;
+  }
+
+  .p-lr-20 {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  /* style for default select*/
+  select.asc-select {
+    -webkit-appearance: none;
+    appearance: none;
+    z-index: 10;
+    position: relative;
+    background: transparent !important;
+    padding-right: 40px !important;
+    border: 1px solid #EAECEF;
+    border-radius: 6px;
+  }
+
+  .select-wrapper {
+    display: flex;
+    background: #ffffff;
+    position: relative;
+    align-items: center;
+    z-index: 1;
+
+    .select-arrow {
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 38px;
+      margin-left: -36px;
+      font-size: 22px;
+      z-index: 1;
+    }
+  }
+
+  .ng-select {
+    width: 200px;
+  }
+
+  .header {
+    width: calc(100% - 8px);
+    background-color: #fff;
+    height: 24px;
+    position: absolute;
+    top: 1px;
+    border-radius: 4px;
+    left: 1px;
+  }
+
+  .fa-exclamation-circle {
+    color: red;
+  }
+
+  #description {
+    max-height: 100px;
+    resize: none;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+      background: #fff;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 1ex;
+      -webkit-border-radius: 1ex;
+    }
+  }
+
+  label[for="resident"] {
+    top: 15px;
+  }
+
+  .error {
+    color: #d81515;
+    font-size: 11px;
+    font-weight: 400;
+    position: absolute;
+  }
+
+  .date-time-wrapper {
+    display: flex;
+
+    .date {
+      width: 50%;
+
+      .date-field {
+        display: flex;
+
+        input /*:placeholder-shown*/ {
+          padding: 1rem 1rem 0rem 1rem;
+        }
+        /*input:placeholder-shown +*/ .placeholder {
+          @include font (#909BA8, 12px, 14px, 'HelveticaRegular');
+          transform: translateY(-10px) translateX(-5px) scale(0.75) !important;
+        }
+      }
+
+      .btn-datepicker-icon.calendar {
+        margin-left: -50px;
+        position: relative;
+        z-index: 10;
+        border: none;
+        font-size: 22px;
+        background-color: transparent;
+      }
+    }
+
+    .time {
+      width: 50%;
+      position: relative;
+      border: 1px solid #EAECEF;
+      height: 57px;
+
+      .time-wrapper {
+        margin-top: 17px;
+
+        .ngb-tp-input {
+          border: none;
+        }
+
+        .form-control:disabled, .form-control[readonly] {
+          background-color: transparent;
+        }
+      }
+
+      .ngx-timepicker {
+        border: 1px solid #EAECEF;
+        border-radius: 4px;
+        padding: 1rem 1rem 0rem 0rem;
+        position: relative;
+
+        ngx-material-timepicker-toggle {
+          position: absolute;
+          top: 11px;
+          right: 10px;
+        }
+
+        &.ngx-timepicker--disabled {
+          background: #ffffff;
+        }
+      }
+
+      .clear-time {
+        position: absolute;
+        right: 85px;
+        top: 28px;
+      }
+
+      .placeholder {
+        color: #909BA8;
+        font-size: 12px;
+        letter-spacing: 0;
+        //line-height: 14px;
+        font-family: "HelveticaRegular";
+        transform: translateY(-50px) translateX(10px) scale(0.75) !important;
+        position: absolute;
+      }
+    }
+  }
+}
+.highAlertSection {
+  margin-top:6px;
+  .ng-select {
+    width: 100%;
+  }
+}
+label {
+  display: flex;
+  align-items: center;
+
+  .icon.icon-svg {
+    font-size: 8px;
+    color: red;
+    margin-right: 3px;
+  }
+}
+/* style for resident list*/
+.list-keywords {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding-bottom: 20px;
+  height: calc(100vh - 600px);
+  overflow-y: scroll;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+    background: #fff;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 1ex;
+    -webkit-border-radius: 1ex;
+  }
+
+  .keywords-item {
+    padding: 10px;
+    display: flex;
+    width: 100%;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover,
+    &.active {
+      background-color: #F8FBFB;
+    }
+
+    .icon-delete {
+      display: none;
+    }
+
+    &:hover .icon-delete {
+      display: flex;
+    }
+
+    @media screen and (max-width: 320px) {
+      flex-wrap: wrap;
+    }
+  }
+
+  &-content {
+    flex: 2;
+  }
+
+  &-title {
+    @include font (#263237, 14px, 16px, 'HelveticaBold');
+    font-weight: 600 !important;
+  }
+
+  &-subtitle {
+    padding-top: 6px;
+    @include font (#909BA8, 14px, 16px, 'HelveticaRegular');
+  }
+
+  &-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    max-width: 100%;
+    cursor: pointer;
+    font-size: 22px;
+
+    @media screen and (max-width: 320px) {
+      width: 100%;
+    }
+  }
+}
+

@@ -1,0 +1,38 @@
+.recipients {
+  display: flex;
+  border: 1px solid #EAECEF;
+  border-radius: 6px;
+  flex-wrap: wrap;
+  padding: 11px 0;
+
+  input {
+    border: none;
+    flex: 1;
+    min-width: 30%;
+    height: 27px;
+  }
+
+  .recipient {
+    display: flex;
+    
+    margin: 2px;
+    border: 1px solid #f29900;
+    border-radius: 5px;
+    padding: 0 2px;
+  }
+
+  .delete-recipient {
+    font-size: 14px;
+    cursor: pointer;
+    
+    #cross {
+      fill: hsl(208, 25.7%, 32.7%);
+    }
+
+    &:hover {
+      #cross {
+        fill: hsl(208, 25.7%, 12.7%);
+      }
+    }
+  }
+}

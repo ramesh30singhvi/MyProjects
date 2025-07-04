@@ -1,0 +1,175 @@
+import { RolesEnum } from "../../models/roles.model";
+import { RouteInfo } from "./vertical-sidebar.metadata";
+
+export const ROUTES: RouteInfo[] = [
+  {
+    path: "/home",
+    title: "Dashboard",
+    icon: "icon-dashboard vertical-menu-icon",
+    class: "",
+    extralink: false,
+    submenu: [],
+    roles: [RolesEnum.Auditor, RolesEnum.Reviewer, RolesEnum.Admin],
+  },
+  {
+    path: "",
+    title: "Audits",
+    icon: "icon-file-text2 vertical-menu-icon",
+    class: "has-arrow",
+    extralink: false,
+    expanded: false,
+    submenu: [
+      {
+        path: "/audits",
+        title: "Active",
+        icon: "icon-file-text2 vertical-menu-icon",
+        class: "",
+        extralink: false,
+        submenu: [],
+        roles: [RolesEnum.Auditor, RolesEnum.Reviewer, RolesEnum.Admin, RolesEnum.Facility],
+      },
+      {
+        path: "/audits/filtered/archived",
+        title: "Archived",
+        icon: "icon-box-add vertical-menu-icon",
+        class: "",
+        extralink: false,
+        submenu: [],
+        roles: [RolesEnum.Reviewer, RolesEnum.Admin],
+      },
+      {
+        path: "/audits/filtered/deleted",
+        title: "Deleted",
+        icon: "icon-bin2 vertical-menu-icon",
+        class: "",
+        extralink: false,
+        submenu: [],
+        roles: [RolesEnum.Admin],
+      },
+    ],
+    roles: [RolesEnum.Auditor, RolesEnum.Reviewer, RolesEnum.Admin, RolesEnum.Facility],
+  },
+  {
+    path: "/report/requests",
+    title: "Report Requests",
+    icon: "icon-drawer vertical-menu-icon",
+    class: "",
+    extralink: false,
+    submenu: [],
+    roles: [RolesEnum.Reviewer, RolesEnum.Admin, RolesEnum.Facility],
+  },
+  {
+    path: "/forms-management",
+    title: "Forms Management",
+    icon: "icon-copy vertical-menu-icon",
+    class: "",
+    extralink: false,
+    submenu: [],
+    roles: [RolesEnum.Admin],
+  },
+  {
+    path: "/users",
+    title: "Users",
+    icon: "icon-user vertical-menu-icon",
+    class: "",
+    extralink: false,
+    submenu: [],
+    roles: [RolesEnum.Admin],
+  },
+  {
+    path: "/organizations",
+    title: "Organizations",
+    icon: "icon-library vertical-menu-icon",
+    class: "",
+    extralink: false,
+    submenu: [],
+    roles: [RolesEnum.Admin],
+  },
+  {
+    path: "/reports",
+    title: "Reports",
+    icon: "icon-fomrs vertical-menu-icon",
+    class: "",
+    extralink: false,
+    roles: [RolesEnum.Admin, RolesEnum.Reviewer, RolesEnum.Facility],
+    submenu: [
+      {
+        path: "/reports/portalReports",
+        title: "Portal Report Test",
+        icon: "icon-eye vertical-menu-icon",
+        class: "",
+        extralink: false,
+        submenu: [],
+        roles: [RolesEnum.Admin],
+      }
+
+    ]
+  },
+  //{
+  //  path: "/reports/processAIReport",
+  //  title: "AI Keyword Report",
+  //  icon: "icon-eye vertical-menu-icon",
+  //  class: "",
+  //  extralink: false,
+  //  roles: [RolesEnum.Admin, RolesEnum.Reviewer, RolesEnum.Auditor],
+  //  submenu: [ ]
+  //},
+  {
+    path: "",
+    title: "AI Audits",
+    icon: "icon-eye vertical-menu-icon",
+    class: "has-arrow",
+    extralink: false,
+    expanded: false,
+    submenu: [
+      {
+        path: "/reports/aiAudits",
+        title: "Active",
+        icon: "icon-file-text2 vertical-menu-icon",
+        class: "",
+        extralink: false,
+        submenu: [],
+        roles: [RolesEnum.Admin, RolesEnum.Reviewer, RolesEnum.Auditor],
+      },
+      {
+        path: "/reports/aiAudits/filtered/deleted",
+        title: "Deleted",
+        icon: "icon-bin2 vertical-menu-icon",
+        class: "",
+        extralink: false,
+        submenu: [],
+        roles: [RolesEnum.Admin],
+      },
+    ],
+    roles: [RolesEnum.Admin, RolesEnum.Reviewer, RolesEnum.Auditor],
+  },
+  {
+    path: "/dashboard-input",
+    title: "Dashboard Input",
+    icon: "icon-fomrs vertical-menu-icon",
+    class: "",
+    extralink: false,
+    roles: [RolesEnum.Auditor, RolesEnum.Reviewer, RolesEnum.Admin],
+    submenu: []
+  },
+  {
+    path: "/aitool",
+    title: "AI Tool V.2",
+    icon: "icon-eye vertical-menu-icon",
+    class: "",
+    extralink: false,
+    expanded: false,
+    roles: [RolesEnum.Auditor, RolesEnum.Reviewer, RolesEnum.Admin],
+    submenu: []
+  },
+  {
+    path: "/auditor-productivity-dashboard",
+    title: "Auditor Productivity",
+    icon: "icon-fomrs vertical-menu-icon",
+    class: "",
+    extralink: false,
+    roles: [RolesEnum.Admin],
+    submenu: []
+  },
+
+];

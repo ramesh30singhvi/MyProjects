@@ -1,0 +1,272 @@
+<div class="page-wrapper auditor-productivity-wrapper">
+  <div class="header-wrapper d-flex justify-content-between mr-4 align-items-center">
+    <h4>Auditor Productivity</h4>
+
+  </div>
+
+  <div class="body-wrapper custom-scroll">
+    <ul ngbNav #nav="ngbNav" [(activeId)]="selectedTab" class="nav-tabs" (navChange)="onNavChange($event)">
+
+      <li [ngbNavItem]="'1'">
+        <a ngbNavLink>
+          Input
+        </a>
+
+        <ng-template ngbNavContent>
+          <div class="container-fluid">
+            <div class="row filter-fields">
+              <div class="form-group">
+                <button type="button"
+                        class="btn btn-default btn-download customExport"
+                        (click)="onExportToExcel_Input()">
+                  Export to Excel
+                </button>
+              </div>
+              <div class="field teams-wrapper">
+                  <div class="form-group custom-select-box">
+                    <label>Teams</label>
+                    <ng-select #teams
+                               [items]="teams$ | async"
+                               bindLabel="name"
+                               (change)="onTeamChanged($event)">
+                    </ng-select>
+
+                  </div>
+              </div>
+         </div>
+              <div class="overflow-auto">
+                <ag-grid-angular #agGrid
+                                 style="width: 100%; height: calc(100vh - 220px);"
+                                 id="inputGrid"
+                                 [ngClass]="'ag-theme-alpine'"
+                                 [rowHeight]="70"
+                                 [columnDefs]="columns_Input"
+                                 [getRowStyle]="getRowStyle"
+                                 [rowModelType]="rowModelType"
+                                 [rowBuffer]="rowBuffer"
+                                 [cacheOverflowSize]="cacheOverflowSize"
+                                 [cacheBlockSize]="cacheBlockSize"
+                                 [maxConcurrentDatasourceRequests]="maxConcurrentDatasourceRequests"
+                                 [infiniteInitialRowCount]="infiniteInitialRowCount"
+                                 [maxBlocksInCache]="maxBlocksInCache"
+                                 [components]="components"
+                                 (gridReady)="onGridReady_Input($event)"
+                                 [defaultColDef]="defaultColumn_Input"
+                                 (filterChanged)="onFilterChanged_Input($event)"
+                                 (columnVisible)="onColumnVisible_Input($event)"
+                                 (columnMoved)="onColumnMoved_Input($event)"
+                                 (columnResized)="onColumnResized_Input($event)"
+                                 (sortChanged)="onSortChanged_Input($event)">
+                </ag-grid-angular>
+              </div>
+            </div>
+
+          </ng-template>
+      </li>
+      <!--<li [ngbNavItem]="'2'">
+        <a ngbNavLink>
+          AHT per Audit Type
+        </a>
+
+        <ng-template ngbNavContent>
+          <div class="container-fluid">
+            <div class="row filter-fields">
+              <div class="form-inline date-range-picker">
+                <div class="form-group" [ngClass]="{ 'ng-has-value': fromDate_AHT }">
+                  <label class="placeholder">Date Processed</label>
+                  &nbsp;&nbsp;
+                  <input name="datepicker"
+                         placeholder=""
+                         class="form-control date-range"
+                         ngbDatepicker
+                         #datepicker="ngbDatepicker"
+                         [autoClose]="'outside'"
+                         (dateSelect)="onDateSelection_AHT($event)"
+                         [displayMonths]="3"
+                         [dayTemplate]="t_AHT"
+                         outsideDays="hidden"
+                         [startDate]="fromDate_AHT!"
+                         [maxDate]="maxDate_AHT"
+                         tabindex="-1"
+                         [value]="rangeFormat(fromDate_AHT, toDate_AHT)"
+                         (click)="datepicker.toggle()"
+                         firstDayOfWeek="7"
+                         readonly />
+                  <button class="btn btn-datepicker-icon calendar"
+                          (click)="datepicker.toggle()"
+                          type="button">
+                    <i class="fa icon-calendar"></i>
+                  </button>
+                  <ng-template #t_AHT let-date let-focused="focused">
+                    <span class="custom-day"
+                          [class.focused]="focused"
+                          [class.range]="isRange_AHT(date)"
+                          [class.faded]="isHovered_AHT(date) || isInside_AHT(date)"
+                          (mouseenter)="hoveredDate_AHT = date"
+                          (mouseleave)="hoveredDate_AHT = null">
+                      {{ date.day }}
+                    </span>
+                  </ng-template>
+                </div>
+                &nbsp;&nbsp;
+                <button type="button"
+                        class="btn btn-default btn-download"
+                        style="position: relative; z-index: 1"
+                        [disabled]="!fromDate_AHT || !toDate_AHT"
+                        (click)="onSearchClick_AHT()">
+                  Search
+                </button>
+              </div>
+
+              <div class="field teams-wrapper">
+                <div class="form-group custom-select-box">
+                  <label>Teams</label>
+                  <ng-select #teams
+                             [items]="teams$ | async"
+                             bindLabel="name"
+                             (change)="onTeamAHTChanged($event)">
+                  </ng-select>
+
+                </div>
+              </div>
+            </div>
+            <div class="overflow-auto">
+              <ag-grid-angular #agGrid
+                               style="width: 100%; height: calc(100vh - 220px);"
+                               id="ahtGrid"
+                               [ngClass]="'ag-theme-alpine'"
+                               [rowHeight]="70"
+                               [columnDefs]="columns_AHT"
+                               [rowModelType]="rowModelType"
+                               [rowBuffer]="rowBuffer"
+                               [cacheBlockSize]="cacheBlockSize"
+                               [cacheOverflowSize]="cacheOverflowSize"
+                               [maxConcurrentDatasourceRequests]="maxConcurrentDatasourceRequests"
+                               [infiniteInitialRowCount]="infiniteInitialRowCount"
+                               [maxBlocksInCache]="maxBlocksInCache"
+                               [components]="components"
+                               [getRowStyle]="getRowStyle"
+                               (gridReady)="onGridReady_AHT($event)"
+                               [defaultColDef]="defaultColumn_AHT"
+                               (filterChanged)="onFilterChanged_AHT($event)"
+                               (columnVisible)="onColumnVisible_AHT($event)"
+                               (columnMoved)="onColumnMoved_AHT($event)"
+                               (columnResized)="onColumnResized_AHT($event)"
+                               (sortChanged)="onSortChanged_AHT($event)">
+              </ag-grid-angular>
+            </div>
+          </div>
+
+        </ng-template>
+      </li>
+      <li [ngbNavItem]="'3'">
+        <a ngbNavLink>
+          Summary per Auditor
+        </a>
+
+        <ng-template ngbNavContent>
+          <div class="container-fluid">
+            <div class="row filter-fields">
+              <div class="form-inline date-range-picker">
+                <div class="form-group" [ngClass]="{ 'ng-has-value': fromDate_Summary }">
+                  <label class="placeholder">Date Processed</label>
+                  &nbsp;&nbsp;
+                  <input name="datepicker2"
+                         placeholder=""
+                         class="form-control date-range"
+                         ngbDatepicker
+                         #datepicker2="ngbDatepicker"
+                         [autoClose]="'outside'"
+                         (dateSelect)="onDateSelection_Summary($event)"
+                         [displayMonths]="3"
+                         [dayTemplate]="t_Summary"
+                         outsideDays="hidden"
+                         [startDate]="fromDate_Summary!"
+                         [maxDate]="maxDate_Summary"
+                         tabindex="-1"
+                         [value]="rangeFormat(fromDate_Summary, toDate_Summary)"
+                         (click)="datepicker2.toggle()"
+                         firstDayOfWeek="7"
+                         readonly />
+                  <button class="btn btn-datepicker-icon calendar"
+                          (click)="datepicker2.toggle()"
+                          type="button">
+                    <i class="fa icon-calendar"></i>
+                  </button>
+                  <ng-template #t_Summary let-date let-focused="focused">
+                    <span class="custom-day"
+                          [class.focused]="focused"
+                          [class.range]="isRange_Summary(date)"
+                          [class.faded]="isHovered_Summary(date) || isInside_Summary(date)"
+                          (mouseenter)="hoveredDate_Summary = date"
+                          (mouseleave)="hoveredDate_Summary = null">
+                      {{ date.day }}
+                    </span>
+                  </ng-template>
+                </div>
+                &nbsp;&nbsp;
+                <button type="button"
+                        class="btn btn-default btn-download"
+                        style="position: relative; z-index: 1"
+                        [disabled]="!fromDate_Summary || !toDate_Summary"
+                        (click)="onSearchClick_Summary()">
+                  Search
+                </button>
+              </div>
+              <div class="field teams-wrapper">
+                <div class="form-group custom-select-box">
+                  <label>Teams</label>
+                  <ng-select #teams
+                             [items]="teams$ | async"
+                             bindLabel="name"
+                             (change)="onTeamSummaryPerAuditorChanged($event)">
+                  </ng-select>
+
+                </div>
+              </div>
+            </div>
+            <div class="overflow-auto">
+              <ag-grid-angular #agGrid
+                               style="width: 100%; height: calc(100vh - 220px);"
+                               id="summaryGrid"
+                               [ngClass]="'ag-theme-alpine'"
+                               [rowHeight]="70"
+                               [columnDefs]="columns_Summary"
+                               [rowModelType]="rowModelType"
+                               [rowBuffer]="rowBuffer"
+                               [cacheBlockSize]="cacheBlockSize"
+                               [cacheOverflowSize]="cacheOverflowSize"
+                               [maxConcurrentDatasourceRequests]="maxConcurrentDatasourceRequests"
+                               [infiniteInitialRowCount]="infiniteInitialRowCount"
+                               [maxBlocksInCache]="maxBlocksInCache"
+                               [components]="components"
+                               [getRowStyle]="getRowStyle"
+                               (gridReady)="onGridReady_Summary($event)"
+                               [defaultColDef]="defaultColumn_Summary"
+                               (filterChanged)="onFilterChanged_Summary($event)"
+                               (columnVisible)="onColumnVisible_Summary($event)"
+                               (columnMoved)="onColumnMoved_Summary($event)"
+                               (columnResized)="onColumnResized_Summary($event)"
+                               (sortChanged)="onSortChanged_Summary($event)">
+              </ag-grid-angular>
+            </div>
+          </div>
+
+        </ng-template>
+      </li>-->
+      <li [ngbNavItem]="'2'">
+        <a ngbNavLink>
+          Summary per Facility
+        </a>
+            <ng-template ngbNavContent>
+
+              <app-summary-facility #summaryFacility></app-summary-facility>
+         
+            </ng-template>
+
+      </li>
+  </ul>
+
+  <div [ngbNavOutlet]="nav"></div>
+</div>
+  </div>

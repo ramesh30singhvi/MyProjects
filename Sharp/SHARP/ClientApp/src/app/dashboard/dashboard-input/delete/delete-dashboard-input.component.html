@@ -1,0 +1,29 @@
+<div class="modal-header">
+  <h4 class="modal-title" id="modal-basic-title">Delete {{ type }}</h4>
+</div>
+
+<div class="modal-body">
+  <div class="form-group">
+    Are you sure that you want to delete {{ name }} ?
+  </div>
+</div>
+
+<div class="modal-footer">
+  <button
+    type="button"
+    class="btn btn-outline-dark btn-close"
+    (click)="activeModal.dismiss()"
+  >
+    Cancel
+  </button>
+
+  <div style="position: relative">
+    <button
+      type="button"
+      class="btn btn-default btn-download"
+      (click)="delete()"
+    >
+      Yes
+    </button>
+  </div>
+</div>

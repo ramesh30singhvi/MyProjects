@@ -1,0 +1,127 @@
+<div class="keyword-wrapper">
+    <div class="col-4 bg-white form">
+      <div class="section-header">
+        <h4>Add Keyword</h4>
+      </div>
+      <div class="container">
+        <form [formGroup]="keywordForm" novalidate (ngSubmit)="saveKeyword()">
+          <div class="row section">
+            <div class="form-group">
+              <tag-input #keywordInput
+                         formControlName="keyword"
+                         [inputId]="'inputKeyword'"
+                         [editable]="true"
+                         (onTagEdited)="onTagEdited($event)"
+                         [modelAsStrings]="true"
+                         [separatorKeys]="['/']"
+                         placeholder="Enter"
+                         secondaryPlaceholder="Enter"
+                         theme="minimal"
+                         [dragZone]="'keywordZone'"
+                         (onTextChange)="onTextChange($event)"
+                         [disable]="formVersion?.status !== formStatuses.Draft.id"
+                         [validators]="validators"
+                         [errorMessages]="errorMessages">
+                <button type="button" class="separatorButton" (click)="onSeparatorButtonClick()" [disabled]="formVersion?.status !== formStatuses.Draft.id">/</button>
+              </tag-input>
+
+              <div class="error" *ngIf="errorMessage">
+                {{errorMessage}}
+              </div>
+            </div>
+          </div>
+
+          <div class="form-check keyword-option">
+            <input #trigger formControlName="trigger" class="form-check-input" [disabled]="formVersion?.status !== formStatuses.Draft.id" type="checkbox">
+            <label class="form-check-label" for="trigger">
+              Use Trigger
+            </label>
+          </div>
+          <div class="field form-trigged-wrapper">
+            <div class="form-group custom-select-box">
+              <ng-select #triggeredForms formControlName="formAudits"
+                         [items]="forms"
+                         bindLabel="name"
+                         (change)="onFormAuditChanged($event)"
+                         [(ngModel)]="selectedTriggeredForms"
+                         [clearable]="true"
+                         [multiple]="true"
+                         placeholder="Audits Trigged By Keyword"
+                         [closeOnSelect]="false"
+                         [searchable]="false"
+                         (open)="onTriggeredFromDropdownOpened()"
+                         class="dashboard-multiple-select">
+                <ng-template ng-header-tmp>
+                  <input style="width: 100%; line-height: 24px; border: none"
+                         type="text"
+                         placeholder="Search"
+                         (input)="onSearchChange($event.target.value)" />
+                </ng-template>
+                <ng-template ng-multi-label-tmp let-items="items" let-clear="clear">
+                  <div class="ng-value-wrapper">
+                    <div class="ng-value" *ngFor="let item of items">
+                      <span class="ng-value-icon left"
+                            (click)="clear(item)"
+                            aria-hidden="true">×</span>
+                      <span class="ng-value-label">{{ item.name }}</span>
+                    </div>
+                  </div>
+                </ng-template>
+                <ng-template ng-option-tmp let-item="item">
+                  <div class="ng-select-option-label">{{ item.name }}</div>
+                </ng-template>
+              </ng-select>
+            </div>
+          </div>
+
+          <div class="footer">
+            <button type="button" class="btn btn-white clear-button" (click)="onClearClick()">
+              Clear
+            </button>
+            <button class="btn add-btn" [disabled]="keywordForm.invalid && !inputKeyword || formVersion?.status !== formStatuses.Draft.id">
+              {{submitButtonTitle}}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="col-8 bg-white table">
+      <div class="section-header">
+        <div class="input-group bg-white pl-3 pr-3">
+          <div class="d-flex align-items-center">
+            <span class="icon icon-search"></span>
+          </div>
+          <input
+          type="text"
+          class="form-control border-0 search"
+          placeholder="Search keywords"
+          [(ngModel)]="searchTerm">
+          <div class="d-flex align-items-center" role="button" *ngIf="searchTerm" (click)="onSearchClear()">
+            <span class="icon icon-close"></span>
+          </div>
+        </div>
+      </div>
+      <div class="data-wrapper">
+        <div class="body">
+          <ng-container *ngFor="let keyword of keywordsList">
+            <div class="data-row" [class.active]="keyword.id === selectedKeyword?.id" (click)="onKeywordClick(keyword)">
+              <div class="column">
+                <span> {{keyword.name}}</span>
+              </div>
+              <div class="column">
+                <span>{{ keywordTrigger(keyword)}}</span>
+              </div>
+              <div class="column">
+                <span>{{ getTriggeredFormsName(keyword) }}</span>
+              </div>
+              <div class="del-column">
+                <div class="keyword-remove" *ngIf="formVersion?.status === formStatuses.Draft.id" (click)="onKeywordDeleteClick(keyword.id); $event.stopPropagation();">
+                  <span class="icon-delete"></span>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+  </div>

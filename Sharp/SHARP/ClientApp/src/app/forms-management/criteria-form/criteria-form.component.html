@@ -1,0 +1,325 @@
+<div class="criteria-form-wrapper">
+    <div class="col-3 bg-white form">
+      <div class="section-header">
+        <h4>Subheader fields</h4>
+        <button class="btn add-btn"
+          [disabled]="formVersion?.status !== formStatuses.Draft.id"
+          (click)="onAddSubheaderClick()">
+          Add
+        </button>
+      </div>
+      <div class="fields-container" [dragula]="FORM_FIELDS" [(dragulaModel)]="formFields">
+        <div class="field-wrapper" *ngFor="let field of formFields">
+
+          <div class="field" [class.field-handle]="!isFormDisabled">
+            <div class="field-drag" [class.field-handle]="!isFormDisabled">
+              <i class="icon icon-drag" [class.field-handle]="!isFormDisabled">
+                <svg xmlns="http://www.w3.org/2000/svg" [class.field-handle]="!isFormDisabled" aria-hidden="true" role="img" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24">
+                  <path 
+                    fill="currentColor" 
+                    d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2s.9-2 2-2s2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2s-2 .9-2 2s.9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2z"/>
+                </svg>
+              </i>
+            </div>
+
+            <div class="field-data" [class.field-handle]="!isFormDisabled">
+              <div class="field-title-type"[class.field-handle]="!isFormDisabled">
+                <div class="w-100" [class.field-handle]="!isFormDisabled">
+                  <div class="field-title"[class.field-handle]="!isFormDisabled">
+                    {{field.labelName}}
+                  </div>
+                  <div class="field-type" [class.field-handle]="!isFormDisabled">
+                    {{field.fieldType.name}}{{field.isRequired ? ' | Required': ''}}
+                  </div>
+                </div>
+
+                <div class="field-actions" *ngIf="!isFormDisabled">
+                  <button type="button" class="btn-edit" (click)="onEditSubheaderClick(field)"><i class="icon ti-pencil"></i></button>
+                  <button type="button" class="btn-delete" (click)="onDeleteSubheaderClick(field)"><i class="icon icon-delete"></i></button>
+                </div>
+              </div>
+              
+              <div class="field-items" [class.field-handle]="!isFormDisabled" *ngIf="field.items" >
+                <span class="field-item" [class.field-handle]="!isFormDisabled" *ngFor="let item of field.items">
+                  {{item.value}}
+                </span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </div>
+    <div class="col-9 bg-white table">
+      <div class="section-header">
+        <div class="input-group bg-white pl-3 pr-3">
+          <div class="d-flex align-items-center">
+            <span class="icon icon-search"></span>
+          </div>
+          <input
+          type="text"
+          class="form-control border-0 search"
+          placeholder="Search criteria"
+          [(ngModel)]="searchTerm">
+          <div class="d-flex align-items-center" role="button" *ngIf="searchTerm" (click)="onSearchClear()">
+            <span class="icon icon-close"></span>
+          </div>
+        </div>
+        <button class="btn btn-white set-section-btn" [disabled]="formVersion?.status !== formStatuses.Draft.id" (click)="onSetSectionClick()">
+          Set Section
+        </button>
+        <button class="btn add-criteria-btn" [disabled]="formVersion?.status !== formStatuses.Draft.id" (click)="onAddCriteriaClick()">
+          Add Criteria
+        </button>
+      </div>
+      <div class="data-wrapper">
+        <div class="header-row header">
+          <div class="col col-drag-icon">
+          </div>
+          <div class="col-1">
+            #
+          </div>
+          <div class="col-4">
+            Question
+          </div>
+          <div class="col-1 criteria-option">
+            Show N/A
+          </div>
+          <div class="col-1 criteria-option">
+            Compliance
+          </div>
+          <div class="col-1 criteria-option">
+            Quality
+          </div>
+          <div class="col-1 criteria-option">
+            Priority
+          </div>
+          <div class="col-2">
+          </div>
+        </div>
+        <div class="body">
+          
+          <ng-container *ngFor="let group of questionGroupList">
+            <div class="group-header" *ngIf="group.name && group.questions">
+              {{group.name}}
+              <div class="group-header-placeholder" *ngIf="group.questions.length === 0">Drag here</div>
+            </div>
+
+            <div *ngIf="!group.id && !group.name && (!group.questions || group.questions.length === 0)">
+              <div class="group-placeholder">Drag here</div>
+            </div>
+            
+            <div [id]="group.id" class="dragula-container" [dragula]="QUESTIONS" [(dragulaModel)]="group.questions">
+              
+              <div class="questions-wrapper" *ngFor="let question of getQuestionList(group.id); index as i">
+                <div class="question-row">
+                  <div class="col col-drag-icon" [class.question-handle]="!isFormDisabled">
+                    <i class="icon icon-drag" [class.question-handle]="!isFormDisabled">
+                      <svg xmlns="http://www.w3.org/2000/svg" [class.question-handle]="!isFormDisabled" aria-hidden="true" role="img" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24">
+                        <path 
+                          fill="currentColor" 
+                          d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2s.9-2 2-2s2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2s-2 .9-2 2s.9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2z"/>
+                      </svg>
+                    </i>
+                  </div>
+                  <div class="col-1 number" [class.question-handle]="!isFormDisabled">
+                    {{i+1}}
+                  </div>
+                  <div class="col-4" [class.question-handle]="!isFormDisabled">
+                    {{question?.value}}
+                  </div>
+                  <div class="col-1 criteria-option"  [class.question-handle]="!isFormDisabled">
+                    <i class="icon-checkbox-checked" *ngIf="question?.criteriaOption?.showNA"></i>
+                  </div>
+                  <div class="col-1 criteria-option"  [class.question-handle]="!isFormDisabled">
+                    <i class="icon-checkbox-checked" *ngIf="question?.criteriaOption?.compliance"></i>
+                  </div>
+                  <div class="col-1 criteria-option" [class.question-handle]="!isFormDisabled">
+                    <i class="icon-checkbox-checked" *ngIf="question?.criteriaOption?.quality"></i>
+                  </div>
+                  <div class="col-1 criteria-option" [class.question-handle]="!isFormDisabled">
+                    <i class="icon-checkbox-checked" *ngIf="question?.criteriaOption?.priority"></i>
+                  </div>
+                  <div class="col-2 actions">
+                    <div *ngIf="formVersion?.status === formStatuses.Draft.id"
+                      [ngClass]="'btn-group ml-2'"
+                      ngbDropdown
+                      role="group"
+                      aria-label="Button">
+                      <button class="three-dots-btn" (click)="onAddChildQuestionClick(question)">
+                        <span class="add-child">
+                          <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 512 512">
+                            <g transform="rotate(90 256 256)">
+                              <path fill="currentColor" d="M80 384v32h216V78.627l84.687 84.687l22.626-22.628L280 17.373L156.687 140.686l22.626 22.628L264 78.627V384H80z"/></g>
+                          </svg>
+                        </span>
+                      </button>
+                    </div>
+
+                    <div ngbDropdown *ngIf="formVersion?.status === formStatuses.Draft.id"
+                      container="body" 
+                      [ngClass]="'btn-group ml-2'">
+                      <button class="btn btn-outline-primary btn-sm three-dots-btn" ngbDropdownToggle>
+                        <i class="fas fa-ellipsis-v"></i>
+                      </button>
+                      <div ngbDropdownMenu class="dropdown-menu three-dots-menu">
+                        <button ngbDropdownItem
+                          class="btn dropdown-item three-dots-item" 
+                          (click)="onEditQuestionClick(group, question); $event.stopPropagation();" 
+                          [disabled]="formVersion?.status !== formStatuses.Draft.id">
+                          <i class="fas ti-pencil three-dots-icon"></i>
+                          <span>Edit</span>
+                        </button>
+                        <button ngbDropdownItem
+                        class="btn dropdown-item three-dots-item"
+                        (click)="onDeleteQuestionClick(question); $event.stopPropagation();"
+                        [disabled]="formVersion?.status !== formStatuses.Draft.id">
+                          <i class="fas icon-delete three-dots-icon"></i>
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+                <div *ngIf="question && !isFormDisabled" [dragula]="question?.id" [(dragulaModel)]="question.subQuestions">
+                    <div class="question-row" *ngFor="let subQuestion of getSubQuestionList(group.id, question.id); index as j">
+                      <div class="col col-drag-icon">
+                        <i class="icon icon-drag">
+                          <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24">
+                            <path 
+                              fill="currentColor" 
+                              d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2s.9-2 2-2s2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2s-2 .9-2 2s.9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2z"/>
+                          </svg>
+                        </i>
+                      </div>
+                      <div class="col-1 number">
+                        <span class="icon child-level">
+                          <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 512 512">
+                            <g transform="rotate(90 256 256)">
+                              <path fill="currentColor" d="M80 384v32h216V78.627l84.687 84.687l22.626-22.628L280 17.373L156.687 140.686l22.626 22.628L264 78.627V384H80z"/></g>
+                          </svg>
+                        </span>
+                        <span>{{i+1}}.{{j+1}}</span>
+                      </div>
+                      <div class="col-4">
+                        {{subQuestion.value}}
+                      </div>
+                      <div class="col-1 criteria-option">
+                        <i class="icon-checkbox-checked" *ngIf="subQuestion.criteriaOption?.showNA"></i>
+                      </div>
+                      <div class="col-1 criteria-option">
+                        <i class="icon-checkbox-checked" *ngIf="subQuestion.criteriaOption?.compliance"></i>
+                      </div>
+                      <div class="col-1 criteria-option">
+                        <i class="icon-checkbox-checked" *ngIf="subQuestion.criteriaOption?.quality"></i>
+                      </div>
+                      <div class="col-1 criteria-option">
+                        <i class="icon-checkbox-checked" *ngIf="subQuestion.criteriaOption?.priority"></i>
+                      </div>
+                      <div class="col-2 actions">
+
+                        <div ngbDropdown *ngIf="formVersion?.status === formStatuses.Draft.id"
+                          container="body"
+                          [ngClass]="'btn-group ml-2'">
+                          <button class="btn btn-outline-primary btn-sm three-dots-btn" ngbDropdownToggle>
+                            <i class="fas fa-ellipsis-v"></i>
+                          </button>
+                          <div ngbDropdownMenu class="dropdown-menu three-dots-menu">
+                            <button ngbDropdownItem
+                              class="btn dropdown-item three-dots-item"
+                              (click)="onEditSubQuestionClick(subQuestion); $event.stopPropagation();"
+                              [disabled]="formVersion?.status !== formStatuses.Draft.id">
+                              <i class="fas ti-pencil three-dots-icon"></i>
+                              <span>Edit</span>
+                            </button>
+                            <button ngbDropdownItem 
+                              class="btn dropdown-item three-dots-item"
+                              (click)="onDeleteSubQuestionClick(subQuestion); $event.stopPropagation();" 
+                              [disabled]="formVersion?.status !== formStatuses.Draft.id">
+                              <i class="fas icon-delete three-dots-icon"></i>
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
+                </div>
+
+                <div *ngIf="question && isFormDisabled">
+                  <div class="question-row" *ngFor="let subQuestion of getSubQuestionList(group.id, question.id); index as j">
+                    <div class="col col-drag-icon">
+                      <i class="icon icon-drag">
+                        <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 24 24">
+                          <path 
+                            fill="currentColor" 
+                            d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2s.9-2 2-2s2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2s-2 .9-2 2s.9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2s2-.9 2-2s-.9-2-2-2z"/>
+                        </svg>
+                      </i>
+                    </div>
+                    <div class="col-1 number">
+                      <span class="icon child-level">
+                        <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" role="img" width="1em" height="1em" preserveAspectRatio="xMidYMid meet" viewBox="0 0 512 512">
+                          <g transform="rotate(90 256 256)">
+                            <path fill="currentColor" d="M80 384v32h216V78.627l84.687 84.687l22.626-22.628L280 17.373L156.687 140.686l22.626 22.628L264 78.627V384H80z"/></g>
+                        </svg>
+                      </span>
+                      <span>{{i+1}}.{{j+1}}</span>
+                    </div>
+                    <div class="col-4">
+                      {{subQuestion.value}}
+                    </div>
+                    <div class="col-1 criteria-option">
+                      <i class="icon-checkbox-checked" *ngIf="subQuestion.criteriaOption?.showNA"></i>
+                    </div>
+                    <div class="col-1 criteria-option">
+                      <i class="icon-checkbox-checked" *ngIf="subQuestion.criteriaOption?.compliance"></i>
+                    </div>
+                    <div class="col-1 criteria-option">
+                      <i class="icon-checkbox-checked" *ngIf="subQuestion.criteriaOption?.quality"></i>
+                    </div>
+                    <div class="col-1 criteria-option">
+                      <i class="icon-checkbox-checked" *ngIf="subQuestion.criteriaOption?.priority"></i>
+                    </div>
+                    <div class="col-2 actions">
+
+                      <div ngbDropdown *ngIf="formVersion?.status === formStatuses.Draft.id"
+                        container="body"
+                        [ngClass]="'btn-group ml-2'">
+                        <button class="btn btn-outline-primary btn-sm three-dots-btn" ngbDropdownToggle>
+                          <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <div ngbDropdownMenu class="dropdown-menu three-dots-menu">
+                          <button ngbDropdownItem
+                            class="btn dropdown-item three-dots-item"
+                            (click)="onEditSubQuestionClick(subQuestion); $event.stopPropagation();"
+                            [disabled]="formVersion?.status !== formStatuses.Draft.id">
+                            <i class="fas ti-pencil three-dots-icon"></i>
+                            <span>Edit</span>
+                          </button>
+                          <button ngbDropdownItem 
+                            class="btn dropdown-item three-dots-item"
+                            (click)="onDeleteSubQuestionClick(subQuestion); $event.stopPropagation();" 
+                            [disabled]="formVersion?.status !== formStatuses.Draft.id">
+                            <i class="fas icon-delete three-dots-icon"></i>
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+              </div>
+
+              </div>
+            </div>
+          </ng-container>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  

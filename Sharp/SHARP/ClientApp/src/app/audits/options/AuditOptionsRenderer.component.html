@@ -1,0 +1,45 @@
+<div ngbDropdown
+  container="body"
+  [ngClass]="'btn-group ml-2'">
+  <button class="btn btn-outline-primary btn-sm three-dots-btn" ngbDropdownToggle>
+    <i class="fas fa-ellipsis-v"></i>
+  </button>
+  <div ngbDropdownMenu class="dropdown-menu three-dots-menu" style="width: 100px;">
+    <button ngbDropdownItem *ngIf="state == 1 && isAuditor"
+            class="btn dropdown-item three-dots-item"
+            style="align-items: center;"
+            (click)="onDuplicateAuditClick(auditId); $event.stopPropagation();">
+      <i class="icon icon-copy three-dots-icon"></i>
+      <span>Duplicate</span>
+    </button>
+    <button ngbDropdownItem *ngIf="state == 1 && (isAdmin || isReviewer)"
+            class="btn dropdown-item three-dots-item"
+            style="align-items: center;"
+            (click)="onArchiveAuditClick(auditId); $event.stopPropagation();">
+      <i class="icon icon-box-add three-dots-icon"></i>
+      <span>Archive</span>
+    </button>
+    <button ngbDropdownItem *ngIf="state == 2 && (isAdmin || isReviewer)"
+            class="btn dropdown-item three-dots-item"
+            style="align-items: center;"
+            (click)="onUnarchiveAuditClick(auditId); $event.stopPropagation();">
+      <i class="icon icon-box-remove three-dots-icon"></i>
+      <span>Unarchive</span>
+    </button>
+    <button ngbDropdownItem *ngIf="state == 1 && (isAdmin || isReviewer || isTrigger)"
+            class="btn dropdown-item three-dots-item"
+            style="align-items: center;"
+            (click)="onDeleteAuditClick(auditId); $event.stopPropagation();">
+      <i class="icon icon-bin2 three-dots-icon"></i>
+      <span>Delete</span>
+    </button>
+    <button ngbDropdownItem *ngIf="state == 3 && (isAdmin)"
+            class="btn dropdown-item three-dots-item"
+            style="align-items: center;"
+            (click)="onUndeleteAuditClick(auditId); $event.stopPropagation();">
+      <i class="icon icon-undo three-dots-icon"></i>
+      <span>Undelete</span>
+    </button>
+
+  </div>
+</div>

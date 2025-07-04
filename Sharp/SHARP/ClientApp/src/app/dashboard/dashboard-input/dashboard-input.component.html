@@ -1,0 +1,445 @@
+<div class="dashboard-input-wrapper">
+  <div
+    class="header-wrapper d-flex justify-content-between mr-4 align-items-center"
+  >
+    <h4>Dashboard Input</h4>
+
+    <button
+      *ngIf="canEdit"
+      type="button"
+      (click)="saveInputValues()"
+      clickable
+      class="btn btn-info rounded"
+    >
+      Save
+    </button>
+  </div>
+
+  <div class="form-group custom-select-box p-4">
+    <ng-select
+      #organization
+      [items]="organizations"
+      bindLabel="name"
+      (change)="onOrganizationChanged($event)"
+      [(ngModel)]="selectedOrganizations"
+      [clearable]="true"
+      [multiple]="false"
+      placeholder="Select organization"
+      [closeOnSelect]="true"
+      [searchable]="false"
+      (open)="onOrganizationDropdownOpened()"
+      class="dashboard-multiple-select"
+    >
+      <ng-template ng-header-tmp>
+        <input
+          style="width: 100%; line-height: 24px; border: none"
+          type="text"
+          placeholder="Search"
+          (input)="organization.filter($event.target.value)"
+        />
+      </ng-template>
+      <ng-template ng-multi-label-tmp let-items="items" let-clear="clear">
+        <div class="ng-value-wrapper">
+          <div class="ng-value" *ngFor="let item of items">
+            <span
+              class="ng-value-icon left"
+              (click)="clear(item)"
+              aria-hidden="true"
+              >×</span
+            >
+            <span class="ng-value-label">{{ item.name }}</span>
+          </div>
+        </div>
+      </ng-template>
+      <ng-template ng-option-tmp let-item="item">
+        <div class="ng-select-option-label">{{ item.name }}</div>
+      </ng-template>
+    </ng-select>
+  </div>
+
+  <div *ngIf="dashboardInput.length > 0" class="body-wrapper custom-scroll">
+    <div class="data-wrapper">
+      <div class="card table-responsive">
+        <div *ngFor="let organization of dashboardInput">
+          <table class="mb-4 table table-sm table-bordered">
+            <thead>
+              <tr>
+                <th
+                  [rowSpan]="2"
+                  class="text-center h4 fw-bold align-middle"
+                  style="
+                    font-family: 'HelveticaBold';
+                    background-color: #ed7d31;
+                    color: white;
+                  "
+                >
+                  <div style="width: 150px; margin: 0 auto">
+                    {{ organization.name }}
+                    <button
+                      *ngIf="canEdit"
+                      type="button"
+                      class="btn-white btn-raw-info btn-sm btn-primary"
+                      (click)="openAddTable(organization.id)"
+                    >
+                      Add table
+                    </button>
+                  </div>
+                </th>
+                <ng-container
+                  *ngFor="
+                    let table of organization.dashboardInputTables;
+                    let i = index
+                  "
+                >
+                  <th
+                    [colSpan]="totalNumberOfElementsInTable(table)"
+                    class="text-center align-middle"
+                    style="font-family: 'HelveticaBold'"
+                    [style.background-color]="getBackgroundColor(i)"
+                    [style.color]="getTextColor(i)"
+                  >
+                    <div
+                      class="d-inline-flex flex-column justify-content-center align-items-center"
+                    >
+                      <h5>{{ table.name }}</h5>
+                      <div class="d-inline-flex align-items-center">
+                        <button
+                          (click)="openEditTable(organization.id, table)"
+                          *ngIf="canEdit"
+                          type="button"
+                          class="btn-white btn-raw-info btn-sm btn-primary"
+                        >
+                          <i class="icon-pencil"></i>
+                        </button>
+
+                        <button
+                          (click)="openDeleteTable(organization.id, table)"
+                          *ngIf="canEdit"
+                          type="button"
+                          class="btn-white btn-raw-info btn-sm btn-primary"
+                        >
+                          <i class="icon-delete"></i>
+                        </button>
+                        <button
+                          *ngIf="canEdit"
+                          type="button"
+                          class="btn-white btn-raw-info btn-sm btn-primary"
+                          (click)="openAddGroup(organization.id, table)"
+                        >
+                          <i class="icon-plus"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </th>
+                </ng-container>
+                <th
+                  *ngIf="organization.dashboardInputTables.length > 0"
+                  rowspan="3"
+                  class="text-center align-middle"
+                  style="background-color: #bdd7ee"
+                >
+                  <div style="width: 60px">TOTAL</div>
+                </th>
+              </tr>
+              <tr>
+                <ng-container
+                  *ngFor="let table of organization.dashboardInputTables"
+                >
+                  <ng-container
+                    *ngFor="let group of table.dashboardInputGroups"
+                  >
+                    <th
+                      [colSpan]="totalNumberOfElementsInGroup(group)"
+                      class="text-center"
+                      style="font-family: 'HelveticaBold'"
+                    >
+                      <div
+                        class="d-inline-flex flex-column justify-content-center align-items-center"
+                      >
+                        {{ group.name }}
+                        <div class="d-inline-flex align-items-center">
+                          <button
+                            (click)="openEditGroup(organization.id, group)"
+                            *ngIf="canEdit"
+                            type="button"
+                            class="btn-white btn-raw-info btn-sm btn-primary"
+                          >
+                            <i class="icon-pencil"></i>
+                          </button>
+
+                          <button
+                            (click)="openDeleteGroup(organization.id, group)"
+                            *ngIf="canEdit"
+                            type="button"
+                            class="btn-white btn-raw-info btn-sm btn-primary"
+                          >
+                            <i class="icon-delete"></i>
+                          </button>
+
+                          <button
+                            *ngIf="canEdit"
+                            type="button"
+                            class="btn-white btn-raw-info btn-sm btn-primary"
+                            (click)="openAddElement(organization.id, group)"
+                          >
+                            <i class="icon-plus"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </th>
+                  </ng-container>
+                  <th *ngIf="table.dashboardInputGroups.length == 0">&nbsp;</th>
+                </ng-container>
+              </tr>
+              <tr>
+                <th
+                  class="text-center align-middle"
+                  style="font-family: 'HelveticaBold'"
+                >
+                  Facility name
+                </th>
+                <ng-container
+                  *ngFor="let table of organization.dashboardInputTables"
+                >
+                  <ng-container
+                    *ngFor="let group of table.dashboardInputGroups"
+                  >
+                    <ng-container
+                      *ngFor="let element of group.dashboardInputElements"
+                    >
+                      <th
+                        style="font-family: 'HelveticaBold'"
+                        class="text-center align-middle"
+                      >
+                        <div
+                          class="d-inline-flex flex-column justify-content-center align-items-center"
+                        >
+                          {{ element.name }}
+
+                          <button
+                            (click)="openEditElement(organization.id, element)"
+                            *ngIf="canEdit"
+                            type="button"
+                            class="btn-white btn-raw-info btn-sm btn-primary"
+                          >
+                            <i class="icon-pencil"></i>
+                          </button>
+
+                          <button
+                            (click)="
+                              openDeleteElement(organization.id, element)
+                            "
+                            *ngIf="canEdit"
+                            type="button"
+                            class="btn-white btn-raw-info btn-sm btn-primary"
+                          >
+                            <i class="icon-delete"></i>
+                          </button>
+                          <input
+                            type="file"
+                            class="file-input hide"
+                            (change)="
+                              onFileSelected($event, organization, element)
+                            "
+                            #fileUpload
+                          />
+                          <button
+                            (click)="fileUpload.click()"
+                            type="button"
+                            class="btn-white btn-raw-info btn-sm btn-primary"
+                          >
+                            <i class="icon-upload"></i>
+                          </button>
+                        </div>
+                      </th>
+                    </ng-container>
+                    <th *ngIf="group.dashboardInputElements.length == 0">
+                      &nbsp;
+                    </th>
+                  </ng-container>
+                </ng-container>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let facility of organization.facilities">
+                <td
+                  class="text-center align-middle"
+                  style="font-family: 'HelveticaBold'"
+                >
+                  {{ facility.name }}
+                </td>
+                <ng-container
+                  *ngFor="let table of organization.dashboardInputTables"
+                >
+                  <ng-container
+                    *ngFor="let group of table.dashboardInputGroups"
+                  >
+                    <ng-container
+                      *ngFor="let element of group.dashboardInputElements"
+                    >
+                      <td
+                        class="text-center"
+                        style="vertical-align: middle"
+                        [style.background-color]="getCellBackgroundColor(0)"
+                      >
+                        <input
+                          id="{{ element.id }}_{{ facility.id }}"
+                          *ngIf="canEdit"
+                          [defaultValue]="
+                            defaultDashboardInputValues[element.id][facility.id]
+                          "
+                          maxlength="2"
+                          type="text"
+                          (keyup)="
+                            onInputValueChanged(
+                              $event.target.value,
+                              element,
+                              facility
+                            )
+                          "
+                          class="form-control text-center"
+                          style="width: 50px; margin: 0 auto"
+                        />
+                        <a
+                          href="/audits/new?organization={{
+                            organization.id
+                          }}&facility={{ facility.id }}&form={{
+                            element.formId
+                          }}"
+                          style="width: 50px; color: black !important"
+                          *ngIf="!canEdit"
+                          >{{
+                            defaultDashboardInputValues[element.id][facility.id]
+                          }}</a
+                        >
+                      </td>
+                    </ng-container>
+                    <td *ngIf="group.dashboardInputElements == 0">&nbsp;</td>
+                  </ng-container>
+                  <td *ngIf="table.dashboardInputGroups == 0">&nbsp;</td>
+                </ng-container>
+                <td
+                  *ngIf="organization.dashboardInputTables.length > 0"
+                  class="text-center align-middle"
+                  style="background-color: #bdd7ee"
+                >
+                  {{ totalValueByFacility(facility) }}
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td class="text-center align-middle">Total</td>
+                <ng-container
+                  *ngFor="let table of organization.dashboardInputTables"
+                >
+                  <ng-container
+                    *ngFor="let group of table.dashboardInputGroups"
+                  >
+                    <ng-container
+                      *ngFor="let element of group.dashboardInputElements"
+                    >
+                      <td class="text-center">
+                        {{ totalValueByElement(element) }}
+                      </td>
+                    </ng-container>
+                    <td *ngIf="group.dashboardInputElements == 0">&nbsp;</td>
+                  </ng-container>
+                  <td *ngIf="table.dashboardInputGroups == 0">&nbsp;</td>
+                </ng-container>
+                <td *ngIf="organization.dashboardInputTables.length > 0">
+                  &nbsp;
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <table class="mb-4 table table-sm table-bordered">
+            <thead>
+              <tr>
+                <th
+                  style="
+                    font-family: 'HelveticaBold';
+                    background-color: #c6efce;
+                  "
+                  [colSpan]="2"
+                  class="text-center fw-bold align-middle"
+                >
+                  Total Audit/Auditor
+                </th>
+                <ng-container
+                  *ngFor="
+                    let summaryShift of organization.dashboardInputSummaries[0]
+                      .dashboardInputSummaryShift
+                  "
+                >
+                  <th
+                    style="
+                      font-family: 'HelveticaBold';
+                      background-color: #c6efce;
+                    "
+                    [colSpan]="2"
+                    class="text-center fw-bold align-middle"
+                  >
+                    {{ summaryShift.name }}
+                  </th>
+                </ng-container>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let auditor of organization.dashboardInputSummaries">
+                <td
+                  class="text-center align-middle"
+                  width="20%"
+                  style="font-family: 'HelveticaBold'"
+                >
+                  {{ auditor.auditor }}
+                </td>
+                <td class="text-center align-middle">
+                  {{ totalValueByAuditor(auditor) }}
+                </td>
+                <ng-container
+                  *ngFor="
+                    let summaryShift of auditor.dashboardInputSummaryShift
+                  "
+                >
+                  <td class="text-center align-middle" width="10%">
+                    <span *ngFor="let formName of summaryShift.formNames">
+                      {{ formName }}<br />
+                    </span>
+                  </td>
+                  <td
+                    style="background-color: #c6efce"
+                    class="text-center align-middle"
+                    width="5%"
+                  >
+                    {{ summaryShift.total }}
+                  </td>
+                </ng-container>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td class="text-center align-middle">Total</td>
+                <td class="text-center align-middle">
+                  {{ totalValueOfAudits(organization) }}
+                </td>
+              </tr>
+              <tr>
+                <td
+                  class="text-center align-middle text-danger"
+                  style="font-family: 'HelveticaBold'"
+                >
+                  Discrepancy
+                </td>
+                <td class="text-center align-middle">
+                  {{ totalDiscrepancyOfAudits(organization) }}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

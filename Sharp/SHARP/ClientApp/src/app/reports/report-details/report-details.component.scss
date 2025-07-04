@@ -1,0 +1,26 @@
+.page-wrapper {
+  height: 100%;
+
+  h4 {
+    padding: 24px 30px 23px 30px;
+    color: #263237;
+    font-size: 22px;
+    font-weight: bold;
+    height: 72px;
+  }
+
+  .container-fluid {
+    padding-top: 0 !important;
+    height: calc(100vh - 144px);
+
+    > div {
+      border: 1px solid #EAECEF;
+      border-radius: 6px;
+      height: 100%;
+    }
+  }
+
+  .icon-download, .icon-printer {
+    margin-right: 10px;
+  }
+}

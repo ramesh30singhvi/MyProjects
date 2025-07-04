@@ -1,0 +1,164 @@
+.edit-mds-modal {
+  input:focus + .placeholder,
+  input:-webkit-autofill + .placeholder,
+  input:not(:placeholder-shown) + .placeholder {
+      font-size: 16px;
+  }
+
+  input:autofill + .placeholder {
+      font-size: 16px;
+  }
+
+  .error {
+      color: #80172a;
+      font-size: 12px;
+  }
+
+  .custom-select-box {
+      .ng-select-container {
+          height: 58px !important;
+      }
+
+      .ng-select .ng-has-value .ng-placeholder {
+          display: block;
+          font-size: 12px;
+          position: absolute;
+          top: 10px;
+      }
+
+      .ng-select .ng-has-value .ng-value {
+          position: absolute;
+          bottom: 5px;
+          width: 83%;
+      }
+
+      .ng-select.ng-select-single .ng-select-container .ng-value-container .ng-input {
+          top: auto;
+      }
+
+      .ng-select.ng-select-single .ng-select-container.ng-has-value .ng-value-container .ng-input {
+          bottom: 5px;
+      }
+  }
+
+  .tracker-option {
+      display: flex;
+      border: 1px solid #EAECEF;
+      border-radius: 4px;
+      background-color: #FFFFFF !important;
+      color: #54667A;
+      font-size: 16px;
+      letter-spacing: 0;
+      line-height: 19px;
+      font-family: "HelveticaRegular";
+      height: 58px;
+      padding-left: 0;
+      align-items: center;
+      margin-top: 1.25rem;
+
+      label {
+          display: flex;
+          width: 100%;
+          height: 100%;
+          padding-left: 1.25rem;
+          align-items: center;
+      }
+
+      .form-check-label {
+          display: inline-flex;
+          align-items: center;
+          user-select: none;
+          margin-bottom: 0;
+      }
+
+      .form-check-label::after {
+          content: "";
+          display: inline-block;
+          width: 1em;
+          height: 1em;
+          border: 1px solid #adb5bd;
+          border-radius: 0.15em;
+          position: absolute;
+          right: 1rem;
+      }
+
+      .form-check-label.checked:after {
+          font-family: "Font Awesome 5 Free";
+          content: "\f14a";
+          color: #145196;
+          font-weight: 900;
+          border: none;
+          font-size: 1.1rem;
+      }
+
+      .form-check-label:not(:disabled):not(:checked):hover::after {
+          border-color: #b3d7ff;
+      }
+
+      .form-check-label:not(:disabled):active::after {
+          background-color: #b3d7ff;
+          border-color: #b3d7ff;
+      }
+
+      .form-check-label:focus::after {
+          box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+      }
+
+      .form-check-label:focus:not(:checked)::after {
+          border-color: #80bdff;
+      }
+
+      .form-check-label:disabled::after {
+          background-color: #e9ecef;
+      }
+
+      input[type=checkbox].form-check-input {
+          position: absolute;
+          z-index: -1;
+          opacity: 0;
+          margin-left: 0;
+      }
+  }
+
+  .divider-line {
+      margin-top: 1.25rem;
+      margin-bottom: 1.25rem;
+  }
+
+  .btn-close,
+  .btn-save {
+      border: 1px solid #e9ecef;
+      border-radius: 4px;
+  }
+
+  .field-type {
+      margin-top: 1.25rem;
+  }
+
+  .field-items-container {
+      max-height: 200px;
+      overflow-y: auto;
+
+      &::-webkit-scrollbar {
+          width: 10px;
+          height: 6px;
+          background: #fff;
+          margin-left: 5px;
+        }
+
+        &::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 1ex;
+            -webkit-border-radius: 1ex;
+        }
+  }
+
+
+  .add-value-btn {
+      margin: 0;
+      i.icon{
+          //font-size: 22px;
+          margin-right: 10px;
+      }
+  }
+}

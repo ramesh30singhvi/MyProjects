@@ -1,0 +1,112 @@
+.modal-header {
+  align-items: center !important;
+
+  .close {
+    cursor: pointer;
+
+    > div {
+      border: 1px solid #EAECEF;
+      padding: 5px;
+      border-radius: 4px;
+    }
+  }
+}
+
+.form-control {
+  border: 1px solid #EAECEF;
+  height: 50px;
+  border-radius: 6px;
+}
+
+.btn-save {
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  background-color: #145196;  
+}
+
+.password, .organizations {
+  > input {
+    border-right: 0;
+  }
+
+  svg {
+    width: 100%;
+    height: 100%;
+    background: white;
+    cursor: pointer;
+  }
+}
+
+.role-input {
+  background: white;
+  cursor: pointer;
+}
+
+.menu {
+  height: 400px;
+  overflow-y: scroll;
+}
+
+.status-input {
+  height: 38px;
+  width: 85px;
+}
+
+.btn-cancel {
+  background: white;
+  border: 1px solid #EAECEF;
+  color: #54667A;
+  border-radius: 4px;
+}
+
+.error-message-wrapper {
+  background-color: #ffc8c8;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+
+.error-message {
+  color: #d81515;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.recipients {
+  display: flex;
+  border: 1px solid #EAECEF;
+  border-radius: 6px;
+  flex-wrap: wrap;
+  padding: 5px 10px;
+
+  input {
+    border: none;
+    flex: 1;
+    min-width: 30%;
+    height: 27px;
+  }
+
+  .recipient {
+    display: flex;
+    
+    margin: 2px;
+    border: 1px solid #f29900;
+    border-radius: 5px;
+    padding: 0 2px;
+  }
+
+  .delete-recipient {
+    font-size: 14px;
+    cursor: pointer;
+    
+    #cross {
+      fill: hsl(208, 25.7%, 32.7%);
+    }
+
+    &:hover {
+      #cross {
+        fill: hsl(208, 25.7%, 12.7%);
+      }
+    }
+  }
+}
+

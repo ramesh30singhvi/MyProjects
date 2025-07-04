@@ -1,0 +1,31 @@
+<div ngbDropdown container="body" [ngClass]="'btn-group ml-2'">
+  <button class="btn btn-outline-primary btn-sm three-dots-btn"
+          ngbDropdownToggle>
+    <i class="fas fa-ellipsis-v"></i>
+  </button>
+  <div ngbDropdownMenu
+       class="dropdown-menu three-dots-menu"
+       style="width: 200px">
+    <button ngbDropdownItem *ngIf="state == 1"
+            class="btn dropdown-item three-dots-item"
+            style="align-items: center"
+            (click)="onEditClick(reportAIContentId); $event.stopPropagation()">
+      <i class="three-dots-icon" [ngClass]="{ 'icon icon-pencil': editbuttonText == 'Edit', 'icon icon-eye': editbuttonText == 'View' }"></i>
+      <span>{{editbuttonText}}</span>
+    </button>
+    <button ngbDropdownItem *ngIf="state == 1 && (isAdmin)"
+            class="btn dropdown-item three-dots-item"
+            style="align-items: center"
+            (click)="onDeleteClick(reportAIContentId); $event.stopPropagation()">
+      <i class="icon icon-delete three-dots-icon"></i>
+      <span>Delete</span>
+    </button>
+    <button ngbDropdownItem *ngIf="state == 3 && (isAdmin)"
+            class="btn dropdown-item three-dots-item"
+            style="align-items: center"
+            (click)="onUndeleteClick(reportAIContentId); $event.stopPropagation()">
+      <i class="icon icon-undo three-dots-icon"></i>
+      <span>Undelete</span>
+    </button>
+  </div>
+</div>

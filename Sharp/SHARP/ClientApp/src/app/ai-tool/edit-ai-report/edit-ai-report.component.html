@@ -1,0 +1,141 @@
+<div class="page-wrapper edit-ai-audit-wrapper">
+  <div class="row breadcrumb-header">
+    <div class="col-12 d-flex flex-wrap align-items-start justify-content-start">
+      <h4 class="title">Edit AI Audit</h4>
+    </div>
+    <div class="col-12 d-flex flex-wrap align-items-start justify-content-start">
+      <ngx-spinner bdColor="#fff" name="loading" size="medium" color="rgba(20,81,150,1)" type="ball-elastic-dots" [fullScreen]="false"></ngx-spinner>
+    </div>
+    <div class="col-12 d-flex flex-wrap align-items-start justify-content-start">
+      <span *ngIf="aiAudit?.id" class="description">
+        <span class="status"
+              [style.background-color]="status?.color"
+              placement="bottom">
+          {{ status?.label }}
+        </span>
+        <span>
+          <span class="custom-label">Organization:</span> {{ aiAudit?.organization?.name }}
+          <span class="custom-label">Facility:</span> {{ aiAudit?.facility?.name }}
+          <span class="custom-label">Auditor Name:</span> {{ aiAudit?.auditorName }}
+          <span class="custom-label">Date:</span> {{ aiAudit?.auditDate | date : "MM/dd/yyyy" }}
+        </span>
+      </span>
+    </div>
+
+    <div class="col-12 d-flex flex-wrap flex-md-nowrap align-items-center justify-content-start justify-content-md-end">
+
+      <button class="btn btn-white"
+              *ngIf="aiAudit?.status === statuses.InProgress.id && (isAdmin || isReviewer || isAuditor)"
+              (click)="getSummaryForAll()">
+        <span class="icon-eye"></span>
+        Get Summary From AI
+      </button>
+      <button class="btn btn-white"
+              *ngIf="
+          aiAudit?.status !== statuses.Submitted.id &&
+          aiAudit?.status !== statuses.Triggered.id
+        "
+              (click)="updateReport()">
+        Save
+      </button>
+
+
+
+      <div class="actions-renderer">
+
+        <button class="btn btn-white"
+                *ngIf="aiAudit?.status === statuses.Submitted.id && (isAdmin || isReviewer || isAuditor)"
+                (click)="createReport()">
+          <span class="icon-download"></span>
+          Download PDF
+        </button>
+
+        <div class="actions-wrapper" *ngFor="let action of actions">
+          <button (click)="onActionClick(action.id)"
+                  class="btn action-button"
+                  [ngClass]="action.classes"
+                  [disabled]="disabled">
+            {{action.label}}
+          </button>
+        </div>
+      </div>
+
+
+
+    </div>
+  </div>
+
+
+  <div><p class="text-danger p-3 mb-2 ">{{error }}</p></div>
+
+ <ul ngbNav #nav="ngbNav" [(activeId)]="active" class="nav-tabs" (navChange)="onNavChange($event)">
+    <li [ngbNavItem]="1" [hidden]="aiAudit == undefined">
+      <!--<a ngbNavLink>
+        Reports by Keyword
+      </a>-->
+
+      <ng-template ngbNavContent>
+        <div class="col-12 mx-3 border border-success">
+          <button class="btn btn-md addkeyword-btn mb-3 ml-3" (click)="addNewToReport()" *ngIf="aiAudit != undefined">
+            Add Resident/Keyword
+          </button>
+
+          <div class="row selectall-checkbox-field" *ngIf="aiAudit != undefined">
+            <input id="selectAll" class="custom-checkbox" type="checkbox" (change)="selectAllChange($event)" />
+            <label for="selectAll" class="custom-checkbox-label">Select All</label>
+          </div>
+
+          <ngb-accordion #acc="ngbAccordion" [activeIds]="activeIds" [destroyOnHide]="false" (shown)="onShownKeywordAccordion($event)" (hidden)="onHiddenKeywordAccordion($event)">
+            <ngb-panel *ngFor=" let item of aiAudit?.values; let i = index  ;  trackBy: trackKey" [id]="'s-' + item.patientId.toString()">
+              <ng-template ngbPanelTitle>
+
+                <button class="btn btn-white" (click)="getProgressNotes(item)">
+                  <span *ngIf='item.patientId != "1"'>Click here for &nbsp;  {{item.patientName }} ({{ item.patientId }})  &nbsp; AI summary</span>
+                  <span *ngIf='item.patientId == "1"'>  {{item.patientName }}</span>
+                </button>
+              </ng-template>
+              <ng-template ngbPanelContent>
+                <div style="overflow-y:auto;" *ngIf="getNotes(item.id).length > 0">
+                  <table class="table table-striped">
+                    <thead>
+                    <th class="col-1 text-nowrap">
+                      <input id="selectAll" type="checkbox" (change)="selectAll($event, item)"  [disabled]="isDisabled"  [checked]="getCheckValue(item)" />
+                      Accept
+                    </th>
+                    <th class="col-1">Date</th>
+                    <th class="col-1">Resident</th>
+                    <th class="col-1">Keyword</th>
+                    <th class="col-6">Summary</th>
+                    </thead>
+                    <ng-container *ngFor="let res of getNotes(item.id) ">
+                      <tr>
+                        <td class="text-center">
+                          <input class="form-check-input" [attr.disabled]="isDisabled ? true : null" 
+                                 type="checkbox" (change)="selectSummary($event,res)"
+                                 [checked]="res.accept" />
+                        </td>
+                        <td ngDefaultControl class="col-1" id="date">{{item.dateTime}}</td>
+
+                        <td ngDefaultControl *ngIf='item.patientId != "1"'>  {{item.patientName }} ({{ item.patientId }})  </td>
+                        <td ngDefaultControl *ngIf='item.patientId == "1"'>  {{item.patientName }}</td>
+
+                        <td ngDefaultControl class="col-1">{{ res.keyword}}</td>
+                        <td class="col-6">
+                          <textarea ngDefaultControl rows="3" class="col-6"  (change)="changeSummary($event)">{{res.summary}}</textarea>
+                        </td>
+                      </tr>
+                    </ng-container>
+                  </table>
+                </div>
+
+              </ng-template>
+
+            </ngb-panel>
+          </ngb-accordion>
+        </div>
+      </ng-template>
+    </li>
+  </ul>
+  <div [ngbNavOutlet]="nav"></div>
+</div>
+

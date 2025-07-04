@@ -1,0 +1,9 @@
+export const ROW_MODEL_TYPE = 'infinite';
+export const SERVER_SIDE_STORE_TYPE = 'partial';
+export const ROW_BUFFER = 0;
+export const CACHE_OVERFLOW_SIZE = 0;
+export const MAX_CONCURRENT_DATASOURCE_REQUESTS = 1;
+export const INFINITE_INITIAL_ROWCOUNT = 0;
+export const MAX_BLOCKS_IN_CACHE = 1;
+export const FILTER_PARAMS_BUTTONS = ["reset", "cancel", "apply"];
+export const FILTER_HEIGHT = 40;

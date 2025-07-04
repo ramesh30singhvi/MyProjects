@@ -1,0 +1,28 @@
+<div class="modal-header">
+  <h4 class="modal-title" id="modal-basic-title">Select Portal Report Type</h4>
+  <button type="button" class="close" aria-label="Close" (click)="activeModal.dismiss()">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+<div class="modal-body">
+  <form [formGroup]="formGroup" novalidate>
+    <div>
+      <label>
+        <input type="radio" value="1" formControlName="reportType">&nbsp;
+        <span>PDF</span>
+      </label>
+      &nbsp;&nbsp;
+      <label>
+        <input type="radio" value="2" formControlName="reportType">&nbsp;
+        <span>Excel</span>
+      </label>
+      <div class="error" *ngIf="formGroup.controls['reportType'].invalid && formGroup.controls['reportType'].touched">
+        'Report Type' must be selected.
+      </div>
+    </div>
+  </form>
+</div>
+<div class="modal-footer">
+  <button type="button" class="btn btn-outline-dark btn-close" (click)="activeModal.dismiss()">Close</button>
+  <button type="button" class="btn btn-default btn-save" (click)="submit()" [disabled]="formGroup?.invalid">Submit</button>
+</div>

@@ -1,0 +1,38 @@
+.three-dots-btn {
+  border: 1px solid #EAECEF;
+  border-radius: 4px;
+  background-color: #FFFFFF;
+  color: #54667A;
+  height: 38px;
+  width: 38px;
+
+  &:hover {
+    background: #F5F5F5;
+  }
+}
+
+.three-dots-menu {
+  border-radius: 10px;
+  margin-top: 10px;
+  width: 280px;
+
+  .three-dots-header {
+    font-size: 16px;
+    padding: 10px 0 10px 20px;
+  }
+
+  .three-dots-item {
+    display: flex;
+    padding: 10px 20px 10px 20px;
+    color: #54667A;
+    cursor: pointer;
+
+    .three-dots-icon {
+        padding-right: 10px;
+    }
+
+    &.active, &:active {
+      background-color: #ced3df;
+    }
+  }
+}

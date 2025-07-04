@@ -1,0 +1,86 @@
+<div class="edit-memo-modal">
+    <div class="modal-header">
+        <h4 class="modal-title" id="modal-basic-title">{{title}}</h4>
+        <button type="button" class="close" aria-label="Close" (click)="activeModal.dismiss()">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+
+    <div class="modal-body">
+
+        <form [formGroup]="memoForm" novalidate>
+
+            <div class="form-group floating-select-box">
+                <ng-select #organization
+                    formControlName="organization"
+                    [items]="organizations" 
+                    bindLabel="name"
+                    placeholder="Organization"
+                    [clearable]="false">
+                </ng-select>
+            </div>
+
+            <div class="form-group floating-input date-field">
+                <input 
+                    ngbDatepicker
+                    formControlName="validityDate"
+                    class="form-control validity-date" 
+                    placeholder="dd.mm.yyyy"
+                    name="validityDate"
+                    #datePicker="ngbDatepicker"
+                    readonly
+                    (click)="datePicker.toggle()"
+                    firstDayOfWeek="7"
+                    [minDate]="minDate">
+                <label for="datepicker" class="placeholder">Valid until</label>
+                <span class="clear-validity-date" (click)="memoForm.controls['validityDate'].reset()">
+                    <span aria-hidden="true" class="ng-clear">×</span>
+                </span>
+                <button class="btn-calendar" (click)="datePicker.toggle()" type="button">
+                    <i class="icon-calendar"></i>
+                </button>
+            </div>
+
+            <div class="floating-area">
+                <div class="header"></div>
+                <textarea
+                    id="text"
+                    formControlName="text"
+                    class="input form-control memo-textarea custom-scroll"
+                    (ngModelChange)="onTextChanged()"
+                    placeholder=" ">
+                </textarea>
+                <label  for="text" class="placeholder">Text</label>
+                <div class="error"
+                    *ngIf="memoForm.controls['text'].invalid && memoForm.controls['text'].touched">
+                    'Text' must not be empty.
+                </div>
+                <div *ngIf="errors && errors['Text']">
+                    <span class="error-message" *ngFor="let error of errors['Text']">
+                      {{error}}
+                    </span>
+                  </div>
+            </div>
+
+        </form>
+
+    </div>
+
+    <div class="modal-footer" [ngClass]="{'edit-modal-footer': editMemo?.id}">
+        <button type="button" *ngIf="editMemo?.id" class="icon-btn btn-outline-red btn-delete" (click)="onMemoDeleteClick()">
+            <i class="icon-delete"></i>
+        </button>
+
+        <div class="buttons-right">
+            <button type="button" class="btn btn-outline-dark btn-close" (click)="activeModal.dismiss()">Cancel</button>
+            <button type="submit" 
+                class="btn btn-default btn-outline-blue btn-save" 
+                style="position: relative; z-index: 1;" 
+                [disabled]="memoForm?.invalid" 
+                (click)="onSaveClick()">
+                Save
+                <ngx-spinner name="memoEditSpinner" bdColor="rgba(20,81,150,1)" size="small" color="#fff" [type]="spinnerType" [fullScreen]="false"></ngx-spinner>
+            </button>
+        </div>
+    </div>
+</div>

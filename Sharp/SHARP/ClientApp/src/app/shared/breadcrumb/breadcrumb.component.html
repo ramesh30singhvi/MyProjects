@@ -1,0 +1,23 @@
+<!-- ============================================================== -->
+<!-- Bread crumb and right sidebar toggle -->
+<!-- ============================================================== -->
+<div class="page-breadcrumb align-self-center breadcrumb-flex">
+      <div class="breadcrumb-wrapper">
+          <h4 class="page-title">{{pageInfo?.title}}</h4>
+          <div class="d-flex align-items-center">
+              <nav aria-label="breadcrumb">
+                  <ol class="breadcrumb">
+                      <ng-template ngFor let-url [ngForOf]="pageInfo?.urls" let-last="last">
+                          <li class="breadcrumb-item" *ngIf="!last" >
+                              <a href='javascript:void(0)' [routerLink]="url.url">{{url.title}}</a>
+                          </li>
+                          <li class="breadcrumb-item active" *ngIf="last">{{url.title}}</li>
+                      </ng-template>
+                  </ol>
+              </nav>
+          </div>
+      </div>
+</div>
+<!-- ============================================================== -->
+<!-- End Bread crumb and right sidebar toggle -->
+<!-- ============================================================== -->

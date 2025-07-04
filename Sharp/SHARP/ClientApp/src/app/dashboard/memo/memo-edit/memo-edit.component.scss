@@ -1,0 +1,98 @@
+@import "/src/assets/scss/variable";
+
+.edit-memo-modal {
+    .modal-body {
+        .date-field {
+            display: flex;
+
+            .validity-date {
+                height: 58px;
+                padding: 1rem 1rem 0rem 1rem;
+                cursor: pointer;
+
+                &[readonly] {
+                    background-color: #fff;
+                    opacity: 1;
+                }
+            }
+
+            .placeholder {
+                font-size: 16px;
+                line-height: 14px;
+                color: #909BA8;
+                transform: translateY(-10px) translateX(-5px) scale(0.75) !important;
+                z-index: 10;
+            }
+
+            .clear-validity-date {
+                display: flex;
+                justify-content: center;
+                position: absolute;
+                top: 19px;    
+                right: 30px;
+                cursor: pointer;    
+                width: 18px;
+                user-select: none;
+                color: #999;
+
+                .ng-clear {
+                    display: inline-block;
+                    font-size: 18px;
+                    line-height: 1;
+                    pointer-events: none;
+                }
+
+                &:hover {
+                    color: #D0021B;
+                }
+            }
+
+            .btn-calendar {
+                border: none;
+                background-color: transparent;
+                position: absolute;
+                top: 14px;
+                right: 0;
+                font-size: 20px;
+                z-index: 10;
+            }
+        }
+
+        .floating-area {
+            .memo-textarea {
+                height: 200px;
+                resize: none;
+            }  
+
+            textarea:focus + .placeholder,
+            textarea:not(:placeholder-shown) + .placeholder {
+                font-size: 16px;
+            }
+
+            .header {
+                width: calc(100% - 8px);
+                background-color: #fff;
+                height: 24px;
+                position: absolute;
+                top: 1px;
+                border-radius: 4px;
+                left: 1px;
+            }
+        }
+        
+        .error-message {
+            color: #d81515;
+            font-size: 12px;
+            font-weight: 400;
+        }
+    }
+
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+
+        &.edit-modal-footer {
+            justify-content: space-between;
+        }
+    }
+}

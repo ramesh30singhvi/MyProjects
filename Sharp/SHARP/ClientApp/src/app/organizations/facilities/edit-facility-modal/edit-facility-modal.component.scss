@@ -1,0 +1,46 @@
+.edit-facility-modal {
+    input:focus + .placeholder,
+    input:-webkit-autofill + .placeholder,
+    input:not(:placeholder-shown) + .placeholder {
+        font-size: 16px;
+    }
+
+    input:autofill + .placeholder {
+        font-size: 16px;
+    }
+
+    .floating-tag-input {
+        position: relative;
+
+        tag-input {
+            > div.ng2-tag-input {
+                min-height: 58px !important;
+                border: 1px solid #EAECEF;
+                border-bottom: 1px solid #EAECEF !important;
+                border-radius: 6px;     
+                padding: 0.5rem 3rem 0 0 !important;
+            }
+
+            .error-message {
+                color: #80172a;
+                font-size: 12px;
+            }
+        }
+
+        .btn-clear {
+            top: 28px !important;
+        }
+    }
+
+    #status {
+        width: 120px;
+        
+        .ng-value-label[ng-reflect-ng-item-label="Active"] {
+            color: green;
+        }
+
+        .ng-value-label[ng-reflect-ng-item-label="Inactive"] {
+            color: red;
+        }
+    }
+}

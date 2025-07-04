@@ -1,0 +1,17 @@
+<div [ngClass]="hide ? 'd-none' : 'btn-group'"
+    ngbDropdown
+    role="group"
+    aria-label="Button group with nested dropdown"
+    >
+    <button (click)="dotsClick($event)" class="btn three-dots-btn" style="z-index:0" ngbDropdownToggle>
+      <i class="fas fa-ellipsis-v"></i>
+    </button>
+    <div class="dropdown-menu menu-index three-dots-menu" ngbDropdownMenu style="z-index:10">
+      <h6 class="dropdown-header three-dots-header">Study Options</h6>
+      <div class="dropdown-divider"></div>
+      <div class="dropdown-item three-dots-item" (click)="onReportClick($event)">
+        <i class="fas fa-eye three-dots-icon"></i>
+        View Study Report
+      </div>
+    </div>
+</div>

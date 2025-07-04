@@ -1,0 +1,92 @@
+<div class="page-wrapper ai-wrapper">
+  <div class="header-wrapper d-flex justify-content-between mr-4">
+    <h4>AI Report</h4>
+  </div>
+
+  <form class="input-reportupload-section mx-3 col-8"
+        [formGroup]="submitReportForm" enctype="multipart/form-data"
+        novalidate>
+    <div class="row form-report-fields">
+      <div class="field organization-wrapper">
+        <div class="form-group custom-select-box">
+          <label>Organization</label>
+          <ng-select #organizations
+                     [items]="organizations$ | async"
+                     bindLabel="name"
+                     formControlName="organization"
+                     (change)="onOrganizationChanged($event)">
+          </ng-select>
+          <div class="error"
+               *ngIf="submitReportForm.controls['organization'].invalid && submitReportForm.controls['organization'].touched">
+            Organization must not be empty.
+          </div>
+        </div>
+      </div>
+
+      <div class="field facility-wrapper">
+        <div class="form-group custom-select-box">
+          <label>Facility</label>
+          <ng-select #facilities
+                     [items]="facilities$ | async"
+                     bindLabel="name"
+                     formControlName="facility"
+                     (change)="onFacilityChanged($event)"
+                     [disabled]=" !facilities || !isEditable">
+          </ng-select>
+          <div *ngIf="errors && errors['FacilityId']">
+            <span class="error-message"
+                  *ngFor="let error of errors['FacilityId']">
+              {{ error }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field users-wrapper">
+        <div class="form-group custom-select-box">
+          <label>Audit By</label>
+          <ng-select #users
+                     [items]="users$ | async"
+                     bindLabel="fullName"
+                     formControlName="user"
+                     (change)="onUserChanged($event)"
+                     [disabled]=" !users || !isEditable">
+          </ng-select>
+          <div class="error"
+               *ngIf="submitReportForm.controls['user'].invalid && submitReportForm.controls['user'].touched">
+            'Audit By User' must not be empty.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="form-group floating-input mb-3 password choosefile">
+      <input id="pdfFile" required
+             formControlName="pdfFile"
+             type="file" #filePicker (change)="onPdfPicked($event)"
+             class="input form-control form-control-lg"
+             autocomplete="off" />
+      <label for="pdfFile" class="placeholder text-lg-left">PDF Report</label>
+      <div class="error mt-2"
+           *ngIf="submitReportForm.controls['pdfFile'].invalid && submitReportForm.controls['pdfFile'].touched">
+        'PDF Report' must not be empty.
+      </div>
+    </div>
+    <div class="d-flex justify-content-between action-buttons">
+      <button class="btn btn-block  btn-info  submit-form-btn" style="position: relative; z-index: 1;" type="button" (click)="submit()" [disabled]="startProcessing && !organization">
+        Parsing PDF
+        <ngx-spinner bdColor="rgba(20,81,150,1)" name="processing" size="medium" color="#fff" type="ball-elastic-dots" [fullScreen]="false"></ngx-spinner>
+      </button>
+    </div>
+    <!--<div class="d-flex justify-content-between action-buttons" *ngIf="resultParse != undefined">
+      <p>{{ startTime }}</p>
+      <button class="btn btn-block  btn-info px-1"
+              (click)="getSummaryForAll()">
+        Get AI Summary For All Patients
+      </button>
+    </div>-->
+  </form>
+
+
+  <div><p class="text-danger p-3 mb-2 ">{{error }}</p></div>
+
+</div>

@@ -1,0 +1,202 @@
+<div class="page-wrapper edit-ai-audit-wrapper">
+  <div class="row breadcrumb-header">
+    <div class="col-12 d-flex flex-wrap align-items-start justify-content-start">
+      <h4 class="title">Edit AI Audit</h4>
+    </div>
+    <div class="col-12 d-flex flex-wrap align-items-start justify-content-start">
+      <ngx-spinner bdColor="#fff" name="loading" size="medium" color="rgba(20,81,150,1)" type="ball-elastic-dots" [fullScreen]="false"></ngx-spinner>
+    </div>
+      <div class="col-12 d-flex flex-wrap align-items-start justify-content-start">
+        <span *ngIf="reportAIContent?.id" class="description">
+          <span class="status"
+                [style.background-color]="status?.color"
+                placement="bottom">
+            {{ status?.label }}
+          </span>
+          <span>
+            <span class="custom-label">Organization:</span> {{ reportAIContent?.organization?.name }}
+            <span class="custom-label">Facility:</span> {{ reportAIContent?.facility?.name }}
+            <span class="custom-label">Auditor Name:</span> {{ reportAIContent?.auditorName }}
+            <span class="custom-label">Date:</span> {{ reportAIContent?.auditDate | date : "MM/dd/yyyy" }}
+          </span>
+        </span>
+      </div>
+
+      <div class="col-12 d-flex flex-wrap flex-md-nowrap align-items-center justify-content-start justify-content-md-end" *ngIf="dataKeywords != null">
+        <div class="actions-renderer">
+
+          <button class="btn btn-white"
+                  *ngIf="reportAIContent?.status === statuses.Submitted.id && (isAdmin || isReviewer || isAuditor)"
+                  (click)="createReport()">
+            <span class="icon-download"></span>
+            Download PDF
+          </button>
+
+
+          <div class="actions-wrapper" *ngFor="let action of actions">
+            <button (click)="onActionClick(action.id)"
+                    class="btn action-button"
+                    [ngClass]="action.classes"
+                    [disabled]="disabled">
+              {{action.label}}
+            </button>
+          </div>
+        </div>
+
+        <button class="btn btn-white"
+                *ngIf="
+              reportAIContent?.status !== statuses.Submitted.id &&
+              reportAIContent?.status !== statuses.Triggered.id
+            "
+                (click)="onSaveClick(true)">
+          Save
+        </button>
+
+      </div>
+    </div>
+
+    <ul ngbNav #nav="ngbNav" [(activeId)]="active" class="nav-tabs" (navChange)="onNavChange($event)">
+      <li [ngbNavItem]="1" [hidden]="dataKeywords == null">
+        <a ngbNavLink>Reports by Keyword</a>
+
+        <ng-template ngbNavContent>
+          <form novalidate [formGroup]="reportForm">
+            <div class="col-12 mx-3 border border-success">
+
+              <button class="btn btn-md addkeyword-btn mb-3 ml-3" (click)="addKeywordToReport()" [hidden]="dataKeywords == null" [disabled]="isDisabled">
+                Add keyword Report
+              </button>
+
+              <div class="row selectall-checkbox-field" *ngIf="dataKeywords != null">
+                <input id="selectAll" class="custom-checkbox" type="checkbox" (change)="selectAllChange($event)" [disabled]="isDisabled" />
+                <label for="selectAll" class="custom-checkbox-label">Select All</label>
+              </div>
+
+              <ngb-accordion #acc="ngbAccordion" [activeIds]="activeKeywordIds" [destroyOnHide]="false" (shown)="onShownKeywordAccordion($event)" (hidden)="onHiddenKeywordAccordion($event)">
+                <ngb-panel *ngFor=" let key of dataKeywords; let index = index ;  trackBy: trackKey" id="static-{{index}}">
+                  <ng-template ngbPanelTitle>
+                    <span>{{key}} </span>
+                  </ng-template>
+                  <ng-template ngbPanelContent>
+                    <div style="overflow-y:auto;">
+                      <table class="table table-striped">
+                        <thead>
+                        <th class="col-1 text-nowrap">
+                          <input id="selectAllInKeyword" type="checkbox" (change)="selectAllInKeywordChange($event, key)" [checked]="isSelectAllInKeywordChecked" [disabled]="isDisabled" />
+                          Accept
+                        </th>
+                        <th class="col-1">Date</th>
+                        <th class="col-1">Resident</th>
+                        <!--<th class="col-3" [hidden]="hideAISummary">AI Summary</th>-->
+                        <th class="col-3">User Summary</th>
+                        <th class="col-3">Report Text</th>
+                        </thead>
+                        <ng-container formArrayName="reportItems" *ngFor="let item of formsForKey(key);let in = index ; trackBy: trackById">
+                          <tr [formGroup]="item">
+                            <td class="text-center">
+                              <input class="form-check-input"
+                                     type="checkbox"
+                                     formControlName="Acceptable"
+                                     [attr.disabled]="isDisabled ? true : null" />
+                            </td>
+                            <td formControlName="Date" ngDefaultControl id="date">{{item.value.Date}}</td>
+                            <td formControlName="Name" ngDefaultControl>{{item.value?.Name}} ({{ item.value?.ID}})</td>
+                            <!--<td [hidden]="hideAISummary">
+                            <textarea class="form-control" ngDefaultControl rows="14" [readonly]="isDisabled" formControlName="Summary">
+                               {{item.value?.Summary}}
+                             </textarea>
+                          </td>-->
+                            <td>
+                              <textarea class="form-control" ngDefaultControl rows="14" [readonly]="isDisabled" formControlName="UserSummary">
+                                  {{item.value?.UserSummary?.value}}
+                              </textarea>
+                            </td>
+                            <td formControlName="Original" [innerHTML]="item.value?.Original" [disabled]="isDisabled ? 'disabled ' :''" ngDefaultControl></td>
+                          </tr>
+                        </ng-container>
+                      </table>
+                    </div>
+
+                  </ng-template>
+
+                </ngb-panel>
+              </ngb-accordion>
+            </div>
+          </form>
+        </ng-template>
+      </li>
+      <li [ngbNavItem]="2" [hidden]="dataKeywords == null">
+        <a ngbNavLink>
+          Reports by Resident
+        </a>
+        <ng-template ngbNavContent>
+          <form novalidate [formGroup]="reportFormByID">
+            <div class="col-12 mx-3 border border-success">
+
+              <button class="btn btn-md addkeyword-btn mb-3 ml-3" (click)="addKeywordToReport()" [hidden]="dataKeywords == null" [disabled]="isDisabled">
+                Add keyword Report
+              </button>
+
+              <div class="row selectall-checkbox-field" *ngIf="dataKeywords != null">
+                <input id="selectAllResident" class="custom-checkbox" type="checkbox" (change)="selectAllResidentChange($event)" [disabled]="isDisabled" />
+                <label for="selectAllResident" class="custom-checkbox-label">Select All</label>
+              </div>
+
+              <ngb-accordion #acc1="ngbAccordion" [activeIds]="activeResidentIds" [destroyOnHide]="false" (shown)="onShownResidentAccordion($event)" (hidden)="onHiddenResidentAccordion($event)">
+                <ngb-panel *ngFor=" let key of  dataByName; let index = index ;  trackBy: trackKey" id="static-{{index}}">
+                  <ng-template ngbPanelTitle>
+                    <span>{{key}} </span>
+                  </ng-template>
+                  <ng-template ngbPanelContent>
+                    <div style="overflow-y:auto;">
+                      <table class="table table-striped">
+                        <thead>
+                        <th class="col-1  text-nowrap">
+                          <input id="selectAllInResident" type="checkbox" (change)="selectAllInResidentChange($event, key)" [checked]="isSelectAllInResidentChecked" [disabled]="isDisabled" />
+                          Accept
+                        </th>
+                        <th class="col-1">Resident</th>
+                        <th class="col-1">Date</th>
+                        <th class="col-1">SearchWord</th>
+                        <!--<th class="col-3" [hidden]="hideAISummary">AI Summary</th>-->
+                        <th class="col-3">User Summary</th>
+                        <th class="col-3">Report Text</th>
+                        </thead>
+                        <ng-container formArrayName="reportItems" *ngFor="let item of formsForName(key)">
+                          <tr [formGroup]="item">
+                            <td class="text-center">
+                              <input class="form-check-input"
+                                     type="checkbox"
+                                     formControlName="Acceptable"
+                                     [attr.disabled]="isDisabled ? true : null" />
+                            </td>
+                            <td formControlName="Name" ngDefaultControl>{{item.value?.Name}} ({{ item.value?.ID}})</td>
+                            <td formControlName="Date" ngDefaultControl id="date">{{item.value.Date}}</td>
+                            <td formControlName="SearchWord" ngDefaultControl>{{item.value?.SearchWord}}</td>
+                            <!--<td [hidden]="hideAISummary">
+    <textarea class="form-control" ngDefaultControl rows="14" [readonly]="isDisabled" formControlName="Summary">
+       {{item.value?.Summary}}
+   </textarea>
+  </td>-->
+                            <td>
+                              <textarea class="form-control" ngDefaultControl rows="14" [readonly]="isDisabled" formControlName="UserSummary">
+                                  {{item.value?.UserSummary?.value}}
+                               </textarea>
+                            </td>
+                            <td formControlName="Original" [innerHTML]="item.value?.Original" [disabled]="isDisabled ? 'disabled ' :''" ngDefaultControl></td>
+                          </tr>
+                        </ng-container>
+                      </table>
+                    </div>
+
+                  </ng-template>
+
+                </ngb-panel>
+              </ngb-accordion>
+            </div>
+          </form>
+        </ng-template>
+      </li>
+    </ul>
+    <div [ngbNavOutlet]="nav"></div>
+  </div>

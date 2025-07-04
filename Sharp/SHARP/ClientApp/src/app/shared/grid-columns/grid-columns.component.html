@@ -1,0 +1,29 @@
+<div ngbDropdown #columnsDropdown="ngbDropdown" class="d-inline-block columns-dropdown" autoClose="outside" placement="bottom-right" (openChange)="openColumnsDropdown($event)">
+    <button class="btn btn-outline-secondary btn-hide-columns shadow-none" id="gridColumnsBtn" ngbDropdownToggle>
+      <i class="fa fa-table" aria-hidden="true"></i>Columns
+    </button>
+    <div ngbDropdownMenu class="columns-dropdown-wrapper">
+      <div class="columns-dropdown-header">
+        Show/Hide or Reorder Columns
+      </div>
+      <div class="scroller up" (mouseover)="scrollDiv(scrollingThing, 5)" (mouseleave)="stopScroll()">
+        <i class="icon-arrow-up2"></i>
+      </div>
+      <div #scrollingThing aria-labelledby="gridColumns" dragula="COLUMNS" class="options-wrapper" [(dragulaModel)]="gridColumns">
+        <div ngbDropdownItem class="form-check columns-form-check-item" *ngFor="let column of gridColumns">
+          <i class="icon-options"></i>
+          <i class="icon-options"></i>
+          <input id="columnsState" type="checkbox" class="columns-check-input" [ngModel]="!column.state.hide" (change)="onColumnVisibleStateChange(column)" />
+          <span class="columns-check-label" [class.checked]="!column.state.hide" (click)="onColumnVisibleStateChange(column)">{{column.name}}</span>
+        </div>
+      </div>
+      <div class="scroller bottom" (mouseover)="scrollDiv(scrollingThing, -5)" (mouseleave)="stopScroll()">
+        <i class="icon-arrow-down2"></i>
+      </div>
+      <div class="columns-dropdown-footer">
+        <button type="button" class="reset-button" (click)="onColumnsStateReset()">Reset</button>
+        <button type="button" class="cancel-button" (click)="onColumnsStateCancel()">Cancel</button>
+        <button type="button" class="save-button" (click)="onColumnsStateSave()">Save</button>
+      </div>
+    </div>
+  </div>

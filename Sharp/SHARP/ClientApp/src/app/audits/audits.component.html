@@ -1,0 +1,88 @@
+<div class="page-wrapper homepage-wrapper" style="height: 100%;">
+  <div class="header-wrapper d-flex justify-content-between mr-4">
+    <h4 *ngIf="state == 1">Audits</h4>
+    <h4 *ngIf="state == 2">Audits Archived</h4>
+    <h4 *ngIf="state == 3">Audits Deleted</h4>
+
+    <div class="action-panel" *ngIf="state == 1">
+      <button *ngIf="isReviewer || isAdmin" class="btn btn-new btn-info" [disabled]="!isAuditSelected" (click)="OnDeleteSelectedAudits()">
+        Delete Audit(s)
+      </button>
+      <button *ngIf="isReviewer || isAdmin" class="btn btn-new btn-info" [disabled]="!isAuditSelected" (click)="OnArchiveSelectedAudits()">
+        Archive Audit(s)
+      </button>
+      <button *ngIf="haveRightToViewPdf" class="btn btn-white" (click)="onGeneratePdfClick()">
+        Generate PDF
+      </button>
+
+      <button *ngIf="isAuditor" [routerLink]="['/audits/new']" class="btn btn-new btn-info btn-md shadow-none">
+        <span class="icon-plus"></span> New Audit
+      </button>
+    </div>
+  </div>
+  <div class="container-fluid homepage-conteiner" style="height: 100%;">
+
+    <div class="row" style="height:100%">
+      <div class="col-12" style="height:100%">
+        <div class="home-row" style="height:100%">
+          <div class="card">
+              <div class="card-body search-block">
+                <div class="button-wrappper btn-toggler">
+                  <button class="btn-today" [class.active]="datePeriodFilter === 1" type="button" (click)="onTodayClick()"  *ngIf="state == 1">Today</button>
+                  <button class="btn-last-seven-days" [class.active]="datePeriodFilter === 2" (click)="onLastSevenDaysClick()"  *ngIf="state == 1">Last 7 Days</button>
+                </div>
+
+                <div class="grid-config-wrappper">
+                  <div class="total-audits-count">
+                    {{totalRecordsCount}} Audits
+                  </div>
+
+                  <app-grid-columns [gridApi]="gridApi" [gridColumnApi]="gridColumnApi"></app-grid-columns>
+
+                </div>
+              </div>
+            </div>
+            <div class="card" style="height:100%">
+              <div class="card-body" style="height:100%; width: 100%;">
+                <ag-grid-angular #agGrid
+                                 style="width: 100%; height: calc(100vh - 220px);"
+                                 id="auditGrid"
+                                 class="ag-theme-alpine"
+                                 [rowHeight]="70"
+                                 [groupHeaderHeight]="75"
+                                 [columnDefs]="columnDefs"
+                                 [suppressRowClickSelection]="false"
+                                 [rowMultiSelectWithClick]="true"
+                                 [rowModelType]="rowModelType"
+                                 [serverSideStoreType]="serverSideStoreType"
+                                 [getContextMenuItems]="getContextMenuItems"
+                                 [rowBuffer]="rowBuffer"
+                                 [cacheOverflowSize]="cacheOverflowSize"
+                                 [cacheBlockSize]="cacheBlockSize"
+                                 [maxConcurrentDatasourceRequests]="maxConcurrentDatasourceRequests"
+                                 [infiniteInitialRowCount]="infiniteInitialRowCount"
+                                 [maxBlocksInCache]="maxBlocksInCache"
+                                 [getRowNodeId]="getRowNodeId"
+                                 [components]="components"
+                                 [rowData]="rowData"
+                                 rowSelection="multiple"
+                                 (filterChanged)="onFilterChanged($event)"
+                                 (filterModified)="onFilterModified($event)"
+                                 [frameworkComponents]="frameworkComponents"
+                                 (gridReady)="onGridReady($event)"
+                                 (firstDataRendered)="onFirstDataRendered($event)"
+                                 [rowClassRules]="rowClassRules"
+                                 [defaultColDef]="defaultColDef"
+                                 (columnVisible)="onColumnVisible($event)"
+                                 (columnMoved)="onColumnMoved($event)"
+                                 (sortChanged)="onSortChanged($event)"                             
+                                 (rowDoubleClicked)="onRowClicked($event)"
+                                 (selectionChanged)="onSelectionChanged($event)"></ag-grid-angular>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+  </div>
+</div>

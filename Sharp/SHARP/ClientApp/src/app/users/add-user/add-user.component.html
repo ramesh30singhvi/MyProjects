@@ -1,0 +1,382 @@
+<div class="modal-header">
+  <h4 class="modal-title">Add User</h4>
+  <div class="close" (click)="onClose()">
+    <div>
+      <svg
+        width="22px"
+        height="22px"
+        viewBox="0 0 22 22"
+        version="1.1"
+        xmlns="http://www.w3.org/2000/svg"
+        xmlns:xlink="http://www.w3.org/1999/xlink"
+      >
+        <title>1D28CDBB-B026-4859-B571-979653331709</title>
+        <g
+          id="Settings"
+          stroke="none"
+          stroke-width="1"
+          fill="none"
+          fill-rule="evenodd"
+        >
+          <g
+            id="Settings-/-User-Management-/-Add"
+            transform="translate(-985.000000, -210.000000)"
+          >
+            <rect fill="#F8FBFB" x="0" y="0" width="1680" height="1024"></rect>
+            <rect
+              id="Rectangle"
+              stroke="#EAECEF"
+              fill="#FFFFFF"
+              x="270.5"
+              y="165.5"
+              width="1379"
+              height="827"
+              rx="10"
+            ></rect>
+            <rect
+              id="Rectangle"
+              x="270"
+              y="165"
+              width="1380"
+              height="70"
+            ></rect>
+            <rect
+              id="Rectangle"
+              fill-opacity="0.3"
+              fill="#54667A"
+              x="0"
+              y="0"
+              width="1680"
+              height="1024"
+            ></rect>
+            <g id="Group-3" transform="translate(645.000000, 186.000000)">
+              <rect
+                id="Rectangle"
+                fill="#FFFFFF"
+                x="0"
+                y="0"
+                width="390"
+                height="629"
+                rx="10"
+              ></rect>
+              <path
+                d="M10,0 L380,0 C385.522847,-1.01453063e-15 390,4.4771525 390,10 L390,70 L390,70 L0,70 L0,10 C-6.76353751e-16,4.4771525 4.4771525,-6.09089673e-15 10,0 Z"
+                id="Rectangle"
+                fill="#FFFFFF"
+              ></path>
+              <g
+                id="buttons-/-icon"
+                transform="translate(332.000000, 16.000000)"
+              >
+                <rect
+                  id="Rectangle"
+                  stroke="#EAECEF"
+                  x="0"
+                  y="0"
+                  width="38"
+                  height="38"
+                  rx="4"
+                ></rect>
+                <g
+                  id="close_black_24dp-(2)"
+                  transform="translate(8.000000, 8.000000)"
+                >
+                  <polygon id="Path" points="0 0 22 0 22 22 0 22"></polygon>
+                  <polygon
+                    id="Path"
+                    fill="#54667A"
+                    points="17.4166667 5.87583333 16.1241667 4.58333333 11 9.7075 5.87583333 4.58333333 4.58333333 5.87583333 9.7075 11 4.58333333 16.1241667 5.87583333 17.4166667 11 12.2925 16.1241667 17.4166667 17.4166667 16.1241667 12.2925 11"
+                  ></polygon>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </svg>
+    </div>
+  </div>
+</div>
+<div class="modal-body">
+  <div class="form-group">
+    <input
+      class="form-control"
+      placeholder="First Name"
+      [(ngModel)]="firstName"
+      (ngModelChange)="onFirstNameChange()"
+      required
+    />
+    <div *ngIf="errors && errors['FirstName']">
+      <span class="error-message" *ngFor="let error of errors['FirstName']">
+        {{ error }}
+      </span>
+    </div>
+  </div>
+  <div class="form-group">
+    <input
+      class="form-control"
+      placeholder="Last Name"
+      [(ngModel)]="lastName"
+      (ngModelChange)="onLastNameChange()"
+      required
+    />
+    <div *ngIf="errors && errors['LastName']">
+      <span class="error-message" *ngFor="let error of errors['LastName']">
+        {{ error }}
+      </span>
+    </div>
+  </div>
+  <div class="form-group">
+    <input
+      class="form-control"
+      placeholder="Email Address"
+      [(ngModel)]="email"
+      (ngModelChange)="onEmailChange()"
+      required
+    />
+    <div *ngIf="errors && errors['Email']">
+      <span class="error-message" *ngFor="let error of errors['Email']">
+        {{ error }}
+      </span>
+    </div>
+  </div>
+  <div class="form-group">
+    <div class="input-group password">
+      <input
+        class="form-control"
+        placeholder="Password"
+        [(ngModel)]="password"
+        type="{{ showPassword ? 'text' : 'password' }}"
+        autocomplete="new-password"
+        (ngModelChange)="onPasswordChange()"
+        required
+      />
+      <div class="input-group-append" (click)="onToggleShowPassword()">
+        <svg
+          width="22px"
+          height="22px"
+          viewBox="0 0 22 22"
+          version="1.1"
+          xmlns="http://www.w3.org/2000/svg"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          class="input-group-text"
+        >
+          <title>DAD64452-D302-4337-8E49-198ACD06818C</title>
+          <g
+            id="Settings"
+            stroke="none"
+            stroke-width="1"
+            fill="none"
+            fill-rule="evenodd"
+          >
+            <g
+              id="Settings-/-User-Management-/-Add"
+              transform="translate(-979.000000, -526.000000)"
+            >
+              <rect
+                fill="#F8FBFB"
+                x="0"
+                y="0"
+                width="1680"
+                height="1024"
+              ></rect>
+              <rect
+                id="Rectangle"
+                stroke="#EAECEF"
+                fill="#FFFFFF"
+                x="270.5"
+                y="165.5"
+                width="1379"
+                height="827"
+                rx="10"
+              ></rect>
+              <g
+                id="rows-/-studies-copy-3"
+                transform="translate(270.000000, 504.000000)"
+              >
+                <rect
+                  id="Rectangle"
+                  x="0"
+                  y="0"
+                  width="1380"
+                  height="70"
+                ></rect>
+                <text
+                  id="Role"
+                  font-family="SFPro-Regular, SF Pro"
+                  font-size="16"
+                  font-weight="normal"
+                  fill="#263237"
+                >
+                  <tspan x="700" y="40.5">Admin</tspan>
+                </text>
+              </g>
+              <rect
+                id="Rectangle"
+                fill-opacity="0.3"
+                fill="#54667A"
+                x="0"
+                y="0"
+                width="1680"
+                height="1024"
+              ></rect>
+              <g id="Group-3" transform="translate(645.000000, 186.000000)">
+                <rect
+                  id="Rectangle"
+                  fill="#FFFFFF"
+                  x="0"
+                  y="0"
+                  width="390"
+                  height="629"
+                  rx="10"
+                ></rect>
+                <g
+                  id="fields-/-regular-/-large-/-before-copy-3"
+                  transform="translate(20.000000, 322.000000)"
+                >
+                  <rect
+                    id="Rectangle"
+                    stroke="#EAECEF"
+                    fill="#FFFFFF"
+                    x="0.5"
+                    y="0.5"
+                    width="349"
+                    height="57"
+                    rx="6"
+                  ></rect>
+                  <g
+                    id="visibility_black_24dp-(2)"
+                    transform="translate(314.000000, 18.000000)"
+                  >
+                    <polygon id="Path" points="0 0 22 0 22 22 0 22"></polygon>
+                    <path
+                      d="M11,5.5 C14.4741667,5.5 17.5725,7.4525 19.085,10.5416667 C17.5725,13.6308333 14.4741667,15.5833333 11,15.5833333 C7.52583333,15.5833333 4.4275,13.6308333 2.915,10.5416667 C4.4275,7.4525 7.52583333,5.5 11,5.5 M11,3.66666667 C6.41666667,3.66666667 2.5025,6.5175 0.916666667,10.5416667 C2.5025,14.5658333 6.41666667,17.4166667 11,17.4166667 C15.5833333,17.4166667 19.4975,14.5658333 21.0833333,10.5416667 C19.4975,6.5175 15.5833333,3.66666667 11,3.66666667 Z M11,8.25 C12.265,8.25 13.2916667,9.27666667 13.2916667,10.5416667 C13.2916667,11.8066667 12.265,12.8333333 11,12.8333333 C9.735,12.8333333 8.70833333,11.8066667 8.70833333,10.5416667 C8.70833333,9.27666667 9.735,8.25 11,8.25 M11,6.41666667 C8.72666667,6.41666667 6.875,8.26833333 6.875,10.5416667 C6.875,12.815 8.72666667,14.6666667 11,14.6666667 C13.2733333,14.6666667 15.125,12.815 15.125,10.5416667 C15.125,8.26833333 13.2733333,6.41666667 11,6.41666667 Z"
+                      id="Shape"
+                      fill="#54667A"
+                    ></path>
+                  </g>
+                </g>
+              </g>
+            </g>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <div *ngIf="errors && errors['Password']">
+      <span class="error-message" *ngFor="let error of errors['Password']">
+        {{ error }}
+      </span>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <ng-select
+      #timezone
+      class="time-zone-select"
+      [items]="timeZones"
+      bindLabel="displayName"
+      [(ngModel)]="selectedTimeZone"
+      (change)="onTimeZoneSelected($event)"
+      placeholder="Time Zone"
+    >
+    </ng-select>
+    <div *ngIf="errors && errors['TimeZone']">
+      <span class="error-message" *ngFor="let error of errors['TimeZone']">
+        {{ error }}
+      </span>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <ng-select
+      #forms
+      class="roles-select"
+      [items]="roles"
+      bindLabel="name"
+      [(ngModel)]="selectedRoles"
+      (change)="onRoleSelected($event)"
+      [multiple]="true"
+      [closeOnSelect]="false"
+      placeholder="Role"
+    >
+    </ng-select>
+    <div *ngIf="errors && errors['Roles']">
+      <span class="error-message" *ngFor="let error of errors['Roles']">
+        {{ error }}
+      </span>
+    </div>
+  </div>
+  <div class="form-group">
+    <ng-select
+      #forms
+      class="organizations-select"
+      [items]="organizations"
+      bindLabel="name"
+      [(ngModel)]="selectedOrganizations"
+      (change)="onOrganizationSelected($event)"
+      [multiple]="true"
+      [closeOnSelect]="false"
+      placeholder="Organization Access"
+    >
+    </ng-select>
+    <div *ngIf="errors && errors['Organizations']">
+      <span class="error-message" *ngFor="let error of errors['Organizations']">
+        {{ error }}
+      </span>
+    </div>
+  </div>
+
+  <div class="form-group" *ngIf="showFacilityAccess()">
+    <ng-select
+      #forms
+      class="facilities-select"
+      [items]="facilities"
+      bindLabel="name"
+      [(ngModel)]="selectedFacilities"
+      (change)="onFacilitySelected($event)"
+      [multiple]="true"
+      [closeOnSelect]="false"
+      placeholder="Facility Access"
+    >
+    </ng-select>
+    <div *ngIf="errors && errors['Facilities']">
+      <span class="error-message" *ngFor="let error of errors['Facilities']">
+        {{ error }}
+      </span>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message-wrapper">
+    <span class="error-message">
+      {{ errorMessage }}
+    </span>
+  </div>
+</div>
+<div class="modal-footer">
+  <div class="form-group">
+    <ng-select
+      #status
+      [items]="statuses"
+      bindLabel="name"
+      [(ngModel)]="selectedStatus"
+      [clearable]="false"
+      placeholder="Status"
+      style="width: 130px"
+    >
+      <ng-template ng-label-tmp let-item="item">
+        <span [style.color]="selectedStatus?.color">{{ item.name }}</span>
+      </ng-template>
+    </ng-select>
+  </div>
+  <div>
+    <button
+      type="button"
+      class="btn btn-default btn-cancel"
+      (click)="onClose()"
+    >
+      Cancel
+    </button>
+    <button type="button" class="btn btn-default btn-save" (click)="onSave()">
+      Save
+    </button>
+  </div>
+</div>

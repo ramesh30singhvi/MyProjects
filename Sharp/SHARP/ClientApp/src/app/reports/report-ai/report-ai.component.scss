@@ -1,0 +1,341 @@
+
+@import "./src/assets/scss/pacs/scss/custom-mixins";
+.report-ai-wrapper {
+  height: 100%;
+  overflow-y: auto;
+
+  h4 {
+    padding: 24px 30px 23px 30px;
+    color: #263237;
+    font-size: 22px;
+    font-weight: bold;
+  }
+
+  .create-btn-report {
+    background-color: #145196;
+    color: white;
+  }
+}
+.field.users-wrapper > .custom-select-box > ng-select > .ng-dropdown-panel {
+  min-width: 100%;
+  width: fit-content;
+}
+
+.field.facility-wrapper > .custom-select-box > ng-select > .ng-dropdown-panel {
+  min-width: 100%;
+  width: fit-content;
+}
+
+.field.form-wrapper > .custom-select-box > ng-select > .ng-dropdown-panel {
+  min-width: 100%;
+  width: fit-content;
+}
+.ng-valid[required], .ng-valid.required {
+  border-left: 5px solid #42A948; /* green */
+}
+
+.ng-invalid:not(form) {
+  border-left: 5px solid #a94442; /* red */
+}
+.ng-autocompletec {
+  .autocomplete-container {
+    box-shadow: none;
+    border: 1px solid #e9ecef !important;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 400;
+    color: #4f5467;
+    background-color: #FFFFFF;
+    background-clip: padding-box;
+    height: 40px;
+  }
+
+  .autocomplete-container .input-container input {
+    height: 37px;
+    font-size: 1rem;
+    font-weight: 400;
+    color: #4f5467;
+  }
+
+ }
+
+.form-report-fields {
+  min-width: 1225px;
+  margin-left: 30px;
+  margin-right: 30px;
+
+  .field {
+    margin-right: 10px;
+  }
+
+  .organization-wrapper {
+    width: 27%;
+    min-width: 200px;
+  }
+
+  .facility-wrapper {
+    width: 27%;
+    min-width: 200px;
+  }
+
+  .users-wrapper {
+    width: 27%;
+    min-width: 200px;
+  }
+
+
+  .form-wrapper {
+    width: 33%;
+    min-width: 300px;
+  }
+}
+
+
+ .input-reportupload-section {
+    .action-buttons {
+      padding: 10px;
+      border-bottom: 1px solid #EEF2F5;
+      height: 75px;
+
+      .submit-form-btn {
+        color: #fff;
+        background-color: #145196;
+        border-radius: 6px;
+        margin: 10px;
+      }
+    }
+  }
+
+ .form-fields {
+    box-shadow: 0 21px 20px -10px rgb(0 0 0 / 8%);
+  }
+
+  label[for="pdfFile"],
+  label[for="keywordFile"] {
+    top: 15px;
+    font-size: 18px !important;
+    color: #145196 !important;
+    font-weight: 500;
+  }
+
+.error {
+  color: #a94442;
+  font-size: 14px;
+}
+
+  .choosefile {
+    background-color: #efefef;
+    padding: 32px;
+    border-radius: 20px;
+  }
+
+  input[type="file"] {
+    padding: 4px;
+    margin: -4px;
+    position: relative;
+    outline: none;
+    /* File Selector Button Styles */
+    &::file-selector-button {
+      border-radius: 4px;
+      padding: 0 16px;
+      height: 40px;
+      cursor: pointer;
+      background-color: white;
+      border: 1px solid rgba(#000, 0.16);
+      box-shadow: 0px 1px 0px rgba(#000, 0.05);
+      margin-right: 16px;
+      /*
+      This is a hack to change the button label. 
+      I'm hiding the default label and then 
+      manually applying the width based on 
+      updated icon and label.
+    */
+      width: 132px;
+      color: transparent;
+      /*
+      Firefox doesn't support the pseudo ::before 
+      or ::after elements on this input field so 
+      we need to use the @supports rule to enable 
+      default styles fallback for Firefox.
+    */
+      @supports (-moz-appearance: none) {
+        color: var(--primary-color);
+      }
+
+      &:hover {
+        background-color: #f3f4f6;
+      }
+
+      &:active {
+        background-color: #e5e7eb;
+      }
+    }
+    /* Faked label styles and icon */
+    &::before {
+      position: absolute;
+      pointer-events: none;
+      top: 14px;
+      left: 16px;
+      height: 20px;
+      width: 20px;
+      content: "";
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230964B0'%3E%3Cpath d='M18 15v3H6v-3H4v3c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2v-3h-2zM7 9l1.41 1.41L11 7.83V16h2V7.83l2.59 2.58L17 9l-5-5-5 5z'/%3E%3C/svg%3E");
+    }
+
+    &::after {
+      position: absolute;
+      pointer-events: none;
+      top: 16px;
+      left: 40px;
+      color: var(--primary-color);
+      content: "Browse...";
+    }
+    /* Handle Component Focus */
+    &:focus-within::file-selector-button,
+    &:focus::file-selector-button {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 2px;
+    }
+  }
+
+  ::ng-deep .accordion {
+    .card {
+      margin-bottom: 0 !important;
+      border-bottom: 1px solid rgba(0, 0, 0, .04) !important;
+
+      .card-header {
+        // padding-top: 0;
+        padding: 0;
+
+        button {
+          padding: 1rem;
+          width: 1000%;
+          color: #fff;
+          background-color: #145196;
+          border-radius: 6px;
+
+          span {
+            float: left;
+            font-size: 1.2rem;
+          }
+        }
+      }
+
+      .card-body {
+        padding: 1rem;
+      }
+    }
+  }
+
+  .highlighted-text {
+    background-color: lightskyblue;
+    color: red;
+    font-style: italic;
+    font-weight: 800;
+  }
+
+
+
+.nav-tabs {
+  margin-left:100px;
+}
+.nav-link.active, .nav-pills .show > .nav-link {
+  background-color: #145196 !important;
+  color: white !important;
+  border-radius: 0;
+  border: 3px solid #145196;
+
+}
+
+.nav-link {
+  margin-bottom: 25px !important;
+  color: #145196 !important;
+  border: 3px solid #145196 !important;
+}
+
+.nav-tabs {
+  border-bottom: 0 !important;
+}
+
+.selectall-checkbox-field {
+  padding-left: 1rem;
+
+  .custom-checkbox {
+    margin-right: 5px;
+  }
+
+  .custom-checkbox-label {
+    margin-bottom: 0px;
+  }
+}
+
+.status {
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 14px;
+  text-align: center;
+  margin-right: 16px;
+  white-space: nowrap;
+}
+
+.description {
+  @include font (#909BA8, 14px, 15px, 'HelveticaRegular');
+  height: 26px;
+  display: flex;
+  align-items: center;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+.custom-label {
+  font-weight: bold;
+}
+
+.actions-renderer {
+  display: flex;
+
+  .action-button {
+    border: 1px solid #EAECEF;
+    border-radius: 6px;
+    background-color: #FFFFFF;
+    padding: 8px 10px;
+    //color: #54667A;
+    font-size: 14px;
+    letter-spacing: 0;
+    line-height: 16px;
+    //font-family: "HelveticaBold";
+    height: 39px;
+
+    &:hover {
+      background-color: #EAECEF;
+    }
+
+    &.green {
+      background-color: #34C759;
+      color: #fff;
+    }
+
+    &.red {
+      background-color: #FF2D55;
+      color: #fff;
+    }
+
+    &.blue {
+      background-color: #145196;
+      color: #fff;
+    }
+
+    &.white {
+      background-color: #fff;
+      color: #000;
+    }
+  }
+}
+
+.text-nowrap {
+  text-wrap: nowrap !important;
+}

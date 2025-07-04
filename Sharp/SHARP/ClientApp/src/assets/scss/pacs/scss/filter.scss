@@ -1,0 +1,157 @@
+.ag-popup {
+    .ag-popup-child {
+        .ag-tabs-header {
+            &.ag-menu-header{
+
+            }
+        }
+        .ag-menu-body {
+            .ag-filter {
+                background: #fff;
+                .ag-filter-wrapper {
+                    &.ag-focus-managed{
+                        .ag-filter-body-wrapper {
+                            &.ag-set-filter-body-wrapper {
+
+                                    .ag-mini-filter {
+                                        margin: 0;
+                                        &.ag-labeled {
+                                            &.ag-label-align-left {
+                                                &.ag-text-field {
+                                                    &.ag-input-field {
+                                                        position: relative;
+                                                        .ag-input-field-input {
+                                                            &.ag-text-field-input {
+                                                                margin: 0;
+                                                                height: 48px;
+                                                                border: none;
+                                                                outline: none;
+                                                                padding-left: 36px;
+
+                                                                &:hover {
+                                                                   box-shadow: none;
+                                                                }
+                                                                &:focus {
+                                                                    box-shadow: none;
+                                                                 }
+                                                            }
+                                                        }
+                                                        input::placeholder {
+                                                            @include font (#54667A, 16px, 18px, 'HelveticaRegular');
+                                                        }
+                                                        input::-webkit-input-placeholder { /* Chrome/Opera/Safari */
+                                                            @include font (#54667A, 16px, 18px, 'HelveticaRegular');
+                                                        }
+                                                        input::-moz-placeholder { /* Firefox 19+ */
+                                                            @include font (#54667A, 16px, 18px, 'HelveticaRegular');
+                                                        }
+                                                        input:-ms-input-placeholder { /* IE 10+ */
+                                                            @include font (#54667A, 16px, 18px, 'HelveticaRegular');
+                                                        }
+                                                        input:-moz-placeholder { /* Firefox 18- */
+                                                            @include font (#54667A, 16px, 18px, 'HelveticaRegular');
+                                                        }
+                                                        &:before {
+                                                            position: absolute;
+                                                            z-index: 10;
+                                                            font-size: 18px;
+                                                            color: #909BA8;
+                                                            pointer-events: none;
+                                                            content: '\f002';
+                                                            font-family: 'Font Awesome 5 Free';
+                                                            font-weight: 900;
+                                                            top: 50%;
+                                                            transform: translateY(-50%);
+                                                            left: 8px;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    .ag-set-filter-list {
+                                        height: 170px;
+                                        .ag-virtual-list-viewport {
+                                            @include scroll;
+                                            &.ag-filter-virtual-list-viewport {
+                                                &.ag-focus-managed {
+                                                    .ag-virtual-list-container {
+                                                        &.ag-filter-virtual-list-container {
+                                                            .ag-virtual-list-item {
+                                                                &.ag-filter-virtual-list-item {
+                                                                    .ag-set-filter-item {
+                                                                        .ag-set-filter-item-checkbox {
+                                                                            &.ag-labeled {
+                                                                                span{
+                                                                                    @include font (#54667A, 15px, 16px, 'HelveticaRegular');
+                                                                                    font-weight: normal
+                                                                                }
+                                                                                &.ag-label-align-right {
+                                                                                    &.ag-checkbox {
+                                                                                        &.ag-input-field {
+
+                                                                                            .ag-input-field-label {
+                                                                                                &.ag-label {
+                                                                                                    &.ag-checkbox-label {
+                                                                                                        @include font (#54667A, 15px, 16px, 'HelveticaRegular');
+                                                                                                        //height: 19px;
+                                                                                                        width: 96%;
+                                                                                                        white-space: break-spaces;
+                                                                                                    }
+                                                                                                }
+                                                                                            }
+                                                                                        }
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .ag-set-filter {
+                                        .ag-filter-no-matches {
+                                            @include font (#54667A, 15px, 16px, 'HelveticaRegular');
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .ag-filter-apply-panel {
+                            button {
+                                &:first-of-type {
+                                    margin-right: auto;
+                                    margin-left: 0;
+                                }
+                            }
+
+                            button {
+                                border: 1px solid #EAECEF;
+                                border-radius: 6px;
+                                background-color: #FFFFFF;
+                                padding: 8px 10px;
+                                @include font (#54667A, 14px,  16px, 'HelveticaBold');
+
+                            }
+
+                            button[ref="applyFilterButton"] {
+                                background-color: #145196;
+                                color: #FFFFFF;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+.ag-filter-body-wrapper 
+{
+    width: 260px;
+}

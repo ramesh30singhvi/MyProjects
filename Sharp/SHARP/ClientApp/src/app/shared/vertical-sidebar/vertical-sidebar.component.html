@@ -1,0 +1,74 @@
+<nav class="sidebar-nav">
+    <ul id="sidebarnav">
+        <!-- User Profile-->
+        <li class="mt-4">
+            <div class="user-profile pb-4">
+                <!-- User profile image -->
+<!--                <div class="profile-img">-->
+<!--                    <img src="assets/images/users/1.jpg" alt="user" />-->
+<!--                  -->
+<!--                </div>-->
+                <div class="d-flex align-items-center justify-content-center">
+                  <ngx-avatar class="menu-avatar" size="50" bgColor="transparent" fgColor="#54667A" borderColor="#EAECEF" name="{{userFullName}}"></ngx-avatar>
+                </div>
+                <!-- User profile text-->
+                <div class="profile-text">
+                    {{userFullName}}
+                </div>
+                <!--<div class="profile-text" ngbDropdown display="static">
+                    <a href="javascript: void(0);" class="dropdown-toggle link u-dropdown" ngbDropdownToggle>{{userFullName}}
+                        <span class="caret"></span>
+                    </a>
+                    <div class="dropdown-menu" ngbDropdownMenu>
+                        <a href="javascript: void(0);" class="dropdown-item">
+                            <i class="ti-user"></i> My Profile</a>
+                        <a href="javascript: void(0);" class="dropdown-item">
+                            <i class="ti-wallet"></i> My Balance</a>
+                        <a href="javascript: void(0);" class="dropdown-item">
+                            <i class="ti-email"></i> Inbox</a>
+                        <div class="dropdown-divider"></div>
+                        <a href="javascript: void(0);" class="dropdown-item">
+                            <i class="ti-settings"></i> Account Setting</a>
+                        <div class="dropdown-divider"></div>
+                        <a href="javascript: void(0);" class="dropdown-item">
+                            <i class="fa fa-power-off"></i> Logout</a>
+                    </div>
+                </div>-->
+            </div>
+        </li>
+        <!-- First level menu -->
+        <li class="sidebar-item"
+            *ngFor="let sidebarnavItem of sidebarnavItems"
+            [class.active]="sidebarnavItem.active">
+          <div class="nav-small-cap" *ngIf="sidebarnavItem.extralink === true">
+            <i [ngClass]="[sidebarnavItem.icon]"></i><span class="hide-menu">{{sidebarnavItem.title | translate}}</span>
+          </div>
+          <a class="sidebar-link waves-effect waves-dark"
+             [routerLink]="sidebarnavItem.class === '' ? [sidebarnavItem.path] : null"
+             [ngClass]="[sidebarnavItem.class]" *ngIf="!sidebarnavItem.extralink;"
+             [class.expanded]="sidebarnavItem.expanded"
+             (click)="expandMenu(sidebarnavItem.title)"
+             [routerLinkActive]="sidebarnavItem.submenu.length != 0 ? '' : 'active'">
+            <i [ngClass]="[sidebarnavItem.icon]"></i>
+            <!-- <i-feather [name]="sidebarnavItem.icon" [ngClass]="[sidebarnavItem.icon]"></i-feather> -->
+            <span class="hide-menu">{{sidebarnavItem.title | translate}}</span>
+          </a>
+          <ul aria-expanded="true" class="collapse first-level" *ngIf="sidebarnavItem.submenu.length > 0"
+              [ngClass]="{'in' : sidebarnavItem.expanded }">
+            <li class="sidebar-item" *ngFor="let sidebarnavSubItem of sidebarnavItem.submenu"
+                (click)="sidebarnavSubItem.submenu.length != 0 ? '' : handleNotify()"
+                [class.active]="showSubMenu === sidebarnavSubItem.title"
+                [routerLinkActive]="sidebarnavSubItem.submenu.length > 0 ? '' : 'active'">
+              <a class="sidebar-link"
+                 [routerLink]="sidebarnavSubItem.submenu.length > 0 ? null : [sidebarnavSubItem.path]"
+                 [routerLinkActive]="sidebarnavSubItem.submenu.length > 0 ? '' : 'router-link-active'"
+                 [ngClass]="[sidebarnavSubItem.class]" *ngIf="!sidebarnavSubItem.extralink;"
+                 [class.active]="sidebarnavSubItem.active">
+                <i [ngClass]="[sidebarnavSubItem.icon]"></i>
+                <span class="hide-menu">{{sidebarnavSubItem.title | translate}}</span>
+              </a>
+            </li>
+          </ul>
+        </li>
+    </ul>
+</nav>

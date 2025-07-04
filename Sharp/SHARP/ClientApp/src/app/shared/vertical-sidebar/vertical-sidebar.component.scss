@@ -1,0 +1,47 @@
+//Icon size
+.vertical-menu-icon {
+  font-size: 22px;
+  margin-right: 7px;
+}
+
+// Color of links
+.sidebar-link {
+  padding: 11px 15px!important;
+  width: 100%;
+  color: #000000!important;
+  &.active {
+    color: #145196!important;
+    border-left: 3px solid #145196!important;
+  }
+}
+/*.first-level .sidebar-item {
+  &.active {
+    color: #145196 !important;
+    border-left: 3px solid #145196 !important;
+  }
+}*/
+// Collapse arrow styles
+.sidebar-item {
+  & .icon-drop-down {
+    font-size: 22px;
+    display: inline-flex;
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  &.expanded {
+    .icon-drop-down {
+      transform: rotate(180deg);
+      justify-content: flex-start;
+    }
+  }
+}
+
+.sidebar-nav li.expanded > .has-arrow::after,
+.sidebar-nav li > .has-arrow.expanded::after,
+.sidebar-nav .has-arrow[aria-expanded="true"]::after {
+  -webkit-transform: rotate(-135deg) translate(0, -50%);
+  -ms-transform: rotate(-135deg) translate(0, -50%);
+  -o-transform: rotate(-135deg) translate(0, -50%);
+  transform: rotate(-135deg) translate(0, -50%);
+}

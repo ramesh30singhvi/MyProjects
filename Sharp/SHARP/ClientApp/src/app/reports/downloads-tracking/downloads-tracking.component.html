@@ -1,0 +1,44 @@
+<div class="page-wrapper homepage-wrapper" style="height: 100%;">
+
+  <div class="flex items-center mb-[10px]">
+    <h3 class="text-main-black font-[500] text-[26px] mr-auto">Downloads tracking</h3>
+  </div>
+
+  <div class="bg-white rounded-[16px] py-[15px] px-[20px] h-full">
+    <div class="flex items-center gap-[15px]">
+      <div class="flex items-center w-[300px] border-cerebral-grey cursor-pointer border-[1px] rounded-[5px] mb-[10px] h-[36px] px-[10px] text-orochimaru">
+        <svg-icon src="assets/icons/heroicons/outline/search.svg" [svgClass]="'h-5 w-5 stroke-cerebral-grey'"> </svg-icon>
+        <input class="ml-[10px] text-[14px]  focus:border-transparent focus:ring-0 border-none font-[300] text-dark-gray p-[0] placeholder-dark-gray"
+               type="text" #searchInput placeholder="Search by Report name"
+               (input)="onSearchInputChanged($event)">
+      </div>
+      <div class="filter-container">
+        <!--<input type="text"
+           [locale]="{ applyLabel: 'ok', format: 'MM/DD/YYYY' }"
+           #dateRangePicker
+           ngxDaterangepickerMd
+           startKey="start"
+           endKey="end"
+           [alwaysShowCalendars]="false"
+           [autoApply]="true"
+           [(ngModel)]="selectedDateRange"
+           placeholder="Choose date"
+           (change)="onDateRangeFilterChanged($event)"/>-->
+      </div>
+    </div>
+
+    <div class="container-fluid homepage-conteiner" style="height: 100%;">
+      <div class="row" style="height:100%">
+        <ag-grid-angular style="width: 100%; height: calc(100% - 46px);"
+                         class="ag-theme-alpine"
+                         [gridOptions]="gridOptions"
+                         [columnDefs]="columnDefs"
+                         [rowData]="filteredData"
+                         [rowHeight]="rowHeight"
+                         [headerHeight]="headerHeight"
+                         (gridReady)="onGridReady($event)">
+        </ag-grid-angular>
+      </div>
+    </div>
+  </div>
+</div>
