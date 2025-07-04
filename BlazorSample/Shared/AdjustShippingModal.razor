@@ -1,0 +1,43 @@
+﻿<SfDialog Width="400px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsAdjustShippingModalVisible">
+    <DialogEvents OnOverlayClick="() => IsAdjustShippingModalVisible = false">
+    </DialogEvents>
+    <DialogTemplates>
+        <Header>Adjust Shipping</Header>
+        <Content>
+            <div class="mb-3">
+                <label class="form-label">Requested Ship Date</label>
+                <SfDatePicker TValue="DateTime" @bind-Value="@ShippingDate" Min="@DateTime.Today" Format="MM/dd/yyyy"></SfDatePicker>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Shipping Service</label>
+                <input type="text" class="form-control" id="inputShippingService" value="UPS Ground $27.50" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Adjust Charges</label>
+                <SfNumericTextBox TValue="decimal" Format="c2" ValidateDecimalOnType="true" Decimals=2 ShowSpinButton="false" @bind-Value=@ShippingCharge Min="0"></SfNumericTextBox>
+            </div>
+        </Content>
+    </DialogTemplates>
+    <DialogButtons>
+        <DialogButton Content="Cancel" OnClick="() => IsAdjustShippingModalVisible = false" />
+        <DialogButton Content="Save" OnClick="OnSaveCharges" IsPrimary="true" />
+    </DialogButtons>
+</SfDialog>
+
+@code {
+
+    [Parameter]
+    public bool IsAdjustShippingModalVisible { get; set; }
+    [Parameter]
+    public decimal ShippingCharge { get; set; }
+    [Parameter]
+    public DateTime ShippingDate { get; set; }
+
+    [Parameter]
+    public EventCallback SaveOrderShippingCharges { get; set; }
+
+    private async Task OnSaveCharges()
+    {
+        await SaveOrderShippingCharges.InvokeAsync();
+    }
+}

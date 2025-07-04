@@ -1,0 +1,245 @@
+﻿@page  "/reservations/wait-list-manager"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col">
+                <h5 class="mb-0"><span class="fa-regular fa-user-clock me-2"></span>Wait List Manager</h5>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <form>
+            <div class="p-3">
+                <div class="row">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">Search</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                            <input type="text" class="form-control" placeholder="Search orders" aria-label="Search Orders" aria-describedby="inputGroupSearch">
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label">Date</label>
+                        <select class="form-select fs--1" id="selDate">
+                            <option value="-1">--Select--</option>
+                            <option value="0">Today</option>
+                            <option value="1">Tomorrow</option>
+                            <option value="9">Last 48 Hours</option>
+                            <option value="7">This Week</option>
+                            <option selected="selected" value="2">This Month</option>
+                            <option value="8">Next Week</option>
+                            <option value="3">Next Month</option>
+                            <option value="4">Yesterday</option>
+                            <option value="5">Last Week</option>
+                            <option value="6">Last Month</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-select fs--1" id="selStatus">
+                            <option selected="selected" value="-1">All</option>
+                            <option value="0">Pending</option>
+                            <option value="1">Approved</option>
+                            <option value="2">Converted</option>
+                            <option value="3">Canceled</option>
+                            <option value="4">No Response</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div class="sf-grid min-vh-75">
+            <SfGrid DataSource="@PlaceholderDataList" AllowPaging="false" Width="100%">
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && PlaceholderDataList.Count <= 0)
+                        {
+                            <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No wait list data.</h6>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn HeaderText="Status" TextAlign="TextAlign.Left" Width="60px">
+                        <Template>
+                            @{
+                                var pholder = (context as PlaceholderData);
+                                <div class="d-flex justify-content-start">
+                                    @if (pholder.Status == "Pending")
+                                    {
+                                        <SfTooltip>
+                                            <TooltipTemplates><Content>@pholder.Received</Content></TooltipTemplates>
+                                            <span class="badge bg-warning">@pholder.Status</span>
+                                        </SfTooltip>
+
+                                    }
+                                    @if (pholder.Status == "Expired")
+                                    {
+                                        <SfTooltip>
+                                            <TooltipTemplates><Content>@pholder.Received</Content></TooltipTemplates>
+                                            <span class="badge bg-secondary">@pholder.Status</span>
+                                        </SfTooltip>
+                                    }
+                                </div>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(PlaceholderData.RSVP) HeaderText="RSVP" TextAlign="TextAlign.Left" Width="60" />
+                    <GridColumn Field=@nameof(PlaceholderData.Guests) HeaderText="Guests" TextAlign="TextAlign.Left" Width="40" />
+                    <GridColumn Field=@nameof(PlaceholderData.EventName) HeaderText="Event Name" TextAlign="TextAlign.Left" Width="120" />
+                    <GridColumn Field=@nameof(PlaceholderData.EventDateTime) HeaderText="Event Date/Time" TextAlign="TextAlign.Left" Width="80" />
+                    <GridColumn HeaderText="Guest Name" TextAlign="TextAlign.Left" Width="80">
+                        <Template>
+                            @{
+                                var pholder = (context as PlaceholderData);
+                                <a href="javascript:void();">@pholder.GuestName</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(PlaceholderData.Received) HeaderText="Received" TextAlign="TextAlign.Center" Width="80" />
+                    <GridColumn HeaderText="" TextAlign="TextAlign.Left" Width="30">
+                        <Template>
+                            @{
+                                var pholder = (context as PlaceholderData);
+                                <div class="d-flex justify-content-start">
+                                    @if (pholder.HasNotes == true)
+                                    {
+                                    <SfTooltip>
+                                        <TooltipTemplates><Content>@pholder.NotesText</Content></TooltipTemplates>
+                                        <button class="delete_icon" @onclick="@OpenModal">
+                                            <span class="far fa-comment-alt-lines mx-1"></span>
+                                        </button>
+                                    </SfTooltip>
+                                    }
+                                </div>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="" AllowFiltering="false" TextAlign="TextAlign.Center" Width="30">
+                        <Template>
+                            @{
+                                var pholder = (context as PlaceholderData);
+                                @if (pholder.Status == "Pending")
+                                {
+                                    <button class="delete_icon">
+                                        <span class="far fa-ban"></span>
+                                    </button>
+                                }
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="" AllowFiltering="false" TextAlign="TextAlign.Center" Width="30">
+                        <Template>
+                            @{
+                                var pholder = (context as PlaceholderData);
+                                @if (pholder.Status == "Pending")
+                                {
+                                    <button class="delete_icon">
+                                        <span class="far fa-check-square"></span>
+                                    </button>
+                                }
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="" AllowFiltering="false" TextAlign="TextAlign.Center" Width="30">
+                        <Template>
+                            @{
+                                var pholder = (context as PlaceholderData);
+                                @if (pholder.Status == "Pending")
+                                {
+                                    <button class="delete_icon">
+                                        <span class="far fa-shopping-cart"></span>
+                                    </button>
+                                }
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+</div>
+
+<SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="ModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Wait List Request Notes</h5></Header>
+        <Content>
+            <div class="row">
+                <div class="m-0">
+                    <div class="mb-2 mt-n2">
+                        <label class="form-label fs--0 fw-bold">Name:</label>
+                        <p class="fs--1 mb-1">Spencer Kuhn</p>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fs--0  fw-bold">Note:</label>
+                        <p class="fs--1 mb-1">I am a wine club member and would like to bring some of my friends with me.</p>
+                    </div>
+                </div>
+            </div>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="@CloseModal">Close</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+
+    private string title = "Wait List Manager | Synergy Commerce Admin Panel";
+
+    private Boolean isLoading = true;
+    private bool ModalVisibility { get; set; } = false;
+
+    public class PlaceholderData
+    {
+        public string Status { get; set; }
+        public bool HasNotes { get; set; }
+        public string NotesText { get; set; }
+        public string RSVP { get; set; }
+        public string Guests { get; set; }
+        public string EventName { get; set; }
+        public string EventDateTime { get; set; }
+        public string GuestName { get; set; }
+        public string Received { get; set; }
+    }
+
+    public List<PlaceholderData> PlaceholderDataList = new List<PlaceholderData>(){
+        new PlaceholderData() { Status = "Expired",HasNotes = false, NotesText = "", RSVP = "", Guests = "2", EventName = "Classic Tasting", EventDateTime = "11/12/21 10:00 AM", GuestName = "Kuhn, Spencer", Received = "11/11/21 4:45 PM "},
+        new PlaceholderData() { Status = "Expired",HasNotes = false, NotesText = "", RSVP = "", Guests = "2", EventName = "Classic Tasting", EventDateTime = "11/12/21 8:00 AM", GuestName = "Kuhn, Spencer", Received = "11/11/21 4:31 PM "},
+        new PlaceholderData() { Status = "Expired",HasNotes = true, NotesText = "Waitlist Test3", RSVP = "", Guests = "4", EventName = "Spencer's Tasting Flight ", EventDateTime = "11/12/21 3:30 PM", GuestName = "Kuhn, Spencer", Received = "11/11/21 4:29 PM "},
+        new PlaceholderData() { Status = "Expired",HasNotes = false, NotesText = "", RSVP = "", Guests = "2", EventName = "Spencer's Tasting Flight ", EventDateTime = "11/12/21 3:30 PM", GuestName = "Kuhn, Spencer", Received = "11/11/21 4:27 PM "},
+        new PlaceholderData(){ Status= "Pending",HasNotes=false, NotesText= "", RSVP = "", Guests = "2", EventName = "Spencer's Tasting Flight", EventDateTime="12/20/21 3:30 PM", GuestName = "Kuhn, Spencer", Received= "11/18/21 4:25 PM "},
+        new PlaceholderData() { Status = "Pending",HasNotes = false, NotesText = "", RSVP = "", Guests = "2", EventName = "Spencer's Tasting Flight", EventDateTime = "12/20/21 3:00 PM", GuestName = "Kuhn, Spencer", Received = "11/18/21 4:24 PM "},
+        new PlaceholderData() { Status = "Pending",HasNotes = false, NotesText = "", RSVP = "", Guests = "2", EventName = "Classic Tasting", EventDateTime = "12/20/21 8:00 PM", GuestName = "Kuhn, Spencer", Received = "11/18/21 4:21 PM "},
+        new PlaceholderData() { Status = "Pending",HasNotes = false, NotesText = "", RSVP = "", Guests = "2", EventName = "Classic Tasting", EventDateTime = "12/18/21 10:00 AM", GuestName = "Kuhn, Spencer", Received = "11/18/21 3:33 PM "},
+    };
+
+    private void OpenModal()
+    {
+        this.ModalVisibility = true;
+    }
+    private void CloseModal()
+    {
+        this.ModalVisibility = false;
+    }
+}

@@ -1,0 +1,149 @@
+﻿@page "/people/vendors"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.XlsIO;
+@using System.Data;
+@inject IVendorViewModel _vendorViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject IJSRuntime jsRuntime
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row flex-between-center">
+            <div class="col">
+                <h5><span class="far fa-industry-alt me-2"></span>Vendors</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-outline-primary me-2" @onclick="ExportVendors" href="javascript:void();">Export</a>
+                <a class="btn btn-sm btn-primary" href="/people/vendors/create">Add Vendor</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body min-vh-50 p-0 sf-grid">
+        <SfGrid DataSource="@vendors" EnableVirtualization="true" Width="100%" class="border-x-0">
+            <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+            <GridColumns>
+                <GridColumn HeaderText="Company" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="300">
+                    <Template>
+                        @{
+                            var company = (context as BusinessVendor).VendorCompany;
+                            var vendorGuid = (context as BusinessVendor).VendorGuid;
+                            <a href="people/vendors/edit/@($"{vendorGuid}")">@($"{company}")</a>
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="Phone" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="200">
+                    <Template>
+                        @{
+                            var phone = (context as BusinessVendor).PhoneFormatted;
+                            phone = !string.IsNullOrEmpty(phone) ? phone : "Not Available";
+                            @($"{phone}")
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="Action" TextAlign="TextAlign.Right" Width="100">
+                    <Template>
+                        @{
+                            <a href="#!"><span class="far fa-trash-alt"></span></a>
+                        }
+                    </Template>
+                </GridColumn>
+            </GridColumns>
+        </SfGrid>
+    </div>
+    <div class="card-footer">
+    </div>
+</div>
+
+
+@code
+{
+    private string title = "Vendors | Synergy Commerce Admin Panel";
+    private Boolean isLoading;
+    private Member currentMember;
+    private List<BusinessVendor> vendors = new List<BusinessVendor>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        BusinessVendorListResponse result = await _vendorViewModel.GetBusinessVendors(currentMember.Id);
+        if (result.success)
+        {
+            vendors = result.data;
+        }
+        isLoading = false;
+    }
+
+    private async Task ExportVendors()
+    {
+        isLoading = true;
+        //Create an instance of ExcelEngine.
+        using (ExcelEngine excelEngine = new ExcelEngine())
+        {
+            IApplication application = excelEngine.Excel;
+            application.DefaultVersion = ExcelVersion.Xlsx;
+
+            //Create a workbook.
+            IWorkbook workbook = application.Workbooks.Create(1);
+            IWorksheet worksheet = workbook.Worksheets[0];
+
+            DataTable table = BindDataTable();
+
+            //Export data from DataTable to Excel worksheet.
+            worksheet.ImportDataTable(table, true, 1, 1);
+
+            worksheet.UsedRange.AutofitColumns();
+            IStyle headerStyle = workbook.Styles.Add("HeaderStyle");
+            headerStyle.Font.Bold = true;
+            worksheet.SetDefaultRowStyle(1, headerStyle);
+            worksheet.UsedRange.HorizontalAlignment = ExcelHAlign.HAlignLeft;
+
+            //Save the document as a stream.
+            using (MemoryStream stream = new MemoryStream())
+            {
+                //Save the created Excel document to MemoryStream.
+                workbook.SaveAs(stream);
+                await jsRuntime.InvokeAsync<object>(
+                       "fileSaveAs",
+                        "Vendors.xlsx",
+                       Convert.ToBase64String(stream.ToArray()));
+            }
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private DataTable BindDataTable()
+    {
+        DataTable vendorsDataTable = new DataTable();
+
+        vendorsDataTable.Columns.Add("Company");
+        vendorsDataTable.Columns.Add("Country");
+        vendorsDataTable.Columns.Add("Address 1");
+        vendorsDataTable.Columns.Add("Address 2");
+        vendorsDataTable.Columns.Add("City");
+        vendorsDataTable.Columns.Add("State");
+        vendorsDataTable.Columns.Add("Zip Code");
+        vendorsDataTable.Columns.Add("First Name");
+        vendorsDataTable.Columns.Add("Last Name");
+        vendorsDataTable.Columns.Add("Phone");
+        vendorsDataTable.Columns.Add("Emil Address");
+
+        foreach (var vendor in vendors)
+        {
+            vendorsDataTable.Rows.Add(vendor.VendorCompany, vendor.Country, vendor.Address1, vendor.Address2, vendor.City, vendor.State, vendor.ZipCode
+                , vendor.FirstName, vendor.LastName, !string.IsNullOrEmpty(vendor.PhoneFormatted) ? vendor.PhoneFormatted : "Not Available", vendor.Email);
+        }
+        return vendorsDataTable;
+    }
+}

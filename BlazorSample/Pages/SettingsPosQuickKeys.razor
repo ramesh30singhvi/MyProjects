@@ -1,0 +1,135 @@
+﻿@page "/settings/pos/quick-keys"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IProductViewModel _productViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-3 mb-md-0"><a href="settings/pos" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-cash-register me-2"></span>Assign Quick Keys</h5>
+                    </div>
+                    <div class="col-md-auto">
+                        @if (isLoading)
+                        {
+                            <Loader />
+                        }
+                        <a class="btn btn-sm btn-primary" href="javascript:void();" @onclick="() => SaveQuickKeys()" hidden="@(isLoading)">Save</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                @if (products.Count > 0 && posKeys.Count > 0)
+                {
+                    <form>
+                        @for (int i = 0; i < 12; i++)
+                        {
+                            int index = i;
+                            <div class="mb-3 row">
+                                <label for="@("inputQuickKey" + (i + 1))" class="col-sm-2 col-form-label">Quick Key #@(i + 1)</label>
+                                <div class="col-sm-10">
+                                    <SfAutoComplete AllowCustom="false" ID="@("inputQuickKey" + (i + 1))" TValue="string" TItem="ProductModel" @bind-Value="@(posKeys[index].product_name)" DataSource="@products">
+                                        <AutoCompleteFieldSettings Text="Product" Value="ProductName"></AutoCompleteFieldSettings>
+                                    </SfAutoComplete>
+                                </div>
+                            </div>
+                        }
+                    </form>
+                }
+                else
+                {
+                    <Loading />
+                }
+
+            </div>
+        </div>
+
+        @*<TelerikTooltip TargetSelector=".toggleTooltip[title]" Position="@TooltipPosition.Top" ShowOn="@TooltipShowEvent.Hover" Id="position-tooltip"></TelerikTooltip>*@
+
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private string title = "Assign Quick Keys | Synergy Commerce Admin Panel";
+    private List<ProductModel> products = new List<ProductModel>();
+    private List<PosKeyRequestModel> posKeys = new List<PosKeyRequestModel>();
+    private POSKeysResponse posKeysResponse;
+    private Boolean isLoading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        Member currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        if (currentMember != null)
+        {
+            products = await _productViewModel.GetProducts(currentMember.Id);
+            posKeysResponse = await _productViewModel.GetPosKeysList(currentMember.Id);
+            for (int i = 0; i < 12; i++)
+            {
+                PosKeyRequestModel posKeyModel = new PosKeyRequestModel();
+                posKeyModel.key_num = i + 1;
+                posKeyModel.product_id = 0;
+                posKeyModel.member_id = currentMember.Id;
+                posKeyModel.product_name = "";
+                foreach (var item in posKeysResponse.data)
+                {
+                    if (i + 1 == item.key_num)
+                    {
+                        posKeyModel.id = item.id;
+                        posKeyModel.key_num = item.key_num;
+                        posKeyModel.product_id = item.product_id;
+                        posKeyModel.member_id = item.member_id;
+                        posKeyModel.product_name = products.FirstOrDefault(x => x.Id == item.product_id).ProductName;
+                    }
+                }
+                posKeys.Add(posKeyModel);
+            }
+        }
+        isLoading = false;
+    }
+
+    private async void SaveQuickKeys()
+    {
+        isLoading = true;
+        for (var i = 0; i < posKeys.Count(); i++)
+        {
+            if (!string.IsNullOrEmpty(posKeys[i].product_name))
+            {
+                posKeys[i].product_id = products.FirstOrDefault(x => x.ProductName == posKeys[i].product_name).Id;
+                var result = await _productViewModel.AddUpdatePosKey(posKeys[i]);
+                if (result.success)
+                {
+                    posKeys[i].id = result.data.id;
+                }
+            }
+            else if (posKeys[i].id != 0 && string.IsNullOrEmpty(posKeys[i].product_name))
+            {
+                RemovePosKeyRequesModel model = new RemovePosKeyRequesModel();
+                model.id = posKeys[i].id;
+                var result = await _productViewModel.RemovePosKey(model);
+                if (result.success)
+                {
+                    posKeys[i].id = 0;
+                }
+            }
+
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,1430 @@
+﻿@page "/settings/manage-club-add"
+@page "/settings/manage-club-edit/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.Blazor.RichTextEditor
+@using Blazored.LocalStorage
+@using AutoMapper;
+@inject IProductViewModel _productViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject NavigationManager _navigationManager
+@inject ToastService toastService
+@inject IClubViewModel _clubViewModel
+@inject IBusinessLocationViewModel _businessLocationViewModel
+@inject IShippingRatesViewModel _shippingRatesViewModel
+@inject IShippingCarrierViewModel _shippingCarrierViewModel
+@inject IUserViewModel _userViewModel
+@inject ILocalStorageService localStorage
+@inject IMapper _mapper
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<EditForm Model="@businessClubDetail" Context="formContext">
+    <ObjectGraphDataAnnotationsValidator />
+    @if (!isLoading)
+    {
+        <div class="card shadow-none border mb-3">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0">
+                            <a href="/settings/manage-clubs" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-gem me-2"></span>Manage Club@(string.IsNullOrEmpty(clubId) ? "" : "- " + clubId)
+                        </h5>
+                    </div>
+                    <div class="col-auto">
+                        @if (isSaving)
+                        {
+                            <Loader />
+                        }
+                        <button class="btn btn-primary" @onclick="@(() => SaveBusinessClub(formContext))" href="javascript:void();">Save</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <form>
+
+                    <div class="row">
+                        <div class="col-12 col-md-8">
+                            <div class="row">
+                                <div class="col-12 col-md-4 d-flex align-items-center">
+                                    <div class="card shadow-none border cover-image w-100 mb-4 mb-md-2">
+                                        <InputFile id="inputDrop" OnChange="OnInputFileChange" class="opacity-0 w-100 h-100 position-absolute" />
+                                        <a href="javascript:void();">
+                                            <img class="card-img-top p-2" src="@(String.IsNullOrEmpty(imgUrl) ? businessClubDetail.BusinessClub.ClubImageFileName + "?" + DateTime.Now : imgUrl)" width="300" alt="@businessClubDetail.BusinessClub.ClubName" hidden="@(string.IsNullOrEmpty(businessClubDetail.BusinessClub.ClubImageFileName))">
+                                            <div class="p-4 text-center" hidden="@(!string.IsNullOrEmpty(businessClubDetail.BusinessClub.ClubImageFileName))"><span class="far fa-image-polaroid text-400 fa-7x m-4"></span></div>
+                                        </a>
+                                        <label class="cover-image-file-input d-flex align-items-center" @onclick="() => uploadImage()">
+                                            <span class="far fa-cloud-upload-alt fa-2x me-2"></span>Change Club image
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-8">
+                                    <div class="mb-3">
+                                        <label class="form-label" for="inputFriendlyName">Friendly Name</label>
+                                        <InputText id="inputFriendlyName" @bind-Value="businessClubDetail.BusinessClub.ClubName" class="form-control" type="text"></InputText>
+                                        <ValidationMessage For="@(() => businessClubDetail.BusinessClub.ClubName)" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="inputTechnicalName">Technical Name</label>
+                                        <InputText id="inputTechnicalName" @bind-Value="businessClubDetail.BusinessClub.TechnicalName" class="form-control" type="text"></InputText>
+                                        <ValidationMessage For="@(() => businessClubDetail.BusinessClub.TechnicalName)" />
+                                    </div>
+                                    <div class="mb-3 sf-ddl">
+                                        <label class="form-label" for="selClubType">Club Type</label>
+                                        @if (clubData != null && clubData.ShipmentCount > 0)
+                                        {
+                                            <SfDropDownList Enabled="false" id=selClubType TValue="int" @bind-Value="BusinessClubType" TItem="DropdownBindingModel" DataSource="@clubTypeList">
+                                                <DropDownListFieldSettings Text="Value" Value="Key"></DropDownListFieldSettings>
+                                            </SfDropDownList>
+                                        }
+                                        else
+                                        {
+                                            <SfDropDownList id=selClubType TValue="int" @bind-Value="BusinessClubType" TItem="DropdownBindingModel" DataSource="@clubTypeList">
+                                                <DropDownListFieldSettings Text="Value" Value="Key"></DropDownListFieldSettings>
+                                            </SfDropDownList>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <ul class="nav nav-tabs mt-4" id="productTabs" role="tablist">
+                                <li class="nav-item text-uppercase"><a class="nav-link@(isOverviewTabActive ? " active" : "")" @onclick="@(() => TabClick("overview-tab"))" id="overview-tab" data-bs-toggle="tab" href="#tab-overview" role="tab" aria-controls="tab-overview" aria-selected="@(isOverviewTabActive ? "true" : "false")">Overview</a></li>
+                                <li class="nav-item text-uppercase"><a class="nav-link@(isFulfillmentTabActive ? " active" : "")" @onclick="@(() => TabClick("fulfillment-tab"))" id="fulfillment-tab" data-bs-toggle="tab" href="#tab-fulfillment" role="tab" aria-controls="tab-fulfillment" aria-selected="@(isFulfillmentTabActive ? "true" : "false")">Fulfillment</a></li>
+                                <li class="nav-item text-uppercase"><a class="nav-link@(isVacationTabActive ? " active" : "")" @onclick="@(() => TabClick("vacation-tab"))" id="vacation-tab" data-bs-toggle="tab" href="#tab-vacation" role="tab" aria-controls="tab-vacation" aria-selected="@(isVacationTabActive ? "true" : "false")">Vacation</a></li>
+                                <li class="nav-item text-uppercase"><a class="nav-link@(isGiftOptionsTabActive ? " active" : "")" @onclick="@(() => TabClick("giftoptions-tab"))" id="giftoptions-tab" data-bs-toggle="tab" href="#tab-giftoptions" role="tab" aria-controls="tab-giftoptions" aria-selected="@(isGiftOptionsTabActive ? "true" : "false")">Gift Options</a></li>
+                                <li class="nav-item text-uppercase"><a class="nav-link@(isCancellationTabActive ? " active" : "")" @onclick="@(() => TabClick("cancellation-tab"))" id="cancellation-tab" data-bs-toggle="tab" href="#tab-cancellation" role="tab" aria-controls="tab-cancellation" aria-selected="@(isCancellationTabActive ? "true" : "false")">Cancellation</a></li>
+                                <li class="nav-item text-uppercase"><a class="nav-link@(isMetaDataTabActive ? " active" : "")" @onclick="@(() => TabClick("metadata-tab"))" id="metadata-tab" data-bs-toggle="tab" href="#tab-metadata" role="tab" aria-controls="tab-metadata" aria-selected="@(isMetaDataTabActive ? "true" : "false")">META DATA</a></li>
+                            </ul>
+                            <div class="tab-content border-x border-bottom p-3 mb-2" id="productTabContent">
+                                <div class="tab-pane fade@(isOverviewTabActive ? " active show" : "")" id="tab-overview" role="tabpanel" aria-labelledby="overview-tab">
+                                    <div class="mb-3">
+                                        <label class="form-label" for="inputTeaser">Teaser</label>
+                                        <MessageInstruction @ref="messageInstruction" MaxTextCount="512" RowsCount="5" MessageText="@businessClubDetail.BusinessClub.Teaser"></MessageInstruction>
+                                        @*<ValidationMessage For="@(() => businessClubDetail.BusinessClub.Teaser)" />*@
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="inputDescription">Description</label>
+                                        <MessageInstruction @ref="messageInstruction2" MaxTextCount="5000" RowsCount="5" MessageText="@businessClubDetail.BusinessClub.Description"></MessageInstruction>
+                                    </div>
+                                </div>
+                                <div class="tab-pane fade@(isVacationTabActive ? " active show" : "")" id="tab-vacation" role="tabpanel" aria-labelledby="vacation-tab">
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="chkAllowVacationHolds" @bind-value="businessClubDetail.BusinessClub.AllowHolds" checked="@businessClubDetail.BusinessClub.AllowHolds">
+                                            <label class="form-check-label" for="chkAllowVacationHolds">Allow Vacation Holds?</label>
+                                        </div>
+                                    </div>
+                                    @if (businessClubDetail.BusinessClub.AllowHolds)
+                                    {
+                                        <div class="mb-3 ms-5">
+                                            <label class="form-check-label" for="chkMaximumVacationDays">Maximum Vacation Days</label>
+                                            <InputNumber id="inputMaximumVacationDays" @bind-Value="businessClubDetail.BusinessClub.MaxHoldDays" class="form-control"></InputNumber>
+                                            <ValidationMessage For="@(() => businessClubDetail.BusinessClub.MaxHoldDays)" />
+                                        </div>
+                                        <div class="mb-3 ms-5">
+                                            <label class="form-check-label" for="chkMaximumVacationsPerYear">Maximum Vacations Per Year</label>
+                                            <InputNumber id="inputMaximumVacationsPerYear" @bind-Value="businessClubDetail.BusinessClub.MaxHoldsPerYear" class="form-control"></InputNumber>
+                                            <ValidationMessage For="@(() => businessClubDetail.BusinessClub.MaxHoldsPerYear)" />
+                                        </div>
+                                        <div class="mb-3  ms-5">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="chkReceiveDiscountsDuringVacation" @bind-value="businessClubDetail.BusinessClub.AllowHoldPrivileges" checked="@businessClubDetail.BusinessClub.AllowHoldPrivileges">
+                                                <label class="form-check-label" for="chkReceiveDiscountsDuringVacation">Receive Discounts During Vacation</label>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="tab-pane fade@(isGiftOptionsTabActive ? " active show" : "")" id="tab-giftoptions" role="tabpanel" aria-labelledby="giftoptions-tab">
+                                    <div class="row mb-3 justify-content-between align-items-center">
+                                        <div class="col-md">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="chkAllowGiftedMemberships" @bind-value="businessClubDetail.BusinessClub.AllowGiftMemberships" checked="@businessClubDetail.BusinessClub.AllowGiftMemberships">
+                                                <label class="form-check-label" for="chkAllowGiftedMemberships">Allow Gifted Memberships</label>
+                                            </div>
+                                        </div>
+                                        @if (businessClubDetail.BusinessClub.AllowGiftMemberships)
+                                        {
+                                            <div class="col-auto">
+                                                <button type="button" class="btn btn-sm btn-primary" @onclick="() => ShowGiftShipmentModal()">Add New</button>
+                                            </div>
+                                        }
+                                    </div>
+                                    @if (businessClubDetail.BusinessClub.AllowGiftMemberships)
+                                    {
+                                        <div class="mb-3">
+                                            <input class="form-check-input" type="checkbox" id="chkOnGoing" @bind-value="businessClubDetail.BusinessClub.OfferPerpetualGiftedMemberships" checked="@businessClubDetail.BusinessClub.OfferPerpetualGiftedMemberships">
+                                            <label class="form-check-label" for="chkOnGoing">Offer Perpetual Gifted Memberships</label>
+                                        </div>
+                                        <div class="mb-3">
+                                            <SfGrid @ref="giftShipmentsGrid" DataSource="@giftShipmentList" AllowSorting="true" AllowPaging="false" Width="100%">
+                                                <GridSortSettings>
+                                                    <GridSortColumns>
+                                                        <GridSortColumn Field="ShipmentCount" Direction="SortDirection.Ascending"></GridSortColumn>
+                                                    </GridSortColumns>
+                                                </GridSortSettings>
+                                                <GridColumns>
+                                                    <GridColumn Field=@nameof(ClubGiftShipmentsRequestModel.ShipmentCount) HeaderText="Number of Shipments" TextAlign="TextAlign.Left" Width="90" />
+                                                    <GridColumn HeaderText="" TextAlign="TextAlign.Right" Width="10">
+                                                        <Template Context="clubGiftShipmentsContext">
+                                                            @{
+                                                                var giftShipmentsRequestModel = (clubGiftShipmentsContext as ClubGiftShipmentsRequestModel);
+                                                                <button type="button" class="delete_icon" @onclick="() => RemoveGiftShipments(giftShipmentsRequestModel)">
+                                                                    <span class="far fa-trash-alt"></span>
+                                                                </button>
+                                                            }
+                                                        </Template>
+                                                    </GridColumn>
+                                                </GridColumns>
+                                            </SfGrid>
+                                            @if (numberOfShipmentsValidationMessage)
+                                            {
+                                                <div class="validation-message">Number of Shipments must be configured to save.</div>
+                                            }
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label" for="inputGiftedMembershipsOverview">Gifted Memberships Overview</label>
+                                            <InputTextArea class="form-control" @bind-Value="businessClubDetail.BusinessClub.GiftDescription" rows="5" maxlength="512" id="inputGiftedMembershipsOverview"></InputTextArea>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="tab-pane fade@(isFulfillmentTabActive ? " active show" : "")" id="tab-fulfillment" role="tabpanel" aria-labelledby="fulfillment-tab">
+                                    <div class="card shadow-none border mb-3">
+                                        <div class="card-header border-bottom">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-0">Ship to Customer</h6>
+                                                <button type="button" @onclick="() => AddShipToCustomerDropdown()" class="btn btn-sm btn-outline-primary">Add New</button>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            @foreach (var shipToLocation in businessClubDetail.ShipToCustomerLocations)
+                                            {
+                                                <div class="mb-2">
+                                                    <div class="sf-ddl d-flex">
+                                                        <SfDropDownList id=sfLocationAddress TValue="int?" @bind-Value="shipToLocation.LocationId" TItem="BusinessLocationModel" Placeholder="Select Address" AllowFiltering="true" DataSource="@shipToLocation.Locations">
+                                                            <DropDownListFieldSettings Text="DisplayLocationAddress" Value="Id"></DropDownListFieldSettings>
+                                                            <DropDownListEvents ValueChange="()=>OnShipToCustomerDropdownChange(shipToLocation)" TItem="BusinessLocationModel" TValue="int?"></DropDownListEvents>
+                                                        </SfDropDownList>
+                                                        @if (shipToLocation.DropdownIndex != 1)
+                                                        {
+                                                            <button type="button" class="btn btn-sm btn-link" @onclick="@(()=>DeleteShipToCustomerLocation(shipToLocation))">
+                                                                <span class="far fa-trash-alt"></span>
+                                                            </button>
+                                                        }
+                                                    </div>
+                                                    <ValidationMessage For="() => shipToLocation.LocationId" />
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="chkOfferCustomerPreferredOptions" checked="@businessClubDetail.BusinessClub.AllowAlternativeDeliveryOptions" @bind-value="@businessClubDetail.BusinessClub.AllowAlternativeDeliveryOptions">
+                                            <label class="form-check-label" for="chkOfferCustomerPreferredOptions">Offer Customer-preferred Shipping</label>
+                                        </div>
+                                    </div>
+                                    <div class="card shadow-none border mb-3" hidden="@(!businessClubDetail.BusinessClub.AllowAlternativeDeliveryOptions)">
+                                        <div class="card-header border-bottom">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-0">Shipping Options</h6>
+                                                <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => ShowAddShippingOptionModal()">Add New</button>
+                                            </div>
+                                        </div>
+                                        <div class="card-body p-0 sf-grid">
+                                            <SfGrid @ref="clubShippingOptionsGrid" DataSource="@clubShippingOptions" AllowSorting="true" AllowPaging="false" Width="100%" class="shippingOption">
+                                                <GridSortSettings>
+                                                    <GridSortColumns>
+                                                        <GridSortColumn Field="ShipMethodName" Direction="SortDirection.Ascending"></GridSortColumn>
+                                                    </GridSortColumns>
+                                                </GridSortSettings>
+                                                <GridColumns>
+                                                    <GridColumn Field=@nameof(ClubShippingOption.ShipMethodName) HeaderText="Shipping Method" TextAlign="TextAlign.Left" Width="80px" />
+                                                    <GridColumn HeaderText="Default" TextAlign="TextAlign.Center" Width="40px">
+                                                        <Template Context="clubShippingOptionContext">
+                                                            @{
+                                                                var clubShippingOptionModel = (clubShippingOptionContext as ClubShippingOption);
+                                                                <input class="form-check-input" aria-label="Default Method" type="radio" name="radioDefaultOption" id="radioDefaultOption" @onchange="@(() => SetDefaultShippingOption(clubShippingOptionModel))" checked="@(clubShippingOptionModel.IsDefault)">
+                                                            }
+                                                        </Template>
+                                                    </GridColumn>
+                                                    <GridColumn TextAlign="TextAlign.Right" Width="20">
+                                                        <Template Context="clubShippingOptionContext">
+                                                            @{
+                                                                var clubShippingOptionModel = (clubShippingOptionContext as ClubShippingOption);
+                                                                <button type="button" class="delete_icon" @onclick="() => RemoveShippingOption(clubShippingOptionModel)">
+                                                                    <span class="far fa-trash-alt"></span>
+                                                                </button>
+                                                            }
+                                                        </Template>
+                                                    </GridColumn>
+                                                </GridColumns>
+                                            </SfGrid>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="chkAllowCustomerPickup" checked="@businessClubDetail.BusinessClub.AllowCustomerPickup" @onchange="AllowCustomerPickupCheckboxChange">
+                                            <label class="form-check-label" for="chkAllowCustomerPickup">Allow Customer Pickup</label>
+                                        </div>
+                                    </div>
+                                    @if (businessClubDetail.BusinessClub.AllowCustomerPickup)
+                                    {
+                                        <div class="card shadow-none border mb-3">
+                                            <div class="card-header border-bottom">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <h6 class="mb-0">Pickup Locations</h6>
+                                                    <button type="button" @onclick="() => AddCustomerPickupDropdown()" class="btn btn-sm btn-outline-primary float-end mb-1">Add New</button>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                @foreach (var customerPickup in businessClubDetail.CustomerPickupLocations)
+                                                {
+                                                    <div class="mb-2">
+                                                        <div class=" sf-ddl d-flex">
+                                                            <SfDropDownList id=sfLocationAddress TValue="int?" @bind-Value="customerPickup.LocationId" TItem="BusinessLocationModel" Placeholder="Select Address" AllowFiltering="true" DataSource="@customerPickup.Locations" aria-label="Pickup Location">
+                                                                <DropDownListFieldSettings Text="DisplayLocationAddress" Value="Id"></DropDownListFieldSettings>
+                                                                <DropDownListEvents ValueChange="() => OnCustomerPickupDropdownChange(customerPickup)" TItem="BusinessLocationModel" TValue="int?"></DropDownListEvents>
+                                                            </SfDropDownList>
+                                                            @if (customerPickup.DropdownIndex != 1)
+                                                            {
+                                                                <button type="button" class="btn btn-sm btn-link" @onclick="@(() => DeleteCustomerPickupLocation(customerPickup))">
+                                                                    <span class="far fa-trash-alt"></span>
+                                                                </button>
+                                                            }
+                                                        </div>
+                                                        <ValidationMessage For="() => customerPickup.LocationId" />
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+
+                                    <div class="mb-3 sf-ddl">
+                                        <label class="form-label" for="rteClubOrderPolicy">Club Order Policy</label>
+                                        <SfRichTextEditor id="rteClubOrderPolicy" @ref="@RteObj" @bind-Value="businessClubDetail.BusinessClub.ClubOrderPolicy">
+                                            <RichTextEditorToolbarSettings Items="@Tools" Type="ToolbarType.MultiRow">
+                                                <RichTextEditorCustomToolbarItems>
+                                                    <RichTextEditorCustomToolbarItem Name="Tags">
+                                                        <Template>
+                                                            <SfDropDownList TValue="string" TItem="ReplacementTag" DataSource="replacementTags" Placeholder="Replacement Tags">
+                                                                <DropDownListFieldSettings Value="Name" Text="Name"></DropDownListFieldSettings>
+                                                                <DropDownListEvents ValueChange="OnTagClick" TItem="ReplacementTag" TValue="string"></DropDownListEvents>
+                                                            </SfDropDownList>
+                                                        </Template>
+                                                    </RichTextEditorCustomToolbarItem>
+                                                </RichTextEditorCustomToolbarItems>
+                                            </RichTextEditorToolbarSettings>
+                                        </SfRichTextEditor>
+                                    </div>
+                                </div>
+                                <div class="tab-pane fade@(isCancellationTabActive ? " active show" : "")" id="tab-cancellation" role="tabpanel" aria-labelledby="cancellation-tab">
+                                    <div class="row mb-3 justify-content-between align-items-center">
+                                        <div class="col-md">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="chkAllowOnlineCancellations" @bind-value="businessClubDetail.BusinessClub.AllowWebCancellations" checked="@businessClubDetail.BusinessClub.AllowWebCancellations">
+                                                <label class="form-check-label" for="chkAllowOnlineCancellations">Allow Online Cancellations</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-auto">
+                                            <button type="button" class="btn btn-sm btn-primary" @onclick="() => ShowCancellationReasonModal()">Add New</button>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <SfGrid @ref="cancellationReasonGrid" DataSource="@cancellationReasonList" AllowSorting="true" AllowPaging="false" Width="100%">
+                                            <GridSortSettings>
+                                                <GridSortColumns>
+                                                    <GridSortColumn Field="Reason" Direction="SortDirection.Ascending"></GridSortColumn>
+                                                </GridSortColumns>
+                                            </GridSortSettings>
+                                            <GridColumns>
+                                                <GridColumn Field=@nameof(CancellationReason.Reason) HeaderText="Option" TextAlign="TextAlign.Left" Width="90" />
+                                                <GridColumn HeaderText="" TextAlign="TextAlign.Right" Width="10">
+                                                    <Template Context="CancellationReasonContext">
+                                                        @{
+                                                            var reason = (CancellationReasonContext as CancellationReason);
+                                                            <button type="button" class="delete_icon" @onclick="() => RemoveCancellationReason(reason)">
+                                                                <span class="far fa-trash-alt"></span>
+                                                            </button>
+                                                        }
+                                                    </Template>
+                                                </GridColumn>
+                                            </GridColumns>
+                                        </SfGrid>
+                                    </div>
+                                    <div class="mb-3 sf-ddl">
+                                        <label class="form-label" for="rteClubSignUpPolicy">Club Sign-up Policy</label>
+                                        <SfRichTextEditor id="rteClubSignUpPolicy" @ref="@RteObj" @bind-Value="businessClubDetail.BusinessClub.SignUpPolicy">
+                                            <RichTextEditorToolbarSettings Items="@Tools" Type="ToolbarType.MultiRow">
+                                                <RichTextEditorCustomToolbarItems>
+                                                    <RichTextEditorCustomToolbarItem Name="Tags">
+                                                        <Template>
+                                                            <SfDropDownList TValue="string" TItem="ReplacementTag" DataSource="replacementTags" Placeholder="Replacement Tags">
+                                                                <DropDownListFieldSettings Value="Name" Text="Name"></DropDownListFieldSettings>
+                                                                <DropDownListEvents ValueChange="OnTagClick" TItem="ReplacementTag" TValue="string"></DropDownListEvents>
+                                                            </SfDropDownList>
+                                                        </Template>
+                                                    </RichTextEditorCustomToolbarItem>
+                                                </RichTextEditorCustomToolbarItems>
+                                            </RichTextEditorToolbarSettings>
+                                        </SfRichTextEditor>
+                                    </div>
+                                    <div class="mb-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="chkRequireMinimumShipmentsBeforeCancel" checked="@businessClubDetail.BusinessClub.RequireMinShipments" @bind-value="businessClubDetail.BusinessClub.RequireMinShipments">
+                                            <label class="form-check-label" for="chkRequireMinimumShipmentsBeforeCancel">Require Minimum Shipments Before Cancel</label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3 row" hidden="@(!businessClubDetail.BusinessClub.RequireMinShipments)">
+                                        <div class="col-auto sf-ddl">
+                                            @{
+                                                var numberList = Enumerable.Range(0, 10).Select(x => new DropdownBindingModel { Key = x, Value = x.ToString() }).ToList();
+                                                <SfDropDownList id=selClubType TValue="int" @bind-Value="businessClubDetail.BusinessClub.MinShipments" TItem="DropdownBindingModel" DataSource="@numberList">
+                                                    <DropDownListFieldSettings Text="Value" Value="Key"></DropDownListFieldSettings>
+                                                </SfDropDownList>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="tab-pane fade@(isMetaDataTabActive ? " active show" : "")" id="tab-metadata" role="tabpanel" aria-labelledby="metadata-tab">
+                                    <div class="row mb-3">
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label" for="inputAttribute1">Attribute 1</label>
+                                            <input id="inputAttribute1" class="form-control" type="text" />
+                                        </div>
+                                        <div class="col-12 col-md-6"></div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label" for="inputAttribute2">Attribute 2</label>
+                                            <input id="inputAttribute2" class="form-control" type="text" />
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-12 col-md-6">
+                                            <label class="form-label" for="inputAttribute3">Attribute 3</label>
+                                            <input id="inputAttribute3" class="form-control" type="text" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="card shadow-none border mb-2">
+                                <div class="card-body">
+                                    <div class="mb-3 sf-ddl">
+                                        <label class="form-label" for="selStatus">Status</label>
+                                        <SfDropDownList id=selClubType TValue="int" @bind-Value="BusinessClubStatus" TItem="DropdownBindingModel" DataSource="@clubStatusList">
+                                            <DropDownListFieldSettings Text="Value" Value="Key"></DropDownListFieldSettings>
+                                        </SfDropDownList>
+                                    </div>
+                                    <div class="mb-3 sf-ddl">
+                                        <label class="form-label" for="selFrequency">Frequency</label>
+                                        <SfDropDownList id=selFrequency TValue="string" @bind-Value="businessClubDetail.BusinessClubFrequency.Frequency" TItem="FrequencyOption" DataSource="@frequencyOptions">
+                                            <DropDownListFieldSettings Text="FrequencyName" Value="FrequencyWeeks"></DropDownListFieldSettings>
+                                            <DropDownListEvents ValueChange="OnFrequencyDropdownChange" TItem="FrequencyOption" TValue="string"></DropDownListEvents>
+                                        </SfDropDownList>
+                                        <ValidationMessage For="@(() => businessClubDetail.BusinessClubFrequency.Frequency)" />
+                                    </div>
+                                    @if (businessClubDetail.BusinessClubFrequency.Frequency == "custom")
+                                    {
+                                        <div class="mb-3">
+                                            <label class="form-label" for="inputMonths">Frequency Name</label>
+                                            <InputText id="inputMonths" class="form-control" type="text" @bind-Value="businessClubDetail.BusinessClubFrequency.FrequencyName"></InputText>
+                                            <ValidationMessage For="@(() => businessClubDetail.BusinessClubFrequency.FrequencyName)" />
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label" for="inputfrequencyWeek">Number of Weeks</label>
+                                            <InputNumber id="inputfrequencyWeek" class="form-control" TValue="int" @bind-Value="businessClubDetail.BusinessClubFrequency.FrequencyWeeks"></InputNumber>
+                                            <ValidationMessage For="@(() => businessClubDetail.BusinessClubFrequency.FrequencyWeeks)" />
+                                        </div>
+                                    }
+                                    @if (Id != null && clubData.PublishedDate != null)
+                                    {
+                                        var publishedDate = clubData.PublishedDate.Value.AddMinutes(loggedInUser.OffsetMinutes);
+                                        <div class="mb-3">
+                                            <label class="form-label" for="selItemtStatus">Publish Date</label><br />
+                                            <label class="form-label" for="selItemtStatus">@(publishedDate.ToString("MM/dd/yyyy hh:mm tt"))</label>
+                                        </div>
+                                    }
+                                    @if (status != "Closed" && status != "Legacy")
+                                    {
+                                        <div class="mb-3">
+                                            <label class="form-label">Capacity & Wait List</label>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="chkUnitClubCapacity" checked="@businessClubDetail.BusinessClub.LimitCapacity" @bind-value="@businessClubDetail.BusinessClub.LimitCapacity">
+                                                <label class="form-check-label" for="chkUnitClubCapacity">Limit Club Capacity</label>
+                                            </div>
+                                        </div>
+                                        @if (businessClubDetail.BusinessClub.LimitCapacity)
+                                        {
+                                            <div class="mb-3">
+                                                <label class="form-label">Total Members</label>
+                                                <InputNumber id="inputTotalMembers" class="form-control" @bind-Value="businessClubDetail.BusinessClub.MaxCapacity"></InputNumber>
+                                                <ValidationMessage For="@(() => businessClubDetail.BusinessClub.MaxCapacity)" />
+                                            </div>
+                                            <div class="mb-3 sf-ddl">
+                                                <label class="form-label">When Capacity Reached</label>
+                                                <SfDropDownList id=selClubType TValue="int" @bind-Value="BusinessClubLimitCapacityType" TItem="DropdownBindingModel" DataSource="@clubLimitCapacityTypes">
+                                                    <DropDownListFieldSettings Text="Value" Value="Key"></DropDownListFieldSettings>
+                                                    <DropDownListEvents ValueChange="OnCapacityTypeDropdownChange" TItem="DropdownBindingModel" TValue="int"></DropDownListEvents>
+                                                </SfDropDownList>
+                                            </div>
+                                            @if (BusinessClubLimitCapacityType == (int)ClubLimitCapacityType.Waitlist)
+                                            {
+                                                <div class="mb-3">
+                                                    <label class="form-label">Allowed on Wait List</label>
+                                                    <InputNumber id="inputTotalMembers" class="form-control" @bind-Value="businessClubDetail.BusinessClub.WaitlistCapacity"></InputNumber>
+                                                    <ValidationMessage For="@(() => businessClubDetail.BusinessClub.WaitlistCapacity)" />
+                                                </div>
+                                                <div class="mb-3">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="chkRequireCCWaitListSignup" @bind-value="businessClubDetail.BusinessClub.RequireCCWaitListSignup" checked="@businessClubDetail.BusinessClub.RequireCCWaitListSignup">
+                                                        <label class="form-check-label" for="chkRequireCCWaitListSignup">Require CC for WaitList Requests</label>
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                    }
+                                    <div class="col-12 mb-3">
+                                        <label class="form-label" for="inputClubAgreementURL">Club Agreement URL</label>
+                                        <div class="input-group mb-3">
+                                            <input id="inputClubAgreementURL" class="form-control" type="text" value="https://www.cellarpass.com/club126-policy" disabled />
+                                            <Clipboard Content="https://www.cellarpass.com/club126-policy" />
+                                            <button type="button" class="btn btn-sm btn-outline-secondary"><span class="fa-solid fa-eye me-1"></span></button>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 mb-3">
+                                        <label class="form-label" for="inputClubSignUpURL">Club Sign Up URL</label>
+                                        <div class="input-group mb-3">
+                                            <input id="inputClubSignUpURL" class="form-control" type="text" value="https://www.cellarpass.com/club126-policy" disabled />
+                                            <Clipboard Content="https://www.cellarpass.com/club126-policy" />
+                                            <button type="button" class="btn btn-sm btn-outline-secondary"><span class="fa-solid fa-eye me-1"></span></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+        <ImageCropper @ref="CropperModal" IsVisible="imageCroperActive" CropperConfiguration="cropperConfiguration" Cropped="OnCropped"></ImageCropper>
+    }
+</EditForm>
+<EditForm Model="@giftShipment" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog Width="400px" IsModal="true" @bind-Visible="@displayGiftShipmentModal">
+        <DialogTemplates>
+            <Header>Gift Shipments</Header>
+            <Content>
+                <div class="mb-3">
+                    <label class="form-label" for="inputNumberofShipments">Number of Shipments</label>
+                    <InputNumber @bind-Value="giftShipment.ShipmentCount" class="form-control" id="inputNumberofShipments"></InputNumber>
+                    <ValidationMessage For="@(() => giftShipment.ShipmentCount)" />
+                </div>
+            </Content>
+        </DialogTemplates>
+        <DialogButtons>
+            <DialogButton Content="Cancel" OnClick="@HideGiftShipmentModal" />
+            <DialogButton Content="Save" IsPrimary="true" OnClick="@(() => AddGiftShipments(formContext))" />
+        </DialogButtons>
+    </SfDialog>
+</EditForm>
+
+<EditForm Model="@clubShippingOption" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog Width="400px" IsModal="true" @bind-Visible="@displayAddShippingMethodModal">
+        <DialogTemplates>
+            <Header>Add Shipping Method</Header>
+            <Content>
+                <div class="mb-3">
+                    <label class="form-label" for="inputAvailableMethods">Available Methods</label>
+                    <SfDropDownList id=inputAvailableMethods TValue="int" @bind-Value="clubShippingOption.ShipMethodId" TItem="ShippingCarrierCodeModel" DataSource="@serviceCodes.Where(x => !clubShippingOptions.Any(y => y.ShipMethodId == x.Id)).ToList()">
+                        <DropDownListFieldSettings Text="ServiceCodeName" Value="Id"></DropDownListFieldSettings>
+                    </SfDropDownList>
+                    <ValidationMessage For="@(() => clubShippingOption.ShipMethodId)" />
+                </div>
+            </Content>
+        </DialogTemplates>
+        <DialogButtons>
+            <DialogButton Content="Cancel" OnClick="@HideAddShippingOptionModal" />
+            <DialogButton Content="Save" IsPrimary="true" OnClick="@(() => AddShippingOption(formContext))" />
+        </DialogButtons>
+    </SfDialog>
+</EditForm>
+
+<EditForm Model="@cancellationReason" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog Width="400px" IsModal="true" @bind-Visible="@displayCancellationReasonModal">
+        <DialogTemplates>
+            <Header>Add Cancellation Reason</Header>
+            <Content>
+                <div class="mb-3 sf-ddl">
+                    <SfComboBox TValue="string" TItem="ClubCancellationReasonListModel" PopupHeight="230px" @bind-Value="@cancellationReason.Reason" DataSource="@clubCancellationReasonList">
+                        @*<ComboBoxEvents TValue="string" TItem="ReplacementTag" ValueChange="OnReasonDropdownChange" />*@
+                        <ComboBoxFieldSettings Text="CancelReason" Value="CancelReason" />
+                    </SfComboBox>
+                    <ValidationMessage For="@(() => cancellationReason.Reason)" />
+                </div>
+            </Content>
+        </DialogTemplates>
+        <DialogButtons>
+            <DialogButton Content="Cancel" OnClick="@HideCancellationReasonModal" />
+            <DialogButton Content="Save" IsPrimary="true" OnClick="@(() => AddCancellationReason(formContext))" />
+        </DialogButtons>
+    </SfDialog>
+</EditForm>
+@code
+{
+    #region On Load
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "";
+    private string clubId = "";
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool isOverviewTabActive = false;
+    private bool isFulfillmentTabActive = false;
+    private bool isVacationTabActive = false;
+    private bool isGiftOptionsTabActive = false;
+    private bool isCancellationTabActive = false;
+    private bool isMetaDataTabActive = false;
+    SfGrid<CancellationReason> cancellationReasonGrid;
+    SfGrid<ClubGiftShipmentsRequestModel> giftShipmentsGrid;
+    SfGrid<ClubShippingOption> clubShippingOptionsGrid;
+    private Member currentMember = new Member();
+    UserDetailModel loggedInUser = new UserDetailModel();
+    private bool displayGiftShipmentModal = false;
+    private bool displayAddShippingMethodModal = false;
+    private bool displayCancellationReasonModal = false;
+    private ImageCropperConfiguration cropperConfiguration = new ImageCropperConfiguration();
+    private ImageCropper CropperModal { get; set; }
+    private int changeImgId { get; set; }
+    string imgUrl;
+    private bool imageCroperActive = false;
+
+    private string whenCapacityReached { get; set; } = "0";
+    private string status { get; set; } = "Inactive";
+
+    private int teaserCount = 512;
+    private int descriptionCount = 5000;
+    SfRichTextEditor RteObj;
+    List<ShippingRateModel> shippingRates = new List<ShippingRateModel>();
+    private List<ShippingCarrierCodeModel> serviceCodes = new List<ShippingCarrierCodeModel>();
+    private List<BusinessLocationModel> inventoryLocations = new List<BusinessLocationModel>();
+    private List<BusinessLocationModel> shipToInventoryLocations = new List<BusinessLocationModel>();
+    private List<BusinessLocationModel> pickUpInventoryLocations = new List<BusinessLocationModel>();
+    private List<ToolbarItemModel> Tools = new List<ToolbarItemModel>();
+    BusinessClubDetailModel businessClubDetail = new BusinessClubDetailModel();
+    List<DropdownBindingModel> clubTypeList = new List<DropdownBindingModel>();
+    List<DropdownBindingModel> clubStatusList = new List<DropdownBindingModel>();
+    List<DropdownBindingModel> clubLimitCapacityTypes = new List<DropdownBindingModel>();
+    private int BusinessClubType { get; set; }
+    private int BusinessClubStatus { get; set; }
+    private int BusinessClubLimitCapacityType { get; set; }
+    ClubDetailFullModel clubData = null;
+    List<ClubCancellationReasonListModel> clubCancellationReasonList = new List<ClubCancellationReasonListModel>();
+    public MessageInstruction messageInstruction;
+    public MessageInstruction messageInstruction2;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isOverviewTabActive = true;
+        businessClubDetail.BusinessClub = new BusinessClubRequestModel();
+        businessClubDetail.ShipToCustomerLocations = new List<ShipToCustomerLocation>();
+        businessClubDetail.CustomerPickupLocations = new List<CustomerPickupLocation>();
+        businessClubDetail.BusinessClubFrequency = new BusinessClubFrequencyModel();
+        businessClubDetail.BusinessClubFrequency.Frequency = "4";
+        //Get Current Member
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        //Get Current User
+        var getUserData = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+        var userByEmail = await _userViewModel.GetUserByEmail(getUserData.Email);
+        if (userByEmail.success)
+            loggedInUser = userByEmail.data;
+        //Text Box Editor Tools
+        Tools.Add(new ToolbarItemModel() { Command = ToolbarCommand.Bold });
+        Tools.Add(new ToolbarItemModel() { Name = "Tags", TooltipText = "Replacement Tags" });
+        //Get enum values
+        await GetClubEnumValues();
+        //Get All Locations By Member Id
+        var locationResponse = await _businessLocationViewModel.GetBusinessLocations(currentMember.Id);
+        if (locationResponse.success)
+        {
+            //Get Inventory Locations Only
+            inventoryLocations = locationResponse?.data?.Where(x => x.IsInventoryLocation)?.OrderBy(x => x.DisplayLocationAddress)?.ToList() ?? new List<BusinessLocationModel>();
+            shipToInventoryLocations = inventoryLocations;
+            pickUpInventoryLocations = inventoryLocations;
+        }
+        //Get shipping Rates
+        var shippingRatesResponse = await _shippingRatesViewModel.GetShippingRates(currentMember.Id);
+        if (shippingRatesResponse.success)
+        {
+            shippingRates = shippingRatesResponse.data;
+        }
+
+        //Get Shipping Carrier Service Codes
+        var shippingServiceCodesResponse = await _shippingCarrierViewModel.GetAllShippingCarrierServiceCodes();
+        if (shippingServiceCodesResponse.success)
+        {
+            foreach (var rate in shippingRates)
+            {
+                if (rate.IsClubSalesChannel)
+                {
+                    if (!serviceCodes.Any(x => x.Id == rate.ShippingServiceCode))
+                    {
+                        serviceCodes.Add(shippingServiceCodesResponse.data.Where(x => x.Id == rate.ShippingServiceCode).FirstOrDefault());
+                    }
+                }
+            }
+            serviceCodes = serviceCodes.OrderBy(x => x.ShippingCarrier).ThenBy(y => y.ServiceCodeName).ToList();
+        }
+
+
+        var cancellationReasonListResponse = await _clubViewModel.GetClubCancellationReasonListAsync(currentMember.Id);
+        clubCancellationReasonList = cancellationReasonListResponse?.data ?? new List<ClubCancellationReasonListModel>();
+
+        //Id has value(for update)
+        if (Id.HasValue)
+        {
+            var clubDetailResponse = await _clubViewModel.GetClubDetailsAsync(0, Id.Value.ToString());
+            if (clubDetailResponse.success && clubDetailResponse.data != null)
+            {
+                clubData = clubDetailResponse.data;
+                clubId = clubData.Id.ToString();
+                businessClubDetail.BusinessClub = _mapper.Map<BusinessClubRequestModel>(clubData);
+
+                BusinessClubType = (int)businessClubDetail.BusinessClub.ClubType;
+                BusinessClubStatus = (int)businessClubDetail.BusinessClub.Status;
+                BusinessClubLimitCapacityType = (int)businessClubDetail.BusinessClub.LimitCapacityType;
+                cancellationReasonList = clubData.ClubCancelReason?.Select(x => new CancellationReason { Reason = x.CancelReason })?.ToList() ?? new List<CancellationReason>();
+                BindPreferredShippingOptions();
+                giftShipmentList = clubData.ClubGiftShipmentCount?.Select(x => new ClubGiftShipmentsRequestModel
+                {
+                    IsDefault = x.IsDefault,
+                    ShipmentCount = x.ShipmentCount,
+                    SortOrder = x.SortOrder
+                })?.ToList() ?? new List<ClubGiftShipmentsRequestModel>();
+                if (!string.IsNullOrEmpty(businessClubDetail.BusinessClub.Teaser) && businessClubDetail.BusinessClub.Teaser.Count() > 0)
+                {
+                    teaserCount = 512 - businessClubDetail.BusinessClub.Teaser.Count();
+                }
+                if (!string.IsNullOrEmpty(businessClubDetail.BusinessClub.Description) && businessClubDetail.BusinessClub.Description.Count() > 0)
+                {
+                    descriptionCount = 5000 - businessClubDetail.BusinessClub.Description.Count();
+                }
+                if (clubData.ClubFrequency?.FirstOrDefault() != null)
+                {
+                    var clubFrequency = clubData.ClubFrequency?.FirstOrDefault();
+                    if (!string.IsNullOrEmpty(clubFrequency?.FrequencyDescription))
+                    {
+                        if (frequencyOptions.Where(x => x.FrequencyWeeks != "custom").Any(x => x.FrequencyName == clubFrequency?.FrequencyDescription))
+                        {
+                            businessClubDetail.BusinessClubFrequency.Frequency = Convert.ToString(clubFrequency.FrequencyWeeks);
+                        }
+                        else
+                        {
+                            businessClubDetail.BusinessClubFrequency.Frequency = "custom";
+                            businessClubDetail.BusinessClubFrequency.FrequencyName = clubFrequency.FrequencyDescription;
+                            businessClubDetail.BusinessClubFrequency.FrequencyWeeks = clubFrequency.FrequencyWeeks;
+                        }
+                    }
+                }
+            }
+        }
+        await MapLocationData(clubData);
+        businessClubDetail.CustomerPickupLocations = businessClubDetail.CustomerPickupLocations.Select(x => { x.AllowCustomerPickup = businessClubDetail.BusinessClub.AllowCustomerPickup; return x; }).ToList();
+        title = $"Manage Club{(string.IsNullOrEmpty(clubId) ? "" : "- " + clubId)} | Synergy Commerce Admin Panel";
+        isLoading = false;
+        StateHasChanged();
+    }
+    private async Task GetClubEnumValues()
+    {
+        clubTypeList = Enum.GetValues(typeof(ClubType))
+                  .Cast<ClubType>()
+                  .Select(t => new DropdownBindingModel
+                  {
+                      Key = (int)t,
+                      Value = Helper.GetDisplayName(t)
+                  }).ToList();
+        clubStatusList = Enum.GetValues(typeof(ClubStatus))
+                        .Cast<ClubStatus>()
+                        .Select(t => new DropdownBindingModel
+                        {
+                            Key = (int)t,
+                            Value = t.ToString()
+                        }).ToList();
+        clubLimitCapacityTypes = Enum.GetValues(typeof(ClubLimitCapacityType))
+                        .Cast<ClubLimitCapacityType>()
+                        .Select(t => new DropdownBindingModel
+                        {
+                            Key = (int)t,
+                            Value = Helper.GetDisplayName(t)
+                        }).ToList();
+    }
+    private async Task MapLocationData(ClubDetailFullModel clubDetail)
+    {
+        if (clubData?.ClubShipLocation?.Count > 0)
+        {
+            pickUpInventoryLocations = pickUpInventoryLocations.Where(x => !clubData.ClubShipLocation.Select(x => x.LocationId).Contains(x.Id)).ToList();
+            foreach (var locationModel in clubData.ClubShipLocation)
+            {
+                List<int> selectedLocationIds = clubData.ClubShipLocation.Select(x => x.LocationId).Where(x => x != locationModel.LocationId).ToList();
+                businessClubDetail.ShipToCustomerLocations.Add(new ShipToCustomerLocation
+                {
+                    LocationId = locationModel.LocationId,
+                    DropdownIndex = ++shipToCustomerDropdownIndex,
+                    Locations = shipToInventoryLocations.Where(x => !selectedLocationIds.Contains(x.Id)).OrderBy(x => x.DisplayLocationAddress).ToList()
+                });
+            }
+        }
+        else
+        {
+            AddShipToCustomerDropdown();
+        }
+        if (clubData?.ClubPickupLocation?.Count > 0)
+        {
+            shipToInventoryLocations = shipToInventoryLocations.Where(x => !clubData.ClubPickupLocation.Select(x => x.LocationId).Contains(x.Id)).ToList();
+            foreach (var locationModel in clubData.ClubPickupLocation)
+            {
+                List<int> selectedLocationIds = clubData.ClubPickupLocation.Select(x => x.LocationId).Where(x => x != locationModel.LocationId).ToList();
+                businessClubDetail.CustomerPickupLocations.Add(new CustomerPickupLocation
+                {
+                    AllowCustomerPickup = businessClubDetail.BusinessClub.AllowCustomerPickup,
+                    LocationId = locationModel.LocationId,
+                    DropdownIndex = ++customerPickupDropdownIndex,
+                    Locations = pickUpInventoryLocations.Where(x => !selectedLocationIds.Contains(x.Id)).OrderBy(x => x.DisplayLocationAddress).ToList()
+                });
+            }
+        }
+        else
+        {
+            AddCustomerPickupDropdown();
+        }
+    }
+    #endregion On Load
+
+    #region Shipping Options
+    ClubShippingOption clubShippingOption = new ClubShippingOption();
+    List<ClubShippingOption> clubShippingOptions = new List<ClubShippingOption>();
+    List<ShippingRateModel> shippingRateOption = new List<ShippingRateModel>();
+
+    private void ShowAddShippingOptionModal()
+    {
+        shippingRateOption = shippingRates.Where(s => !clubShippingOptions.Select(x => x.ShipMethodId).ToList().Contains(s.Id)).OrderBy(x => x.ShippingRateName).ToList();
+        clubShippingOption = new ClubShippingOption();
+        displayAddShippingMethodModal = true;
+    }
+    private void HideAddShippingOptionModal()
+    {
+        displayAddShippingMethodModal = false;
+        clubShippingOption = new ClubShippingOption();
+    }
+    private void AddShippingOption(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            clubShippingOption.ShipMethodName = serviceCodes?.FirstOrDefault(x => x.Id == clubShippingOption.ShipMethodId)?.ServiceCodeName ?? string.Empty;
+            clubShippingOptions.Add(clubShippingOption);
+            clubShippingOption = new ClubShippingOption();
+            clubShippingOptionsGrid.Refresh();
+            StateHasChanged();
+            displayAddShippingMethodModal = false;
+        }
+    }
+    private void RemoveShippingOption(ClubShippingOption option)
+    {
+        if (option != null)
+        {
+            clubShippingOptions.Remove(option);
+            clubShippingOptionsGrid.Refresh();
+        }
+    }
+    private void SetDefaultShippingOption(ClubShippingOption model)
+    {
+        clubShippingOptions = clubShippingOptions.Select(x => { x.IsDefault = false; return x; }).ToList();
+        model.IsDefault = true;
+    }
+    #endregion Shipping Options
+
+    #region Gift
+    ClubGiftShipmentsRequestModel giftShipment = new ClubGiftShipmentsRequestModel();
+    List<ClubGiftShipmentsRequestModel> giftShipmentList = new List<ClubGiftShipmentsRequestModel>();
+    private bool numberOfShipmentsValidationMessage = false;
+    private void ShowGiftShipmentModal()
+    {
+        giftShipment = new ClubGiftShipmentsRequestModel();
+        displayGiftShipmentModal = true;
+    }
+    private void HideGiftShipmentModal()
+    {
+        displayGiftShipmentModal = false;
+        giftShipment = new ClubGiftShipmentsRequestModel();
+    }
+    private void AddGiftShipments(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            giftShipmentList.Add(giftShipment);
+            giftShipment = new ClubGiftShipmentsRequestModel();
+            giftShipmentsGrid.Refresh();
+            StateHasChanged();
+            numberOfShipmentsValidationMessage = false;
+            displayGiftShipmentModal = false;
+        }
+    }
+    private void RemoveGiftShipments(ClubGiftShipmentsRequestModel giftShipment)
+    {
+        if (giftShipment != null)
+        {
+            giftShipmentList.Remove(giftShipment);
+            giftShipmentsGrid.Refresh();
+            //Show/Hide validation message
+            if (businessClubDetail.BusinessClub.AllowGiftMemberships && (giftShipmentList == null || giftShipmentList.Count == 0))
+            {
+                numberOfShipmentsValidationMessage = true;
+            }
+            else
+            {
+                numberOfShipmentsValidationMessage = false;
+            }
+        }
+    }
+    #endregion Gift
+
+    #region Cancellation
+    CancellationReason cancellationReason = new CancellationReason();
+    List<CancellationReason> cancellationReasonList = new List<CancellationReason>();
+
+    private void ShowCancellationReasonModal()
+    {
+        cancellationReason = new CancellationReason();
+        displayCancellationReasonModal = true;
+    }
+    private void HideCancellationReasonModal()
+    {
+        displayCancellationReasonModal = false;
+        cancellationReason = new CancellationReason();
+    }
+    private void AddCancellationReason(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            cancellationReasonList.Add(new CancellationReason { Reason = cancellationReason.Reason });
+            cancellationReasonGrid.Refresh();
+            cancellationReason = new CancellationReason();
+            displayCancellationReasonModal = false;
+        }
+    }
+    private void RemoveCancellationReason(CancellationReason cancellationReason)
+    {
+        if (cancellationReason != null)
+        {
+            cancellationReasonList.Remove(cancellationReason);
+            cancellationReasonGrid.Refresh();
+        }
+    }
+    #endregion Cancellation
+
+    #region Image and Other
+    private async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        var maxAllowedFiles = 1;
+        var format = "image/png";
+        foreach (var imageFile in e.GetMultipleFiles(maxAllowedFiles))
+        {
+            var buffer = new byte[imageFile.Size];
+            await imageFile.OpenReadStream(buffer.LongLength).ReadAsync(buffer);
+            var imageDataUrl =
+                $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+
+            await CropperModal.OnFileChange(imageDataUrl);
+            imageCroperActive = true;
+        }
+        StateHasChanged();
+    }
+
+    async Task OnCropped(string value)
+    {
+        imageCroperActive = false;
+        imgUrl = value;
+        if (Id.HasValue)
+        {
+            UploadClubImageResponse response = await _clubViewModel.UploadBusinessClubImage(new UploadClubImageRequestModel { Bytes = value, BusinessId = currentMember.Id, ClubGuid = Id.Value });
+            if (response.success)
+                businessClubDetail.BusinessClub.ClubImageFileName = response.data.ClubFileName;
+        }
+        StateHasChanged();
+    }
+
+    private async Task uploadImage()
+    {
+        imageCroperActive = false;
+        await CropperModal.TriggerFileSelect("inputDrop");
+    }
+
+    private void GetTeaserCount(Microsoft.AspNetCore.Components.ChangeEventArgs eventArgs)
+    {
+        var value = eventArgs.Value.ToString().Count();
+        teaserCount = 512 - value;
+        StateHasChanged();
+    }
+
+    private void GetDescriptionCount(Microsoft.AspNetCore.Components.ChangeEventArgs eventArgs)
+    {
+        var value = eventArgs.Value.ToString().Count();
+        descriptionCount = 5000 - value;
+        StateHasChanged();
+    }
+
+    private async Task OnTagClick(ChangeEventArgs<string, ReplacementTag> args)
+    {
+        if (!string.IsNullOrEmpty(args?.Value ?? null))
+            await this.RteObj.ExecuteCommandAsync(CommandName.InsertText, args.Value);
+    }
+    private List<ReplacementTag> replacementTags = new List<ReplacementTag>{
+    new ReplacementTag{ Name = "[[Tag1]]", Value = "[[Tag1]]" },
+    new ReplacementTag{ Name = "[[Tag2]]", Value = "[[Tag2]]" },
+    new ReplacementTag{ Name = "[[Tag3]]", Value = "[[Tag3]]" },
+    };
+    public class ReplacementTag
+    {
+        public string Name { get; set; }
+        public string Value { get; set; }
+    }
+    private void TabClick(string tabName)
+    {
+        SetActiveTab(tabName);
+    }
+    private void SetActiveTab(string tabName)
+    {
+        switch (tabName)
+        {
+            case "overview-tab":
+                isOverviewTabActive = true;
+                isFulfillmentTabActive = isVacationTabActive = isGiftOptionsTabActive = isCancellationTabActive = isMetaDataTabActive = false;
+                break;
+            case "fulfillment-tab":
+                isFulfillmentTabActive = true;
+                isOverviewTabActive = isVacationTabActive = isGiftOptionsTabActive = isCancellationTabActive = isMetaDataTabActive = false;
+                break;
+            case "vacation-tab":
+                isVacationTabActive = true;
+                isOverviewTabActive = isFulfillmentTabActive = isGiftOptionsTabActive = isCancellationTabActive = isMetaDataTabActive = false;
+                break;
+            case "giftoptions-tab":
+                isGiftOptionsTabActive = true;
+                isOverviewTabActive = isFulfillmentTabActive = isVacationTabActive = isCancellationTabActive = isMetaDataTabActive = false;
+                break;
+            case "cancellation-tab":
+                isCancellationTabActive = true;
+                isOverviewTabActive = isFulfillmentTabActive = isVacationTabActive = isGiftOptionsTabActive = isMetaDataTabActive = false;
+                break;
+            case "metadata-tab":
+                isMetaDataTabActive = true;
+                isOverviewTabActive = isFulfillmentTabActive = isVacationTabActive = isGiftOptionsTabActive = isCancellationTabActive = false;
+                break;
+        }
+    }
+    #endregion Image and Other
+
+    #region Location
+    int shipToCustomerDropdownIndex = 0;
+    int customerPickupDropdownIndex = 0;
+    private void AllowCustomerPickupCheckboxChange(Microsoft.AspNetCore.Components.ChangeEventArgs args)
+    {
+        businessClubDetail.BusinessClub.AllowCustomerPickup = (bool)args.Value;
+        businessClubDetail.CustomerPickupLocations = businessClubDetail.CustomerPickupLocations.Select(x => { x.AllowCustomerPickup = businessClubDetail.BusinessClub.AllowCustomerPickup; return x; }).ToList();
+    }
+    private void OnShipToCustomerDropdownChange(ShipToCustomerLocation preference)
+    {
+        pickUpInventoryLocations = inventoryLocations.Where(x => !businessClubDetail.ShipToCustomerLocations.Select(y => y.LocationId).ToList().Contains(x.Id)).ToList();
+        UpdateShipToCustomerDropdownDatasource();
+        UpdateCustomerPickupDropdownDatasource();
+    }
+    private void UpdateShipToCustomerDropdownDatasource()
+    {
+        foreach (var locationModel in businessClubDetail.ShipToCustomerLocations)
+        {
+            List<int?> selectedLocationIds = businessClubDetail.ShipToCustomerLocations.Select(x => x.LocationId).Where(x => x != locationModel.LocationId).ToList();
+            locationModel.Locations = shipToInventoryLocations.Where(x => !selectedLocationIds.Contains(x.Id)).OrderBy(x => x.DisplayLocationAddress).ToList();
+        }
+    }
+    private void AddShipToCustomerDropdown()
+    {
+        businessClubDetail.ShipToCustomerLocations.Add(new ShipToCustomerLocation
+        {
+            LocationId = null,
+            DropdownIndex = ++shipToCustomerDropdownIndex,
+            Locations = shipToInventoryLocations.Where(x => !businessClubDetail.ShipToCustomerLocations.Select(l => l.LocationId).ToList().Contains(x.Id)).OrderBy(x => x.DisplayLocationAddress).ToList()
+        });
+    }
+    private void DeleteShipToCustomerLocation(ShipToCustomerLocation locationToDelete)
+    {
+        businessClubDetail.ShipToCustomerLocations.Remove(locationToDelete);
+        UpdateShipToCustomerDropdownDatasource();
+    }
+
+    private void OnCustomerPickupDropdownChange(CustomerPickupLocation preference)
+    {
+        shipToInventoryLocations = inventoryLocations.Where(x => !businessClubDetail.CustomerPickupLocations.Select(y => y.LocationId).ToList().Contains(x.Id)).ToList();
+        UpdateCustomerPickupDropdownDatasource();
+        UpdateShipToCustomerDropdownDatasource();
+    }
+    private void UpdateCustomerPickupDropdownDatasource()
+    {
+        foreach (var locationModel in businessClubDetail.CustomerPickupLocations)
+        {
+            List<int?> selectedLocationIds = businessClubDetail.CustomerPickupLocations.Select(x => x.LocationId).Where(x => x != locationModel.LocationId).ToList();
+            locationModel.Locations = pickUpInventoryLocations.Where(x => !selectedLocationIds.Contains(x.Id)).OrderBy(x => x.DisplayLocationAddress).ToList();
+        }
+    }
+    private void AddCustomerPickupDropdown()
+    {
+        businessClubDetail.CustomerPickupLocations.Add(new CustomerPickupLocation
+        {
+            AllowCustomerPickup = businessClubDetail.BusinessClub.AllowCustomerPickup,
+            LocationId = null,
+            DropdownIndex = ++customerPickupDropdownIndex,
+            Locations = pickUpInventoryLocations.Where(x => !businessClubDetail.CustomerPickupLocations.Select(l => l.LocationId).ToList().Contains(x.Id)).OrderBy(x => x.DisplayLocationAddress).ToList()
+        });
+    }
+    private void DeleteCustomerPickupLocation(CustomerPickupLocation locationToDelete)
+    {
+        businessClubDetail.CustomerPickupLocations.Remove(locationToDelete);
+        UpdateCustomerPickupDropdownDatasource();
+    }
+    #endregion Location
+
+    #region frequency
+    public class FrequencyOption
+    {
+        public string FrequencyName { get; set; }
+        public string FrequencyWeeks { get; set; }
+    }
+    List<FrequencyOption> frequencyOptions = new List<FrequencyOption>(){
+        new FrequencyOption{FrequencyName = "Monthly", FrequencyWeeks = "4"},
+        new FrequencyOption{FrequencyName = "Bi-monthly", FrequencyWeeks = "8"},
+        new FrequencyOption{FrequencyName = "Quarterly", FrequencyWeeks = "16"},
+        new FrequencyOption{FrequencyName = "Semi-annually", FrequencyWeeks = "26"},
+        new FrequencyOption{FrequencyName = "Annually", FrequencyWeeks = "52"},
+        new FrequencyOption{FrequencyName = "Custom", FrequencyWeeks = "custom"},
+    };
+    private void OnFrequencyDropdownChange(ChangeEventArgs<string, FrequencyOption> args)
+    {
+        if (args != null && args.ItemData != null)
+        {
+            if (args.ItemData.FrequencyWeeks == "custom")
+            {
+                businessClubDetail.BusinessClubFrequency.FrequencyName = string.Empty;
+                businessClubDetail.BusinessClubFrequency.FrequencyWeeks = 0;
+            }
+        }
+    }
+    private void GetFrequency()
+    {
+        if (businessClubDetail.BusinessClubFrequency.Frequency != "custom")
+        {
+            businessClubDetail.BusinessClubFrequency.FrequencyName = frequencyOptions.FirstOrDefault(x => x.FrequencyWeeks == businessClubDetail.BusinessClubFrequency.Frequency).FrequencyName;
+            int number;
+            bool isNumeric = int.TryParse(frequencyOptions.FirstOrDefault(x => x.FrequencyWeeks == businessClubDetail.BusinessClubFrequency.Frequency).FrequencyWeeks, out number);
+            businessClubDetail.BusinessClubFrequency.FrequencyWeeks = isNumeric ? number : 0;
+        }
+    }
+    #endregion frequency
+
+    #region Add/Update
+    private void OnCapacityTypeDropdownChange(ChangeEventArgs<int, DropdownBindingModel> args)
+    {
+        businessClubDetail.BusinessClub.LimitCapacityType = (ClubLimitCapacityType)BusinessClubLimitCapacityType;
+    }
+
+    private async Task SaveBusinessClub(EditContext editContext)
+    {
+        //Overview Tab Validation
+        //if (string.IsNullOrEmpty(businessClubDetail.BusinessClub.Teaser))
+        //{
+        //    toastService.ShowToast("Club Teaser is required.", ToastLevel.Error);
+        //    SetActiveTab("overview-tab");
+        //    return;
+        //}
+
+        //Fulfillment Tab Validation
+        if (businessClubDetail.ShipToCustomerLocations.Any(x => x.LocationId == null) //If Any ShipToCustomerLocation is not selected
+        || (businessClubDetail.BusinessClub.AllowCustomerPickup //If AllowCustomerPickup is checked and
+        && businessClubDetail.CustomerPickupLocations.Any(x => x.LocationId == null))) //If Any CustomerPickupLocation is not selected
+        {
+            toastService.ShowToast("Please fill the required fields in the Fulfillment tab.", ToastLevel.Error);
+            SetActiveTab("fulfillment-tab");
+            return;
+        }
+        //Gift Options Tab Validation
+        if (businessClubDetail.BusinessClub.AllowGiftMemberships && (giftShipmentList == null || giftShipmentList.Count == 0))
+        {
+            numberOfShipmentsValidationMessage = true;
+            toastService.ShowToast("Please fill the required fields in the Gift Options tab.", ToastLevel.Error);
+            SetActiveTab("giftoptions-tab");
+            return;
+        }
+        else
+        {
+            numberOfShipmentsValidationMessage = false;
+        }
+        //Vacation Tab Validation
+        if (businessClubDetail.BusinessClub.AllowHolds && (businessClubDetail.BusinessClub.MaxHoldDays == 0 || businessClubDetail.BusinessClub.MaxHoldsPerYear == 0))
+        {
+            toastService.ShowToast("Please fill the required fields in the Vacation tab.", ToastLevel.Error);
+            SetActiveTab("vacation-tab");
+            return;
+        }
+        //Offer Customer-preferred Shipping Validation
+        if (businessClubDetail.BusinessClub.AllowAlternativeDeliveryOptions && !clubShippingOptions.Any())
+        {
+            toastService.ShowToast("Please add Shipping Choices.", ToastLevel.Error);
+            SetActiveTab("fulfillment-tab");
+            return;
+        }
+        //Map location to request model
+        businessClubDetail.BusinessClub.BusinessId = currentMember.Id;
+        businessClubDetail.BusinessClub.ClubShipInventoryLocation = businessClubDetail.ShipToCustomerLocations.Select(x => x.LocationId.Value).ToList();
+        businessClubDetail.BusinessClub.ClubPickupInventoryLocation = businessClubDetail.BusinessClub.AllowCustomerPickup
+                                                                      ? businessClubDetail.CustomerPickupLocations.Select(x => x.LocationId.Value).ToList()
+                                                                      : new List<int>();
+        if (editContext.Validate())
+        {
+            isSaving = true;
+            isLoading = true;
+            businessClubDetail.BusinessClub.Teaser = messageInstruction.MessageText;
+            businessClubDetail.BusinessClub.Description = messageInstruction2.MessageText;
+            businessClubDetail.BusinessClub.EmailDescription = string.Empty;
+            businessClubDetail.BusinessClub.GiftDescription = businessClubDetail.BusinessClub.GiftDescription ?? string.Empty;
+            businessClubDetail.BusinessClub.SignUpPolicy = businessClubDetail.BusinessClub.SignUpPolicy ?? string.Empty;
+            businessClubDetail.BusinessClub.ClubOrderPolicy = businessClubDetail.BusinessClub.ClubOrderPolicy ?? string.Empty;
+            businessClubDetail.BusinessClub.Description = businessClubDetail.BusinessClub.Description ?? string.Empty;
+            businessClubDetail.BusinessClub.ClubType = (ClubType)BusinessClubType;
+            businessClubDetail.BusinessClub.Status = (ClubStatus)BusinessClubStatus;
+            businessClubDetail.BusinessClub.LimitCapacityType = (ClubLimitCapacityType)BusinessClubLimitCapacityType;
+            if (!businessClubDetail.BusinessClub.LimitCapacity)
+                businessClubDetail.BusinessClub.MaxCapacity = 0;
+            //LimitCapacityType is Close then WaitlistCapacity and RequireCCWaitListSignup will not display
+            if (businessClubDetail.BusinessClub.LimitCapacityType == ClubLimitCapacityType.Close)
+            {
+                businessClubDetail.BusinessClub.WaitlistCapacity = 0;
+                businessClubDetail.BusinessClub.RequireCCWaitListSignup = false;
+            }
+            //If Allow Gifted Memberships checkbox is uncheck
+            if (!businessClubDetail.BusinessClub.AllowGiftMemberships)
+            {
+                giftShipmentList = new List<ClubGiftShipmentsRequestModel>();
+                businessClubDetail.BusinessClub.GiftDescription = string.Empty;
+                businessClubDetail.BusinessClub.OfferPerpetualGiftedMemberships = false;
+            }
+            //If Allow Vacation Holds? checkbox is uncheck
+            if (!businessClubDetail.BusinessClub.AllowHolds)
+            {
+                businessClubDetail.BusinessClub.MaxHoldDays = 0;
+                businessClubDetail.BusinessClub.MaxHoldsPerYear = 0;
+                businessClubDetail.BusinessClub.AllowHoldPrivileges = false;
+            }
+            //If Require Minimum Shipments checkobox is uncheck
+            if (!businessClubDetail.BusinessClub.RequireMinShipments)
+                businessClubDetail.BusinessClub.MinShipments = 0;
+
+            //Get Frequency according to selected option
+            GetFrequency();
+
+            if (businessClubDetail.BusinessClub.ClubImageFileName is not null && businessClubDetail.BusinessClub.ClubImageFileName.Contains("/"))
+            {
+                int index = businessClubDetail.BusinessClub.ClubImageFileName.LastIndexOf("/");
+                if (index >= 0)
+                    businessClubDetail.BusinessClub.ClubImageFileName = businessClubDetail.BusinessClub.ClubImageFileName.Substring(index + 1);
+            }
+
+
+            if (Id == null)
+            {
+                await CreateBusinessClub();
+            }
+            else if (Id != null && clubData != null)
+            {
+                await UpdateBusinessClub();
+            }
+            StateHasChanged();
+        }
+    }
+    private async Task CreateBusinessClub()
+    {
+        if (Id == null)
+        {
+            businessClubDetail.BusinessClub.ClubCancelReasons = cancellationReasonList?.Select(x => x.Reason)?.ToList() ?? new List<string>();
+            businessClubDetail.BusinessClub.ClubFrequencies = new List<ClubFrequencyRequestModel>(){
+            new ClubFrequencyRequestModel
+            {
+                SortOrder = 1,
+                FrequencyDescription = businessClubDetail.BusinessClubFrequency.FrequencyName,
+                FrequencyWeeks = businessClubDetail.BusinessClubFrequency.FrequencyWeeks,
+                IsDefault = true
+            }};
+            businessClubDetail.BusinessClub.ClubShippingOptions = businessClubDetail.BusinessClub.AllowAlternativeDeliveryOptions ?
+                                               clubShippingOptions.Select(x =>
+                                               new ClubShippingOptionsRequestModel
+                                               {
+                                                   ShipMethodId = x.ShipMethodId,
+                                                   IsDefault = x.IsDefault
+                                               }).ToList()
+                                               : new List<ClubShippingOptionsRequestModel>();
+            var clubGiftShipments = new List<ClubGiftShipmentsRequestModel>();
+            if (giftShipmentList != null && giftShipmentList.Count > 0)
+            {
+                var index = 1;
+                foreach (var item in giftShipmentList.OrderBy(x => x.ShipmentCount).ToList())
+                {
+                    item.SortOrder = 1;
+                    item.IsDefault = index == 1;
+                    clubGiftShipments.Add(item);
+                    index++;
+                }
+            }
+            businessClubDetail.BusinessClub.ClubGiftShipments = clubGiftShipments;
+            businessClubDetail.BusinessClub.UserId = loggedInUser?.Id ?? 0;
+            businessClubDetail.BusinessClub.ClubImageBytes = imgUrl;
+            var result = await _clubViewModel.CreateClubAsync(businessClubDetail.BusinessClub);
+            isLoading = false;
+            isSaving = false;
+            if (result.success)
+            {
+                Id = result.data.ClubGUID;
+                var clubDetailResponse = await _clubViewModel.GetClubDetailsAsync(0, Id.Value.ToString());
+                if (clubDetailResponse.success && clubDetailResponse.data != null)
+                {
+                    clubData = clubDetailResponse.data;
+                    clubId = clubData.Id.ToString();
+                    businessClubDetail.BusinessClub.ClubImageFileName = clubData.ClubImageFileName;
+                    BindPreferredShippingOptions();
+                    title = $"Manage Club{(string.IsNullOrEmpty(clubId) ? "" : "- " + clubId)} | Synergy Commerce Admin Panel";
+                }
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(result.error_info.description, ToastLevel.Error);
+            }
+        }
+        StateHasChanged();
+    }
+    private async Task UpdateBusinessClub()
+    {
+        if (Id != null && clubData != null)
+        {
+            var businessClubUpdateModel = _mapper.Map<UpdateClubRequestModel>(businessClubDetail.BusinessClub);
+            businessClubUpdateModel.Id = clubData.Id;
+            businessClubUpdateModel.ClubCancelReasons = cancellationReasonList?.Select(x => new ClubCancelReasonsModel
+            {
+                CancelReason = x.Reason,
+                id = clubData.ClubCancelReason?.FirstOrDefault(c => c.CancelReason == x.Reason)?.id ?? 0
+            })?.ToList();
+            businessClubUpdateModel.ClubFrequencies = new List<ClubFrequencyModel>(){
+            new ClubFrequencyModel
+            {
+                SortOrder = 1,
+                FrequencyDescription = businessClubDetail.BusinessClubFrequency.FrequencyName,
+                FrequencyWeeks = businessClubDetail.BusinessClubFrequency.FrequencyWeeks,
+                IsDefault = true,
+                BusinessClubId = clubData.Id,
+                Id = clubData?.ClubFrequency?.FirstOrDefault()?.Id ?? 0
+                }};
+            businessClubUpdateModel.ClubShippingOptions = businessClubDetail.BusinessClub.AllowAlternativeDeliveryOptions ?
+            clubShippingOptions.Select(x => new ClubShippingOptionsModel
+            {
+                BusinessClubId = clubData.Id,
+                ShipMethodId = x.ShipMethodId,
+                IsDefault = x.IsDefault,
+                Id = clubData.ClubDeliveryOption?.FirstOrDefault(c => c.ShipMethodId == x.ShipMethodId)?.Id ?? 0
+            }).ToList() : new List<ClubShippingOptionsModel>();
+            var clubGiftShipments = new List<ClubGiftShipmentsModel>();
+            if (giftShipmentList != null && giftShipmentList.Count > 0)
+            {
+                var index = 1;
+                foreach (var item in giftShipmentList.OrderBy(x => x.ShipmentCount).ToList())
+                {
+                    clubGiftShipments.Add(new ClubGiftShipmentsModel
+                    {
+                        BusinessClubId = clubData.Id,
+                        Id = clubData.ClubGiftShipmentCount?.FirstOrDefault(c => c.ShipmentCount == item.ShipmentCount)?.Id ?? 0,
+                        ShipmentCount = item.ShipmentCount,
+                        IsDefault = index == 1,
+                        SortOrder = index
+                    });
+                    index++;
+                }
+            }
+            businessClubUpdateModel.ClubGiftShipments = clubGiftShipments;
+            businessClubUpdateModel.ClubPickupInventoryLocation = businessClubDetail.BusinessClub.AllowCustomerPickup ? businessClubDetail.BusinessClub.ClubPickupInventoryLocation.Select(cl =>
+                new ClubPickupLocationModel
+                {
+                    BusinessClubId = clubData.Id,
+                    LocationId = cl,
+                    Id = clubData.ClubPickupLocation?.FirstOrDefault(c => c.LocationId == cl)?.Id ?? 0,
+                }).ToList() : new List<ClubPickupLocationModel>();
+            businessClubUpdateModel.ClubShipInventoryLocation = businessClubDetail.BusinessClub.ClubShipInventoryLocation.Select(cl =>
+                new ClubShipLocationModel
+                {
+                    BusinessClubId = clubData.Id,
+                    LocationId = cl,
+                    Id = clubData.ClubShipLocation?.FirstOrDefault(c => c.LocationId == cl)?.Id ?? 0,
+                }).ToList();
+            businessClubUpdateModel.UserId = loggedInUser?.Id ?? 0;
+            var result = await _clubViewModel.UpdateClubAsync(businessClubUpdateModel);
+            isLoading = false;
+            isSaving = false;
+            if (result.success)
+            {
+                var clubDetailResponse = await _clubViewModel.GetClubDetailsAsync(0, Id.Value.ToString());
+                if (clubDetailResponse.success && clubDetailResponse.data != null)
+                {
+                    clubData = clubDetailResponse.data;
+                    businessClubDetail.BusinessClub.ClubImageFileName = clubData.ClubImageFileName;
+                    BindPreferredShippingOptions();
+                }
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(result.error_info.description, ToastLevel.Error);
+            }
+        }
+        StateHasChanged();
+    }
+    private void BindPreferredShippingOptions()
+    {
+        clubShippingOptions = clubData?.ClubDeliveryOption?.Select(d => new ClubShippingOption
+        {
+            ShipMethodId = d.ShipMethodId,
+            ShipMethodName = serviceCodes?.FirstOrDefault(r => r.Id == d.ShipMethodId)?.ServiceCodeName ?? string.Empty,
+            IsDefault = d.IsDefault
+        })?.ToList() ?? new List<ClubShippingOption>();
+    }
+    #endregion Add/Update
+}
+
+<style>
+    .e-toolbar-items {
+        float: left;
+    }
+
+    .shippingOption .e-headercelldiv {
+        height: 30px;
+    }
+
+    .e-grid .e-sortfilterdiv {
+        display: none;
+    }
+</style>

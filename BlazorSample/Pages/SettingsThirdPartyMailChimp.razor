@@ -1,0 +1,308 @@
+﻿@page "/settings/integrated-partners/mailchimp/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm Model="@mailChimp" Context="formContext" Class="row g-3">
+    <DataAnnotationsValidator />
+    <div class="card">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h5 class="mb-0"><a href="marketplace/partner/@Id" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-brands fa-mailchimp me-2"></span>MailChimp</h5>
+                </div>
+                <div class="col-md-auto">
+                    <button hidden="@AddNewFieldsVisibility" class="btn btn-sm btn-primary" @onclick="@(() => SaveMailChimp(formContext))">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <div class="col-md-11" hidden="@AddNewFieldsVisibility">
+                        <label for="inputMailChimpApiKey" class="form-label">API Key</label>
+                        <InputText class="form-control" @bind-Value="mailChimp.MailChimpAPIKey" id="inputMailChimpApiKey" type="text" placeholder="API Key"></InputText>
+                        <ValidationMessage For="@(() => mailChimp.MailChimpAPIKey)" />
+                    </div>
+                    <div class="col-md-11 mb-3" hidden="@CurrentFieldsVisibility">
+                        <label for="inputMailChimpApiKeyReadonly" class="form-label">API Key</label>
+                        <input readonly class="form-control" @bind="mailChimp.MailChimpAPIKey" id="inputMailChimpApiKeyReadonly" type="text" placeholder="API Key" />
+                    </div>
+                    <div class="col-md-11 d-flex align-items-end">
+                        <button hidden="@AddNewFieldsVisibility" class="btn btn-sm btn-outline-primary mb-1" @onclick="@(() => GetMailChimpLists(formContext))">Get MailChimp Lists</button>
+                    </div>
+                    <div class="row g-2" hidden="@AddNewFieldsVisibility">
+                        <div class="col-md-11">
+                            <label for="selMailChimpList" class="form-label">MailChimp List</label>
+                            <SfDropDownList Placeholder="Select List" TValue="string" @bind-Value="mailChimp.MailChimpList" TItem="MailChimpViewModel" DataSource="@mailChimpLists">
+                                <DropDownListFieldSettings Value="Id" Text="Name"></DropDownListFieldSettings>
+                                <DropDownListEvents TItem="MailChimpViewModel" TValue="string" ValueChange="OnMailChimpListChange"></DropDownListEvents>
+                            </SfDropDownList>
+                            <ValidationMessage For="@(() => mailChimp.MailChimpList)" />
+                        </div>
+                        <div class="col-md-11 d-flex align-items-end">
+                            <button hidden="@CreateStoreBtnVisibility" class="btn btn-sm btn-outline-primary mb-1" @onclick="@(() => CreateMailChimpStore(formContext))">Create Store</button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3"  hidden="@CurrentFieldsVisibility">
+                        <div class="col-md-11">
+                            <label for="inputMailChimpCurrentList" class="form-label">Current List</label>
+                            <input readonly class="form-control" @bind="mailChimp.MailChimpListName" id="inputMailChimpCurrentList" type="text" placeholder="Current List" />
+                        </div>
+                    </div>
+                    <div class="mb-3"  hidden="@CurrentFieldsVisibility">
+                        <div class="col-md-11">
+                            <label for="inputMailChimpCurrentStore" class="form-label">Current Store</label>
+                            <input readonly class="form-control" @bind="mailChimp.MailChimpStore" id="inputMailChimpCurrentStore" type="text" placeholder="Current Store" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="col-md-11 mb-3" hidden="@CurrentFieldsVisibility">
+                        <label for="inputPosTag" class="form-label">POS Tag</label>
+                        <input readonly class="form-control" @bind="mailChimp.PosTag" id="inputPosTag" type="text" placeholder="POS Tag" />
+                    </div>
+                    <div class="col-md-11 mb-3" hidden="@CurrentFieldsVisibility">
+                        <label for="inputOmsTag" class="form-label">OMS Tag</label>
+                        <input readonly class="form-control" @bind="mailChimp.OmsTag" id="inputOmsTag" type="text" placeholder="OMS Tag" />
+                    </div>
+                    <div class="col-md-11 mb-3" hidden="@CurrentFieldsVisibility">
+                        <label for="inputeCommerceTag" class="form-label">eCommerce Tag</label>
+                        <input readonly class="form-control" @bind="mailChimp.eCommerceTag" id="inputeCommerceTag" type="text" placeholder="eCommerce Tag" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-12">
+                <div class="row mb-3 g-3" hidden="@AddNewFieldsVisibility">
+                    <p><span class="fas fa-exclamation me-2"></span>The list can not be changed once a store connection is created.</p>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer" hidden="@FooterVisibility">
+            <div class="row justify-content-end">
+                <div class="col-md-auto">
+                    <button class="btn btn-primary" @onclick="@(() => DeleteDialogOpen())"><span class="far fa-trash-alt"></span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+<SfDialog IsModal="true" Width="410px" ShowCloseIcon="true" @bind-Visible="DeleteDialogVisibility">
+    <DialogTemplates>
+        <Header> Remove MailChimp Connection? </Header>
+        <Content>
+            <div class="">
+                <p>Are you sure you want to remove the MailChimp connection?</p>
+            </div>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="@CloseDeleteDialog">No</button>
+            <button type="button" class="btn btn-primary" @onclick="@DeleteConfirmation">Yes</button>
+        </FooterTemplate>
+    </DialogTemplates>
+    <DialogEvents Closed="@CloseDeleteDialog"></DialogEvents>
+</SfDialog>
+
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "MailChimp | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    private bool CurrentFieldsVisibility { get; set; } = true;
+    private bool AddNewFieldsVisibility { get; set; } = true;
+    private bool CreateStoreBtnVisibility { get; set; } = true;
+    private bool FooterVisibility { get; set; } = true;
+    private bool DeleteDialogVisibility { get; set; } = false;
+    Member currentMember = new Member();
+    MailChimpRequestModel mailChimp = new MailChimpRequestModel();
+    List<MailChimpViewModel> mailChimpLists = new List<MailChimpViewModel>();
+    List<string> mailChimpMetaKeys = new List<string>(){
+        BusinessSettingsMetaKey.MailChimpAPIKey,
+        BusinessSettingsMetaKey.MailChimpList,
+        BusinessSettingsMetaKey.MailChimpListName,
+        BusinessSettingsMetaKey.MailChimpStore,
+        BusinessSettingsMetaKey.PosTag,
+        BusinessSettingsMetaKey.OmsTag,
+        BusinessSettingsMetaKey.eCommerceTag
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get business settings for MailChimp
+        var response = await _settingsViewModel.GetBusinessSettingsListAsync(currentMember.Id, BusinessSettingsMetaNamespace.MailChimp);
+
+        foreach (var metaKey in mailChimpMetaKeys)
+        {
+            var metaValue = response?.data?.Where(x => x.MetaKey == metaKey)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+            Helper.SetPropertyValue(mailChimp, metaKey, metaValue);//Note: meta key and request model property name should be same
+        }
+
+        if (response?.data != null &&
+    !string.IsNullOrEmpty(mailChimp.MailChimpAPIKey) &&
+    !string.IsNullOrEmpty(mailChimp.MailChimpList) &&
+    !string.IsNullOrEmpty(mailChimp.MailChimpStore))
+        {
+            CurrentFieldsVisibility = false;
+            FooterVisibility = false;
+            AddNewFieldsVisibility = true;
+        }
+        else
+        {
+            AddNewFieldsVisibility = false;
+            CurrentFieldsVisibility = true;
+            FooterVisibility = true;
+        }
+        SpinnerVisibility = false;
+    }
+
+    public async Task GetMailChimpLists(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var response = await _settingsViewModel.GetMailChimpLists(mailChimp.MailChimpAPIKey);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                mailChimpLists = response.data ?? new List<MailChimpViewModel>();
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    public async Task OnMailChimpListChange()
+    {
+        CreateStoreBtnVisibility = false;
+    }
+
+    public async Task CreateMailChimpStore(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var response = await _settingsViewModel.CreateMailChimpStore(mailChimp.MailChimpAPIKey, currentMember.Id, mailChimp.MailChimpList);
+            SpinnerVisibility = false;
+            if (response.success && !string.IsNullOrEmpty(response.storeId))
+            {
+                mailChimp.MailChimpStore = response.storeId;
+                mailChimp.MailChimpListName = mailChimpLists?.Where(x => x.Id == mailChimp.MailChimpList)?.FirstOrDefault()?.Name ?? string.Empty;
+                toastService.ShowToast(Constants.MailChimpStoreCreated, ToastLevel.Success);
+                await SaveMailChimp(editContext);
+                await OnInitializedAsync();
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    public async Task SaveMailChimp(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var businessSettings = new List<BusinessSettingsRequestModel>();
+            foreach (var key in mailChimpMetaKeys)
+            {
+                var setting = new BusinessSettingsRequestModel();
+                setting.BusinessId = currentMember.Id;
+                setting.MetaNamespace = BusinessSettingsMetaNamespace.MailChimp;
+                setting.Title = string.Empty;
+                setting.Description = string.Empty;
+                setting.MetaKey = key;
+                ValueTypeEnum valueType = Helper.GetPropertyDataType(mailChimp, key); //Note: meta key and request model property name should be same
+                if (key == BusinessSettingsMetaKey.MailChimpListName)
+                {
+                    setting.MetaValue = mailChimpLists?.Where(x => x.Id == mailChimp.MailChimpList)?.FirstOrDefault()?.Name ?? string.Empty;
+                }
+                else
+                {
+                    setting.MetaValue = (string)Helper.GetPropertyValue(mailChimp, key) ?? string.Empty;
+                }
+                setting.ValueType = Convert.ToInt32(valueType);
+                businessSettings.Add(setting);
+            }
+            var response = await _settingsViewModel.CreateBusinessSettingListAsync(businessSettings);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    private void DeleteDialogOpen()
+    {
+        DeleteDialogVisibility = true;
+    }
+
+    /// <summary>
+    /// Close dialog
+    /// </summary>
+    private void CloseDeleteDialog() => DeleteDialogVisibility = false;
+
+
+    public async Task DeleteConfirmation()
+    {
+        SpinnerVisibility = true;
+        var settingsResponse = await _settingsViewModel.GetBusinessSettingsListAsync(currentMember.Id, BusinessSettingsMetaNamespace.MailChimp);
+        //var businessSettings = settingsResponse.data.Select(s => { s.MetaValue = string.Empty; return s; }).ToList();
+        var businessSettings = settingsResponse.data.Select(s => new BusinessSettingsRequestModel
+        {
+            BusinessId = s.BusinessId,
+            Id = s.Id,
+            MetaValue = string.Empty,
+            Description = s.Description,
+            MetaKey = s.MetaKey,
+            MetaNamespace = s.MetaNamespace,
+            Title = s.Title,
+            ValueType = s.ValueType
+        }).ToList();
+        var response = await _settingsViewModel.CreateBusinessSettingListAsync(businessSettings);
+        SpinnerVisibility = false;
+        if (response.success)
+        {
+            DeleteDialogVisibility = false;
+            toastService.ShowToast(Constants.DeleteMessage, ToastLevel.Success);
+            mailChimpLists = new List<MailChimpViewModel>();
+            await OnInitializedAsync();
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+}

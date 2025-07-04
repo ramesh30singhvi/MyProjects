@@ -1,0 +1,432 @@
+﻿@page "/store/update-inventory"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using System.Dynamic
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject IInventoryViewModel _inventoryViewModel
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="/store/inventory" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-store me-2"></span>Update Inventory</h5>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="px-2 ms-2">
+            <div class="row my-3">
+                <div class="col-12 col-md-4">
+                    <label class="form-label" for="inputCollectionName">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                        <input type="text" class="form-control" placeholder="Search Products" @oninput="(EventArgs) => {SearchProducts(EventArgs.Value.ToString());}" aria-label="Search Products" aria-describedby="inputGroupSearch">
+                    </div>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label" for="selLocation">Location</label>
+                    <div class="mb-3">
+                        <select value="@bindedLocFilter" @onchange="HandleLocationFilter" class="form-select fs--1">
+                            <option value="0">All</option>
+                            @foreach (var loc in businessLocsNames)
+                            {
+                                <option value="@loc.Id">@loc.LocationName</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 col-md-4">
+                    <div class="input-group mb-3">
+                        <label class="input-group-text mb-0 fs--1" for="selBulkActions">@((selectedRows == 1)?"1 Item selected":$"{selectedRows} Item(s) selected")</label>
+                    <select value="@bulkAction" @onchange="@HandleBulkAction" class="form-select fs--1" id="selBulkActions">
+                        @foreach (BulkActionsOperation action in Enum.GetValues(typeof(BulkActionsOperation)))
+                        {
+                            <option value="@action">@EnumHelper.GetDescription(action)</option>
+                        }
+                    </select>
+                    </div>
+                </div>
+                @{
+                    if (selectedRows > 0)
+                    {
+                        <div class="col-12 col-md-2">
+                            <button type="button" @onclick="UpdateInventory" class="btn btn-primary">Update</button>
+                        </div>
+                    }
+                }
+
+            </div>
+        </div>
+
+        <div class="min-vh-75 sf-grid">
+            <SfGrid @ref="InventoryGrid" DataSource="@dynamicInv" AllowPaging="true" Width="100%">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridEvents RowSelected="RowSelectHandler" RowDeselected="RowDeselectHandler" TValue="ExpandoObject"></GridEvents>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && dynamicInv.Count <= 0)
+                        {
+                            <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Inventory Available</h6>
+                                <button type="button" class="btn btn-outline-primary">Get Started</button>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn Type="Syncfusion.Blazor.Grids.ColumnType.CheckBox" TextAlign="TextAlign.Left" Width="40"></GridColumn>
+                    <GridColumn Field="ProductId" AllowEditing="false" HeaderText="" IsPrimaryKey="true" TextAlign="TextAlign.Left" Width="0"></GridColumn>
+                    <GridColumn Field="ProductName" AllowEditing="false" HeaderText="Product Name" EditType="EditType.DefaultEdit" TextAlign="TextAlign.Left" Width="130">
+                        <Template>
+                            @{
+                                var productName = (context as ExpandoObject);
+                                var val = ((dynamic)productName).ProductName;
+                                <a href="javascript:void();">@($"{val}")</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    @{
+                        if (businessLocsNames.Any())
+                        {
+                            foreach (var loc in businessLocsNames)
+                            {
+                                <GridColumn Field="@(loc.Id +" - AlertQty")" HeaderText="" Width="70" TextAlign="TextAlign.Center" ValidationRules="@(new ValidationRules { Required=true})"></GridColumn>
+                                <GridColumn AllowEditing="true" EditType="EditType.DefaultEdit" IsFrozen="false" Field="@(loc.Id.ToString())" TextAlign="TextAlign.Left" HeaderText="@loc.LocationName" Width="90">
+                                    <Template>
+                                        @{
+                                            var locn = loc.Id.ToString();
+                                            var locnName = (context as ExpandoObject);
+                                            var prodId = Convert.ToInt32(((IDictionary<string, object>)locnName)["ProductId"]);
+                                            var qty = Convert.ToInt32(((IDictionary<string, object>)locnName)[locn]);
+                                            if (bindedLocFilter == loc.Id)
+                                            {
+                                                <input @onkeydown:stopPropagation="true" class="form-control" contenteditable="true" type="number" value="@qty" @onchange="(e) => HandleQtyChange(e, prodId, locn)" />
+                                            }
+                                            else
+                                            {
+                                                @qty
+                                            }
+                                        }
+                                    </Template>
+                                </GridColumn>
+                            }
+                        }
+                    }
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+    <div class="card-footer">
+    </div>
+</div>
+
+<SfDialog Width="500px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsBulkActionsModalVisible">
+    <DialogEvents OnOverlayClick="() => IsBulkActionsModalVisible = false">
+    </DialogEvents>
+    <DialogTemplates>
+        <Header>
+            @bulkActionsHeader
+        </Header>
+        <Content>
+            <div class="row">
+                <div class="col-12">
+                    <label class="form-label" for="bulkActionQty">Quantity</label>
+                    <input class="form-control" @bind-value="@bulkActionQty" type="number" id="bulkActionQty" placeholder="Enter the Quantity" />
+                </div>
+            </div>
+        </Content>
+    </DialogTemplates>
+    <DialogButtons>
+        <DialogButton Content="Cancel" OnClick="() => IsBulkActionsModalVisible = false" />
+        <DialogButton Content="Save" @onclick="ApplyBulkAction" IsPrimary="true" />
+    </DialogButtons>
+</SfDialog>
+
+@code
+{
+    private string title = "Update Inventory | Synergy  Admin Panel";
+    private Boolean isLoading = false;
+    private Member currentMember = new Member();
+    private int bindedLocFilter { get; set; }
+    private bool IsBulkActionsModalVisible { get; set; }
+
+    private List<BusinessLocationNameModel> businessLocsNames = new List<BusinessLocationNameModel>();
+
+    private List<ExpandoObject> dynamicInv { get; set; } = new List<ExpandoObject>();
+    private List<ExpandoObject> totalInv { get; set; } = new List<ExpandoObject>();
+    private string searchVal = "";
+    private int selectedRows = 0;
+    SfGrid<ExpandoObject> InventoryGrid;
+    private BulkActionsOperation bulkAction = BulkActionsOperation.BulkAction;
+    private string bulkActionsHeader { get; set; }
+    private int bulkActionQty { get; set; }
+
+    private class InventoryCustomModel
+    {
+        public bool IsActive { get; set; }
+        public int ProductId { get; set; }
+        public Guid ProductGuid { get; set; }
+        public string ProductName { get; set; }
+        public List<ProductInventoryLocQtyModel> ProductInv { get; set; }
+    }
+
+    private class ProductInventoryLocQtyModel
+    {
+        public int ProductInventoryId { get; set; }
+        public int LocationId { get; set; }
+        public string LocationName { get; set; }
+        public int AvailableQty { get; set; }
+        public int AlertQty { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        await GetInventoryDetails();
+        isLoading = false;
+    }
+
+    private async Task GetInventoryDetails()
+    {
+        totalInv = new List<ExpandoObject>();
+        businessLocsNames = new List<BusinessLocationNameModel>();
+        var inventoryResponse = await _inventoryViewModel.GetInventoryDetails(currentMember.Id);
+        if (inventoryResponse.success)
+        {
+            var productInventory = inventoryResponse.data.GroupBy(x => x.ProductId).
+               Select(x => new InventoryCustomModel
+               {
+                   ProductId = x.Key,
+                   ProductGuid = x.ToList()[0].ProductGUID,
+                   ProductName = x.ToList()[0].ProductName,
+                   ProductInv = x.ToList().
+               Select(y => new ProductInventoryLocQtyModel { ProductInventoryId = y.ProductInventoryId, LocationId = y.LocationId, LocationName = y.LocationName, AvailableQty = y.AvailableQty, AlertQty = y.AlertQty }).ToList()
+               }).ToList();
+            if (productInventory.Any())
+            {
+                foreach (var product in productInventory)
+                {
+                    // Inserting data to the Expando Object
+                    dynamic inv = new ExpandoObject();
+                    inv.ProductId = product.ProductId;
+                    inv.IsActive = false;
+                    var dict = (IDictionary<string, object>)inv;
+                    dict["ProductGuid"] = product.ProductGuid;
+                    dict["ProductName"] = product.ProductName;
+                    dict["ProductInventoryIds"] = product.ProductInv.Select(x => x.ProductInventoryId).ToArray();
+                    foreach (var loc in product.ProductInv)
+                    {
+                        dict[loc.LocationId.ToString()] = loc.AvailableQty;
+                        dict[loc.LocationId + " - AlertQty"] = loc.AlertQty;
+                    }
+                    totalInv.Add(inv);
+                }
+
+                foreach (var loc in productInventory[0].ProductInv)
+                {
+                    var location = new BusinessLocationNameModel
+                    {
+                        Id = loc.LocationId,
+                        LocationName = loc.LocationName
+                    };
+                    businessLocsNames.Add(location);
+                }
+            }
+        }
+        SearchProducts(searchVal);
+    }
+
+    private void HandleLocationFilter(ChangeEventArgs args)
+    {
+        bindedLocFilter = Convert.ToInt32(args.Value);
+    }
+
+    private void HandleQtyChange(ChangeEventArgs args, int productId, string locnId)
+    {
+        if (!string.IsNullOrWhiteSpace(args.Value.ToString()))
+        {
+            isLoading = true;
+            foreach (var product in totalInv)
+            {
+                if (Convert.ToInt32(((dynamic)product).ProductId) == productId)
+                {
+                    ((IDictionary<string, object>)product)[locnId] = Convert.ToInt32(args.Value);
+                }
+            }
+            SearchProducts(searchVal);
+            isLoading = false;
+        }
+    }
+
+    private async Task<List<int>> GetSelectedRowsProductIdsAsync()
+    {
+        var selectedrows = await InventoryGrid.GetSelectedRecordsAsync();
+        var selectedProductIds = new List<int>();
+        foreach (var selectedRow in selectedrows)
+        {
+            selectedProductIds.Add(Convert.ToInt32(((dynamic)selectedRow).ProductId));
+        }
+        return selectedProductIds;
+    }
+
+    private async Task UpdateInventory()
+    {
+        isLoading = true;
+        List<InventoryUpdateRequestModel> request = new List<InventoryUpdateRequestModel>();
+        var selectedProductIds = await GetSelectedRowsProductIdsAsync();
+        foreach (var product in dynamicInv)
+        {
+            var productId = Convert.ToInt32(((dynamic)product).ProductId);
+            if (selectedProductIds.Contains(productId))
+            {
+                int count = 0;
+                var productInvIds = ((IDictionary<string, object>)product)["ProductInventoryIds"] as int[];
+                foreach (var loc in businessLocsNames)
+                {
+                    var invRequest = new InventoryUpdateRequestModel
+                    {
+                        ProductInventoryId = productInvIds[count],
+                        LocationId = loc.Id,
+                        ProductId = productId,
+                        AvailableQty = Convert.ToInt32(((IDictionary<string, object>)product)[loc.Id.ToString()]),
+                        AlertQty = Convert.ToInt32(((IDictionary<string, object>)product)[loc.Id + " - AlertQty"])
+                    };
+                    request.Add(invRequest);
+                    count++;
+                }
+            }
+
+        }
+
+        var updateInventoryResponse = await _inventoryViewModel.UpdateInventory(request);
+        if (updateInventoryResponse.success)
+        {
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            await GetInventoryDetails();
+            selectedRows = 0;
+        }
+        else
+        {
+            toastService.ShowToast(updateInventoryResponse.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+    }
+
+    private void SearchProducts(string searchValue)
+    {
+        if (!string.IsNullOrEmpty(searchValue))
+        {
+            searchVal = searchValue;
+            var query = from t in totalInv
+                        where ((IDictionary<string, object>)t)["ProductName"].ToString().ToLower().Contains(searchValue.ToLower())
+                        select t;
+            dynamicInv = query.ToList();
+        }
+        else
+        {
+            searchVal = "";
+            dynamicInv = totalInv;
+        }
+        StateHasChanged();
+    }
+
+    public void RowSelectHandler(RowSelectEventArgs<ExpandoObject> args)
+    {
+        selectedRows = InventoryGrid.SelectedRecords.Count();
+    }
+
+    public void RowDeselectHandler(RowDeselectEventArgs<ExpandoObject> args)
+    {
+        selectedRows = InventoryGrid.SelectedRecords.Count();
+    }
+
+    private async Task HandleBulkAction(ChangeEventArgs args)
+    {
+        BulkActionsOperation action = (BulkActionsOperation)Enum.Parse(typeof(BulkActionsOperation), args.Value.ToString());
+        bulkAction = action;
+        var selectedRows = await InventoryGrid.GetSelectedRecordsAsync();
+        if(action != BulkActionsOperation.BulkAction)
+        {
+            if (selectedRows.Count == 0)
+            {
+                toastService.ShowToast("Rows must be selected first.", ToastLevel.Error);
+            }
+            else
+            {
+                switch (action)
+                {
+                    case BulkActionsOperation.Set:
+                        bulkActionsHeader = "Set Available Quantities To";
+                        break;
+                    case BulkActionsOperation.Add:
+                        bulkActionsHeader = "Add to Available Quantities";
+                        break;
+                    case BulkActionsOperation.Subtract:
+                        bulkActionsHeader = "Subtract from Available Quantities";
+                        break;
+                }
+                bulkActionQty = 0;
+                IsBulkActionsModalVisible = true;
+            }
+        }
+
+    }
+
+    private async Task ApplyBulkAction()
+    {
+        isLoading = true;
+        IsBulkActionsModalVisible = false;
+        var selectedProductIds = await GetSelectedRowsProductIdsAsync();
+        foreach (var product in totalInv)
+        {
+            if (selectedProductIds.Contains(Convert.ToInt32(((dynamic)product).ProductId)))
+            {
+                if(bindedLocFilter == 0)
+                {
+                    foreach(var location in businessLocsNames)
+                    {
+                        ApplyQtyChangeByBulk(product, location.Id.ToString());
+                    }
+                }
+                else
+                {
+                    ApplyQtyChangeByBulk(product, bindedLocFilter.ToString());
+                }
+            }
+        }
+        SearchProducts(searchVal);
+        toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        isLoading = false;
+    }
+
+    private void ApplyQtyChangeByBulk(ExpandoObject product, string location)
+    {
+        switch (bulkAction)
+        {
+            case BulkActionsOperation.Set:
+                ((IDictionary<string, object>)product)[location] = bulkActionQty;
+                break;
+            case BulkActionsOperation.Add:
+                ((IDictionary<string, object>)product)[location] = Convert.ToInt32(((IDictionary<string, object>)product)[location]) + bulkActionQty;
+                break;
+            case BulkActionsOperation.Subtract:
+                ((IDictionary<string, object>)product)[location] = Convert.ToInt32(((IDictionary<string, object>)product)[location]) - bulkActionQty;
+                break;
+        }
+    }
+}

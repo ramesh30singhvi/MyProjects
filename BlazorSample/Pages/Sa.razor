@@ -1,0 +1,55 @@
+﻿@page "/sa"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-0"><span class="far fa-mask me-2"></span>Super Admin</h5>
+                    </div>
+                    <div class="col-md-auto"></div>
+                </div>
+            </div>
+            <div class="card-body bg-light">
+                <div class="row my-4">
+                    
+                    
+                    
+                    
+                </div>
+            </div>
+        </div>
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    bool isDisabledModalVisible = false;
+
+    private string title = "Super Admin | Synergy Commerce Super Admin  Panel";
+
+
+    [Parameter]
+    public int Id { get; set; }
+
+
+}

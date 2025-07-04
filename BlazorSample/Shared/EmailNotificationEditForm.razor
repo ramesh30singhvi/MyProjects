@@ -1,0 +1,172 @@
+﻿@inject IJSRuntime JSRuntime
+@using Syncfusion.Blazor.RichTextEditor
+@using CellarPassAppAdmin.Shared.Models
+@using Syncfusion.Blazor.Inputs
+
+<form class="row g-3">
+    <div class="col-md-6">
+        <label for="inputFromEmail" class="form-label">From Email</label>
+        <SfTextBox ID="inputFromEmail" ValueChange="@OnFromEmailChanged" @bind-Value="FromEmail" CssClass="sf-TextBox form-control"></SfTextBox>
+        @foreach (var message in editContext?.GetValidationMessages(FromEmailFieldId) ?? new List<string>())
+        {
+            <div class="validation-message">@message</div>
+        }
+    </div>
+    <div class="col-md-6">
+        <label for="inputFromName" class="form-label">From Name</label>
+        <SfTextBox ID="inputFromName" ValueChange="@OnFromNameChanged" @bind-Value="FromName" CssClass="sf-TextBox form-control"></SfTextBox>
+        @foreach (var message in editContext?.GetValidationMessages(FromNameFieldId) ?? new List<string>())
+        {
+            <div class="validation-message">@message</div>
+        }
+    </div>
+    <div class="col-6">
+        <label for="inputSubject" class="form-label">Email Subject</label>
+        <SfTextBox ID="inputSubject" ValueChange="@OnEmailSubjectChanged" @bind-Value="EmailSubject" CssClass="sf-TextBox form-control"></SfTextBox>
+    </div>
+    <div class="col-6">
+        <label for="inputOrderId" class="form-label">OrderId</label>
+        <input type="number" ID="inputOrderId" @bind-value:event="onchange" @oninput="@((e)=>OnOrderIdChanged(e))" @bind-value="OrderId" class="sf-TextBox form-control" />
+    </div>
+    <div class="col-12" hidden>
+        <label for="inputState" class="form-label">Email Template</label>
+        <select id="selEmailTemplate" class="form-select">
+            <option selected>Default Template</option>
+            <option>...</option>
+        </select>
+    </div>
+    <div class="col-12">
+        <label for="sfContent" class="form-label">Email Content</label>
+        <SfRichTextEditor id="sfContent" @ref="@RteObj" @bind-Value="EmailContent" Height="600px" CssClass="sf-hide-img-upload">
+            <RichTextEditorToolbarSettings Items="@Tools" Type="ToolbarType.MultiRow">
+                <RichTextEditorCustomToolbarItems>
+                    <RichTextEditorCustomToolbarItem Name="Tags">
+                        <Template>
+                            <SfDropDownList TValue="string" TItem="NotificationEmailVariableModel" DataSource="NotificationEmailVariables" Placeholder="Replacement Tags">
+                                <DropDownListFieldSettings Value="VariableName" Text="VariableName"></DropDownListFieldSettings>
+                                <DropDownListEvents ValueChange="OnTagClick" TItem="NotificationEmailVariableModel" TValue="string"></DropDownListEvents>
+                            </SfDropDownList>
+                        </Template>
+                    </RichTextEditorCustomToolbarItem>
+                </RichTextEditorCustomToolbarItems>
+            </RichTextEditorToolbarSettings>
+            <RichTextEditorEvents ValueChange="@OnEmailContentChanged"></RichTextEditorEvents>
+        </SfRichTextEditor>
+    </div>
+</form>
+
+@code {
+
+    #region Requested Parameters and Event Callbacks
+    [Parameter]
+    public string FromEmail { get; set; } = string.Empty;
+    [Parameter]
+    public string FromName { get; set; }
+    [Parameter]
+    public string EmailSubject { get; set; }
+    [Parameter]
+    public int? OrderId { get; set; }
+    [Parameter]
+    public string EmailContent { get; set; } = string.Empty;
+    [Parameter]
+    public List<NotificationEmailVariableModel> NotificationEmailVariables { get; set; }
+
+    [CascadingParameter]
+    private EditContext editContext { get; set; }
+    private FieldIdentifier FromEmailFieldId;
+    private FieldIdentifier FromNameFieldId;
+    private string FromEmailCss => editContext?.FieldCssClass(FromEmailFieldId) ?? "";
+    private string FromNameCss => editContext?.FieldCssClass(FromNameFieldId) ?? "";
+
+    [Parameter]
+    public System.Linq.Expressions.Expression<Func<string>> FromEmailExpression { get; set; }
+    [Parameter]
+    public System.Linq.Expressions.Expression<Func<string>> FromNameExpression { get; set; }
+
+    [Parameter]
+    public EventCallback<string> FromEmailChanged { get; set; }
+    [Parameter]
+    public EventCallback<string> FromNameChanged { get; set; }
+    [Parameter]
+    public EventCallback<string> EmailSubjectChanged { get; set; }
+    [Parameter]
+    public EventCallback<int> OrderIdChanged { get; set; }
+    [Parameter]
+    public EventCallback<string> EmailContentChanged { get; set; }
+    #endregion
+
+    #region On Load
+    protected override void OnInitialized()
+    {
+        FromEmailFieldId = FieldIdentifier.Create(FromEmailExpression);
+        FromNameFieldId = FieldIdentifier.Create(FromNameExpression);
+        StateHasChanged();
+    }
+    #endregion
+
+    #region Text editor and Other
+
+    private async Task OnFromEmailChanged(ChangedEventArgs args)
+    {
+        FromEmail = args.Value.ToString();
+        await FromEmailChanged.InvokeAsync(args.Value.ToString());
+        editContext?.NotifyFieldChanged(FromEmailFieldId);
+    }
+    private async Task OnFromNameChanged(ChangedEventArgs args)
+    {
+        FromName = args.Value.ToString();
+        await FromNameChanged.InvokeAsync(args.Value.ToString());
+        editContext?.NotifyFieldChanged(FromNameFieldId);
+    }
+    private async Task OnEmailSubjectChanged(ChangedEventArgs args)
+    {
+        EmailSubject = args.Value.ToString();
+        await EmailSubjectChanged.InvokeAsync(args.Value.ToString());
+    }
+    private void OnOrderIdChanged(Microsoft.AspNetCore.Components.ChangeEventArgs args)
+    {
+        int res = 0;
+        if (!string.IsNullOrEmpty(args.Value?.ToString())){
+        res =int.Parse(args.Value.ToString());
+        if(res > 0)
+            OrderId = res;
+        OrderIdChanged.InvokeAsync(int.Parse(args.Value.ToString()));
+        }
+
+    }
+    private async Task OnEmailContentChanged(Syncfusion.Blazor.RichTextEditor.ChangeEventArgs args)
+    {
+        EmailContent = args.Value.ToString();
+        await EmailContentChanged.InvokeAsync(args.Value.ToString());
+    }
+
+    SfRichTextEditor RteObj;
+
+    private async Task OnTagClick(ChangeEventArgs<string, NotificationEmailVariableModel> args)
+    {
+        if (!string.IsNullOrEmpty(args?.Value ?? null))
+            await this.RteObj.ExecuteCommandAsync(CommandName.InsertText, args.Value);
+    }
+    private List<ToolbarItemModel> Tools = new List<ToolbarItemModel>()
+{
+        new ToolbarItemModel() { Command = ToolbarCommand.Bold },
+        new ToolbarItemModel() { Command = ToolbarCommand.Italic },
+        new ToolbarItemModel() { Command = ToolbarCommand.Underline },
+        new ToolbarItemModel() { Command = ToolbarCommand.StrikeThrough },
+        new ToolbarItemModel() { Command = ToolbarCommand.Separator },
+        new ToolbarItemModel() { Command = ToolbarCommand.Alignments },
+        new ToolbarItemModel() { Command = ToolbarCommand.NumberFormatList },
+        new ToolbarItemModel() { Command = ToolbarCommand.BulletFormatList },
+        new ToolbarItemModel() { Command = ToolbarCommand.Separator },
+        new ToolbarItemModel() { Command = ToolbarCommand.CreateLink },
+        new ToolbarItemModel() { Command = ToolbarCommand.Image },
+        new ToolbarItemModel() { Command = ToolbarCommand.Separator },
+        new ToolbarItemModel() { Command = ToolbarCommand.ClearFormat },
+        new ToolbarItemModel() { Command = ToolbarCommand.SourceCode },
+        new ToolbarItemModel() { Command = ToolbarCommand.Separator },
+        new ToolbarItemModel() { Command = ToolbarCommand.Undo },
+        new ToolbarItemModel() { Command = ToolbarCommand.Redo },
+        new ToolbarItemModel() { Name = "Tags", TooltipText = "Replacement Tags" }
+};
+    #endregion
+}

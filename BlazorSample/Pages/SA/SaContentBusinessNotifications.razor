@@ -1,0 +1,113 @@
+﻿@page "/sa/content/business-notifications"
+@using CellarPassAppAdmin.Shared.Enums
+@layout SaLayout
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+
+<div class="pt-3">
+    <div class="row justify-content-between">
+        <div class="col-md-auto">
+            <h5 class="mb-3 mb-md-0"><a href="sa/content" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-envelope-open-text me-2"></span>Business Notifications</h5>
+        </div>
+        <div class="col-md-auto">
+        </div>
+    </div>
+    <hr />
+</div>
+<div class="row">
+    <div class="col-12">
+        <div class="table-responsive">
+            <table class="table table-striped fs--1 mb-0 overflow-hidden">
+                <thead class="bg-200 text-900">
+                    <tr>
+                        <th class="p-0 text-center" style="width: 3%;min-width: 28px;"></th>
+                        <th class="ps-1 white-space-nowrap">Notification Category</th>
+                        <th class="pe-1 white-space-nowrap">Template Subject</th>
+                    </tr>
+                </thead>
+                <tbody class="list" id="table-customers-body">
+                    @foreach (var emailNotification in systemEmailNotifications)
+                    {
+                        <tr>
+                            <td class="align-middle p-0 text-center">
+                                <span class="far fa-cog"></span>
+                            </td>
+                            <td class="py-2 ps-1">
+                                <a href="sa/content/business-notification-edit/@((int)emailNotification.Type+"/"+(int)emailNotification.Category)">
+                                    @emailNotification.Title
+                                </a>
+                                <br /><span class="fs--2 text-500">@emailNotification.SubTitle</span>
+                            </td>
+                            <td class="white-space-nowrap py-2 align-middle">
+                                @emailNotification.Subject
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+@code
+{
+    private string title = "System Notifications | Synergy Commerce Admin Panel";
+
+    private class SystemEmailNotification
+    {
+        public NotificationsTypes Type { get; set; }
+        public EmailNotificationCategory Category { get; set; }
+        public string Title { get { return Helper.GetDisplayName(this.Type); } }
+        public string SubTitle { get; set; } = string.Empty;
+        public string Subject { get; set; }
+    }
+    List<SystemEmailNotification> systemEmailNotifications = new List<SystemEmailNotification>();
+    protected override async Task OnInitializedAsync()
+    {
+        systemEmailNotifications.Add(new SystemEmailNotification
+        {
+            Type = NotificationsTypes.ReservationConfirmation,
+            Category = EmailNotificationCategory.Reservation,
+            Subject = "Reservation Confirmation [[Confirmation#]]"
+        });
+        systemEmailNotifications.Add(new SystemEmailNotification
+        {
+            Type = NotificationsTypes.ReservationReminder,
+            Category = EmailNotificationCategory.Reservation,
+            Subject = "Reservation Reminder [[Confirmation#]]"
+        });
+        systemEmailNotifications.Add(new SystemEmailNotification
+        {
+            Type = NotificationsTypes.ReservationPostVisit,
+            Category = EmailNotificationCategory.Reservation,
+            Subject = "Reservation Post Visit [[Confirmation#]]"
+        });
+        systemEmailNotifications.Add(new SystemEmailNotification
+        {
+            Type = NotificationsTypes.ReservationCancellation,
+            Category = EmailNotificationCategory.Reservation,
+            Subject = "Reservation Cancellation [[Confirmation#]]"
+        });
+        systemEmailNotifications.Add(new SystemEmailNotification
+        {
+            Type = NotificationsTypes.ReservationNoShow,
+            Category = EmailNotificationCategory.Reservation,
+            Subject = "Reservation No Show [[Confirmation#]]"
+        });
+        systemEmailNotifications.Add(new SystemEmailNotification
+        {
+            Type = NotificationsTypes.NewClubSignUp,
+            Category = EmailNotificationCategory.Club,
+            Subject = "Club Member Signup Confirmation"
+        });
+        systemEmailNotifications.Add(new SystemEmailNotification
+        {
+            Type = NotificationsTypes.NewMemberCancel,
+            Category = EmailNotificationCategory.Club,
+            Subject = "Club Member Cancel Confirmation"
+        });
+    }
+}
+

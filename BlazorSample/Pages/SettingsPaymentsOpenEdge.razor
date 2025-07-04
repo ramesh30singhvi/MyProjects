@@ -1,0 +1,111 @@
+﻿@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm @ref="OpenEdgeForm" Model="@openEdge" Context="formContext" Class="row g-3">
+    <DataAnnotationsValidator />
+    <div class="card shadow-none border-dashed">
+        @*<div class="card-header border-bottom" hidden="@hide">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h5 class="mb-0"><a href="settings/integrated-partners" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-credit-card me-2"></span>OpenEdge</h5>
+                </div>
+                <div class="col-md-auto">
+                    @if (!IsActivePaymentGateway)
+                    {
+                        <button class="btn btn-sm btn-outline-secondary me-2 disabled">Save</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-sm btn-primary" @onclick="@(() => SaveOpenEdge(formContext))">Save</button>
+                    }
+                </div>
+            </div>
+        </div>*@
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="inputOpenEdgeXWebID" class="form-label">XWebID</label>
+                <InputText class="form-control" @bind-Value="@openEdge.XWebID" id="inputOpenEdgeXWebID" type="text" placeholder="XWebID"></InputText>
+                <ValidationMessage For="@(() => openEdge.XWebID)" />
+            </div>
+            <div class="mb-3">
+                <label for="inputOpenEdgeAuthKey" class="form-label">Auth Key</label>
+                <InputText class="form-control" @bind-Value="@openEdge.AuthKey" id="inputOpenEdgeAuthKey" type="text" placeholder="Auth Key"></InputText>
+                <ValidationMessage For="@(() => openEdge.AuthKey)" />
+            </div>
+            <div class="mb-3">
+                <label for="inputOpenEdgeTerminalId" class="form-label">Terminal ID</label>
+                <InputText class="form-control" @bind-Value="@openEdge.TerminalId" id="inputOpenEdgeTerminalId" type="text" placeholder="Terminal ID"></InputText>
+                <ValidationMessage For="@(() => openEdge.TerminalId)" />
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    //[Parameter]
+    //public bool? hide { get; set; }
+    [Parameter]
+    public List<BusinessPaymentProviderProfileSettingsViewModel>? data { get; set; }
+    private string title = "OpenEdge | Synergy Commerce Admin Panel";
+    public EditForm OpenEdgeForm { get; set; }
+    private bool SpinnerVisibility { get; set; } = false;
+    private bool IsActivePaymentGateway { get; set; } = false;
+    Member currentMember = new Member();
+    OpenEdgeRequestModel openEdge = new OpenEdgeRequestModel();
+    List<string> openEdgeMetaKeys = new List<string>(){
+        BusinessSettingsMetaKey.OpenEdgeXWebID,
+        BusinessSettingsMetaKey.OpenEdgeAuthKey,
+        BusinessSettingsMetaKey.OpenEdgeTerminalId
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        if (data != null && data.Any(x => x.MetaNamespace == BusinessSettingsMetaNamespace.OpenEdge))
+        {
+            openEdge = new OpenEdgeRequestModel
+            {
+                AuthKey = data.Where(x => x.MetaKey == BusinessSettingsMetaKey.OpenEdgeAuthKey).FirstOrDefault().MetaValue,
+                TerminalId = data.Where(x => x.MetaKey == BusinessSettingsMetaKey.OpenEdgeTerminalId).FirstOrDefault().MetaValue,
+                XWebID = data.Where(x => x.MetaKey == BusinessSettingsMetaKey.OpenEdgeXWebID).FirstOrDefault().MetaValue,
+            };
+        }
+
+        SpinnerVisibility = false;
+    }
+
+    public async Task SaveOpenEdge(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var businessSettings = await Helper.BusinessSettingsMapping(openEdge, currentMember.Id, BusinessSettingsMetaNamespace.OpenEdge, openEdgeMetaKeys);
+            var response = await _settingsViewModel.CreateBusinessSettingListAsync(businessSettings);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+}

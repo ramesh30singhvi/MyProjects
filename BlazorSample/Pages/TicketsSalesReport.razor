@@ -1,0 +1,168 @@
+﻿@page "/reports/tickets/ticket-sales-report"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><span class="far fa-cart-shopping me-2"></span>Ticket Sales Report</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="javascript:void(0)">Sell Tickets</a>
+                <a class="btn btn-sm btn-success" href="javascript:void(0)">Search Orders</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+
+        <ul class="nav nav-tabs mt-4 text-uppercase">
+            <li class="nav-item"><a class="nav-link active" id="ByEventDate-tab" data-bs-toggle="tab" href="#tab-ByEventDate" role="tab" aria-controls="tab-ByEventDate" aria-selected="true">By Event Date</a></li>
+            <li class="nav-item"><a class="nav-link" id="ByOrderDate-tab" data-bs-toggle="tab" href="#tab-ByOrderDate" role="tab" aria-controls="tab-ByOrderDate" aria-selected="false">By Order Date</a></li>
+        </ul>
+        <div class="tab-content border-x border-bottom p-3 mb-2" id="productTabContent">
+            <div class="tab-pane fade show active" id="tab-ByEventDate" role="tabpanel" aria-labelledby="ByEventDate-tab">
+                <form>
+                    <div class="row m-2 mb-4 row-cols-2 row-cols-lg-5 g-2 g-lg-3 justify-content-end">
+                        <div class="col">
+                            <SfDatePicker TValue="DateTime?" Placeholder="Choose a Date" ShowClearButton="true"></SfDatePicker>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-select form-select-sm">
+                                <option value="-1">--Select--</option>
+                                <option selected="selected" value="0">Today</option>
+                                <option value="1">Tomorrow</option>
+                                <option value="9">Last 48 Hours</option>
+                                <option value="10">Last 7 Days</option>
+                                <option value="7">This Week</option>
+                                <option value="2">This Month</option>
+                                <option value="8">Next Week</option>
+                                <option value="3">Next Month</option>
+                                <option value="4">Yesterday</option>
+                                <option value="5">Last Week</option>
+                                <option value="6">Last Month</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+                <div class="sf-grid min-vh-75">
+                    <SfGrid DataSource="@TicketList" AllowPaging="false" Width="100%">
+                        <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                        <GridPageSettings PageSize="50"></GridPageSettings>
+                        <GridTemplates>
+                            <EmptyRecordTemplate>
+                                @if (!isLoading && TicketList.Count <= 0)
+                                {
+                                    <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                        <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Tickets</h6>
+                                    </div>
+                                }
+                            </EmptyRecordTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Left" Width="30">
+                                <Template>
+                                    <span class="badge bg-success rounded-pill">&nbsp;</span>
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Center" Width="30">
+                                <Template>
+                                    @{
+                                        <button class="delete_icon">
+                                            <span class="far fa-credit-card"></span>
+                                        </button>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="Order" TextAlign="TextAlign.Left" Width="80">
+                                <Template>
+                                    @{
+                                        var ticketData = (context as TicketData);
+                                        <a href="orders/tickets/order-details">@ticketData.OrderNumber</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(TicketData.OrderDate) HeaderText="Date" TextAlign="TextAlign.Left" Width="100"></GridColumn>
+                            <GridColumn HeaderText="Customer" TextAlign="TextAlign.Left" Width="100">
+                                <Template>
+                                    @{
+                                        var ticketData = (context as TicketData);
+                                        <a href="javascript:void();">@ticketData.CustomerName</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="Event Name" TextAlign="TextAlign.Left" Width="240">
+                                <Template>
+                                    @{
+                                        var ticketData = (context as TicketData);
+                                        <a href="javascript:void();">@ticketData.Event</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(TicketData.Quantity) HeaderText="Quantity" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                            <GridColumn Field=@nameof(TicketData.Tickets) HeaderText="Tickets" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                            <GridColumn Field=@nameof(TicketData.SvcFees) HeaderText="Svc Fees" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                            <GridColumn Field=@nameof(TicketData.Total) HeaderText="Total" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                            <GridColumn Field=@nameof(TicketData.CCFee) HeaderText="CC Fee" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                            <GridColumn Field=@nameof(TicketData.PromoCode) HeaderText="Promo Code" TextAlign="TextAlign.Left" Width="120"></GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="tab-ByOrderDate" role="tabpanel" aria-labelledby="ByOrderDate-tab">
+            </div>
+        </div>
+    </div>
+</div>
+
+@code
+{
+
+    private string title = "Ticket Sales Report | Synergy Commerce Admin Panel";
+
+    [Parameter]
+    public int Id { get; set; }
+
+    private bool SpinnerVisibility { get; set; } = false;
+    private Boolean isLoading = true;
+
+
+    public class TicketData
+    {
+        public int Id { get; set; }
+        public string OrderNumber { get; set; }
+        public string OrderDate { get; set; }
+        public string CustomerName { get; set; }
+        public string Event { get; set; }
+        public string Quantity { get; set; }
+        public string Tickets { get; set; }
+        public string SvcFees { get; set; }
+        public string Total { get; set; }
+        public string CCFee { get; set; }
+        public string PromoCode { get; set; }
+    }
+
+    public List<TicketData> TicketList = new List<TicketData>(){
+        new TicketData(){ Id=1, OrderNumber= "215096", OrderDate = "12/1/2021", CustomerName= "Sarah jacks", Event="December Wine Club Pick Up Party!", Quantity="1",Tickets="$0.00", SvcFees="$0.00", Total="$0.00", CCFee="N/A", PromoCode="N/A"   },
+        new TicketData(){ Id=2, OrderNumber= "215099", OrderDate = "12/1/2021", CustomerName= "Maricruz Trejo", Event="December Wine Club Pick Up Party!", Quantity="2",Tickets="$0.00", SvcFees="$0.00", Total="$0.00", CCFee="N/A", PromoCode="N/A"   },
+        new TicketData(){ Id=3, OrderNumber= "215101", OrderDate = "12/1/2021", CustomerName= "Lita Gregory", Event="Christmas Celler Tour (Saturday, December 18th)", Quantity="2",Tickets="$70.00", SvcFees="$5.64", Total="$75.64", CCFee="$2.45", PromoCode="N/A"   },
+    };
+
+
+
+}

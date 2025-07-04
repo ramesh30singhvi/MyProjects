@@ -1,0 +1,82 @@
+﻿@page "/settings/preferred-shipping-options"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject IPreferredShippingOptionsViewModel _preferredShippingOptionsViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject IShippingCarrierViewModel _shippingCarrierViewModel
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="spinnerVisibility"></SfSpinner>
+<div class="card mb-3">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="/settings/shipping" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-globe-americas me-2"></span>Preferred Shipping Options</h5>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        @{ 
+            foreach(var shippingOptions in preferredOptions)
+            {
+                <div class="row mb-5 ">
+                    <div class="col-1">
+                        <h5>@(shippingCarriers.Where(x => x.Id == shippingOptions.CarrierId).FirstOrDefault().CarrierName)</h5>
+                    </div>
+                    <div class="col-11">
+                        <ul class="list-inline">
+                            @foreach (var options in shippingOptions.PreferredOptions.OrderBy(x => ! x.IsMapped))
+                            {
+                            <li class="list-inline-item mb-2">
+                                <span class="badge @(options.IsMapped ? "bg-primary" : "badge-soft-secondary") fw-normal">@options.ServiceCodeName</span>
+                            </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private string title = "Shipping | Preferred Shipping Options";
+    private bool spinnerVisibility = false;
+    Member currentMember = new Member();
+    List<CustomPreferredShipppingOptionsModel> preferredOptions = new List<CustomPreferredShipppingOptionsModel>();
+    public List<ShippingCarrierModel> shippingCarriers = new List<ShippingCarrierModel>();
+
+    private class CustomPreferredShipppingOptionsModel
+    {
+        public int CarrierId { get; set; }
+        public List<PreferredShippingOptionsModel> PreferredOptions { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        spinnerVisibility = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var getShippingCarriersResponse = await _shippingCarrierViewModel.GetAllShippingCarriers();
+        if (getShippingCarriersResponse.success)
+        {
+            shippingCarriers = getShippingCarriersResponse.data;
+        }
+        var getPreferredShippingOptionsResponse = await _preferredShippingOptionsViewModel.GetPreferredShippingOptions(currentMember.Id);
+        if (getPreferredShippingOptionsResponse.success)
+        {
+            var response = getPreferredShippingOptionsResponse.data;
+            preferredOptions = response.GroupBy(x => x.ShippingCarrier).Select(x => new CustomPreferredShipppingOptionsModel() { CarrierId = x.Key, PreferredOptions = x.ToList() }).ToList();
+        }
+        spinnerVisibility = false;
+    }
+
+}

@@ -1,0 +1,61 @@
+﻿@page "/sa/content/press-releases"
+@layout SaLayout
+@using CellarPassAppAdmin.Client.ViewModels.SA;
+@using CellarPassAppAdmin.Shared.Models
+@inject ISaPressReleaseViewModel _saPressReleaseViewModel
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<div class="py-3">
+    <div class="row justify-content-between">
+        <div class="col-md-auto">
+            <h5 class="mb-3 mb-md-0"><a href="sa/content" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-file-signature me-2"></span>Press Releases</h5>
+        </div>
+        <div class="col-md-auto">
+            <a class="btn btn-sm btn-primary" href="/sa/content/press-release-create">Create Press Release</a>
+        </div>
+    </div>
+    <hr />
+</div>
+<div class="row">
+    <div class="col-12">
+        <div class="mb-4">
+            <ul class="list-group list-group-border">
+                @foreach (var cPPressRelease in cPPressReleaseList)
+                {
+                    <li class="list-group-item py-3 mb-2">
+                        <h5>@cPPressRelease.PRTitle</h5>
+                        <div class="row">
+                            <div class="col-md-7">
+                                <p>@cPPressRelease.PRSubTitle</p>
+                            </div>
+                            <div class="col-md-3">
+                                <p>@cPPressRelease.PRPublishDate</p>
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <a class="btn btn-link" href="/sa/content/press-release-edit/@cPPressRelease.IdGUID"><span class="fa-regular fa-pencil"></span></a>
+                            </div>
+                        </div>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+
+
+@code
+{
+    private string title = "Press Releases | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    List<CPPressReleaseModel> cPPressReleaseList = new List<CPPressReleaseModel>();
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        var pressReleaseListResponse = await _saPressReleaseViewModel.GetPressReleaseListAsync(null, null, null);
+        cPPressReleaseList = pressReleaseListResponse?.data ?? new List<CPPressReleaseModel>();
+        SpinnerVisibility = false;
+    }
+}
+

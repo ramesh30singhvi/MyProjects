@@ -1,0 +1,195 @@
+﻿@page "/sa/ticketing-payment-gateway"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA 
+@inject ISettingsViewModel _settingsViewModel
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ToastService toastService
+@inject ICPSettingViewModel _cPSettingViewModel
+@inject IBusinessViewModel _businessViewModel
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <SfSpinner @bind-Visible="isLoading"></SfSpinner>
+        <Title Value="@title"></Title>
+        <EditForm Model="@ticketingPaymentGatewayRequest" Context="formContext" Class="row g-3">
+            <DataAnnotationsValidator />
+            <div class="py-3">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-0"><a href="/sa/configuration" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a>Ticketing Payment Gateway</h5>
+                    </div>
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-sm btn-primary" @onclick="() => SaveTicketingPaymentGateway(formContext)">Save</button>
+                    </div>
+                </div>
+                <hr />
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6 mb-3">
+                    <label for="selPaymentGateway" class="form-label">Payment Gateway</label>
+                    <SfDropDownList TValue="int" @bind-Value="ticketingPaymentGatewayRequest.TicketingPaymentGateway" TItem="DropdownBindingModel" DataSource="@paymentGateways">
+                        <DropDownListFieldSettings Value="Key" Text="Value"></DropDownListFieldSettings>
+                    </SfDropDownList>
+                    <ValidationMessage For="@(() => ticketingPaymentGatewayRequest.TicketingPaymentGateway)" />
+                </div>
+                @switch (ticketingPaymentGatewayRequest.TicketingPaymentGateway)
+                {
+                        case ((int)PaymentGateway.AuthorizeNet):
+                            <SettingsPaymentsAuthorizeDotNet @ref="SettingsPaymentsAuthorizeDotNet" />
+                            break;
+                        case ((int)PaymentGateway.BrainTree):
+                            <SettingsPaymentsBrainTree @ref="SettingsPaymentsBrainTree" />
+                            break;
+                        case ((int)PaymentGateway.SynergyPayments):
+                            <SettingsPaymentsSynergyPayments @ref="SettingsPaymentsSynergyPayments" TicketingPaymentGatewayData="@gatewayCredentials" />
+                            break;
+                }
+            </div>
+        </EditForm>
+    </Authorized>
+</AuthorizeView>
+
+@code
+{
+    private string title = "Ticketing Payment Gateway | Synergy Commerce Admin Panel";
+    private bool isLoading = false;
+    Member currentMember = null;
+    TicketingPaymentGatewayRequestModel ticketingPaymentGatewayRequest = new TicketingPaymentGatewayRequestModel();
+    SettingsPaymentsAuthorizeDotNet SettingsPaymentsAuthorizeDotNet = new SettingsPaymentsAuthorizeDotNet();
+    SettingsPaymentsBrainTree SettingsPaymentsBrainTree;
+    SettingsPaymentsSynergyPayments SettingsPaymentsSynergyPayments;
+    List<string> ticketingPaymentGatewayMetaKeys = new List<string>();
+    List<CPSettingModel> gatewayCredentials = new List<CPSettingModel>();
+    EditContext reqForm;
+    List<DropdownBindingModel> paymentGateways = Enum.GetValues(typeof(PaymentGateway))
+               .Cast<PaymentGateway>()
+               .Select(t => new DropdownBindingModel
+               {
+                   Key = (int)t,
+                   Value = EnumHelper.GetDescription(t)
+               }).ToList();
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        await LoadCredentials();
+        isLoading = false;
+    }
+
+    private async Task LoadCredentials()
+    {
+        //Get CP settings for Ticketing Payment Gateway
+        var response = await _cPSettingViewModel.GetCPSettingListAsync(CPSettingMetaNamespace.TicketingPaymentGateway);
+        if (response.success)
+        {
+            if (response.data != null)
+            {
+                var paymentGateway = response.data.FirstOrDefault(x => x.MetaKey == BusinessSettingsMetaKey.TicketingPaymentGateway)?.MetaValue ?? string.Empty;
+                if (!string.IsNullOrEmpty(paymentGateway))
+                {
+                    var paymentGatewayId = Convert.ToInt32(paymentGateway);
+                    ticketingPaymentGatewayRequest.TicketingPaymentGateway = paymentGatewayId;
+                    switch (paymentGatewayId)
+                    {
+                        case ((int)PaymentGateway.SynergyPayments):
+                            ticketingPaymentGatewayMetaKeys.Add(BusinessSettingsMetaKey.SynergyPaymentsUserId);
+                            ticketingPaymentGatewayMetaKeys.Add(BusinessSettingsMetaKey.SynergyPaymentsAPIKey);
+                            ticketingPaymentGatewayMetaKeys.Add(BusinessSettingsMetaKey.SynergyPaymentsLocationId);
+                            gatewayCredentials = response.data.Where(x => ticketingPaymentGatewayMetaKeys.Contains(x.MetaKey)).ToList();
+                            break;
+                        case ((int)PaymentGateway.BrainTree):
+                            ticketingPaymentGatewayMetaKeys.Add(BusinessSettingsMetaKey.BrainTreeMerchantId);
+                            ticketingPaymentGatewayMetaKeys.Add(BusinessSettingsMetaKey.BrainTreePrivateKey);
+                            ticketingPaymentGatewayMetaKeys.Add(BusinessSettingsMetaKey.BrainTreePublicKey);
+                            gatewayCredentials = response.data.Where(x => ticketingPaymentGatewayMetaKeys.Contains(x.MetaKey)).ToList();
+                            break;
+                        case ((int)PaymentGateway.AuthorizeNet):
+                            ticketingPaymentGatewayMetaKeys.Add(BusinessSettingsMetaKey.AuthorizeNetAPILoginKey);
+                            ticketingPaymentGatewayMetaKeys.Add(BusinessSettingsMetaKey.AuthorizeNetTransactionKey);
+                            gatewayCredentials = response.data.Where(x => ticketingPaymentGatewayMetaKeys.Contains(x.MetaKey)).ToList();
+                            break;
+                    }
+                }
+            }
+        }
+    }
+
+    private async Task SaveTicketingPaymentGateway(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            switch (ticketingPaymentGatewayRequest.TicketingPaymentGateway)
+            {
+                case ((int)PaymentGateway.SynergyPayments):
+                    reqForm = SettingsPaymentsSynergyPayments.SynergyPaymentForm.EditContext;
+                    break;
+                case ((int)PaymentGateway.BrainTree):
+                    reqForm = SettingsPaymentsBrainTree.BrainTreeForm.EditContext;
+                    break;
+                case ((int)PaymentGateway.AuthorizeNet):
+                    reqForm = SettingsPaymentsAuthorizeDotNet.AuthorizeNetForm.EditContext;
+                    break;
+            }
+
+            if (reqForm.Validate())
+            {
+                isLoading = true;
+                var request = new CPSettingRequestModel
+                {
+                    MetaNamespace = CPSettingMetaNamespace.TicketingPaymentGateway,
+                    MetaKey = BusinessSettingsMetaKey.TicketingPaymentGateway,
+                    MetaValue = ticketingPaymentGatewayRequest.TicketingPaymentGateway.ToString(),
+                    ValueType = Convert.ToInt32(ValueTypeEnum.Integer),
+                    Title = string.Empty,
+                    Description = string.Empty
+                };
+                var response = await _cPSettingViewModel.AddUpdateCPSettingAsync(request);
+                if (response.success)
+                {
+                    ticketingPaymentGatewayRequest.TicketingPaymentGateway = Convert.ToInt32(response.data.MetaValue);
+                    foreach (var key in ticketingPaymentGatewayMetaKeys)
+                    {
+                        var checkExistingCredential = gatewayCredentials.FirstOrDefault(x => x.MetaKey == key);
+                        request = new CPSettingRequestModel
+                        {
+                            Id = checkExistingCredential?.Id ?? 0,
+                            MetaNamespace = CPSettingMetaNamespace.TicketingPaymentGateway,
+                            MetaKey = key,
+                            MetaValue = Helper.GetPropertyValue(reqForm.Model, key).ToString(),
+                            ValueType = Convert.ToInt32(ValueTypeEnum.String),
+                            Title = string.Empty,
+                            Description = string.Empty
+                        };
+                        await _cPSettingViewModel.AddUpdateCPSettingAsync(request);
+                    }
+                }
+
+                isLoading = false;
+                if (response.success)
+                {
+                    gatewayCredentials = new List<CPSettingModel>();
+                    await LoadCredentials();
+                    toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+                }
+                else
+                {
+                    toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+                }
+            }
+
+
+        }
+    }
+
+}

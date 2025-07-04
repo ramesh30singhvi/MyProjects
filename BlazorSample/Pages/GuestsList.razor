@@ -1,0 +1,98 @@
+﻿@page "/customer-list"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@inject ICustomerViewModel _customerViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<SfGrid DataSource="@GridData" Height="600" EnableVirtualization="true" AllowFiltering="true" AllowSorting="true">
+    <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+    <GridColumns>
+        <GridColumn HeaderText="Id" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })">
+            <Template>
+                @{
+                    var id = (context as CustomerModel).Id;
+                        var userGUID = (context as CustomerModel).UserGUID;
+                    <a href="guest-details/@($"{userGUID}")">@($"{id}")</a>
+                }
+            </Template>
+        </GridColumn>
+        <GridColumn Field=@nameof(CustomerModel.LastName) HeaderText="Last Name" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" />
+        <GridColumn Field=@nameof(CustomerModel.FirstName) HeaderText="First Name" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" />
+        <GridColumn Field=@nameof(CustomerModel.Email) HeaderText="Email" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" />
+    </GridColumns>
+</SfGrid>
+
+@code
+{
+    private CustomerListModel businessCustomers = new CustomerListModel();
+    private bool loading = true;
+    private int pageCount = 10;
+    private int total;
+    private List<CustomerModel> GridData;
+    BusinessCustomerRequestModel request = new BusinessCustomerRequestModel();
+    //GridReadEventArgs gridReadEventArgs = new GridReadEventArgs();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Member currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        request.PageNo = 1;
+        request.PageCount = pageCount;
+        request.BusinessId = currentMember.Id;
+        CustomerListResponse response = await _customerViewModel.GetBusinessCustomerList(request);
+        if (response.success)
+        {
+            businessCustomers = response.data;
+        }
+        GridData = businessCustomers.Customers;
+        //gridReadEventArgs.Request.Page = 1;
+        //gridReadEventArgs.Request.PageSize = 10;
+        //_cellarPassAuthenticationStateProvider.NotifyUICurrentMemberChangeForGrid += (GridReadEventArgs) => GetMemberGuestsListAsync(gridReadEventArgs);
+    }
+
+    public void Dispose()
+    {
+        //_cellarPassAuthenticationStateProvider.NotifyUICurrentMemberChangeForGrid -= (GridReadEventArgs) => GetMemberGuestsListAsync(gridReadEventArgs);
+    }
+
+    //public async void GetMemberGuestsListAsync(GridReadEventArgs args)
+    //{
+    //    loading = true;
+    //    Member currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+    //    if (currentMember != null)
+    //    {
+    //        request.PageNo = args.Request.Page;
+    //        request.PageCount = args.Request.PageSize;
+    //        request.MemberId = currentMember.Id;
+    //        request.SearchType = new List<string>();
+    //        request.SearchValue = new List<string>();
+    //        if (args.Request.Sorts.Count > 0)
+    //        {
+    //            request.OrderBy = args.Request.Sorts[0].Member;
+    //        }
+    //        if (args.Request.Filters.Count > 0)
+    //        {
+    //            foreach (var item in args.Request.Filters)
+    //            {
+    //                if (item is FilterDescriptor) // filter row
+    //                {
+    //                    FilterDescriptor currFilter = item as FilterDescriptor;
+    //                    request.SearchType.Add(currFilter.Member);
+    //                    request.SearchValue.Add(currFilter.Value.ToString());
+    //                }
+    //            }
+    //        }
+    //        memberGuests = await _memberViewModel.GetMemberGuestsList(request);
+    //        GridData = memberGuests.guests;
+    //        total = memberGuests.TotalRecords;
+    //        StateHasChanged();
+    //    }
+    //    loading = false;
+    //}
+}

@@ -1,0 +1,157 @@
+﻿@page "/reservations/book"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IBusinessViewModel _businesViewModel
+@inject ICountryViewModel _countryViewModel
+@inject IStateViewModel _stateViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject NavigationManager _navigationManager
+@attribute [Authorize]
+
+<Title Value="Playground"></Title>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-12 col-md-5">
+
+                <div class="mb-4">
+                    <div class="d-flex flex-between-center">
+                        <h5 class="mb-3"><span class="fa-regular fa-calendar me-2"></span>Select Date</h5>
+                        <a href="#!">Today</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <tr>
+                                <td class="py-3 px-2">
+                                    <div class="d-flex justify-content-between">
+                                        <div class="h5">Aug 2021<a href="#!"><span class="fa-solid fa-chevron-down ms-3 text-900"></span></a></div>
+                                        <a href="#!">Sunday, Aug 1, 2021</a>
+                                    </div>
+
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="p-0 ">
+                                    <div class="btn-group w-100 mb-0 p-0" role="group" aria-label="Calendar Days">
+                                        <button class="btn btn-outline-secondary btn-sm px-2" type="button"><span class="fa-solid fa-chevron-left"></span></button>
+                                        <button class="btn btn-outline-secondary btn-sm px-0" type="button"><div class="d-flex align-items-center flex-column my-2 mx-2"><span class="mb-auto">Sat</span><span class="fs-2">31</span></div></button>
+                                        <button class="btn btn-outline-secondary btn-sm px-0 active" type="button"><div class="d-flex align-items-center flex-column my-2 mx-2"><span class="mb-2">Sun</span><span class="fs-2">1</span></div></button>
+                                        <button class="btn btn-outline-secondary btn-sm px-0" type="button"><div class="d-flex align-items-center flex-column my-2 mx-2"><span class="mb-auto">Mon</span><span class="fs-2">2</span></div></button>
+                                        <button class="btn btn-outline-secondary btn-sm px-0" type="button"><div class="d-flex align-items-center flex-column my-2 mx-2"><span class="mb-auto">Tue</span><span class="fs-2">3</span></div></button>
+                                        <button class="btn btn-outline-secondary btn-sm px-0" type="button"><div class="d-flex align-items-center flex-column my-2 mx-2"><span class="mb-auto">Wed</span><span class="fs-2">4</span></div></button>
+                                        <button class="btn btn-outline-secondary btn-sm px-0" type="button"><div class="d-flex align-items-center flex-column my-2 mx-2"><span class="mb-auto">Thu</span><span class="fs-2">5</span></div></button>
+                                        <button class="btn btn-outline-secondary btn-sm px-0" type="button"><div class="d-flex align-items-center flex-column my-2 mx-2"><span class="mb-auto">Fri</span><span class="fs-2">6</span></div></button>
+                                        <button class="btn btn-outline-secondary btn-sm px-2" type="button"><span class="fa-solid fa-chevron-right"></span></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mb-5">
+                    <h5 class="mb-3"><span class="fa-regular fa-user me-2"></span>Select Party Size </h5>
+                    <div class="btn-group w-100 mb-0 p-0" role="group" aria-label="Calendar Days">
+                        <button class="btn btn-outline-secondary px-2" type="button"><span class="fa-solid fa-chevron-left"></span></button>
+                        <button class="btn btn-outline-secondary px-0 d-flex justify-content-center" type="button"><span class="fs-2">1</span></button>
+                        <button class="btn btn-outline-secondary px-0 d-flex justify-content-center" type="button"><span class="fs-2">2</span></button>
+                        <button class="btn btn-outline-secondary px-0 d-flex justify-content-center" type="button"><span class="fs-2">3</span></button>
+                        <button class="btn btn-outline-secondary px-0 d-flex justify-content-center" type="button"><span class="fs-2">4</span></button>
+                        <button class="btn btn-outline-secondary px-0 d-flex justify-content-center" type="button"><span class="fs-2">5</span></button>
+                        <button class="btn btn-outline-secondary px-0 d-flex justify-content-center" type="button"><span class="fs-2">6</span></button>
+                        <button class="btn btn-outline-secondary px-0 d-flex justify-content-center" type="button"><span class="fs-2">7</span></button>
+                        <button class="btn btn-outline-secondary px-0 d-flex justify-content-center" type="button"><span class="fs-2">8</span></button>
+                        <button class="btn btn-outline-secondary px-0 d-flex justify-content-center" type="button"><span class="fs-2">9</span></button>
+                        <button class="btn btn-outline-secondary px-0 d-flex justify-content-center" type="button"><span class="fs-2">10</span></button>
+                        <button class="btn btn-outline-secondary px-2" type="button"><span class="fa-solid fa-chevron-right"></span></button>
+                    </div>
+                </div>
+
+                <div class="my-4">
+                    <h5 class="mb-3"><span class="fa-regular fa-calendar-lines me-2"></span>Calendar Notes</h5>
+                    <ul class="list-group">
+                        <li class="list-group-item"><h6>11:00 AM</h6><p class="mb-0">This is a calendar note.</p></li>
+                        <li class="list-group-item"><h6>2:30 PM</h6><p class="mb-0">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p></li>
+                    </ul>
+                </div>
+
+            </div>
+            <div class="col-12 col-md-7">
+
+                <div class="mb-4">
+                    <h5 class="mb-3">Available Experiences</h5>
+                    <ul class="list-group">
+                        <li class="list-group-item py-3">
+                            <h5>Bouchon Tasting with Boxed Lunch</h5>
+                            <p class="fs--2 fw-bold mb-0">Daily</p>
+                            <p>Join us for a 90-minute tour and tasting that includes your choice of a boxed lunch paired with our latest releases and local artisan salumi and cheeses.</p>
+                            <ul class="list-inline mb-3">
+                                <li class="list-inline-item pb-2"><div class="fw-bold fs--2"><span class="fa-light fa-user me-1"></span>$112.50 - $116.00/pp</div></li>
+                                <li class="list-inline-item pb-2"><div class="fw-bold fs--2"><span class="fa-light fa-user-friends me-1"></span>Group Size 1-6</div></li>
+                                <li class="list-inline-item pb-2"><div class="fw-bold fs--2"><span class="fa-light fa-stopwatch me-1"></span>Approx 1.5 Hours</div></li>
+                            </ul>
+                            <ul class="list-inline">
+                                <li class="list-inline-item pb-2"><button class="btn btn-sm btn-outline-primary me-1 mb-1" type="button">12:00 PM</button></li>
+                                <li class="list-inline-item pb-2"><button class="btn btn-sm btn-outline-primary me-1 mb-1" type="button">1:00 PM</button></li>
+                                <li class="list-inline-item pb-2"><button class="btn btn-sm btn-outline-primary me-1 mb-1" type="button">2:00 PM</button></li>
+                                <li class="list-inline-item pb-2"><button class="btn btn-sm btn-outline-primary me-1 mb-1" type="button">3:00 PM</button></li>
+                                <li class="list-inline-item pb-2"><button class="btn btn-sm btn-outline-primary me-1 mb-1" type="button">4:00 PM</button></li>
+                            </ul>
+                        </li>
+                        <li class="list-group-item py-3">
+                            <h5>Wine & Pizza Pairing Experience</h5>
+                            <p class="fs--2 fw-bold mb-0">Daily</p>
+                            <p>Join us for a 90-minute food and elegant wine pairing that includes a choice of four pizzas, Margherita, Caprese, Quattro Formagio or New York Style.</p>
+                            <ul class="list-inline mb-3">
+                                <li class="list-inline-item pb-2"><div class="fw-bold fs--2"><span class="fa-light fa-user me-1"></span>$100.00/pp</div></li>
+                                <li class="list-inline-item pb-2"><div class="fw-bold fs--2"><span class="fa-light fa-user-friends me-1"></span>Group Size 1-16</div></li>
+                                <li class="list-inline-item pb-2"><div class="fw-bold fs--2"><span class="fa-light fa-stopwatch me-1"></span>Approx 1.5 Hours</div></li>
+                            </ul>
+                            <ul class="list-inline">
+                                <li class="list-inline-item pb-2"><button class="btn btn-sm btn-outline-primary me-1 mb-1" type="button">12:00 PM</button></li>
+                                <li class="list-inline-item pb-2"><button class="btn btn-sm btn-outline-primary me-1 mb-1" type="button">1:00 PM</button></li>
+                                <li class="list-inline-item pb-2"><button class="btn btn-sm btn-outline-primary me-1 mb-1" type="button">2:00 PM</button></li>
+                                <li class="list-inline-item pb-2"><button class="btn btn-sm btn-outline-primary me-1 mb-1" type="button">3:00 PM</button></li>
+                                <li class="list-inline-item pb-2"><button class="btn btn-sm btn-outline-primary me-1 mb-1" type="button">4:00 PM</button></li>
+                            </ul>
+                        </li>
+                        <li class="list-group-item py-3">
+                            <h5><span class="fa-light fa-gem me-1"></span>Vineyard Tour & Tasting<a href="#!"><span class="fa-light fa-square-info ms-2"></span></a></h5>
+                            <ul class="list-inline mb-3">
+                                <li class="list-inline-item pb-2"><div class="fw-bold fs--2"><span class="fa-light fa-user me-1"></span>$170.00 - $245.00/pp</div></li>
+                                <li class="list-inline-item pb-2"><div class="fw-bold fs--2"><span class="fa-light fa-user-friends me-1"></span>Group Size 1-24</div></li>
+                                <li class="list-inline-item pb-2"><div class="fw-bold fs--2"><span class="fa-light fa-stopwatch me-1"></span>Approx 1.5 Hours</div></li>
+                                <li class="list-inline-item pb-2"><div class="fw-bold fs--2"><span class="fa-light fa-wave-sine me-1"></span>Daily</div></li>
+                            </ul>
+                            <ul class="list-inline">
+                                <li class="list-inline-item pb-2"><button class="btn btn-sm btn-outline-primary me-1 mb-1" type="button">1:00 PM</button></li>
+                                <li class="list-inline-item pb-2"><button class="btn btn-sm btn-outline-primary me-1 mb-1" type="button">2:00 PM</button></li>
+                                <li class="list-inline-item pb-2"><button class="btn btn-sm btn-outline-primary me-1 mb-1" type="button">3:00 PM</button></li>
+                                <li class="list-inline-item pb-2"><button class="btn btn-sm btn-outline-primary me-1 mb-1" type="button">4:00 PM</button></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+@code
+{
+
+    private string title = "Book Reservation | Synergy Commerce Admin Panel";
+
+
+}

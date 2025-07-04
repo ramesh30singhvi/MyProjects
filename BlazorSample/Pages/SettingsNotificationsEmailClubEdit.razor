@@ -1,0 +1,96 @@
+﻿@page "/settings/notifications/email/club/edit"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.Blazor.RichTextEditor
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md-auto">
+                <h5 class="mb-0"><a href="settings/notifications/email" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-gem me-2"></span>Club Sign Up Confirmation Email</h5>
+            </div>
+            <div class="col-md-auto">
+                <a class="btn btn-outline-dark" href="#!"><span class="fa-regular fa-eye me-2"></span>Preview</a>
+                <a class="btn btn-primary" href="#!">Save</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row d-flex justify-content-between align-items-center">
+            <div class="col-12 col-md-10">
+                <p>Email is sent when a customer signs up for a club.</p>
+            </div>
+            <div class="col-auto">
+                <div class="form-check form-switch">
+                    <input id="switchEnabled" class="form-check-input" type="checkbox" role="switch" checked>
+                    <label for="switchEnabled" class="form-check-label">Enabled</label>
+                </div>
+            </div>
+        </div>
+        <hr />
+        @*Using common component EmailNotificationEditForm for edit form*@
+        <EmailNotificationEditForm @bind-EmailContent="businessEmailRequestModel.EmailContent"
+                                   @bind-FromEmail="businessEmailRequestModel.FromEmail"
+                                   @bind-FromName="businessEmailRequestModel.FromName"
+                                   @bind-EmailSubject="businessEmailRequestModel.EmailSubject"
+                                   @bind-OrderId="businessEmailRequestModel.OrderId"
+                                   NotificationEmailVariables="@NotificationEmailVariables"></EmailNotificationEditForm>
+        <button class="btn btn-outline-primary" @onclick="@ShowConfirmReplaceDlg">Replace with template</button>
+    </div>
+</div>
+
+<SfDialog @bind-Visible="@ConfirmReplaceDlgVisible" Width="400px" IsModal="true" ShowCloseIcon="true">
+    <DialogTemplates>
+        <Header>
+            Replace with default content
+        </Header>
+        <Content>
+            Your current email content will be replaced with default content.
+        </Content>
+    </DialogTemplates>
+    <DialogButtons>
+        <DialogButton Content="Cancel" OnClick="@HideConfirmReplaceDlg" />
+        <DialogButton Content="Replace" IsPrimary="true" OnClick="@ConfirmReplace" />
+    </DialogButtons>
+</SfDialog>
+
+@code
+{
+    private string title = "Edit Club Email Notification | Synergy Commerce Admin Panel";
+    private bool ConfirmReplaceDlgVisible { get; set; } = false;
+    AddUpdateBusinessEmailRequestModel businessEmailRequestModel = new AddUpdateBusinessEmailRequestModel();
+    List<NotificationEmailVariableModel> NotificationEmailVariables = new List<NotificationEmailVariableModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+
+    private void ShowConfirmReplaceDlg()
+    {
+        this.ConfirmReplaceDlgVisible = true;
+    }
+    private void HideConfirmReplaceDlg(Object e)
+    {
+        this.ConfirmReplaceDlgVisible = false;
+    }
+    private void ConfirmReplace()
+    {
+        //Todo - Replace the content with default
+        //Then hide the dialog
+        this.ConfirmReplaceDlgVisible = false;
+    }
+}

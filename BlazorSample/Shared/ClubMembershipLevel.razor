@@ -1,0 +1,45 @@
+﻿@using CellarPassAppAdmin.Shared.Models
+
+@foreach (var club in BusinessClubs.OrderBy(x => x.ClubName).ToList())
+{
+    <div class="col-sm-6 col-md-4 col-lg-4 mb-3">
+        <div class="card shadow-none border h-100">
+            <div class="card-header h5 border-bottom py-2">
+                @club.ClubName
+            </div>
+            <div class="card-body">
+                <p class="card-text">@club.Teaser</p>
+                <p class="mb-0"><span class="h6 me-2">Frequency:</span>@club.Frequency</p>
+                <p class="mb-0"><span class="h6 me-2">Members:</span>@club.Total Members</p>
+            </div>
+            <div class="card-footer border-top text-center d-flex justify-content-center">
+                <button class="btn btn sm btn-primary" @onclick="@(() => OnSelectClub.InvokeAsync(new SelectClubEventCallbackArgs { Club = club, IsGiftSignup = false }))">Standard Sign-Up</button>
+                @if (club.AllowGiftMemberships)
+                {
+                    <button class="btn btn sm btn-outline-primary" @onclick="@(() => OnSelectClub.InvokeAsync(new SelectClubEventCallbackArgs { Club = club, IsGiftSignup = true }))">Gift Sign-Up</button>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public List<BusinessClubListModel> BusinessClubs { get; set; }
+
+    [Parameter]
+    public EventCallback<SelectClubEventCallbackArgs> OnSelectClub { get; set; }
+}
+<style>
+    .card .card-footer.d-flex {
+        padding: 12px 10px;
+    }
+        .card .card-footer.d-flex > .btn {
+            padding: 5px 12px;
+            font-size: 14px;
+        }
+
+            .card .card-footer.d-flex > .btn:not(:last-child) {
+                margin-right: 5px;
+            }
+</style>

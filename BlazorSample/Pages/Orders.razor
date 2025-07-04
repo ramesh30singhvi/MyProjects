@@ -1,0 +1,898 @@
+﻿@page "/store/orders"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using System
+@using Syncfusion.Blazor.Spinner
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.QueryBuilder
+@using Syncfusion.Blazor.DropDowns
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.Extensions.Primitives
+@using CellarPassAppAdmin.Shared.Helpers
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using EnumsNET
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject IOrderViewModel _orderViewModel
+@inject IUserViewModel _userViewModel
+@inject NavigationManager navManager
+@inject ToastService toastService
+@attribute [Authorize]
+
+<style type="text/css">
+    .e-btngroup-or, .e-btngroup-or-lbl {
+        display: none;
+    }
+</style>
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<Feedback PageSection="PageSection.Orders"></Feedback>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            @if (isSearchOrders)
+            {
+                <div class="col-md">
+                    <h5 class="mb-3 mb-md-0"><span class="far fa-shopping-bag me-2"></span>Search Results</h5>
+                </div>
+            }
+            else
+            {
+                <div class="col-md">
+                    <h5 class="mb-3 mb-md-0"><span class="far fa-shopping-bag me-2"></span>Order Manager</h5>
+                </div>
+            }
+            <div class="col-auto">
+                <a class="btn btn-sm btn-outline-dark me-2" href="javascript:void(0)" @onclick="() => LoadOrdersData(true)" data-bs-toggle="modal">Refresh</a>
+                <a class="btn btn-sm btn-primary" href="store/create-order">Create Order</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body min-vh-50 p-0">
+
+        @if (!isSearchOrders)
+        {
+            <ul class="nav nav-tabs text-uppercase my-2">
+                <li class="nav-item ">
+                    <a class="nav-link @isRecentActive" href="javascript:void(0)" @onclick="()=> UpdateGrid(OrdersType.RecentOrders)" aria-current="page">Recent Paid</a>
+                </li>
+                <li class="nav-item ">
+                    <a class="nav-link @isAllActive" href="javascript:void(0)" @onclick="()=> UpdateGrid(OrdersType.all)">All</a>
+                </li>
+                <li class="nav-item ">
+                    <a class="nav-link @isOpenActive" href="javascript:void(0)" @onclick="()=> UpdateGrid(OrdersType.open)">Open</a>
+                </li>
+                <li class="nav-item ">
+                    <a class="nav-link @isUnfulfilledActive" href="javascript:void(0)" @onclick="()=> UpdateGrid(OrdersType.unfulfilled)">Unfulfilled</a>
+                </li>
+                <li class="nav-item ">
+                    <a class="nav-link @isUnpaidActive" href="javascript:void(0)" @onclick="()=> UpdateGrid(OrdersType.unpaid)">Unpaid</a>
+                </li>
+                <li class="nav-item ">
+                    <a class="nav-link @isSuspendedActive" href="javascript:void(0)" @onclick="()=> UpdateGrid(OrdersType.suspended)">Suspended</a>
+                </li>
+                <li class="nav-item ">
+                    <a class="nav-link @isShippedActive" href="javascript:void(0)" @onclick="()=> UpdateGrid(OrdersType.shipped)">Shipped</a>
+                </li>
+                <li class="nav-item ">
+                    <a class="nav-link @isCartsActive" href="javascript:void(0)" @onclick="()=> UpdateGrid(OrdersType.carts)">Carts</a>
+                </li>
+                <li class="nav-item ">
+                    <a class="nav-link" href="/orders/product-returns-dashboard">RETURNS & REFUNDS</a>
+                </li>
+            </ul>
+        }
+        <div class="px-2">
+            <div class="row my-3">
+                <div class="col-12 col-md-10">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                        <input type="text" class="form-control" @onchange="(EventArgs) => {SearchOrders(EventArgs.Value.ToString());}" placeholder="Search orders" aria-label="Search Orders" aria-describedby="inputGroupSearch">
+                    </div>
+                </div>
+                <div class="col-12 col-md-2">
+                    <div class="input-group d-grid">
+                        <button type="button" class="btn btn-outline-dark" @onclick="TriggerFiltering"><span class="fa-solid fa-bars-filter me-1"></span>Filter</button>
+                    </div>
+                </div>
+            </div>
+            <EditForm Model="filterOrders">
+                <div class="row">
+                    <div class="col-12 col-md-4">
+                        <div class="input-group mb-3">
+                            @if (selectedOrders == 1)
+                            {
+                                <label class="input-group-text mb-0 fs--1" for="selBulkActions">1 order selected</label>
+                            }
+                            else
+                            {
+                                <label class="input-group-text mb-0 fs--1" for="selBulkActions">@selectedOrders orders selected</label>
+                            }
+
+                            <InputSelect @bind-Value="filterOrders.BulkAction" @oninput="@HandleBulkAction" class="form-select fs--1" id="selBulkActions">
+                                @foreach (BulkActions action in Enum.GetValues(typeof(BulkActions)))
+                                {
+                                    <option value="@action">@EnumHelper.GetDescription(action)</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <div class="input-group mb-3">
+                            <InputSelect @bind-Value="filterOrders.OrderPaymentStatus" @oninput="@HandleOrderPaymentFilter" class="form-select fs--1">
+                                @foreach (OrderPaymentStatus paymentStatus in Enum.GetValues(typeof(OrderPaymentStatus)))
+                                {
+                                    <option value="@paymentStatus">@EnumHelper.GetDescription(paymentStatus)</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <div class="input-group mb-3">
+                            @{
+                                string fulfillmentStatus = "FulfillmentStatus";
+                            }
+                            <InputSelect @bind-Value="fulfillmentStatus" class="form-select fs--1">
+                                <option value="@fulfillmentStatus">Fulfillment Status</option>
+                                @foreach (OrderFulfillmentStatus fulfillmentStatus in Enum.GetValues(typeof(OrderFulfillmentStatus)))
+                                {
+                                    <option value="@fulfillmentStatus">@EnumHelper.GetDescription(fulfillmentStatus)</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <div class="input-group mb-3">
+                            <InputSelect @bind-Value="filterOrders.FilterOrdersDateRange" @oninput="@HandleDateFilter" class="form-select fs--1">
+                                @foreach (FilterOrdersDateRange filterDate in Enum.GetValues(typeof(FilterOrdersDateRange)))
+                                {
+                                    <option value="@filterDate">@EnumHelper.GetDescription(filterDate)</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+                    @*<div class="col-12 col-md-2">
+                        <div class="input-group mb-3">
+                            <select class="form-select fs--1">
+                                <option value="0" selected>Advanced Filters</option>
+                            </select>
+                        </div>
+                    </div>*@
+
+                </div>
+            </EditForm>
+            <div class="row">
+                <div class="col-12 col-md-8">
+                    <a class="btn btn-sm btn-outline-dark fs--1 mb-2 me-2 @displayPriceTool" href="javascript:void(0)" role="button">Orders > $@filterPrice<div style="float:right" @onclick="RemovePriceFilter"><span class="fa-solid fa-circle-xmark text-600 ms-2"></span></div></a>
+                    <a class="btn btn-sm btn-outline-dark fs--1 mb-2 me-2 @displayTagTool" href="#" role="button">Tagged with 'MyTag'<span class="fa-solid fa-circle-xmark text-600 ms-2"></span></a>
+                </div>
+            </div>
+        </div>
+
+        <OrdersCommonGrid @ref="CommonOrdersGrid" IsLoading="isLoading" Orders="orders" OnOrderSelected="OnOrderSelected" OffSetMinutes="loggedInUser.OffsetMinutes" EnableOrderSelection="true"></OrdersCommonGrid>
+        <SfDialog ID="prompt_dialog" @bind-Visible="@FilterModalVisible" ShowCloseIcon="true" Width="1000px">
+            <DialogTemplates>
+                <Header>
+                    Filter Orders
+                </Header>
+                <Content>
+                    <SfQueryBuilder @ref="querybuilder" TValue="OrderDetailFullModel" DataSource="@dataSource" MaxGroupCount="0">
+                        <QueryBuilderRule Condition="and" Rules="@importRules"></QueryBuilderRule>
+                        <QueryBuilderEvents Created="Created" TValue="OrderDetailFullModel" RuleChanged="UpdateRule"></QueryBuilderEvents>
+                        <QueryBuilderColumns>
+                            <QueryBuilderColumn Field="GrandTotal" Label="Price" Type=Syncfusion.Blazor.QueryBuilder.ColumnType.Number></QueryBuilderColumn>
+                            <QueryBuilderColumn Field="OrderTag" Label="Order Tags" Type=Syncfusion.Blazor.QueryBuilder.ColumnType.String Operators="@stringOperator">
+                                <QueryBuilderTemplates>
+                                    <ValueTemplate>
+                                        <SfMultiSelect @ref="TagsFilterDropdown" TValue="string[]" TItem="OrderTag" AllowFiltering="true" Mode="@VisualMode.CheckBox" DataSource="@orderTags" PopupHeight="350px">
+                                            <MultiSelectFieldSettings Text="Id" Value="Text"></MultiSelectFieldSettings>
+                                            <MultiSelectEvents TItem="OrderTag" TValue="string[]" ValueChange="@ValueChangeHandler"></MultiSelectEvents>
+                                        </SfMultiSelect>
+                                    </ValueTemplate>
+                                </QueryBuilderTemplates>
+                            </QueryBuilderColumn>
+
+                        </QueryBuilderColumns>
+                    </SfQueryBuilder>
+                </Content>
+            </DialogTemplates>
+            <DialogPositionData Y="200"></DialogPositionData>
+
+        </SfDialog>
+
+        <SfDialog Width="500px" IsModal="true" @bind-Visible="@IsTagsDialogVisible">
+            <DialogEvents OnOverlayClick="@OnOverlayclick">
+            </DialogEvents>
+            <DialogTemplates>
+                <Header>
+                    @TagModalHeader
+                </Header>
+                <Content>
+                    <div class="row">
+                        <div class="mb-3 col-10">
+                            <SfMultiSelect Placeholder="Select" TValue="string[]" HtmlAttributes="@(new Dictionary<string,object>() { { "maxLength", "100" } })" @bind-Value="tags" TItem="OrderTagModel" AllowCustomValue="allowCustomVal" DataSource="@SelectedOrderTags" AllowFiltering="true" Mode="@VisualMode.Box">
+                                <MultiSelectFieldSettings Text="Value" Value="Value"></MultiSelectFieldSettings>
+                            </SfMultiSelect>
+                        </div>
+                        <div class="col-2 p-0">
+                            <a href="javascript:void(0)" class="btn btn-sm btn-primary" @onclick="@((e)=>SaveTags(addTags))" type="button">Save</a>
+                        </div>
+                    </div>
+                </Content>
+            </DialogTemplates>
+        </SfDialog>
+    </div>
+</div>
+
+@code
+{
+    private string title = "Order Manager | Synergy Commerce";
+    private bool isLoading = true;
+    Member currentMember = null;
+    List<OrderDetailFullModel> totalOrders = new List<OrderDetailFullModel>();
+    List<OrderDetailFullModel> orders = new List<OrderDetailFullModel>();
+    List<OrderDetailFullModel> dataSource = new List<OrderDetailFullModel>();
+    UserDetailViewModel loggedInUser = new UserDetailViewModel();
+    public int selectedOrders = 0;
+    private string isAllActive = "";
+    private string isOpenActive = "";
+    private string isUnfulfilledActive = "";
+    private string isUnpaidActive = "";
+    private string isSuspendedActive = "";
+    private string isShippedActive = "";
+    private string isCartsActive = "";
+    private string isRecentActive = "active";
+    private bool FilterModalVisible = false;
+    private SfQueryBuilder<OrderDetailFullModel> querybuilder;
+    private double filterPrice { get; set; }
+    private string displayPriceTool = "d-none";
+    private string displayTagTool = "d-none";
+    private List<OrderTag> orderTags = new List<OrderTag>();
+    private bool isAndFilterCondition = true;
+    private bool isPriceFilterApplied = false;
+    OrdersType ordersType = OrdersType.RecentOrders;
+    private string searchVal { get; set; }
+    private bool isSearchOrders = false;
+    private bool IsTagsDialogVisible = false;
+    string[] tags = new string[] { };
+    List<OrderTagModel> SelectedOrderTags = new List<OrderTagModel>();
+    FilterOrders filterOrders = new FilterOrders() { OrderPaymentStatus = OrderPaymentStatus.Paid};
+    string TagModalHeader { get; set; }
+    bool allowCustomVal { get; set; }
+    bool addTags { get; set; }
+    Uri uri;
+    OrdersCommonGrid CommonOrdersGrid;
+
+    SfMultiSelect<string[], OrderTag> TagsFilterDropdown = new SfMultiSelect<string[], OrderTag>();
+
+    private class OrderTag
+    {
+        public string Id { get; set; }
+        public string Text { get; set; }
+    }
+
+    private class FilterOrders
+    {
+        public BulkActions BulkAction { get; set; }
+        public OrderPaymentStatus OrderPaymentStatus { get; set; }
+        public OrderFulfillmentStatus OrderFulfillmentStatus { get; set; }
+        public FilterOrdersDateRange FilterOrdersDateRange { get; set; } 
+    }
+
+    private List<OperatorsModel> stringOperator = new List<OperatorsModel>()
+{
+        new OperatorsModel { Text = "In", Value="equal" }
+    };
+
+    private void HandleDateRangeFilter(DateRange dateRange)
+    {
+        switch (dateRange)
+        {
+            case (DateRange.LastSevenDays):
+                filterOrders.FilterOrdersDateRange = FilterOrdersDateRange.LastSevenDays;
+                break;
+            case (DateRange.LastTenDays):
+                filterOrders.FilterOrdersDateRange = FilterOrdersDateRange.LastTenDays;
+                break;
+            case (DateRange.LastThirtyDays):
+                filterOrders.FilterOrdersDateRange = FilterOrdersDateRange.LastThirtyDays;
+                break;
+            case (DateRange.LastMonth):
+                filterOrders.FilterOrdersDateRange = FilterOrdersDateRange.LastMonth;
+                break;
+            case (DateRange.ThisMonth):
+                filterOrders.FilterOrdersDateRange = FilterOrdersDateRange.ThisMonth;
+                break;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        loggedInUser = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        uri = navManager.ToAbsoluteUri(navManager.Uri);
+        StringValues dateRange;
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("RecentOrders", out dateRange))
+        {
+            var getEnumVal = (DateRange)Enum.Parse(typeof(DateRange), dateRange.ToString());
+            HandleDateRangeFilter(getEnumVal);
+            ordersType = OrdersType.RecentOrders;
+        }
+        else
+        {
+            //Get Default Date Range
+            var DefaultDateRangeResponse = await _userViewModel.GetUserMetafieldListAsync(loggedInUser.Id, currentMember.Id, UserMetafieldNamespace.UserPrefDateRange);
+            if (DefaultDateRangeResponse?.data?.FirstOrDefault()?.MetaValue != null)
+            {
+                //var dateRangeEnumVal = Convert.ToInt32(DefaultDateRangeResponse.data.FirstOrDefault().MetaValue);
+                var dateRangeEnumVal =(int)FilterOrdersDateRange.LastTenDays; //default : last 10 days
+                HandleDateRangeFilter((DateRange)dateRangeEnumVal);
+            }
+        }
+        await LoadOrdersData(false);
+        filterOrders.OrderPaymentStatus = OrderPaymentStatus.All;
+        UpdateGridPaymentType(filterOrders.OrderPaymentStatus);
+    }
+
+    private void OnOrderSelected(int count)
+    {
+        selectedOrders = count;
+    }
+    private async Task LoadOrdersData(bool refresh)
+    {
+        isLoading = true;
+        var endDate = DateTime.Now.AddDays(1);
+        var startDate = endDate.Date;
+        var getDateRanges = DateTimeHelper.GetDateRange(DateRange.LastSevenDays);
+        switch (filterOrders.FilterOrdersDateRange)
+        {
+            case (FilterOrdersDateRange.Today):
+                getDateRanges = DateTimeHelper.GetDateRange(DateRange.Today);
+                endDate = getDateRanges.enddate;
+                startDate = getDateRanges.startDate;
+                break;
+            case (FilterOrdersDateRange.LastSevenDays):
+                endDate = getDateRanges.enddate;
+                startDate = getDateRanges.startDate;
+                break;
+            case (FilterOrdersDateRange.LastTenDays):
+                getDateRanges = DateTimeHelper.GetDateRange(DateRange.LastSevenDays);
+                endDate = getDateRanges.enddate;
+                startDate = getDateRanges.startDate;
+                break;
+            case (FilterOrdersDateRange.LastThirtyDays):
+                getDateRanges = DateTimeHelper.GetDateRange(DateRange.LastThirtyDays);
+                endDate = getDateRanges.enddate;
+                startDate = getDateRanges.startDate;
+                break;
+            case (FilterOrdersDateRange.ThisMonth):
+                getDateRanges = DateTimeHelper.GetDateRange(DateRange.ThisMonth);
+                endDate = getDateRanges.enddate;
+                startDate = getDateRanges.startDate;
+                break;
+            case (FilterOrdersDateRange.LastMonth):
+                getDateRanges = DateTimeHelper.GetDateRange(DateRange.LastMonth);
+                endDate = getDateRanges.enddate;
+                startDate = getDateRanges.startDate;
+                break;
+        }
+
+        var response = await _orderViewModel.GetSearchOrdersAsync(currentMember.Id, -1, startDate.ToUniversalTime(), endDate.ToUniversalTime());
+        if (response.success)
+        {
+            var result = response.data;
+            StringValues searchOrderNum;
+            StringValues searchOrderLastName;
+            StringValues searchOrderPhone;
+            if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("OrderNumber", out searchOrderNum))
+            {
+                isSearchOrders = true;
+            }
+            if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("LastName", out searchOrderLastName))
+            {
+                isSearchOrders = true;
+            }
+            if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("Phone", out searchOrderPhone))
+            {
+                isSearchOrders = true;
+            }
+
+            if (isSearchOrders)
+            {
+                title = "Order Search Results | Synergy Commerce";
+                var searchOrdersResult = result.Where(x => (!string.IsNullOrWhiteSpace(searchOrderNum) && (x.FormattedOrderNumber?.ToLower().Contains(searchOrderNum.ToString().ToLower()) ?? false)) ||
+                                        (!string.IsNullOrWhiteSpace(searchOrderLastName) && ((x.BillingCustomer?.LastName?.ToLower().Contains(searchOrderLastName.ToString().ToLower()) ?? false) ||
+                                        (x.ShippingCustomer?.LastName?.ToLower().Contains(searchOrderLastName.ToString().ToLower()) ?? false))) ||
+                                        (!string.IsNullOrWhiteSpace(searchOrderPhone) && ((x.BillingCustomer?.Phone?.Contains(searchOrderPhone) ?? false) ||
+                                        (x.ShippingCustomer?.Phone?.Contains(searchOrderPhone) ?? false)))).ToList();
+                totalOrders = searchOrdersResult;
+                dataSource = searchOrdersResult;
+                orders = searchOrdersResult;
+            }
+            else
+            {
+                totalOrders = result;
+                dataSource = result;
+                orders = result;
+            }
+
+            orders.ForEach(x =>
+            {
+                if (x.OrderTags != null)
+                    orderTags.Concat(x.OrderTags.Select(y => new OrderTag
+                    {
+                        Id = y.Value,
+                        Text = y.Value
+                    }));
+            });
+            orderTags = orderTags.Distinct().ToList();
+        }
+
+        selectedOrders = 0;
+        if (refresh)
+        {
+            if (isSearchOrders)
+            {
+                SearchOrders(searchVal);
+            }
+        }
+
+        UpdateGrid(ordersType);
+
+        isLoading = false;
+    }
+
+    List<RuleModel> importRules = new List<RuleModel>();
+
+    private void OnOverlayclick(MouseEventArgs arg)
+    {
+        IsTagsDialogVisible = false;
+    }
+
+    private void TriggerFiltering()
+    {
+        FilterModalVisible = true;
+    }
+
+    private List<OrderDetailFullModel> UpdateTagData(string[] tags)
+    {
+        List<OrderDetailFullModel> tmp = new List<OrderDetailFullModel>();
+        List<OrderDetailFullModel> tmpList = new List<OrderDetailFullModel>();
+
+        foreach (var tag in tags)
+        {
+            if (isPriceFilterApplied)
+            {
+                tmpList = orders.Where(x => x.OrderTags != null).ToList();
+            }
+            else
+            {
+                tmpList = dataSource.Where(x => x.OrderTags != null).ToList();
+            }
+            var reqOrders = tmpList.Where(x => x.OrderTags.Any(y => y.Value == tag)).ToList();
+            if (reqOrders.Count > 0)
+            {
+                foreach (var order in reqOrders)
+                {
+                    tmp.Add(order);
+                }
+            }
+        }
+
+        return tmp;
+    }
+
+    private void ValueChangeHandler(MultiSelectChangeEventArgs<string[]> args)
+    {
+
+        var rules = querybuilder.GetRules().Rules;
+        UpdateDatasource(rules);
+    }
+
+    private void Created()
+    {
+        orders = querybuilder.GetFilteredRecords().ToList().AsEnumerable<OrderDetailFullModel>().ToList();
+    }
+
+    private void UpdateRule(Syncfusion.Blazor.QueryBuilder.RuleChangeEventArgs args)
+    {
+        if (args.Rule.Condition == "and")
+        {
+            isAndFilterCondition = true;
+        }
+        var res = querybuilder.GetValidRules().Rules.Count();
+        if (res > 0)
+        {
+            foreach (var rule in args.Rule.Rules)
+            {
+                if (rule.Label == "Price")
+                {
+                    filterPrice = rule.Value;
+                    displayPriceTool = "";
+                }
+            }
+            var rules = querybuilder.GetRules().Rules;
+            UpdateDatasource(rules);
+        }
+        else
+        {
+            displayPriceTool = "d-none";
+            orders = dataSource;
+        }
+        StateHasChanged();
+    }
+
+    private void UpdateDatasource(List<RuleModel> rules)
+    {
+        var tagsRule = rules.Where(x => x.Label == "Order Tags").FirstOrDefault();
+        bool isTagRuleAdded = false;
+        if (tagsRule != null && TagsFilterDropdown.Value != null)
+        {
+            querybuilder.DataSource = UpdateTagData(TagsFilterDropdown.Value);
+            rules.Remove(tagsRule);
+            querybuilder.SetRules(rules);
+            isTagRuleAdded = true;
+        }
+
+        if (querybuilder.GetValidRules().Rules.Any())
+            orders = querybuilder.GetFilteredRecords().ToList().AsEnumerable<OrderDetailFullModel>().ToList();
+        else
+            orders = querybuilder.DataSource.ToList();
+
+        if (isTagRuleAdded)
+        {
+            rules.Add(tagsRule);
+            querybuilder.SetRules(rules);
+        }
+        StateHasChanged();
+    }
+
+    private List<OrderDetailFullModel> FilterTagsData(string joinedTags)
+    {
+        var tags = joinedTags.Split(',').ToList();
+        List<OrderDetailFullModel> tmp = new List<OrderDetailFullModel>();
+        foreach (var tag in tags)
+        {
+            var tmpList = dataSource.Where(x => x.OrderTags != null).ToList();
+            var reqOrders = tmpList.Where(x => x.OrderTags.Any(y => y.Value == tag)).ToList();
+            if (reqOrders.Count > 0)
+            {
+                foreach (var order in reqOrders)
+                {
+                    tmp.Add(order);
+                }
+            }
+        }
+        return tmp;
+    }
+
+    private void RemovePriceFilter()
+    {
+        var reqRule = importRules.Where(x => x.Label == "Price").FirstOrDefault();
+        importRules.Remove(reqRule);
+        displayPriceTool = "d-none";
+        orders = dataSource;
+    }
+
+    private void ResetOrdersTypeFilter()
+    {
+        isAllActive = "";
+        isOpenActive = "";
+        isUnfulfilledActive = "";
+        isUnpaidActive = "";
+        isSuspendedActive = "";
+        isShippedActive = "";
+        isCartsActive = "";
+        isRecentActive = "";
+    }
+
+    private void SetOrdersByFilter()
+    {
+        if (importRules.Count > 0)
+        {
+            querybuilder.DataSource = dataSource;
+            orders = querybuilder.GetFilteredRecords().ToList().AsEnumerable<OrderDetailFullModel>().ToList();
+        }
+        else
+        {
+            orders = dataSource;
+        }
+
+        SearchOrders(searchVal);
+    }
+    private void UpdateGridPaymentType(OrderPaymentStatus paymentType)
+    {
+        switch (paymentType)
+        {
+            case OrderPaymentStatus.All:
+                dataSource = totalOrders;
+                break;
+            case OrderPaymentStatus.Unpaid:
+                dataSource = totalOrders.Where(x => x.PaymentStatus == OrderPaymentStatus.Unpaid).ToList();
+                break;
+            case OrderPaymentStatus.Authorized:
+                dataSource = totalOrders.Where(x => x.PaymentStatus == OrderPaymentStatus.Authorized).ToList();
+                break;
+            case OrderPaymentStatus.Paid:
+                dataSource = totalOrders.Where(x => x.PaymentStatus == OrderPaymentStatus.Paid).ToList();
+                break;
+            case OrderPaymentStatus.Error:
+                dataSource = totalOrders.Where(x => x.PaymentStatus == OrderPaymentStatus.Error).ToList();
+                break;
+            case OrderPaymentStatus.PartialRefund:
+                dataSource = totalOrders.Where(x => x.PaymentStatus == OrderPaymentStatus.PartialRefund).ToList();
+                break;
+            case OrderPaymentStatus.FullRefund:
+                dataSource = totalOrders.Where(x => x.PaymentStatus == OrderPaymentStatus.FullRefund).ToList();
+                break;
+            case OrderPaymentStatus.Voided:
+                dataSource = totalOrders.Where(x => x.PaymentStatus == OrderPaymentStatus.Voided).ToList();
+                break;
+            case OrderPaymentStatus.PartiallyPaid:
+                dataSource = totalOrders.Where(x => x.PaymentStatus == OrderPaymentStatus.PartiallyPaid).ToList();
+                break;
+        }
+        SetOrdersByFilter();
+    }
+
+    private void UpdateGrid(OrdersType ordersOfType)
+    {
+        ordersType = ordersOfType;
+        ResetOrdersTypeFilter();
+        selectedOrders = 0;
+        switch (ordersOfType)
+        {
+            case OrdersType.all:
+                isAllActive = "active";
+                dataSource = totalOrders;
+                break;
+            case OrdersType.open:
+                isOpenActive = "active";
+                dataSource = totalOrders;
+                break;
+            case OrdersType.unfulfilled:
+                isUnfulfilledActive = "active";
+                dataSource = totalOrders.Where(x => x.FulfillmentStatus != OrderFulfillmentStatus.Fulfilled).ToList();
+                break;
+            case OrdersType.unpaid:
+                isUnpaidActive = "active";
+                dataSource = totalOrders.Where(x => x.PaymentStatus == OrderPaymentStatus.Unpaid).ToList();
+                break;
+            case OrdersType.suspended:
+                isSuspendedActive = "active";
+                dataSource = totalOrders.Where(x => x.OrderStatus == OrderStatus.Suspended).ToList();
+                break;
+            case OrdersType.shipped:
+                isShippedActive = "active";
+                dataSource = totalOrders.Where(x => x.OrderFulfillment != null && x.OrderFulfillment.Any(y => y.FulfillmentStatus == (int)OrderFulfillmentStatus.Shipped)).ToList();
+                break;
+            case OrdersType.carts:
+                isCartsActive = "active";
+                dataSource = totalOrders.Where(x => x.OrderStatus == OrderStatus.ShoppingCart).ToList();
+                break;
+            case OrdersType.RecentOrders:
+                isRecentActive = "active";
+                dataSource = totalOrders.Where(x => x.PaymentStatus == OrderPaymentStatus.Paid).ToList();
+                break;
+        }
+
+        dataSource = dataSource.Where(x => x.PaymentStatus == filterOrders.OrderPaymentStatus).ToList();
+        UpdateGridPaymentType(OrderPaymentStatus.All);
+        SetOrdersByFilter();
+    }
+
+    private void SearchOrders(string searchValue)
+    {
+        if (!string.IsNullOrEmpty(searchValue))
+        {
+            orders = dataSource.Where(x => (x.FormattedOrderNumber?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                                (x.DeliveryMethodText?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                                (x.BillingCustomer?.FirstName?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                                (x.BillingCustomer?.LastName?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                                (x.BillToAddress?.City?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                                (x.BillToAddress?.State?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                                (x.BillToAddress?.ZipCode?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                                (x.ShippingCustomer?.FirstName?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                                (x.ShippingCustomer?.LastName?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                                (x.ShipToAddress?.City?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                                (x.ShipToAddress?.State?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                                (x.ShipToAddress?.ZipCode?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                                (x.OrderSourceText?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                                (x.PaymentStatusText?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                                (x.OrderStatusText?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                                x.GrandTotal.ToString().Contains(searchValue.ToLower())).ToList();
+        }
+        else
+        {
+            orders = dataSource;
+        }
+
+        if (importRules.Count > 0)
+        {
+            querybuilder.DataSource = orders;
+            orders = querybuilder.GetFilteredRecords().ToList().AsEnumerable<OrderDetailFullModel>().ToList();
+        }
+
+        searchVal = searchValue;
+        StateHasChanged();
+    }
+
+    private async Task SaveTags(bool isAdd)
+    {
+        isLoading = true;
+        IsTagsDialogVisible = false;
+        var selectedOrders = await CommonOrdersGrid.GetSelectedOrdersAsync();
+        var msg = Constants.UpdateMessage;
+        if (tags == null)
+        {
+            tags = new string[] { };
+        }
+
+        AddUpdateOrderTagRequestModel addTagsRequest = new AddUpdateOrderTagRequestModel { };
+        DeleteOrderTagRequestModel deleteTagsRequest = new DeleteOrderTagRequestModel { };
+        foreach (var order in selectedOrders)
+        {
+            addTagsRequest.OrderTags = new List<AddUpdateTagRequest>();
+            deleteTagsRequest.Tags = new List<string>();
+            if (isAdd)
+            {
+                var newTags = tags.Where(t => !order.OrderTags.Any(o => o.Value == t)).ToArray();
+                if (newTags.Length > 0)
+                {
+                    addTagsRequest.OrderId = order.Id;
+                    foreach (var newTag in newTags)
+                    {
+                        order.OrderTags.Add(new OrderTagModel { Value = newTag });
+                        addTagsRequest.OrderTags.Add(new AddUpdateTagRequest { Value = newTag });
+                    }
+                }
+            }
+            else
+            {
+                var removeOrderTags = order.OrderTags.Where(x => tags.Any(t => t == x.Value)).ToList();
+                if (removeOrderTags.Count > 0)
+                {
+                    deleteTagsRequest.OrderId = order.Id;
+                    foreach (var removeTag in removeOrderTags)
+                    {
+                        order.OrderTags.RemoveAll(x => x.Value == removeTag.Value);
+                        deleteTagsRequest.Tags.Add(removeTag.Value);
+                    }
+                }
+            }
+
+            if (deleteTagsRequest.Tags.Count > 0)
+            {
+                BaseResponse response = await _orderViewModel.DeleteOrderTag(deleteTagsRequest);
+                if (!isAdd)
+                {
+                    if (response.success)
+                    {
+                        msg = Constants.RemoveMessage;
+                    }
+                    else
+                    {
+                        msg = Constants.InternalServerError;
+                    }
+                }
+            }
+
+            if (addTagsRequest.OrderTags.Count > 0)
+            {
+                var response = await _orderViewModel.AddUpdateOrderTagAsync(addTagsRequest);
+                if (response.success)
+                {
+                    msg = Constants.UpdateMessage;
+                }
+                else
+                {
+                    msg = Constants.InternalServerError;
+                }
+            }
+        }
+        isLoading = false;
+
+        switch (msg)
+        {
+            case Constants.InternalServerError:
+                toastService.ShowToast(Constants.InternalServerError, ToastLevel.Error);
+                break;
+            case Constants.UpdateMessage:
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                break;
+            case Constants.RemoveMessage:
+                toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+                break;
+        }
+    }
+
+    private void GetSelectedOrdersTags(List<OrderDetailFullModel> selectedOrders)
+    {
+        tags = new string[] { };
+        SelectedOrderTags = new List<OrderTagModel>();
+        foreach (var order in selectedOrders)
+        {
+            if (order.OrderTags != null)
+            {
+                foreach (var tag in order.OrderTags)
+                {
+                    if (!SelectedOrderTags.Any(x => x.Value == tag.Value))
+                    {
+                        tag.StrId = tag.Id.ToString();
+                        SelectedOrderTags.Add(tag);
+                    }
+                }
+            }
+        }
+        if (!addTags)
+        {
+            tags = SelectedOrderTags.Select(x => x.Value).ToArray();
+        }
+
+        IsTagsDialogVisible = true;
+    }
+
+    private async Task HandleBulkAction(Microsoft.AspNetCore.Components.ChangeEventArgs args)
+    {
+        if (selectedOrders <= 0)
+        {
+            toastService.ShowToast("Orders must be selected first.", ToastLevel.Error);
+        }
+        else
+        {
+            var selectedOrders = await CommonOrdersGrid.GetSelectedOrdersAsync();
+            BulkActions action = (BulkActions)Enum.Parse(typeof(BulkActions), args.Value.ToString());
+            switch (action)
+            {
+                case BulkActions.AddOrderTags:
+                    allowCustomVal = true;
+                    addTags = true;
+                    GetSelectedOrdersTags(selectedOrders);
+                    TagModalHeader = "Add Order Tag(s)";
+                    break;
+                case BulkActions.RemoveOrderTags:
+                    allowCustomVal = false;
+                    addTags = false;
+                    GetSelectedOrdersTags(selectedOrders);
+                    TagModalHeader = "Remove Order Tag(s)";
+                    break;
+            }
+        }
+    }
+
+    private async Task HandleDateFilter(Microsoft.AspNetCore.Components.ChangeEventArgs args)
+    {
+        filterOrders.FilterOrdersDateRange = (FilterOrdersDateRange)Enum.Parse(typeof(FilterOrdersDateRange), args.Value.ToString());
+        await LoadOrdersData(false);
+    }
+
+    private void HandleOrderFulfillmentFilter(Microsoft.AspNetCore.Components.ChangeEventArgs args)
+    {
+        isLoading = true;
+        filterOrders.OrderFulfillmentStatus = (OrderFulfillmentStatus)Enum.Parse(typeof(OrderFulfillmentStatus), args.Value.ToString());
+        UpdateGrid(ordersType);
+        isLoading = false;
+    }
+
+    private void HandleOrderPaymentFilter(Microsoft.AspNetCore.Components.ChangeEventArgs args)
+    {
+        isLoading = true;
+        filterOrders.OrderPaymentStatus = (OrderPaymentStatus)Enum.Parse(typeof(OrderPaymentStatus), args.Value.ToString());
+        UpdateGridPaymentType(filterOrders.OrderPaymentStatus);
+        isLoading = false;
+        StateHasChanged();
+    }
+
+}

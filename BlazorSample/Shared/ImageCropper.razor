@@ -1,0 +1,56 @@
+﻿@using CellarPassAppAdmin.Shared.Models
+
+@inject IJSRuntime JsRuntime
+
+<SfDialog CssClass="sf-dialog-cropper" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsVisible">
+    <DialogTemplates>
+        <Header> Adjust Image </Header>
+        <Content>
+            <div>
+                <img id="image" src="#" style="width:100%" />
+            </div>
+        </Content>
+    </DialogTemplates>
+    <DialogButtons>
+        <DialogButton Content="Cancel" OnClick="CancelDialog" />
+        <DialogButton Content="Save" IsPrimary="true" OnClick="SaveImage" />
+    </DialogButtons>
+</SfDialog>
+
+@code {
+
+    [Parameter]
+    public bool IsVisible { get; set; }
+
+    [Parameter]
+    public ImageCropperConfiguration CropperConfiguration { get; set; }
+
+    [Parameter]
+    public EventCallback<string> Cropped { get; set; }
+
+    public async Task OnFileChange(string base64Url)
+    {
+        await JsRuntime.InvokeVoidAsync("imageCropper.setImageUrl", base64Url);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await JsRuntime.InvokeVoidAsync("imageCropper.initCropper", CropperConfiguration);
+    }
+
+    private void CancelDialog()
+    {
+        IsVisible = false;
+    }
+
+    private async Task SaveImage()
+    {
+        var base64Url = await JsRuntime.InvokeAsync<string>("imageCropper.getCroppedImage");
+        await Cropped.InvokeAsync(base64Url);
+    }
+
+    public async Task TriggerFileSelect(string id)
+    {
+        await JsRuntime.InvokeVoidAsync("imageCropper.triggerFileSelect", id);
+    }
+}

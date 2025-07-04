@@ -1,0 +1,228 @@
+﻿@page "/settings/integrated-partners/winedirect/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+
+<div class="alert bg-soft-warning mb-4" role="alert"><strong><i class="fa-regular fa-lock me-2"></i>Feature Disabled.</strong> View our <a href="#!">knowledge base</a> article for additional information.</div>
+
+<EditForm Model="@wineDirect" Context="formContext" Class="row g-3">
+    <DataAnnotationsValidator />
+    <div class="card">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h5 class="mb-0"><a href="marketplace/partner/@Id" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-plug me-2"></span>WineDirect</h5>
+                </div>
+                <div class="col-md-auto">
+                    <button @onclick="@(() => TestLogin(formContext))" class="btn btn-sm btn-outline-secondary me-2" hidden="@(SetTestLoginBtnVisibility())">Test Login</button>
+                    <button class="btn btn-sm btn-primary" @onclick="@(() => SaveWineDirect(formContext))">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="inputWineDirectUsername" class="form-label">WineDirect API Username</label>
+                <InputText class="form-control" @bind-Value="wineDirect.APIUsername" id="inputWineDirectUsername" type="text" placeholder="API Username"></InputText>
+                <ValidationMessage For="@(() => wineDirect.APIUsername)" />
+            </div>
+            <div class="mb-3">
+                <label for="inputWineDirectPassword" class="form-label">WineDirect API Password</label>
+                <InputText class="form-control" @bind-Value="wineDirect.APIPassword" id="inputWineDirectPassword" type="password" placeholder="API Password"></InputText>
+                <ValidationMessage For="@(() => wineDirect.APIPassword)" />
+            </div>
+            <div class="mb-3">
+                <label for="inputWineDirectPassword" class="form-label">Default Customer Type</label>
+                <select id="selCustomerTypes" class="form-select">
+                    <option selected>None</option>
+                    <option value="1">Club Member</option>
+                    <option value="2">The Collectors Club</option>
+                    <option value="3">Platinum</option>
+                </select>
+            </div>
+            <a href="#modalCustomerTypes" class="btn btn-outline-primary" data-bs-toggle="modal">Sync Customer Types</a>
+        </div>
+    </div>
+</EditForm>
+
+<!-- Modal -->
+<div class="modal fade" id="modalCustomerTypes" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0">
+            <div class="table-responsive scrollbar">
+                    <table class="table fs--1 mb-0">
+                        <thead class="bg-200 text-900">
+                            <tr>
+                                <th class="pe-1 align-middle white-space-nowrap"></th>
+                                <th class="pe-1 align-middle white-space-nowrap">Contact Type</th>
+                                <th class="pe-1 align-middle white-space-nowrap">UUID</th>
+                                <th class="pe-1 align-middle white-space-nowrap">Active Club</th>
+                            </tr>
+                        </thead>
+                        <tbody class="" id="table-locations-body">
+                            <tr>
+                                <td class="align-middle white-space-nowrap">
+                                    <div class="form-check mb-0 d-flex align-items-center"><input class="form-check-input" type="checkbox" id="chk-enabled-1" data-bulk-select-row="data-bulk-select-row" checked></div>
+                                </td>
+                                <td class="align-middle white-space-nowrap">Club Member	</td>
+                                <td>2f0b2210-7799-446a-9bf4-741d427fa37f</td>
+                                <td><span class="fas fa-check"></span></td>
+                            </tr>
+                            <tr>
+                                <td class="align-middle white-space-nowrap">
+                                    <div class="form-check mb-0 d-flex align-items-center"><input class="form-check-input" type="checkbox" id="chk-enabled-2" data-bulk-select-row="data-bulk-select-row"></div>
+                                </td>
+                                <td class="align-middle white-space-nowrap">Employee</td>
+                                <td>b2e80c3f-7bf5-4e85-87fd-3c48228c7281	</td>
+                                <td><span class="fas fa-check"></span></td>
+                            </tr>
+                            <tr>
+                                <td class="align-middle white-space-nowrap">
+                                    <div class="form-check mb-0 d-flex align-items-center"><input class="form-check-input" type="checkbox" id="chk-enabled-3" data-bulk-select-row="data-bulk-select-row"></div>
+                                </td>
+                                <td class="align-middle white-space-nowrap">Investor</td>
+                                <td>760cad00-001b-4abe-ad9f-0f50751a0910	</td>
+                                <td><span class="fas fa-check"></span></td>
+                            </tr>
+                            <tr>
+                                <td class="align-middle white-space-nowrap">
+                                    <div class="form-check mb-0 d-flex align-items-center"><input class="form-check-input" type="checkbox" id="chk-enabled-4" data-bulk-select-row="data-bulk-select-row"></div>
+                                </td>
+                                <td class="align-middle white-space-nowrap">New Customer	</td>
+                                <td>2f0b2210-7799-446a-9bf4-741d427fa37f</td>
+                                <td><span class="fas fa-check"></span></td>
+                            </tr>
+                            <tr>
+                                <td class="align-middle white-space-nowrap">
+                                    <div class="form-check mb-0 d-flex align-items-center"><input class="form-check-input" type="checkbox" id="chk-enabled-5" data-bulk-select-row="data-bulk-select-row"></div>
+                                </td>
+                                <td class="align-middle white-space-nowrap">Platinum</td>
+                                <td>00ba5204-3f06-4b7d-8862-936cadf6fed8	</td>
+                                <td><span class="fas fa-check"></span></td>
+                            </tr>
+                            <tr>
+                                <td class="align-middle white-space-nowrap">
+                                    <div class="form-check mb-0 d-flex align-items-center"><input class="form-check-input" type="checkbox" id="chk-enabled-6" data-bulk-select-row="data-bulk-select-row" checked></div>
+                                </td>
+                                <td class="align-middle white-space-nowrap">The Collectors Club	</td>
+                                <td>11cc4b72-c18b-4a6c-abd9-693388e04d1b</td>
+                                <td><span class="fas fa-check"></span></td>
+                            </tr>
+                            <tr>
+                                <td class="align-middle white-space-nowrap">
+                                    <div class="form-check mb-0 d-flex align-items-center"><input class="form-check-input" type="checkbox" id="chk-enabled-7" data-bulk-select-row="data-bulk-select-row" checked></div>
+                                </td>
+                                <td class="align-middle white-space-nowrap">The Connoisseur Club	</td>
+                                <td>08426222-4b78-4710-a909-a7cffa24e5ee	</td>
+                                <td><span class="fas fa-check"></span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary">Create Customer Types</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "WineDirect | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    Member currentMember = new Member();
+    WineDirectRequestModel wineDirect = new WineDirectRequestModel();
+    List<string> wineDirectMetaKeys = new List<string>(){
+        BusinessSettingsMetaKey.WineDirectAPIPassword,
+        BusinessSettingsMetaKey.WineDirectAPIUsername
+    };
+
+    protected bool SetTestLoginBtnVisibility()
+    {
+        if (!string.IsNullOrEmpty(wineDirect.APIUsername) &&
+            !string.IsNullOrEmpty(wineDirect.APIPassword))
+        {
+            return false;
+        }
+        else
+            return true;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get business settings for WineDirect
+        var response = await _settingsViewModel.GetBusinessSettingsListAsync(currentMember.Id, BusinessSettingsMetaNamespace.WineDirect);
+        wineDirect.APIUsername = response?.data?.Where(x => x.MetaKey == BusinessSettingsMetaKey.WineDirectAPIUsername)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+        wineDirect.APIPassword = response?.data?.Where(x => x.MetaKey == BusinessSettingsMetaKey.WineDirectAPIPassword)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+        SetTestLoginBtnVisibility();
+        SpinnerVisibility = false;
+    }
+
+    private async Task TestLogin(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var response = await _settingsViewModel.WineDirectTestLogin(wineDirect.APIUsername, wineDirect.APIPassword);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.LoginSuccessful, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(string.IsNullOrEmpty(response.error_info.description) ? Constants.LoginFailed : response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    public async Task SaveWineDirect(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var businessSettings = await Helper.BusinessSettingsMapping(wineDirect, currentMember.Id, BusinessSettingsMetaNamespace.WineDirect, wineDirectMetaKeys);
+            var response = await _settingsViewModel.CreateBusinessSettingListAsync(businessSettings);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+}
+

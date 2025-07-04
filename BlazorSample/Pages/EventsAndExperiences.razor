@@ -1,0 +1,143 @@
+﻿@page "/events-experiences"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject IBusinessViewModel _businessViewModel 
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md-auto">
+                <h5 class="mb-0"><span class="fa-regular fa-calendar-star me-2"></span>Events & Experiences</h5>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+
+        <div class="row my-4">
+            <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="fa-regular fa-calendar-days fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="javascript:void(0);" @onclick="@OpenExperiencesTypeModal">Manage Experiences</a></h6>
+                        <p class="fs--2">Create &amp; manage experiences</p>
+                    </div>
+                </div>
+            </div>
+            @if (isReservationsMappedToSynergy)
+            {
+                <div class="col-sm-6 col-md-4 mb-3">
+                    <div class="d-flex position-relative mb-2">
+                        <span class="fa-regular fa-calendar-check fa-2x fa-fw me-2"></span>
+                        <div class="flex-1">
+                            <h6 class="fs-0 mb-0"><a class="stretched-link" href="reservations/reservation">Reservations</a></h6>
+                            <p class="fs--2">View upcoming reservations</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-4 mb-3">
+                    <div class="d-flex position-relative mb-2">
+                        <span class="fa-regular fa-clock fa-2x fa-fw me-2"></span>
+                        <div class="flex-1">
+                            <h6 class="fs-0 mb-0"><a class="stretched-link" href="reservations/wait-list-manager">Waitlists</a></h6>
+                            <p class="fs--2">Add and manage guests on waitlists</p>
+                        </div>
+                    </div>
+                </div>
+            }
+            <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="fa-regular fa-ticket fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="#">Sell Tickets</a></h6>
+                        <p class="fs--2">Sell tickets to your special events</p>
+                    </div>
+                </div>
+            </div>
+            @if (isReservationsMappedToSynergy)
+            {
+                <div class="col-sm-6 col-md-4 mb-3">
+                    <div class="d-flex position-relative mb-2">
+                        <span class="fa-regular fa-calendar-plus fa-2x fa-fw me-2"></span>
+                        <div class="flex-1">
+                            <h6 class="fs-0 mb-0"><a class="stretched-link" href="reservations/book">Book Reservation</a></h6>
+                            <p class="fs--2">Quickly book a reservation for a guest</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-4 mb-3">
+                    <div class="d-flex position-relative mb-2">
+                        <span class="fa-regular fa-credit-card fa-2x fa-fw me-2"></span>
+                        <div class="flex-1">
+                            <h6 class="fs-0 mb-0"><a class="stretched-link" href="reservations/pending-cc-charges">Pending CC</a></h6>
+                            <p class="fs--2">View pending charges for upcoming reservations</p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<SfDialog IsModal="true" Width="300px" ShowCloseIcon="true" @bind-Visible="experiencesTypeModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Select Experiences Type</h5></Header>
+        <Content>
+            <div class="row text-center">
+                <div class="col-md-12 mt-3 mb-3">
+                    <a class="btn btn-sm btn-primary" href="javascript:void(0);">
+                        Reservations
+                    </a>
+                    <a class="btn btn-sm btn-primary" href="experiences/ticketed-events">
+                        Ticketing
+                    </a>
+                </div>
+            </div>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+    private string title = "Events & Experiences | Synergy Admin Panel";
+    private bool isLoading { get; set; }
+    Member currentMember = new Member();
+    private bool isReservationsMappedToSynergy { get; set; }
+    private bool experiencesTypeModalVisibility = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        //Get ReservationsService Settings
+        var reservationSetting = await _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount, BusinessSettingsMetaKey.ReservationsService);
+        var isReservationsServiceSettingsSaved = !string.IsNullOrEmpty(reservationSetting?.data?.MetaValue ?? string.Empty);
+        if (isReservationsServiceSettingsSaved)
+        {
+            //Get ReservationsService Configuration
+            var businessReservationsServiceConfigurationResponse = await _businessViewModel.GetBusinessConfigurationOptionDetail(BusinessConfigurationNamespace.ReservationsService, reservationSetting.data.MetaValue);
+            var reservationsServiceSettingName = businessReservationsServiceConfigurationResponse?.data?.SettingName ?? string.Empty;
+            isReservationsMappedToSynergy = reservationsServiceSettingName.Equals("Synergy Commerce");
+        }
+        isLoading = false;
+    }
+    private void OpenExperiencesTypeModal()
+    {
+        experiencesTypeModalVisibility = true;
+    }
+}

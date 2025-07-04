@@ -1,0 +1,82 @@
+﻿@page "/settings/cancel-policies/edit"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card mb-3">
+            <div class="card-header">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="settings/cancel-policies" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-shield-alt me-2"></span>Private Event Policy</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-primary" href="#!">Save</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body bg-light">
+
+                <form>
+                    <div class="row mb-3">
+                        <div class="col-6 col-md-3">
+                            <label class="form-label" for="chkAutoHide">Public</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkPublicTag" checked>
+                                <label class="form-check-label" for="chkPublicTag">
+                                    Allow Guest to Select
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                        </div>
+                        <div class="mb-3 col-6 col-md-2"></div>
+                        <div class="mb-3 col-6 col-md-2"></div>
+                        <div class="mb-3 col-6 col-md-2"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="inputPolicyDesc">Policy Description</label>
+                        <textarea id="inputPolicyDesc" class="form-control" placeholder="Cancellation Policy Description" rows="4"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="inputPolicyName">Policy Name</label>
+                        <input id="inputPolicyName" class="form-control" type="text" placeholder="Cancellation Policy Name" value="Private Event Policy" />
+                    </div>
+                </form>
+
+            </div>
+            <div class="card-footer fs--1 bg-white">
+                Available Tags: [[CancelLeadTime]]
+            </div>
+        </div>
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    bool isDisabledModalVisible = false;
+
+    private string title = "Cancellation Policy | Synergy Commerce Admin Panel";
+
+
+    [Parameter]
+    public int Id { get; set; }
+
+
+}

@@ -1,0 +1,231 @@
+﻿@page "/store/transfer-inventory-request"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="/store/transfer-inventory" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-store me-2"></span>Inventory Transfer Request</h5>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="theme-wizard border-bottom p-3">
+            <ul class="nav justify-content-between nav-wizard">
+                <li class="nav-item">
+                    <a class="nav-link active fw-semi-bold" href="#bootstrap-wizard-tab1" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-1"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Create Transfer</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab2" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-2"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Set From / To Locations</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab3" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-3"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Set Transfer Quantity</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab4" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-4"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Receive Inventory</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab5" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-5"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Inventory Updated</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="px-2 mx-2 ">
+            <div class="row my-3">
+                <div class="col-12 col-md-12">
+                    <label class="form-label" for="inputCollectionName">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                        <input type="text" class="form-control" placeholder="Search Products" aria-label="Search Products" aria-describedby="inputGroupSearch">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="sf-grid">
+            <SfGrid DataSource="@inventory" Width="100%">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && inventory.Count <= 0)
+                        {
+                            <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Inventory Available</h6>
+                                <button type="button" class="btn btn-outline-primary">Get Started</button>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn HeaderText="" TextAlign="TextAlign.Center" Width="50">
+                        <Template>
+                            @{
+                                <button class="delete_icon">
+                                    <span class="far fa-eye"></span>
+                                </button>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="Product Name" TextAlign="TextAlign.Left" Width="150px">
+                        <Template>
+                            @{
+                                var productName = (context as InventoryModel).ProductName;
+                                <a href="javascript:void();">@($"{productName}")</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(InventoryModel.Sku) HeaderText="Sku" TextAlign="TextAlign.Center" Width="100px" />
+                    <GridColumn Field=@nameof(InventoryModel.Type) HeaderText="Type" TextAlign="TextAlign.Center" Width="100px" />
+                    <GridColumn Field=@nameof(InventoryModel.Retail) HeaderText="Retail" TextAlign="TextAlign.Center" Width="100px" />
+                    <GridColumn Field=@nameof(InventoryModel.Sale) HeaderText="Sale" TextAlign="TextAlign.Center" Width="100px" />
+                    <GridColumn Field=@nameof(InventoryModel.Variants) HeaderText="Variants" TextAlign="TextAlign.Center" Width="100px" />
+                    <GridColumn HeaderText="" Width="50px">
+                        <Template>
+                            @{
+                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                    <a class="dropdown-item" href="javascript:void();">Create Transfer Request</a>
+                                </div>
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+        <div class="row m-3 mt-5">
+            <div class="col-12 col-md-6">
+                <div class="mb-3">
+                    <label class="form-label" for="inputRequestedQuantity">Requested Quantity</label>
+                    <input type="text" class="form-control" value="12" id="inputRequestedQuantity">
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="mb-3">
+                    <label for="selOriginType" class="form-label">Origin Type</label>
+                    <select id="selOriginType" class="form-select" aria-label="Origin Type">
+                        <option>None</option>
+                        <option selected>Internal</option>
+                        <option>Supplier</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="mb-3">
+                    <label for="selLocationFrom" class="form-label">Transfer Location (From)</label>
+                    <select id="selLocationFrom" class="form-select" aria-label="Transfer Location (From)">
+                        <option selected>[[LocationName1]]</option>
+                        <option>[[LocationName2]]</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="mb-3">
+                    <label for="selLocationTo" class="form-label">Transfer Location (To)</label>
+                    <select id="selLocationTo" class="form-select" aria-label="Transfer Location (To)">
+                        <option selected>[[LocationName2]]</option>
+                        <option>[[LocationName4]]</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Available Quantity</label>
+                    <br />
+                    <label class="form-label">127</label>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Post Transfer Quantity</label>
+                    <br />
+                    <label class="form-label">139</label>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="mb-3">
+                    <label class="form-label" for="selCarrier">Carrier</label>
+                    <select id="selCarrier" class="form-select" aria-label="Carrier">
+                        <option selected>[[ShippingIntegratedPartner]]</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="mb-3">
+                    <label class="form-label" for="inputTrackingNumber">Tracking Number</label>
+                    <input type="text" class="form-control" id="inputTrackingNumber" value="1Z9023060202526348 ">
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="mb-3">
+                    <label for="dpEstimatedArrival" class="form-label">Estimated Arrival</label>
+                    <SfDatePicker id="dpEstimatedArrival" TValue="DateTime?"></SfDatePicker>
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <div class="mb-3">
+                    <label class="form-label" for="inputReferenceNumber">Reference Number</label>
+                    <input type="text" class="form-control" id="inputReferenceNumber" value="1Z9023060202526348 ">
+                </div>
+            </div>
+            <div class="col-12 col-md-12">
+                <div class="mb-3">
+                    <label class="form-label">Transfer Notes</label>
+                    <textarea class="form-control" @bind="transferNote"
+                              @bind:event="oninput"
+                              maxlength="@MAXTransferNoteCount" rows="4" />
+                    <label class="form-label">(@(MAXTransferNoteCount - transferNote.Count()) Remaining)</label>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer">
+    </div>
+</div>
+
+@code
+{
+    private string title = "Inventory Transfer Request | Synergy Admin Panel";
+    private Boolean isLoading = false;
+    private class InventoryModel
+    {
+        public string ProductName { get; set; }
+        public string Sku { get; set; }
+        public string Type { get; set; }
+        public string Retail { get; set; }
+        public string Sale { get; set; }
+        public string Variants { get; set; }
+    }
+    private List<InventoryModel> inventory = new List<InventoryModel>() {
+        new InventoryModel(){ ProductName= "2018 Autumn Sky Pinot Nair", Sku= "ABC125425", Type= "Wine", Retail= "28.00", Sale="28.00", Variants="0"},
+        new InventoryModel(){ ProductName= "2018 Autumn Sky Pinot Nair", Sku= "ABC125425", Type= "Wine", Retail= "28.00", Sale="28.00", Variants="0"},
+    };
+    string transferNote = "Transfer via GLS";
+    const int MAXTransferNoteCount = 500;
+}

@@ -1,0 +1,94 @@
+﻿@page "/settings/integrated-partners/ams/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm Model="@aMS" Context="formContext" Class="row g-3">
+    <DataAnnotationsValidator />
+    <div class="card">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h5 class="mb-0"><a href="marketplace/partner/@Id" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-plug me-2"></span>AMS</h5>
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-primary" @onclick="@(() => SaveAMS(formContext))">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="amsFileName" class="form-label">File Name</label>
+                <InputText class="form-control" @bind-Value="aMS.FileName" id="amsFileName" type="text" placeholder="File Name"></InputText>
+                <ValidationMessage For="@(() => aMS.FileName)" />
+            </div>
+            <div class="mb-3">
+                <label for="amsImportRunTime" class="form-label">Import Run Time</label>
+                <InputText class="form-control" @bind-Value="aMS.ImportSchedule" id="amsImportRunTime" type="text" placeholder="Import Run Time"></InputText>
+                <ValidationMessage For="@(() => aMS.ImportSchedule)" />
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "AMS | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    Member currentMember = new Member();
+    AMSRequestModel aMS = new AMSRequestModel();
+    List<string> aMSMetaKeys = new List<string>(){
+        BusinessSettingsMetaKey.AMSFileName,
+        BusinessSettingsMetaKey.AMSImportSchedule
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get business settings for AMS
+        var response = await _settingsViewModel.GetBusinessSettingsListAsync(currentMember.Id, BusinessSettingsMetaNamespace.AMS);
+        aMS.FileName = response?.data?.Where(x => x.MetaKey == BusinessSettingsMetaKey.AMSFileName)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+        aMS.ImportSchedule = response?.data?.Where(x => x.MetaKey == BusinessSettingsMetaKey.AMSImportSchedule)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+        SpinnerVisibility = false;
+    }
+
+    public async Task SaveAMS(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var businessSettings = await Helper.BusinessSettingsMapping(aMS, currentMember.Id, BusinessSettingsMetaNamespace.AMS, aMSMetaKeys);
+            var response = await _settingsViewModel.CreateBusinessSettingListAsync(businessSettings);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+}

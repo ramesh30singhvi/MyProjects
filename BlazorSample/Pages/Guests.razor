@@ -1,0 +1,391 @@
+﻿@page "/people/customers"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.WebUtilities;
+@using Microsoft.Extensions.Primitives;
+@using CellarPassAppAdmin.Shared.Enums
+@using Syncfusion.XlsIO;
+@using System.Data;
+@using System.Threading;
+@inject ICustomerViewModel _customerViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject NavigationManager navManager
+@inject IJSRuntime jsRuntime
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="Manage Customers | Synergy Commerce Admin Panel"></Title>
+<SfSpinner @bind-Visible="loading"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0" id="followers"><span class="far fa-user me-2"></span>Customers</h5>
+            <div class="p-0">
+                <a class="btn btn-sm btn-outline-primary me-2" @onclick="ExportCustomers" href="javascript:void();">Export</a>
+                <a class="btn btn-sm btn-primary" href="/people/customer/create">Add Customer</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body min-vh-50 p-0 sf-grid">
+        <ul class="nav nav-tabs text-uppercase my-2">
+            <li class="nav-item"><a class="nav-link @((isAllActive)?"active":"")" id="all-tab" data-bs-toggle="tab" href="javascript:void();" @onclick="@(() => selectTab("tab-all"))" role="tab" aria-controls="tab-all" aria-selected="false">All</a></li>
+            <li class="nav-item"><a class="nav-link @((isNewActive)?"active":"")" id="new-tab" data-bs-toggle="tab" href="javascript:void();" @onclick="@(() => selectTab("tab-new"))" role="tab" aria-controls="tab-new" aria-selected="true">New</a></li>
+            <li class="nav-item"><a class="nav-link @((isRecentActive)?"active":"")" id="recent-tab" data-bs-toggle="tab" href="javascript:void();" @onclick="@(() => selectTab("tab-recent"))" role="tab" aria-controls="tab-recent" aria-selected="true">Recent</a></li>
+            <li class="nav-item"><a class="nav-link @((isBannedActive)?"active":"")" id="banned-tab" data-bs-toggle="tab" href="javascript:void();" @onclick="@(() => selectTab("tab-banned"))" role="tab" aria-controls="tab-banned" aria-selected="true">Banned</a></li>
+        </ul>
+        <div class="row m-3">
+            <div class="col-12 col-md-12">
+                <label class="form-label" for="inputCustomerSearch">Search</label>
+                <div class="input-group mb-3">
+                    <span class="input-group-text bg-white"><span class="far fa-search"></span></span>
+                    <input id="inputCustomerSearch" type="text" class="form-control" @bind="@searchText" @oninput="SearchBusinessCustomersAsync" placeholder="Search Customers" aria-label="Search Customers" />
+                </div>
+            </div>
+        </div>
+
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@customers" AllowPaging="true" EnableVirtualization="true" class="border-x-0">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridColumns>
+                    <GridColumn HeaderText="Last Name" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="80px">
+                        <Template>
+                            @{
+                                <a href="people/customers/@($"{(context as CustomersViewModel).UserGUID}")">@($"{(context as CustomersViewModel).LastName}")</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(CustomersViewModel.FirstName) HeaderText="First Name" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="60px" />
+                    <GridColumn HeaderText="Email" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="120px">
+                        <Template>
+                            @{
+                                <a href="mailto:@($"{(context as CustomersViewModel).Email}")">@($"{(context as CustomersViewModel).Email}")</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(CustomersViewModel.CellPhone) HeaderText="Phone" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="60px" />
+                    <GridColumn Field=@nameof(CustomersViewModel.FormattedLoginDate) HeaderText="Last Login" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="80px" />
+                    <GridColumn Field=@nameof(CustomersViewModel.Location) HeaderText="Location" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="100px" />
+                </GridColumns>
+            </SfGrid>
+        </div>
+
+    </div>
+
+</div>
+
+@code
+{
+    private List<CustomersViewModel> customers = new List<CustomersViewModel>();
+    private List<CustomersViewModel> newCustomers = new List<CustomersViewModel>();
+    private List<CustomersViewModel> customerList = new List<CustomersViewModel>();
+    private List<CustomersViewModel> allCustomers = new List<CustomersViewModel>();
+    private List<CustomersViewModel> recentCustomers = new List<CustomersViewModel>();
+    private List<CustomersViewModel> bannedCustomers = new List<CustomersViewModel>();
+    private List<ExportCustomerModel> exportCustomers = new List<ExportCustomerModel>();
+    private string selectedNavTab = "tab-all";
+    Member currentMember = new Member();
+    public string searchText;
+    string Height = "650px";
+    private bool isAllActive { get; set; } = true;
+    private bool isNewActive { get; set; }
+    private bool isRecentActive { get; set; }
+    private bool isBannedActive { get; set; }
+    private bool loading = false;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        loading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        await GetAllCustomers();
+        var uri = navManager.ToAbsoluteUri(navManager.Uri);
+        StringValues dateRange;
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("NewCustomers", out dateRange))
+        {
+            var endDate = DateTime.Now;
+            var startDate = endDate.Date;
+            var getDateRanges = DateTimeHelper.GetDateRange(DateRange.LastSevenDays);
+            var getEnumVal = (DateRange)Enum.Parse(typeof(DateRange), dateRange.ToString());
+            switch (getEnumVal)
+            {
+                case (DateRange.Today):
+                    getDateRanges = DateTimeHelper.GetDateRange(DateRange.Today);
+                    endDate = getDateRanges.enddate;
+                    startDate = getDateRanges.startDate;
+                    break;
+                case (DateRange.LastSevenDays):
+                    endDate = getDateRanges.enddate;
+                    startDate = getDateRanges.startDate;
+                    break;
+                case (DateRange.LastThirtyDays):
+                    getDateRanges = DateTimeHelper.GetDateRange(DateRange.LastThirtyDays);
+                    endDate = getDateRanges.enddate;
+                    startDate = getDateRanges.startDate;
+                    break;
+                case (DateRange.LastTenDays):
+                    getDateRanges = DateTimeHelper.GetDateRange(DateRange.LastTenDays);
+                    endDate = getDateRanges.enddate;
+                    startDate = getDateRanges.startDate;
+                    break;
+                case (DateRange.LastMonth):
+                    getDateRanges = DateTimeHelper.GetDateRange(DateRange.LastMonth);
+                    endDate = getDateRanges.enddate;
+                    startDate = getDateRanges.startDate;
+                    break;
+                case (DateRange.ThisMonth):
+                    getDateRanges = DateTimeHelper.GetDateRange(DateRange.ThisMonth);
+                    endDate = getDateRanges.enddate;
+                    startDate = getDateRanges.startDate;
+                    break;
+            }
+            newCustomers = allCustomers.Where(x => x.CreatedDate >= startDate && x.CreatedDate <= endDate).ToList();
+            customers = newCustomers;
+            isAllActive = false;
+            isNewActive = true;
+        }
+        else
+        {
+            customers = allCustomers;
+        }
+        StateHasChanged();
+        loading = false;
+    }
+
+    private async Task GetNewCustomers()
+    {
+        var response = await _customerViewModel.GetLatestBusinessCustomers(currentMember.Id, 50);
+        if (response.success)
+        {
+            newCustomers = response.data;
+            StateHasChanged();
+        }
+    }
+
+    private async Task GetAllCustomers()
+    {
+        var response = await _customerViewModel.GetLatestBusinessCustomers(currentMember.Id, 0);
+        if (response.success)
+        {
+            allCustomers = response.data;
+        }
+        StateHasChanged();
+    }
+
+    private async Task GetRecentCustomers()
+    {
+        var response = await _customerViewModel.GetRecentBusinessCustomers(currentMember.Id);
+        if (response.success)
+        {
+            recentCustomers = response.data;
+        }
+        StateHasChanged();
+    }
+
+    private void SearchBusinessCustomersAsync(ChangeEventArgs eventArgs)
+    {
+       searchText = eventArgs.Value == null ? string.Empty : eventArgs.Value.ToString();
+      if (!string.IsNullOrEmpty(searchText) && searchText.Length > 2)
+        {
+            var searchKeyWord = searchText.ToLower();
+            loading = true;
+            if (selectedNavTab == "tab-new")
+            {
+                customers = newCustomers.Where(x => ((x.FirstName?.ToLower().Contains(searchKeyWord) ?? false) || (x.LastName?.ToLower().Contains(searchKeyWord) ?? false) || (x.Email?.ToLower().Contains(searchKeyWord) ?? false) || (x.HomePhone?.Contains(searchKeyWord) ?? false) || (x.CellPhone?.Contains(searchKeyWord) ?? false))).ToList();
+            }
+            else if (selectedNavTab == "tab-recent")
+            {
+                customers = recentCustomers.Where(x => ((x.FirstName?.ToLower().Contains(searchKeyWord) ?? false) || (x.LastName?.ToLower().Contains(searchKeyWord) ?? false) || (x.Email?.ToLower().Contains(searchKeyWord) ?? false) || (x.HomePhone?.Contains(searchKeyWord) ?? false) || (x.CellPhone?.Contains(searchKeyWord) ?? false))).ToList();
+            }
+            else if (selectedNavTab == "tab-all")
+            {
+                customers = allCustomers.Where(x => ((x.FirstName?.ToLower().Contains(searchKeyWord) ?? false) ||( x.LastName?.ToLower().Contains(searchKeyWord) ?? false )|| (x.Email?.ToLower().Contains(searchKeyWord) ?? false) || (x.HomePhone?.Contains(searchKeyWord) ?? false) || (x.CellPhone?.Contains(searchKeyWord) ?? false))).ToList();
+            }
+            else if (selectedNavTab == "tab-banned")
+            {
+                customers = bannedCustomers.Where(x => ((x.FirstName?.ToLower().Contains(searchKeyWord) ?? false) || (x.LastName?.ToLower().Contains(searchKeyWord) ?? false) || (x.Email?.ToLower().Contains(searchKeyWord) ?? false) || (x.HomePhone?.Contains(searchKeyWord) ?? false) || (x.CellPhone?.Contains(searchKeyWord) ?? false))).ToList();
+            }
+            loading = false;
+
+        }
+        else
+        {
+            if (selectedNavTab == "tab-new")
+            {
+                customers = newCustomers;
+            }
+            else if (selectedNavTab == "tab-recent")
+            {
+                customers = recentCustomers;
+            }
+            else if (selectedNavTab == "tab-all")
+            {
+                customers = allCustomers;
+            }
+            else if (selectedNavTab == "tab-banned")
+            {
+                customers = bannedCustomers;
+            }
+        }
+        StateHasChanged();
+    }
+
+    private async void selectTab(string selectedTab)
+    {
+        selectedNavTab = selectedTab;
+        if (selectedTab == "tab-new")
+        {
+            if (newCustomers.Count > 0)
+            {
+                customers = newCustomers;
+            }
+            else
+            {
+                await GetNewCustomers();
+                customers = newCustomers;
+            }
+        }
+        else if (selectedTab == "tab-recent")
+        {
+            if (recentCustomers.Count > 0)
+            {
+                customers = recentCustomers;
+            }
+            else
+            {
+                await GetRecentCustomers();
+                customers = recentCustomers;
+            }
+        }
+        else if (selectedTab == "tab-all")
+        {
+            customers = allCustomers;
+        }
+        else if (selectedTab == "tab-banned")
+        {
+            customers = bannedCustomers;
+        }
+        StateHasChanged();
+    }
+
+    private async Task ExportCustomers()
+    {
+        loading = true;
+        var exportBusinessCustomersResponse = await _customerViewModel.ExportBusinessCustomers(currentMember.Id, selectedNavTab);
+        if (exportBusinessCustomersResponse.success)
+        {
+            exportCustomers = exportBusinessCustomersResponse.data;
+            //Create an instance of ExcelEngine.
+            using (ExcelEngine excelEngine = new ExcelEngine())
+            {
+                IApplication application = excelEngine.Excel;
+                application.DefaultVersion = ExcelVersion.Xlsx;
+
+                //Create a workbook.
+                IWorkbook workbook = application.Workbooks.Create(1);
+                IWorksheet worksheet = workbook.Worksheets[0];
+
+                DataTable table = BindDataTable();
+
+                //Export data from DataTable to Excel worksheet.
+                worksheet.ImportDataTable(table, true, 1, 1);
+
+                worksheet.UsedRange.AutofitColumns();
+                IStyle headerStyle = workbook.Styles.Add("HeaderStyle");
+                headerStyle.Font.Bold = true;
+                worksheet.SetDefaultRowStyle(1, headerStyle);
+                worksheet.UsedRange.HorizontalAlignment = ExcelHAlign.HAlignLeft;
+
+                //Save the document as a stream.
+                using (MemoryStream stream = new MemoryStream())
+                {
+                    //Save the created Excel document to MemoryStream.
+                    workbook.SaveAs(stream);
+                    await jsRuntime.InvokeAsync<object>(
+                           "fileSaveAs",
+                            "Customers.xlsx",
+                           Convert.ToBase64String(stream.ToArray()));
+                }
+            }
+        }
+        else
+        {
+            toastService.ShowToast(exportBusinessCustomersResponse.error_info.extra_info, ToastLevel.Error);
+        }
+        loading = false;
+        StateHasChanged();
+    }
+
+    private DataTable BindDataTable()
+    {
+        DataTable customers = new DataTable();
+
+        customers.Columns.Add("Last Name");
+        customers.Columns.Add("First Name");
+        customers.Columns.Add("Email");
+        customers.Columns.Add("Customer Type");
+        customers.Columns.Add("Company");
+        customers.Columns.Add("Date of Birth");
+        customers.Columns.Add("Home Phone");
+        customers.Columns.Add("Mobile Phone");
+        customers.Columns.Add("Billing First Name");
+        customers.Columns.Add("Billing Last Name");
+        customers.Columns.Add("Billing Country");
+        customers.Columns.Add("Billing Address 1");
+        customers.Columns.Add("Billing Address 2");
+        customers.Columns.Add("Billing City");
+        customers.Columns.Add("Billing State");
+        customers.Columns.Add("Billing Zip Code");
+        customers.Columns.Add("Shipping First Name");
+        customers.Columns.Add("Shipping Last Name");
+        customers.Columns.Add("Shipping Country");
+        customers.Columns.Add("Shipping Address 1");
+        customers.Columns.Add("Shipping Address 2");
+        customers.Columns.Add("Shipping City");
+        customers.Columns.Add("Shipping State");
+        customers.Columns.Add("Shipping Zip Code");
+        customers.Columns.Add("Last Login");
+        customers.Columns.Add("UserID");
+        customers.Columns.Add("Customer Since");
+        customers.Columns.Add("Spouse's Name");
+        customers.Columns.Add("Investor Price");
+        customers.Columns.Add("Member Exclusive");
+        customers.Columns.Add("Link to Recipe");
+
+        foreach (var customer in exportCustomers)
+        {
+            CustomBusinessMetaDataModel spouseName = new CustomBusinessMetaDataModel();
+            CustomBusinessMetaDataModel linkToRecipe = new CustomBusinessMetaDataModel();
+            CustomBusinessMetaDataModel investorPrice = new CustomBusinessMetaDataModel();
+            CustomBusinessMetaDataModel memberExclusive = new CustomBusinessMetaDataModel();
+
+            var billingAddress = customer.Address.FirstOrDefault(x => x.IsDefaultBilling);
+            var shippingAddress = customer.Address.FirstOrDefault(x => x.IsDefaultShipping);
+            var customerTypes = customer.CustomerTypes.Select(x => x.CustomerType).ToList();
+
+            if (customer.CustomBusinessMetaDatas.Count > 0)
+            {
+                spouseName = customer.CustomBusinessMetaDatas.Where(x => x.Name == CustomerMetaName.SpouseName).FirstOrDefault() ?? new CustomBusinessMetaDataModel();
+                linkToRecipe = customer.CustomBusinessMetaDatas.Where(x => x.Name == CustomerMetaName.LinkToRecipe).FirstOrDefault() ?? new CustomBusinessMetaDataModel();
+                investorPrice = customer.CustomBusinessMetaDatas.Where(x => x.Name == CustomerMetaName.InvestorPrice).FirstOrDefault() ?? new CustomBusinessMetaDataModel();
+                memberExclusive = customer.CustomBusinessMetaDatas.Where(x => x.Name == CustomerMetaName.MemberExclusive).FirstOrDefault() ?? new CustomBusinessMetaDataModel();
+            }
+
+            customers.Rows.Add(customer.LastName, customer.FirstName, customer.Email, Helper.GetCommaSeparatedStringFromList(customerTypes), customer.Company, customer.FormattedDOB, Helper.GetStringValue(billingAddress?.PhoneFormatted ?? null), customer.CellPhone,
+        Helper.GetStringValue(billingAddress?.FirstName ?? null), Helper.GetStringValue(billingAddress?.LastName ?? null), Helper.GetStringValue(billingAddress?.Country ?? null),
+        Helper.GetStringValue(billingAddress?.Address1 ?? null), Helper.GetStringValue(billingAddress?.Address2 ?? null), Helper.GetStringValue(billingAddress?.City ?? null),
+        Helper.GetStringValue(billingAddress?.State ?? null), Helper.GetStringValue(billingAddress?.ZipCode ?? null), Helper.GetStringValue(shippingAddress?.FirstName ?? null),
+        Helper.GetStringValue(shippingAddress?.LastName ?? null), Helper.GetStringValue(shippingAddress?.Country ?? null), Helper.GetStringValue(shippingAddress?.Address1 ?? null),
+        Helper.GetStringValue(shippingAddress?.Address2 ?? null), Helper.GetStringValue(shippingAddress?.City ?? null), Helper.GetStringValue(shippingAddress?.State ?? null),
+        Helper.GetStringValue(shippingAddress?.ZipCode ?? null), customer.FormattedLoginDate, customer.UserGUID, customer.FormattedMappingDate, spouseName.BusinessMetaDataId != 0 ? spouseName.DefaultValue : string.Empty
+        , investorPrice.BusinessMetaDataId != 0 ? investorPrice.PriceDefaultValue : string.Empty, memberExclusive.BusinessMetaDataId != 0 ? (memberExclusive.SwitchDefaultValue ? "Yes" : "No") : string.Empty
+        , linkToRecipe.BusinessMetaDataId != 0 ? linkToRecipe.DefaultValue : string.Empty);
+        }
+        return customers;
+    }
+}

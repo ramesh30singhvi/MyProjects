@@ -1,0 +1,2311 @@
+﻿@page "/store/products/create/"
+@page "/store/products/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Entities
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.Blazor.Lists
+@using Syncfusion.Blazor.Navigations;
+@using System.Globalization;
+@inject IProductViewModel _productViewModel
+@inject IStoreCollectionViewModel _storeCollectionViewModel
+@inject IDepartmentViewModel _departmentViewModel
+@inject IVendorViewModel _vendorViewModel
+@inject ISettingsViewModel _settingViewModel
+@inject IBusinessViewModel _businessViewModel
+@inject IShippingClassViewModel _shippingClassViewModel
+@inject IBusinessMenuViewModel _businessMenuViewModel
+@inject IProductModifierGroupViewModel _ProductModifierGroupViewModel
+@inject IInventoryViewModel _inventoryViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject NavigationManager _navigationManager
+@inject ToastService toastService
+@attribute [Authorize]
+
+<AuthorizeView>
+	<Authorized>
+		<Title Value="@title"></Title>
+		<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+		@if (!isLoading)
+		{
+
+			<div class="card shadow-none border mb-3">
+				<div class="card-header border-bottom">
+					<div class="row justify-content-between align-items-center">
+						<div class="col-md">
+                            <h5 class="mb-3 mb-md-0"><a href="store/products" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-box-open me-2"></span>@(Id != null ? product.ProductTitle : "Add Product" )</h5>
+						</div>
+						<div class="col-auto">
+							@if (isSaving)
+							{
+								<Loader />
+							}
+							<a class="btn btn-primary" href="javascript:void();" @onclick="() => SaveProductDetail()" hidden="@(isSaving)">Save</a>
+						</div>
+					</div>
+				</div>
+				<div class="card-body">
+
+					<form>
+
+						<div class="row">
+							<div class="col-12 col-md-8">
+								<div class="row">
+									<div class="col-12 col-md-4 d-flex align-items-center">
+										@*<div id="productImageUpload" class="mb-2">
+									<div class="dz-message dropzone-area px-2 py-2">
+									<div class="text-center">
+									<div class="far fa-cloud-upload-alt fa-2x d-block mx-auto"></div>
+									<p><span class="far fa-image fa-lg me-2"></span>Upload your product image</p><p class="fs--1 text-400">Upload a 480 x 400 jpg image with a maximum size of 400KB</p>
+									<p class="fs--1 mb-0">Drag and drop your files here or click to open file loading dialogue...</p>
+									</div>
+									</div>
+									</div>*@
+										<div class="card shadow-none border cover-image w-100 mb-4 mb-md-2">
+											<InputFile id="inputDrop" OnChange="OnInputFileChange" class="opacity-0 w-100 h-100 position-absolute" />
+											<a href="javascript:void();">
+												<img class="card-img-top p-2" src="@(String.IsNullOrEmpty(imgUrl) ?  product.ProductImageURL + "?" + DateTime.Now : imgUrl)" width="300" alt="@product.ProductTitle" hidden="@(string.IsNullOrEmpty(product.ProductImage))">
+												<div class="p-4 text-center" hidden="@(!string.IsNullOrEmpty(product.ProductImage))" ProductTeaser><span class="far fa-image-polaroid text-400 fa-7x m-4"></span></div>
+											</a>
+											<label class="cover-image-file-input d-flex align-items-center" @onclick="() => uploadImage()">
+												<span class="far fa-cloud-upload-alt fa-2x me-2"></span>Change product image
+											</label>
+										</div>
+									</div>
+									<div class="col-12 col-md-8">
+										<div class="mb-3">
+											<label class="form-label" for="inputItemName">Item Name</label>
+											<input id="inputItemName" class="form-control" type="text" @bind="product.ProductTitle" placeholder="Name of Item" />
+										</div>
+										<div class="mb-3">
+											<label class="form-label" for="inputItemTeaser">Teaser</label>
+											<MessageInstruction @ref="mailInstruction" MaxTextCount="512" RowsCount="4" MessageText="@product.ProductTeaser"></MessageInstruction>
+										</div>
+									</div>
+								</div>
+
+								<ul class="nav nav-tabs mt-4" id="productTabs" role="tablist">
+									<li class="nav-item text-uppercase"><a class="nav-link active" id="overview-tab" data-bs-toggle="tab" href="#tab-overview" role="tab" aria-controls="tab-overview" aria-selected="true">Overview</a></li>
+									<li class="nav-item text-uppercase"><a class="nav-link" id="fulfillment-tab" data-bs-toggle="tab" href="#tab-fulfillment" role="tab" aria-controls="tab-fulfillment" aria-selected="false">Fulfillment</a></li>
+									<li class="nav-item text-uppercase"><a class="nav-link" id="inventory-tab" data-bs-toggle="tab" href="#tab-inventory" role="tab" aria-controls="tab-inventory" aria-selected="false">Inventory</a></li>
+									<li class="nav-item text-uppercase"><a class="nav-link" id="metadata-tab" data-bs-toggle="tab" href="#tab-metadata" role="tab" aria-controls="tab-metadata" aria-selected="false">Meta Data</a></li>
+									<li class="nav-item text-uppercase"><a class="nav-link" id="photos-tab" data-bs-toggle="tab" href="#tab-photos" role="tab" aria-controls="tab-photos" aria-selected="false">Images</a></li>
+								</ul>
+								<div class="tab-content border-x border-bottom mb-2" id="productTabContent">
+									<div class="tab-pane fade show active" id="tab-overview" role="tabpanel" aria-labelledby="overview-tab">
+										<div class="p-3">
+											<div class="row g-3 mb-3">
+												@if (productTypes.Count > 0)
+												{
+													<div class="col-12 col-md-6">
+														<label class="form-label" for="selItemType">Item Type</label>
+														<select id="selItemType" class="form-select" aria-label="Match By" value="@product.ProductType" @onchange="@((Microsoft.AspNetCore.Components.ChangeEventArgs args) =>OnChangeProductType(args))">
+
+															@foreach (var item in productTypes)
+															{
+																<option value="@item.Id">@item.TypeName</option>
+															}
+														</select>
+													</div>
+												}
+												<div class="col-12 col-md-6">
+													<label class="form-label" for="selItemUnitType">Unit Type</label>
+													<select id="selItemUnitType" class="form-select" aria-label="Unit Type" @bind="product.VolumeUnit">
+														<option value="1" selected>Per Item</option>
+														<option value="2">Per Gallon</option>
+														<option value="3">Per Liter</option>
+														<option value="4">Per Ounce</option>
+														<option value="5">Per Pound</option>
+														<option value="6">Per Yard</option>
+													</select>
+												</div>
+											</div>
+											<div class="row g-3 mb-3">
+												<div class="col-12 col-md-6">
+													<label class="form-label" for="inputRetailPrice">Retail Price</label>
+													<SfNumericTextBox TValue="decimal" ValidateDecimalOnType="true" Format="c2" Decimals=2 ShowSpinButton="false" @bind-Value=@product.RetailPrice></SfNumericTextBox>
+												</div>
+												<div class="col-12 col-md-6">
+													<label class="form-label" for="inputSalePrice">Sale Price</label>
+													<SfNumericTextBox TValue="decimal" ValidateDecimalOnType="true" Format="c2" Decimals=2 ShowSpinButton="false" @bind-Value=@product.SalePrice></SfNumericTextBox>
+												</div>
+											</div>
+											<div class="row g-3 mb-3">
+												<div class="col-12 col-md-6">
+													<label class="form-label" for="inputCost">Cost</label>
+													<SfNumericTextBox TValue="decimal" ValidateDecimalOnType="true" Format="c2" Decimals=2 ShowSpinButton="false" @bind-Value=@product.CostPrice></SfNumericTextBox>
+												</div>
+												<div class="col-12 col-md-6">
+													<label class="form-label" for="inputClubPrice">Club Price</label>
+													<SfNumericTextBox TValue="decimal" ValidateDecimalOnType="true" Format="c2" Decimals=2 ShowSpinButton="false" @bind-Value=@product.ClubPrice></SfNumericTextBox>
+												</div>
+											</div>
+											<div class="row g-3 mb-3">
+												<div class="col-12 col-md-6">
+													<div class="form-check">
+														<input class="form-check-input" type="checkbox" id="chkExcludefromDiscounts" @bind="product.ExcludeDiscounts">
+														<label class="form-check-label" for="chkExcludefromDiscounts">
+															Exclude from Discounts
+														</label>
+													</div>
+												</div>
+												<div class="col-12 col-md-6">
+												</div>
+											</div>
+											<div class="row g-3 mb-3">
+												<div class="col-12 col-md-6">
+													<label class="form-label" for="selVolumeType">Volume Type</label>
+													<select id="selVolumeType" class="form-select" aria-label="Volume Type" @bind="volumeType">
+														<option value="None" selected>None</option>
+														<option value="mL">mL</option>
+														<option value="L">L</option>
+														<option value="gal">gal</option>
+														<option value="oz">oz</option>
+													</select>
+												</div>
+												@if (volumeType != "None")
+												{
+													<div class="col-12 col-md-6">
+														<label class="form-label" for="inputItemVolume">Volume</label>
+														<input id="inputItemVolume" class="form-control" type="text" @bind="product.VolumeValue" placeholder="Volume" />
+													</div>
+												}
+											</div>
+											<div class="mb-3">
+												<label class="form-label" for="inputItemDescription">Item Description</label>
+												<MessageInstruction @ref="mailInstruction1" MaxTextCount="5000" RowsCount="5" MessageText="@product.ProductDescription"></MessageInstruction>
+											</div>
+											<div class="row g-3 mb-3">
+												<div class="col-12 col-md-6">
+													<label class="form-label" for="inputItemName">SKU</label>
+													<input id="inputItemSku" class="form-control" type="text" @bind="product.ProductSku" placeholder="Item Sku" />
+												</div>
+												<div class="col-12 col-md-6">
+													<div class="d-flex justify-content-between">
+														<label class="form-label" for="inputItemUPC">Barcode</label>
+														<a class="fs--1" href="javascript:void(0)" @onclick="@(() => GenerateBarCode())" hidden="@(string.IsNullOrEmpty(upc))"><span class="far fa-barcode me-1"></span>Show Barcode</a>
+													</div>
+													<input id="inputItemUPC" class="form-control" @bind-value="@upc" type="text" placeholder="UPC" />
+												</div>
+											</div>
+										</div>
+										<div class="card shadow-none border-top">
+											<div class="card-header border-bottom">
+												<div class="row justify-content-between align-items-center">
+													<div class="col">
+														<h5 class="mb-3 mb-md-0">Modifiers</h5>
+													</div>
+													<div class="col-auto"><a class="btn btn-sm btn-outline-primary" href="javascript:void();" @onclick="@OpenManageModModal">Add Modifier</a></div>
+												</div>
+											</div>
+											<div class="card-body" hidden="@(savedModifierDataList.Count <= 0)">
+												<div class="sf-grid my-3">
+													<SfListBox TValue="string[]" DataSource="@savedModifierDataList" TItem="PlaceholderData" AllowDragAndDrop="true" @ref="ListBoxObj" CssClass="rounded cp-list cp-no-selection">
+														<ListBoxFieldSettings Text="ModifierGroupName" />
+														<ListBoxEvents TValue="string[]" Dropped="SaveModifierSortOrder" TItem="PlaceholderData"></ListBoxEvents>
+														<ListBoxTemplates TItem="PlaceholderData">
+															<ItemTemplate Context="modContext">
+																<div class="d-flex justify-content-start align-items-center">
+																	<span class="far fa-sort me-2"></span>
+																	<div class="me-auto">
+																		<h6>@((modContext as PlaceholderData).ModifierGroupName)</h6>
+																		<p class="text-400 mb-0">@((modContext as PlaceholderData).Modifiers)</p>
+																	</div>
+																	<a href="javascript:void();" @onclick="() => OpenModModal((modContext as PlaceholderData))" class="btn btn-sm btn-link mx-4">Customize</a>
+																	<a href="javascript:void();" @onclick="@(() =>{openDeleteDialog2= true; })" class="text-dark"><span class="far fa-trash-alt"></span></a>
+																	<DeleteConfirmation OpenDeleteDialog="openDeleteDialog2" OnDialogClose="DialogClose2" OnDeleteConfirmed="()=>RemoveModifier((modContext as PlaceholderData))"></DeleteConfirmation>
+																</div>
+															</ItemTemplate>
+														</ListBoxTemplates>
+													</SfListBox>
+												</div>
+											</div>
+										</div>
+									</div>
+									<div class="tab-pane fade" id="tab-fulfillment" role="tabpanel" aria-labelledby="fulfillment-tab">
+										<div class="p-3">
+											<div class="row g-3 mb-3">
+												<div class="col-12 col-md-6">
+													<div class="form-check">
+														<input class="form-check-input" type="checkbox" id="chkRequireShipping" @bind-value="@isRequireShipping" checked="@isRequireShipping">
+														<label class="form-check-label" for="chkRequireShipping">
+															Customer Pickup Only
+														</label>
+														<p>
+                                                            @((isRequireShipping)? "Item cannot be shipped": "Item can only be shipped when enabled.")
+														</p>
+													</div>
+												</div>
+												@if (!isRequireShipping)
+												{
+													<div class="col-12 col-md-6">
+														<div class="row g-2">
+															<label class="form-label mb-0">Item Dimensions</label>
+															<div class="col-4">
+																<input id="inputItemLength" class="form-control" type="text" placeholder="Length" @bind="product.DimensionsLength" aria-label="Item Length" />
+															</div>
+															<div class="col-4">
+																<input id="inputItemWidth" type="text" class="form-control" placeholder="Width" @bind="product.DimensionsWidth" aria-label="Item Width">
+															</div>
+															<div class="col-4">
+																<input id="intputItemHeight" type="text" class="form-control" placeholder="Height" @bind="product.DimensionsHeight" aria-label="Item Height">
+															</div>
+														</div>
+													</div>
+												}
+
+											</div>
+											@if (!isRequireShipping)
+											{
+												<div class="row g-3 mb-3">
+													<div class="col-12 col-md-6">
+														<label class="form-label" for="selShippingClass">Shipping Class</label>
+														<SfDropDownList TValue="int" TItem="ShippingClassModel" Placeholder="Select Shipping Class" @bind-Value="@product.ShippingClass" DataSource="@shippingClasses">
+															<DropDownListFieldSettings Value="Id" Text="Class"></DropDownListFieldSettings>
+														</SfDropDownList>
+													</div>
+													<div class="col-12 col-md-6">
+														<div class="row g-2">
+															<div class="col-8">
+																<label class="form-label" for="inputItemWeight">Item Weight</label>
+																<input id="inputItemWeight" class="form-control" type="text" @bind="product.WeightValue" placeholder="Weight" />
+															</div>
+															<div class="col-4 d-flex align-items-end">
+																<label class="visually-hidden" for="selItemWeightType">Weight Type</label>
+																<select id="selItemWeightType" class="form-select" aria-label="Weight Type" @bind="product.WeightUnit">
+																	<option value="0" selected>lb</option>
+																	<option value="1">oz</option>
+																	<option value="2">kg</option>
+																	<option value="3">g</option>
+																</select>
+															</div>
+														</div>
+													</div>
+												</div>
+
+												<div class="mb-3">
+													<label class="form-label" for="inputFulfillmentService">Fulfillment Service</label>
+													<input id="inputFulfillmentService" class="form-control" type="text" placeholder="Optional" />
+												</div>
+											}
+										</div>
+										@if (isComplianceSettingsSaved && !string.IsNullOrEmpty(complianceSettingName) && complianceSettingName == ThirdPartyType.ShipCompliant.ToString())
+										{
+											<div Id="integrationShipCompliant" class="card shadow-none border-top">
+												<div class="card-header border-bottom py-2">
+													<div class="d-flex justify-content-start align-items-center">
+														<img src="https://cdn.cellarpass.com/static/images/partners/shipcompliant_logo.png" class="rounded me-1" width="50" alt="ShipCompliant" /><h5 class="mb-0">ShipCompliant</h5>
+													</div>
+												</div>
+												<div class="card-body">
+													<div class="row g-3 mb-3">
+														<div class="col-12 col-md-6">
+															<label class="form-label" for="inputComplianceBrandKey">Brand Key</label>
+															<input id="inputComplianceBrandKey" class="form-control" @bind-value="@metaBrandKey.MetaValue" type="text" placeholder="Compliance Brand Key" />
+														</div>
+														<div class="col-12 col-md-6">
+															<label class="form-label" for="inputComplianceProductKey">Product Key</label>
+															<input id="inputComplianceProductKey" class="form-control" @bind-value="@metaProductKey.MetaValue" type="text" placeholder="Compliance Product Key" />
+														</div>
+													</div>
+												</div>
+											</div>
+										}
+
+									</div>
+									<div class="tab-pane p-3 fade" id="tab-inventory" role="tabpanel" aria-labelledby="inventory-tab">
+
+										<div class="row mb-3 g-3">
+											<div class="col-12">
+												<label class="form-label" for="selItemInventoryMode">Inventory Mode</label>
+												<SfDropDownList TValue="int" Value="Convert.ToInt32(product.TrackInventory)" TItem="DropdownBindingModel" DataSource="@inventoryModes">
+													<DropDownListFieldSettings Value="Key" Text="Value"></DropDownListFieldSettings>
+													<DropDownListEvents ValueChange="OnInventoryModeDropdownChange" TItem="DropdownBindingModel" TValue="int"></DropDownListEvents>
+												</SfDropDownList>
+											</div>
+										</div>
+										<div class="row mb-3 g-3">
+											@{
+												if (product.ProductInventory != null && product.ProductInventory.Any())
+												{
+													foreach (var inventoryLoc in product.ProductInventory)
+													{
+														<div class="col-12 col-md-6">
+                                                            <label class="form-label" for="inputPrimaryQty">@((product.ProductInventory.Count == 1)?"Primary":inventoryLoc.LocationName)</label>
+															<input id="inputPrimaryQty" class="form-control" type="number" @bind-value="@inventoryLoc.AvailableQty" placeholder="Available Quantity" />
+														</div>
+														<div class="col-12 col-md-6">
+															<label class="form-label" for="inputPrimaryLowLimit">Low Threshold</label>
+															<input id="inputPrimaryLowLimit" class="form-control" type="number" @bind-value="@inventoryLoc.AlertQty" placeholder="0" />
+														</div>
+													}
+												}
+											}
+										</div>
+
+										<div class="row mb-3 g-3">
+											<div class="col-12">
+												<label class="form-label" for="selBackorderMode">Backorder Mode</label>
+												<SfDropDownList TValue="int" Value="Convert.ToInt32(product.AvailableWhenOutofStock)" TItem="DropdownBindingModel" DataSource="@backOrderModes">
+													<DropDownListFieldSettings Value="Key" Text="Value"></DropDownListFieldSettings>
+													<DropDownListEvents ValueChange="OnBackOrderModeChange" TItem="DropdownBindingModel" TValue="int"></DropDownListEvents>
+												</SfDropDownList>
+											</div>
+											<div class="col-12">
+												<label class="form-label" for="inputTrackStockMessage">Backordered Message</label>
+												<MessageInstruction @ref="mailInstruction2" MaxTextCount="512" RowsCount="4" MessageText="@product.BackorderedMessage"></MessageInstruction>
+											</div>
+										</div>
+
+									</div>
+									<div class="tab-pane fade" id="tab-metadata" role="tabpanel" aria-labelledby="metadata-tab">
+										<div class="p-3">
+											<div class="mb-3">
+												<label class="form-label" for="inputTags">Tags</label>
+												<SfMultiSelect Id="tags-multiselect" @bind-Value="@tags" TValue="List<string>" TItem="ProductTagModel" Placeholder="Select Tags" AllowCustomValue=true DataSource="@product.Tags">
+													<MultiSelectFieldSettings Text="Value" Value="Value"></MultiSelectFieldSettings>
+												</SfMultiSelect>
+											</div>
+											<div id="customMetaData">
+												@if (product.CustomBusinessMetaDatas != null)
+												{
+                                                    <CustomMetaData customBusinessMetaData="@product.CustomBusinessMetaDatas" isReadOnly="false"/>
+												}
+												@*<div class="row">
+											@foreach (var item in product.CustomBusinessMetaDatas)
+											{
+											<div class="col-12 col-md-6 mb-3" hidden="@(item.ContentType != (int)MetaDataContentType.Choice)">
+											<label class="form-label" for="metaDropdownItem">@item.Name</label>
+											@if (item.MetaDropdownItemData.Count > 0)
+											{
+											<select class="form-select" @bind="@item.DefaultValue">
+											@foreach (var subItem in item.MetaDropdownItemData)
+											{
+											<option value="@subItem.Choice">@subItem.Choice</option>
+											}
+											</select>
+											}
+											</div>
+											<div class="col-12 col-md-6 mb-3" hidden="@(item.ContentType != (int)MetaDataContentType.Date)">
+											<label class="form-label" for="dpDefaultDate">@item.Name</label>
+											<SfDatePicker id="dpDefaultDate" TValue="DateTime?" @bind-Value="@item.DateDefaultValue" Placeholder="Choose a Date" ShowClearButton="true"></SfDatePicker>
+											</div>
+											<div class="col-12 col-md-6 mb-3" hidden="@(item.ContentType != (int)MetaDataContentType.Url)">
+											<label class="form-label" for="inputURL">@item.Name</label>
+											<SfTextBox class="form-control" @bind-value="item.DefaultValue"></SfTextBox>
+											</div>
+											<div class="col-12 col-md-6 mb-3" hidden="@(item.ContentType != (int)MetaDataContentType.Text)">
+											<label class="form-label" for="inputTextBox">@item.Name</label>
+											<SfTextBox class="form-control" @bind-value="item.DefaultValue"></SfTextBox>
+											</div>
+											<div class="col-12 col-md-6 mb-3" hidden="@(item.ContentType != (int)MetaDataContentType.Boolean)">
+											<label class="form-label" for="inputSwitch">@item.Name</label>
+											<div class="form-check form-switch">
+											<input class="form-check-input" type="checkbox" id="inputSwitch" @bind-value="@item.SwitchDefaultValue" checked="@item.SwitchDefaultValue">
+											</div>
+											</div>
+											<div class="col-12 col-md-6 mb-3" hidden="@(item.ContentType != (int)MetaDataContentType.Price)">
+											<label class="form-label" for="numPrice">@item.Name</label>
+											<SfNumericTextBox id="numPrice" TValue="decimal?" Format="c2" @bind-Value="@item.PriceDefaultValue"></SfNumericTextBox>
+											</div>
+											}
+											</div>*@
+											</div>
+										</div>
+										@if (isECommerceSettingsSaved && !string.IsNullOrEmpty(eCommerceSettingName) && eCommerceSettingName == "Commerce7")
+										{
+											<div id="integrationCommerce7" class="card shadow-none border-top">
+												<div class="card-header border-bottom py-2">
+													<div class="d-flex justify-content-start align-items-center">
+														<img src="https://cdn.cellarpass.com/static/images/partners/commerce7_logo.png" class="rounded me-1" alt="Commerce7" width="40"><h5 class="mb-0">Commerce7</h5>
+													</div>
+												</div>
+												<div class="card-body" hidden="@(savedModifierDataList.Count <= 0)">
+													<div class="row g-3 mb-3">
+														<div class="col-12 col-md-6">
+															<label class="form-label" for="inputItemName">C7 Sku</label>
+															<input id="inputC7Sku" @bind-value="itemSKU.MetaValue" class="form-control" type="text" placeholder="Item Sku" />
+														</div>
+														<div class="col-12 col-md-6">
+															<label class="form-label" for="selTaxType">Tax Type</label>
+															<div hidden="@(!product.ChargeSalesTax)">
+																<select id="selTaxType" class="form-select" @bind="@taxType.MetaValue">
+																	@foreach (var item in taxTypes)
+																	{
+																		<option value="@item.MetaValue1">@item.MetaValue1</option>
+																	}
+																</select>
+															</div>
+															<p hidden="@(product.ChargeSalesTax)">Non Taxable</p>
+														</div>
+													</div>
+													<div class="row g-3 mb-3" hidden="@(!product.ChargeSalesTax)">
+														<div class="col-12 col-md-6">
+															<label class="form-label" for="selItemType">Item Type</label>
+															<select id="selItemType" class="form-select" @bind="@itemType.MetaValue">
+																@foreach (var item in itemTypes)
+																{
+																	<option value="@item.MetaValue1">@item.MetaValue1</option>
+																}
+															</select>
+														</div>
+														<div class="col-12 col-md-6">
+															<label class="form-label" for="selItemType">Category</label>
+															@if (string.IsNullOrWhiteSpace(categoryType.MetaValue))
+															{
+																categoryType.MetaValue = "None";
+															}
+															<select id="selCategory" class="form-select" @bind="@categoryType.MetaValue">
+																@foreach (var category in categoryTypes)
+																{
+																	<option value="@category.MetaValue1">@category.MetaValue1</option>
+																}
+															</select>
+														</div>
+													</div>
+												</div>
+											</div>
+										}
+									</div>
+									<div class="tab-pane p-3 fade" id="tab-photos" role="tabpanel" aria-labelledby="photos-tab">
+										<div class="row g-2">
+											@if (product.Images != null && product.Images.Count > 0)
+											{
+												foreach (var item in product.Images.Select((value, i) => new { i, value }))
+												{
+													<div class="col-12 col-md-4">
+														<div class="hoverbox h-100 rounded-3 border text-center">
+															<img class="img-fluid h-100" src="@item.value.GalleryImage" alt="Product Gallery Image" />
+															<div class="light hoverbox-content bg-dark p-2 flex-center">
+																<div class="d-flex align-items-center flex-column">
+																	<p class="text-white">Change Product Image</p>
+																	<a class="btn btn-outline-light btn-sm my-4" href="javascript:void(0);" @onclick="()=> ChangeProductGalleryImage(item.value.Id, item.i+1)"><span class="far fa-cloud-upload-alt me-2"></span>Upload</a>
+																	<a class="text-white" href="javascript:void(0)" @onclick="()=>DeleteDialogOpen(item.value.Id)"><span class="fa-regular fa-trash-can"></span></a>
+																</div>
+															</div>
+														</div>
+													</div>
+												}
+											}
+											<div class="col-12 col-md-4 d-flex justify-content-center align-items-center">
+												@*<button class="btn btn-outline-primary">Add Image</button>*@
+												<a class="btn btn-outline-primary" href="javascript:void();" @onclick="() => UploadProductGalleryImage()">Add Image</a>
+											</div>
+										</div>
+									</div>
+								</div>
+
+							</div>
+							<div class="col-12 col-md-4">
+								<div class="card shadow-none border mb-2">
+									<div class="card-body">
+										<div class="mb-3">
+											<label class="form-label" for="selItemtStatus">Item Status</label>
+											<select id="selItemtStatus" class="form-select" aria-label="Match Type" @bind="product.ProductStatus">
+												<option value="1" selected>Active- Public</option>
+												<option value="2">Active- Private</option>
+												<option value="0">Draft</option>
+												<option value="3">Inactive</option>
+											</select>
+										</div>
+										<div class="mb-3">
+											<label class="form-label" for="selItemtStatus">Applicable Channels</label>
+											<div class="d-flex justify-content-between px-card py-2 border-200">
+												<div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchWeb">Web</label></div>
+												<div class="d-flex align-items-center">
+													<div class="form-check form-switch"><input class="form-check-input" id="switchWeb" type="checkbox" checked="@isWebChannel" @bind-value="@isWebChannel"></div>
+												</div>
+											</div>
+											<div class="d-flex justify-content-between border-top px-card  py-2 border-200">
+												<div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchPOS">POS</label></div>
+												<div class="d-flex align-items-center">
+													<div class="form-check form-switch"><input class="form-check-input" id="switchPOS" type="checkbox" checked="@isPosChannel" @bind-value="@isPosChannel"></div>
+												</div>
+											</div>
+											<div class="d-flex justify-content-between border-top px-card py-2 border-200">
+												<div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchClub">Club</label></div>
+												<div class="d-flex align-items-center">
+													<div class="form-check form-switch"><input class="form-check-input" id="switchClub" type="checkbox" checked="@isClubChannel" @bind-value="@isClubChannel"></div>
+												</div>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="card shadow-none border mb-2">
+									<div class="card-body">
+
+										@if (renderInplace)
+										{
+											<div class="mb-3">
+												<label class="form-label" for="selProductTemplate">Product Template</label>
+												<SfInPlaceEditor Mode="RenderMode.Popup" @bind-Value="@template.MetaValue" TValue="string">
+													<EditorComponent>
+														<SfDropDownList TValue="string" @bind-Value="@template.MetaValue" TItem="ProductTemplatesModel" DataSource="@productTemplates">
+															<DropDownListFieldSettings Value="TemplateName" Text="TemplateName"></DropDownListFieldSettings>
+														</SfDropDownList>
+													</EditorComponent>
+												</SfInPlaceEditor>
+											</div>
+											<div class="mb-3">
+												<label class="form-label" for="selDepartment">Department</label>
+												<SfInPlaceEditor Mode="RenderMode.Popup" @bind-Value="@departmentName" TValue="string">
+													<EditorComponent>
+														<SfDropDownList @bind-Value="@department.Description" TValue="string" TItem="BusinessDepartment" DataSource="@departments">
+															<DropDownListEvents TItem="BusinessDepartment" TValue="string" ValueChange="@(() => selectType("Department"))"></DropDownListEvents>
+															<DropDownListFieldSettings Value="DepartmentName" Text="DepartmentName"></DropDownListFieldSettings>
+														</SfDropDownList>
+													</EditorComponent>
+													<InPlaceEditorEvents TValue="string" BeginEdit="editDepartment"></InPlaceEditorEvents>
+												</SfInPlaceEditor>
+											</div>
+											<div class="mb-3">
+												<label class="form-label" for="selTaxClass">Tax Class</label>
+												<SfInPlaceEditor Mode="RenderMode.Popup" @bind-Value="@taxClass" TValue="string">
+													<EditorComponent>
+														<SfDropDownList @bind-Value="@selectedTaxClass.Description" TValue="string" TItem="TaxClassModel" DataSource="@TaxClassesList">
+															<DropDownListEvents TItem="TaxClassModel" TValue="string" ValueChange="@(() => selectType("TaxClass"))"></DropDownListEvents>
+															<DropDownListFieldSettings Value="TaxClassName" Text="TaxClassName"></DropDownListFieldSettings>
+														</SfDropDownList>
+													</EditorComponent>
+													<InPlaceEditorEvents TValue="string" BeginEdit="editTaxClass"></InPlaceEditorEvents>
+												</SfInPlaceEditor>
+											</div>
+											<div class="mb-3">
+												<label class="form-label" for="selVendor">Vendor</label>
+												<SfInPlaceEditor Mode="RenderMode.Popup" @bind-Value="@vendorName" TValue="string">
+													<EditorComponent>
+														<SfDropDownList @bind-Value="@product.VendorName" TValue="string" TItem="BusinessVendor" DataSource="@vendors">
+															<DropDownListEvents TItem="BusinessVendor" TValue="string" ValueChange="@(() => selectType("Vendor"))"></DropDownListEvents>
+															<DropDownListFieldSettings Value="VendorCompany" Text="VendorCompany"></DropDownListFieldSettings>
+														</SfDropDownList>
+													</EditorComponent>
+													<InPlaceEditorEvents TValue="string" BeginEdit="editVendor"></InPlaceEditorEvents>
+												</SfInPlaceEditor>
+											</div>
+										}
+
+										<div class="mb-3">
+											<label class="form-label">Menus</label>
+											<div class="e-control e-inplaceeditor e-lib">
+												<div class="e-editable-value-container " title="Click to edit">
+													@{
+                                                        var checkProductMenuMapping = menuDataList.Any(x => x.Child.Any(y => y.IsChecked !=null && y.IsChecked==true));
+													}
+                                                    <span class="e-editable-value"><a href="javascript:void();" @onclick="() => OpenMenuModal()" class="text-900">@(checkProductMenuMapping? "Selected":"Select")</a></span>
+												</div>
+											</div>
+
+										</div>
+									</div>
+								</div>
+								<div class="card shadow-none border mb-2">
+									<div class="card-body">
+
+										@if (renderInplace)
+										{
+											<div class="mb-3">
+												<label class="form-label" for="inputCollections">Collections</label>
+												<SfMultiSelect Id="collections-multiselect" @bind-Value="@product.Collections" TValue="List<string>" TItem="StoreCollectionBase" Placeholder="Select Collections" DataSource="@collections">
+													<MultiSelectFieldSettings Text="CollectionName" Value="CollectionName"></MultiSelectFieldSettings>
+												</SfMultiSelect>
+											</div>
+										}
+
+									</div>
+								</div>
+								<div class="card shadow-none border mb-2">
+
+									<div class="card-body">
+										<div class="mb-3">
+											<label class="form-label" for="inputCustomField1">Purchase URL</label>
+											<div class="input-group mb-3">
+												<input id="inputPurchaseURL" class="form-control" type="text" @bind="purchaseURL" disabled />
+												<Clipboard Content="@purchaseURL" />
+											</div>
+										</div>
+										@if (@context.User.IsInRole("System Administrator"))
+										{
+											<div class="mb-3">
+												<label class="form-label" for="inputCustomField2">External Purchase URL</label>
+												<div class="input-group mb-3">
+													<input id="inputExternalPurchaseURL" class="form-control" type="text" @bind="@externalPurchaseUrl.MetaValue" placeholder="External Purchase URL" />
+													<Clipboard Content="@externalPurchaseUrl.MetaValue" />
+												</div>
+											</div>
+										}
+									</div>
+								</div>
+							</div>
+						</div>
+
+					</form>
+
+				</div>
+			</div>
+
+			<div class="card shadow-none border">
+				<div class="card-header border-bottom">
+					<div class="row justify-content-between">
+						<div class="col-md-auto">
+							<h5 class="mb-3 mb-md-0">Variants</h5>
+						</div>
+						<div class="col-md-auto"><a class="btn btn-sm btn-outline-primary" href="javascript:void();" @onclick="() => showProductVariantModal()">Add New</a></div>
+					</div>
+				</div>
+				<div class="card-body p-0" hidden="@(product.Variants.Count <= 0)">
+					<div class="table-responsive scrollbar">
+						<table class="table fs--1 mb-0">
+							<thead class="bg-200 text-900">
+								<tr>
+									<th class="pe-1 align-middle white-space-nowrap">Item</th>
+									<th class="pe-1 align-middle white-space-nowrap"></th>
+								</tr>
+							</thead>
+							<tbody class="" id="table-locations-body">
+								@foreach (var item in product.Variants)
+								{
+									<tr>
+                                        <td class="align-middle white-space-nowrap"><a href="javascript:void();" @onclick="() => NavigateToVariantProduct(item.ProductGuid)" >@item.VariantName</a></td>
+										<td class="align-middle white-space-nowrap text-end"><a href="javascript:void();" @onclick="() =>{openDeleteDialog3 = true;}"><span class="far fa-trash-alt"></span></a></td>
+										<DeleteConfirmation OpenDeleteDialog="openDeleteDialog3" OnDialogClose="DialogClose3" OnDeleteConfirmed="()=>removeProductVariant(item.ProductId)"></DeleteConfirmation>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+
+			<div class="modal fade show" tabindex="-1" role="dialog" style="display: block;" hidden="@(!isShowModal)">
+				<div class="modal-dialog" role="document">
+					<div class="modal-content">
+						<div class="modal-header">
+							<h5 class="modal-title">Select Product Variant</h5>
+							<button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="() => hideProductVariantModal()">
+								<span aria-hidden="true">&times;</span>
+							</button>
+						</div>
+						<div class="modal-body">
+							@if (productVariants.Count > 0)
+							{
+								<SfComboBox @bind-Value="@selectedVariant" @ref="filterVariantsObj" AllowFiltering=true DataSource="@productVariants">
+									<ComboBoxEvents TItem="ProductVariantModelExtended" TValue="string" Filtering="OnFilterVariants"></ComboBoxEvents>
+									<ComboBoxFieldSettings Value="VariantName"></ComboBoxFieldSettings>
+								</SfComboBox>
+							}
+						</div>
+						<div class="modal-footer">
+							<button type="button" class="btn btn-secondary" @onclick="() => hideProductVariantModal()">Cancel</button>
+							<button type="button" class="btn btn-primary" @onclick="() => SelectProductVariant()">Add Variant</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="modal fade show" tabindex="-1" role="dialog" style="display: block;" hidden="@(!barCodeDialogVisibility)">
+				<div class="modal-dialog" role="document">
+					<div class="modal-content">
+						<div class="modal-header">
+							<h5 class="modal-title">@product.ProductTitle</h5>
+							<button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="() => barCodeDialogVisibility= false">
+								<span aria-hidden="true">&times;</span>
+							</button>
+						</div>
+						<div class="modal-body">
+							<div class="row p-2 text-center">
+								<div class="col">
+									<SfBarcodeGenerator Width="200px" Height="150px" Type="@BarcodeType.Code128" Value="@upc">
+										<BarcodeGeneratorDisplayText>
+											<BarcodeTextMargin Top="10" Bottom="10"></BarcodeTextMargin>
+										</BarcodeGeneratorDisplayText>
+									</SfBarcodeGenerator>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<ImageCropper @ref="CropperModal" IsVisible="imageCroperActive" CropperConfiguration="cropperConfiguration" Cropped="OnCropped"></ImageCropper>
+		}
+	</Authorized>
+</AuthorizeView>
+
+<SfDialog IsModal="true" Width="800px" ShowCloseIcon="true" @bind-Visible="ModModalVisibility">
+	<DialogTemplates>
+		<Header><h5 class="modal-title" id="modalLabel">@productModifierGroupModel.ModifierGroupName</h5></Header>
+		<Content>
+			<div class="alert bg-soft-info border-2 p-2 mb-4 d-flex align-items-center" role="alert">
+				<span class="far fa-info-circle text-info fs-2 me-3"></span>
+				<p class="mb-0 flex-1 fs--1">
+					These modifier changes will appear on this item only and will not affect other items using this modifier.
+				</p>
+			</div>
+			<div class="row g-2">
+				<div class="col-6">
+					<h6>Required</h6>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" id="chkRequired" checked="@productModifierGroupModel.IsRequired" @bind-value="@productModifierGroupModel.IsRequired" />
+					</div>
+				</div>
+				<div class="col-6">
+					<h6>Visibility</h6>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" id="chkVisibility" checked="@productModifierGroupModel.ShowOnReceipts" @bind-value="@productModifierGroupModel.ShowOnReceipts" />
+						<label class="form-check-label" for="chkVisibility">
+							Hide modifiers on receipts and invoices.
+						</label>
+					</div>
+				</div>
+			</div>
+			<hr />
+			<div class="row g-2">
+				<h6>Number of choices allowed</h6>
+				<div class="col-6">
+					<label for="selMinReq" class="form-label">Minimum Required</label>
+					<select id="selMinReq" class="form-select" @bind="@productModifierGroupModel.MinRequired">
+						<option value="0" selected>None</option>
+						@for (var i = 1; i <= ProductModifierGroupItem.Count; i++)
+						{
+							<option value="@i">@i</option>
+						}
+					</select>
+				</div>
+				<div class="col-6">
+					<label for="selMaxReq" class="form-label">Maximum Required</label>
+					<select id="selMaxReq" class="form-select" @bind="@productModifierGroupModel.MaxRequired">
+						<option value="0" selected>No Maximum</option>
+						@for (var i = 1; i <= ProductModifierGroupItem.Count; i++)
+						{
+							<option value="@i">@i</option>
+						}
+					</select>
+
+				</div>
+			</div>
+			<div class="my-4" hidden="@(productModifierGroupModel.ModifierType == 1)">
+				<h6>Select defaults and hide choices</h6>
+				<div class="table-responsive mt-3">
+					<SfGrid DataSource="@ProductModifierGroupItem" Width="100%">
+						<GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+						<GridPageSettings PageSize="50"></GridPageSettings>
+						<GridTemplates>
+							<EmptyRecordTemplate>
+								@if (!isLoading && ProductModifierGroupItem.Count <= 0)
+								{
+									<div class="font-weight-black fs-8 text-center my-4">
+										<h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Modifier Items</h6>
+									</div>
+								}
+							</EmptyRecordTemplate>
+						</GridTemplates>
+						<GridColumns>
+							<GridColumn Field=@nameof(ProductModifierGroupItemModel.ItemName) HeaderText="Modifier Choice" TextAlign="TextAlign.Left" Width="40"></GridColumn>
+							<GridColumn Field=@nameof(ProductModifierGroupItemModel.Price) Format="c2" HeaderText="Additional Cost" TextAlign="TextAlign.Left" Width="30"></GridColumn>
+							<GridColumn HeaderText="Default Choice" TextAlign="TextAlign.Center" Width="20">
+								<Template>
+									@{
+										var pholder = (context as ProductModifierGroupItemModel);
+										<div class="form-check">
+											<input class="form-check-input" type="checkbox" checked="@pholder.IsDefault" @bind-value="@pholder.IsDefault">
+										</div>
+									}
+								</Template>
+							</GridColumn>
+							<GridColumn HeaderText="Hide" TextAlign="TextAlign.Center" Width="10">
+								<Template>
+									@{
+										var pholder = (context as ProductModifierGroupItemModel);
+										<div class="form-check">
+											<input class="form-check-input" type="checkbox" checked="@pholder.IsHidden" @bind-value="@pholder.IsHidden">
+										</div>
+									}
+								</Template>
+							</GridColumn>
+						</GridColumns>
+					</SfGrid>
+				</div>
+			</div>
+		</Content>
+		<FooterTemplate>
+			<button type="button" class="btn btn-secondary" @onclick="@CloseModModal">Close</button>
+			<button type="button" class="btn btn-primary" @onclick="() => SaveProductModifierGroupItem()">Save</button>
+		</FooterTemplate>
+	</DialogTemplates>
+</SfDialog>
+
+<SfDialog IsModal="true" Width="800px" ShowCloseIcon="true" @bind-Visible="ManageModModalVisibility">
+	<DialogTemplates>
+		<Header><h5 class="modal-title" id="modalLabel">Add Modifier</h5></Header>
+		<Content>
+			<h6>Modifiers applied to this item</h6>
+			<div class="table-responsive my-3">
+				<SfGrid DataSource="@appliedModifierDataList" Width="100%">
+					<GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+					<GridPageSettings PageSize="50"></GridPageSettings>
+					<GridTemplates>
+						<EmptyRecordTemplate>
+							@if (!isLoading && appliedModifierDataList.Count <= 0)
+							{
+								<div class="font-weight-black fs-8 text-center my-4">
+									<h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Modifiers</h6>
+								</div>
+							}
+						</EmptyRecordTemplate>
+					</GridTemplates>
+					<GridColumns>
+						<GridColumn HeaderText="Modifier Group" TextAlign="TextAlign.Left" Width="200px">
+							<Template>
+								@{
+									var pholder = (context as PlaceholderData);
+									@(pholder.ModifierGroupName)
+								}
+							</Template>
+						</GridColumn>
+						<GridColumn HeaderText="Modifiers" TextAlign="TextAlign.Left" Width="400">
+							<Template>
+								@{
+									var pholder = (context as PlaceholderData);
+									@(pholder.Modifiers)
+								}
+							</Template>
+						</GridColumn>
+						<GridColumn HeaderText="" Width="50px">
+							<Template>
+								@{
+									<button class="delete_icon" @onclick="() => DeleteAppliedModifier((context as PlaceholderData))">
+										<span class="fa-regular fa-trash-can text-dark"></span>
+									</button>
+								}
+							</Template>
+						</GridColumn>
+					</GridColumns>
+				</SfGrid>
+			</div>
+
+			<h6>Apply Modifiers</h6>
+			<p class="fs--1">Select the modifiers you would like to apply to this item</p>
+			<div class="row flex-between-center align-items-center">
+				<div class="col-auto col-sm-6">
+					<div class="input-group mb-3">
+						<span class="input-group-text bg-white" id="inputModifierSearch"><span class="far fa-search"></span></span>
+						<input type="text" class="form-control" placeholder="Search Modifiers" aria-label="Search Products" aria-describedby="inputModifierSearch">
+					</div>
+				</div>
+				<div class="col-auto text-end col-sm-6">
+					<button class="btn btn-sm btn-outline-primary mb-2">Create New</button>
+				</div>
+			</div>
+			<div class="sf-grid mb-4">
+				<SfGrid DataSource="@modifierDataList" AllowPaging="true" Width="100%">
+					<GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+					<GridPageSettings PageSize="50"></GridPageSettings>
+					<GridTemplates>
+						<EmptyRecordTemplate>
+							@if (!isLoading && modifierDataList.Count <= 0)
+							{
+								<div class="font-weight-black fs-8 text-center my-4">
+									<h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Modifiers</h6>
+								</div>
+							}
+						</EmptyRecordTemplate>
+					</GridTemplates>
+					<GridColumns>
+						<GridColumn HeaderText="Modifier Group" TextAlign="TextAlign.Left" Width="200px">
+							<Template>
+								@{
+									var pholder = (context as PlaceholderData);
+									@(pholder.ModifierGroupName)
+								}
+							</Template>
+						</GridColumn>
+						<GridColumn HeaderText="Modifiers" TextAlign="TextAlign.Left" Width="400">
+							<Template>
+								@{
+									var pholder = (context as PlaceholderData);
+									@(pholder.Modifiers)
+								}
+							</Template>
+						</GridColumn>
+						<GridColumn HeaderText="" Width="50px">
+							<Template>
+								@{
+									<button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+									<div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+										<a class="dropdown-item" href="javascript:void();" @onclick="() => AddModifier((context as PlaceholderData))">Add Modifier</a>
+										<a class="dropdown-item" href="javascript:void();">Remove</a>
+									</div>
+								}
+							</Template>
+						</GridColumn>
+					</GridColumns>
+				</SfGrid>
+			</div>
+		</Content>
+		<FooterTemplate>
+			<button type="button" class="btn btn-secondary" @onclick="@CloseManageModModal">Close</button>
+			<button type="button" class="btn btn-primary" @onclick="() => SaveProductModifierGroup()">Save</button>
+		</FooterTemplate>
+	</DialogTemplates>
+</SfDialog>
+
+<SfDialog IsModal="true" Width="800px" ShowCloseIcon="true" @bind-Visible="MenuModalVisibility">
+	<DialogTemplates>
+		<Header><h5 class="modal-title" id="modalLabel">Menus</h5></Header>
+		<Content>
+			<SfTreeView ID="treeMenus" TValue="PlaceholderMenuData" AllowDragAndDrop="false" ShowCheckBox="true" @ref="tree" @bind-CheckedNodes="@CheckedNodes" CssClass="sfTree hideParentCheck">
+				<TreeViewFieldsSettings TValue="PlaceholderMenuData" Id="NodeId" Text="NodeText" Child="Child" DataSource="@menuDataList" Expanded="Expanded"></TreeViewFieldsSettings>
+			</SfTreeView>
+		</Content>
+		<FooterTemplate>
+			<button type="button" class="btn btn-secondary" @onclick="@CloseMenuModal">Close</button>
+			<button type="button" class="btn btn-primary" @onclick="() => SaveMenus()">Save</button>
+		</FooterTemplate>
+	</DialogTemplates>
+</SfDialog>
+
+<DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="()=>ConfirmDelete(idForDelete)"></DeleteConfirmation>
+
+@code
+{
+	[Parameter]
+	public Guid? Id { get; set; }
+	private string title = "Edit Product | Synergy Commerce Admin Panel";
+
+	List<ProductModifierGroupModel> productModifierGroupList = new List<ProductModifierGroupModel>();
+	ObservableCollection<PlaceholderData> modifierDataList = new ObservableCollection<PlaceholderData>();
+	ObservableCollection<PlaceholderData> appliedModifierDataList = new ObservableCollection<PlaceholderData>();
+	ObservableCollection<PlaceholderData> savedModifierDataList = new ObservableCollection<PlaceholderData>();
+	SfListBox<string[], PlaceholderData> ListBoxObj = new SfListBox<string[], PlaceholderData>();
+	List<PlaceholderMenuData> menuDataList = new List<PlaceholderMenuData>();
+	ProductModifierGroupModel productModifierGroupModel = new ProductModifierGroupModel();
+	ObservableCollection<ProductModifierGroupItemModel> ProductModifierGroupItem = new ObservableCollection<ProductModifierGroupItemModel>();
+
+	MessageInstruction mailInstruction;
+	MessageInstruction mailInstruction1;
+	MessageInstruction mailInstruction2;
+
+	private bool ModModalVisibility { get; set; } = false;
+	private bool ManageModModalVisibility { get; set; } = false;
+	private bool MenuModalVisibility { get; set; } = false;
+	private string attributeName;
+	private string attributeType;
+	private string selectionValue;
+	private bool BackOrderVisibility { get; set; } = true;
+
+	string[] CheckedNodes = new string[] { };
+	SfTreeView<PlaceholderMenuData> tree;
+
+	private Member currentMember = new Member();
+	private List<StoreCollectionBase> collections = new List<StoreCollectionBase>();
+	private List<string> tags = new List<string>();
+	private ProductDetailFullModel product = new ProductDetailFullModel();
+	private ProductRequestModel productRequest = new ProductRequestModel();
+	private List<ProductVariantModelExtended> productVariants = new List<ProductVariantModelExtended>();
+	private List<BusinessDepartment> departments = new List<BusinessDepartment>();
+	private List<BusinessIntegrationSettingModel> itemTypes = new List<BusinessIntegrationSettingModel>();
+	private List<BusinessIntegrationSettingModel> taxTypes = new List<BusinessIntegrationSettingModel>();
+	private List<BusinessIntegrationSettingModel> categoryTypes = new List<BusinessIntegrationSettingModel>();
+	private List<BusinessVendor> vendors = new List<BusinessVendor>();
+	private List<ProductTemplatesModel> productTemplates = new List<ProductTemplatesModel>()
+{
+	  new ProductTemplatesModel() { Id = 0, TemplateName = "Default" }
+	};
+	private List<ProductType> productTypes = new List<ProductType>();
+	private List<ShippingClassModel> shippingClasses = new List<ShippingClassModel>();
+	private string selectedVariant;
+	private bool isLoading = true;
+	private bool isSaving = false;
+	private bool isShowModal = false;
+	private bool isRequireShipping = false;
+	private string purchaseURL = "https://www.cellarpass.com/pr/";
+	SfComboBox<string, ProductVariantModelExtended> filterVariantsObj { get; set; }
+	private string productTemplate { get; set; }
+	private ImageCropperConfiguration cropperConfiguration = new ImageCropperConfiguration();
+	private ImageCropper CropperModal { get; set; }
+	private int changeImgId { get; set; }
+	private bool isProductImgUpload = false;
+	string imgUrl;
+	string upc = string.Empty;
+	private bool barCodeDialogVisibility = false;
+	private bool imageCroperActive = false;
+	bool openDeleteDialog = false;
+	bool openDeleteDialog2 = false;
+	bool openDeleteDialog3 = false;
+	int idForDelete = 0;
+	DeleteConfirmation DeleteConfirmation;
+	private string selectedFileName = null;
+	private ProductMetaDataModel metaBrandKey = new ProductMetaDataModel();
+	private ProductMetaDataModel metaProductKey = new ProductMetaDataModel();
+	private ProductMetaDataModel taxType = new ProductMetaDataModel();
+	private ProductMetaDataModel itemType = new ProductMetaDataModel();
+	private ProductMetaDataModel categoryType = new ProductMetaDataModel();
+	private ProductMetaDataModel itemSKU = new ProductMetaDataModel();
+	private ProductMetaDataModel customField1 = new ProductMetaDataModel();
+	private ProductMetaDataModel customField2 = new ProductMetaDataModel();
+	private ProductMetaDataModel externalPurchaseUrl = new ProductMetaDataModel();
+	private ProductMetaDataModel department = new ProductMetaDataModel();
+	private ProductMetaDataModel selectedTaxClass = new ProductMetaDataModel();
+	private ProductMetaDataModel template = new ProductMetaDataModel();
+	private List<TaxClassModel> TaxClassesList = new List<TaxClassModel>();
+	private bool isWebChannel;
+	private bool isPosChannel;
+	private bool isClubChannel;
+	private int productTeaserCount = 512;
+	private int productDescriptionCount = 5000;
+	private string volumeType;
+	public bool renderInplace { get; set; } = false;
+	string departmentName { get; set; } = "None";
+	string vendorName { get; set; } = "None";
+	string taxClass { get; set; } = "None";
+	private bool isECommerceSettingsSaved { get; set; }
+	private bool isComplianceSettingsSaved { get; set; }
+	private string eCommerceSettingName = "";
+	private string complianceSettingName = "";
+	List<DropdownBindingModel> inventoryModes = Enum.GetValues(typeof(InventoryModes))
+							.Cast<InventoryModes>()
+							.Select(t => new DropdownBindingModel
+						  {
+							  Key = (int)t,
+							  Value = Helper.GetDisplayName(t)
+						  }).ToList();
+
+	List<DropdownBindingModel> backOrderModes = Enum.GetValues(typeof(BackOrderModes))
+							.Cast<BackOrderModes>()
+							.Select(t => new DropdownBindingModel
+						  {
+							  Key = (int)t,
+							  Value = Helper.GetDisplayName(t)
+						  }).ToList();
+
+	[Parameter, SupplyParameterFromQuery(Name="typeName")]
+	public string TypeName { get; set; }
+
+	protected override async Task OnInitializedAsync()
+	{
+		currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+		product.Variants = new List<ProductVariantModelExtended>();
+		product.Collections = new List<string>();
+		product.Tags = new List<ProductTagModel>();
+		product.WeightUnit = "0";
+		product.VolumeUnit = "1";
+
+		//Get eCommerce Settings
+		var eCommerceSettings = _settingViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount, BusinessSettingsMetaKey.WebSync);
+
+		//Get Compliance Settings
+		var complianceSettings = _settingViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount, BusinessSettingsMetaKey.ComplianceService);
+
+		var res = await _storeCollectionViewModel.GetCollectionsBySelectionType(currentMember.Id);
+		if (res.success)
+		{
+			collections = res.data;
+		}
+
+		ProductTypeResponse productTypeResponse = await _productViewModel.GetProductTypes();
+		if (productTypeResponse.success)
+		{
+			productTypes = productTypeResponse.data;
+
+			if (productTypes.FirstOrDefault(x => x.TypeName == TypeName) is not null)
+			{
+				product.ProductType = productTypes.FirstOrDefault(x => x.TypeName == TypeName).Id;
+			}
+			if (productTypes.FirstOrDefault(x => x.TypeName == "Alcohol - Wine") is not null && product.ProductType == productTypes.FirstOrDefault(x => x.TypeName == "Alcohol - Wine").Id )
+			{
+				volumeType = "mL";
+			}
+			if (productTypes.FirstOrDefault(x => x.TypeName == "Alcohol - Beer") is not null && product.ProductType == productTypes.FirstOrDefault(x => x.TypeName == "Alcohol - Beer").Id)
+			{
+				volumeType = "oz";
+			}
+		}
+
+		var businessSettingResponse = await _settingViewModel.GetBusinessIntegrationSettingListAsync(BusinessSettingsMetaNamespace.Commerce7, "", 0, null);
+		if (businessSettingResponse.success)
+		{
+			var result = businessSettingResponse.data;
+			if (result.Count > 0)
+			{
+				itemTypes = result.Where(x => x.MetaKey == BusinessSettingsMetaKey.Commerce7ItemType).ToList();
+				taxTypes = result.Where(x => x.MetaKey == BusinessSettingsMetaKey.Commerce7TaxType).ToList();
+				categoryTypes = result.Where(x => x.MetaKey == BusinessSettingsMetaKey.Commerce7CategoryType).ToList();
+			}
+		}
+
+		var getShippingClasses = await _shippingClassViewModel.GetShippingClasses(currentMember.Id);
+		if (getShippingClasses.success)
+		{
+			shippingClasses = getShippingClasses.data;
+		}
+
+		if (Id.HasValue)
+		{
+			GetProductDetailsResponse result = await _productViewModel.GetProductDetails(0, Id.Value.ToString(), 0);
+			if (result.success)
+			{
+				product = result.data;
+				isRequireShipping = !Convert.ToBoolean(product.RequiresShipping);
+				if (product.MetaData.Count > 0)
+				{
+					metaBrandKey = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.ComplianceBrandKey).FirstOrDefault() ?? new ProductMetaDataModel();
+					metaProductKey = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.ComplianceProductKey).FirstOrDefault() ?? new ProductMetaDataModel();
+					taxType = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.Commerce7TaxType).FirstOrDefault() ?? new ProductMetaDataModel();
+					itemType = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.Commerce7ItemType).FirstOrDefault() ?? new ProductMetaDataModel();
+					categoryType = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.Commerce7CategoryType).FirstOrDefault() ?? new ProductMetaDataModel();
+					itemSKU = product.MetaData?.Where(x => x.MetaNamespace == "Commerce7").FirstOrDefault() ?? new ProductMetaDataModel();
+					customField1 = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.CustomField1).FirstOrDefault() ?? new ProductMetaDataModel();
+					customField2 = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.CustomField2).FirstOrDefault() ?? new ProductMetaDataModel();
+					externalPurchaseUrl = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.ExternalPurchaseURL).FirstOrDefault() ?? new ProductMetaDataModel();
+					department = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.Department).FirstOrDefault() ?? new ProductMetaDataModel();
+					departmentName = string.IsNullOrEmpty(department.Description) ? "None" : department.Description;
+					template = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.Template).FirstOrDefault() ?? new ProductMetaDataModel();
+					selectedTaxClass = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.Commerce7TaxClass).FirstOrDefault() ?? new ProductMetaDataModel();
+					taxClass = string.IsNullOrEmpty(selectedTaxClass.Description) ? "None" : selectedTaxClass.Description;
+				}
+				else
+				{
+					template.MetaValue = "Default";
+				}
+				vendorName = string.IsNullOrEmpty(product.VendorName) ? "None" : product.VendorName;
+				if (product.Channels.Count > 0)
+				{
+					foreach (var item in product.Channels)
+					{
+						if (item.Channel == (int)ProductChannels.Online)
+						{
+							isWebChannel = true;
+						}
+						else if (item.Channel == (int)ProductChannels.Pos)
+						{
+							isPosChannel = true;
+						}
+						else if (item.Channel == (int)ProductChannels.Club)
+						{
+							isClubChannel = true;
+						}
+					}
+				}
+				if (product.CustomBusinessMetaDatas != null && product.CustomBusinessMetaDatas.Count > 0)
+				{
+					foreach (var item in product.CustomBusinessMetaDatas)
+					{
+						if (!string.IsNullOrEmpty(item.ContentChoices))
+						{
+							item.MetaDropdownItemData = System.Text.Json.JsonSerializer.Deserialize<List<MetaDropdownItem>>(item.ContentChoices);
+						}
+					}
+				}
+				else
+				{
+					product.CustomBusinessMetaDatas = new List<CustomBusinessMetaDataModel>();
+				}
+
+				if (product.Tags.Count > 0)
+				{
+					foreach (var item in product.Tags)
+					{
+						tags.Add(item.Value);
+					}
+				}
+
+				if (!string.IsNullOrEmpty(product.ProductTeaser) && product.ProductTeaser.Count() > 0)
+				{
+					productTeaserCount = 512 - product.ProductTeaser.Count();
+				}
+
+				if (!string.IsNullOrEmpty(product.ProductDescription) && product.ProductDescription.Count() > 0)
+				{
+					productDescriptionCount = 5000 - product.ProductDescription.Count();
+				}
+
+				if (!string.IsNullOrEmpty(product.VolumeValue))
+				{
+					string[] splittedVolumeValue = product.VolumeValue.Split("-");
+					if (splittedVolumeValue.Length > 1)
+					{
+						product.VolumeValue = splittedVolumeValue[0];
+						volumeType = splittedVolumeValue[1];
+					}
+				}
+
+				purchaseURL += product.ProductTitle.ToLower().Replace(" ", "-");
+				purchaseURL += "-" + product.Id;
+				upc = product.ProductBarcode;
+				renderInplace = true;
+			}
+		}
+		else
+		{
+			product.TrackInventory = true;
+			title = "Add Product | Synergy Commerce Admin Panel";
+			template.MetaValue = "Default";
+			renderInplace = true;
+			product.ProductInventory = new List<ProductInventoryModel>();
+			var getInventoryLocations = await _inventoryViewModel.GetInventoryLocations(currentMember.Id);
+			if (getInventoryLocations.success)
+			{
+				foreach (var loc in getInventoryLocations.data)
+				{
+					var productInv = new ProductInventoryModel
+						{
+							LocationId = loc.BusinessLocationId,
+							LocationName = loc.LocationName
+						};
+					product.ProductInventory.Add(productInv);
+				}
+			}
+		}
+
+		var productsResult = await _productViewModel.SearchProducts(currentMember.Id, true, "");
+		if (productsResult.success)
+		{
+			List<ProductListModel> productList = productsResult.data;
+			if (productList.Count > 0)
+			{
+				foreach (var item in productList)
+				{
+					ProductVariantModelExtended variant = new ProductVariantModelExtended()
+						{
+							ProductId = item.Id,
+							VariantName = item.ProductTitle,
+							ProductGuid = item.ProductGuid
+						};
+					productVariants.Add(variant);
+				}
+			}
+		}
+
+		await GetBusinessMenu();
+		await GetProductModifierGroup();
+
+		var setting = await eCommerceSettings;
+		isECommerceSettingsSaved = !string.IsNullOrEmpty(setting?.data?.MetaValue ?? string.Empty);
+		if (isECommerceSettingsSaved)
+		{
+			//Get eCommerce Configuration
+			var businessECommerceConfigurationResponse = await _businessViewModel.GetBusinessConfigurationOptionDetail(BusinessConfigurationNamespace.WebSync, setting.data.MetaValue);
+			eCommerceSettingName = businessECommerceConfigurationResponse?.data?.SettingName ?? string.Empty;
+		}
+
+		var complianceServiceSettings = await complianceSettings;
+		isComplianceSettingsSaved = !string.IsNullOrEmpty(complianceServiceSettings?.data?.MetaValue ?? string.Empty);
+		if (isComplianceSettingsSaved)
+		{
+			//Get ComplianceService Configuration
+			var businessComplianceConfigurationResponse = await _businessViewModel.GetBusinessConfigurationOptionDetail(BusinessConfigurationNamespace.ComplianceService, complianceServiceSettings.data.MetaValue);
+			complianceSettingName = businessComplianceConfigurationResponse?.data?.SettingName ?? string.Empty;
+		}
+
+		// PlaceholderModDataList = PlaceholderModList;
+
+		isLoading = false;
+		StateHasChanged();
+	}
+
+	private async Task OnChangeProductType(Microsoft.AspNetCore.Components.ChangeEventArgs args)
+	{
+		product.ProductType = int.Parse(args.Value.ToString());
+		if (product.ProductType == productTypes.FirstOrDefault(x => x.TypeName == "Wine").Id )
+		{
+			volumeType = "mL";
+		}
+		else if (product.ProductType == productTypes.FirstOrDefault(x => x.TypeName == "Beer").Id)
+		{
+			volumeType = "oz";
+		}
+		else
+		{
+			volumeType = "None";
+		}
+		StateHasChanged();
+	}
+
+	private async Task NavigateToVariantProduct(Guid varientProductGuid)
+	{
+		Id = varientProductGuid;
+		isLoading = true;
+		await OnInitializedAsync();
+		isLoading = false;
+		StateHasChanged();
+	}
+
+	private async void SaveProductDetail()
+	{
+		product.ProductTeaser = mailInstruction.MessageText;
+		product.ProductDescription = mailInstruction1.MessageText;
+		product.BackorderedMessage = mailInstruction2.MessageText;
+
+		if (product.ProductType <= 0)
+		{
+			toastService.ShowToast("Item type is required.", ToastLevel.Error);
+			return;
+		}
+		var thirdPartyType = ThirdPartyType.Commerce7.ToString();
+		if ((savedModifierDataList.Count > 0) && (eCommerceSettingName == thirdPartyType && string.IsNullOrWhiteSpace(itemSKU.MetaValue)))
+		{
+			toastService.ShowToast("C7 Sku is required in the Meta Data.", ToastLevel.Error);
+			return;
+		}
+		isSaving = true;
+		productRequest.Id = product.Id;
+		productRequest.ChargeSalesTax = product.ChargeSalesTax;
+		productRequest.ClubPrice = product.ClubPrice;
+		productRequest.CostPrice = product.CostPrice;
+		productRequest.AvailableWhenOutofStock = product.AvailableWhenOutofStock;
+		productRequest.BusinessId = currentMember.Id;
+		productRequest.DimensionsHeight = product.DimensionsHeight;
+		productRequest.DimensionsLength = product.DimensionsLength;
+		productRequest.DimensionsWidth = product.DimensionsWidth;
+		productRequest.ExcludeDiscounts = product.ExcludeDiscounts;
+		productRequest.ProductBarcode = upc;
+		productRequest.ProductDescription = product.ProductDescription;
+		productRequest.ProductSku = product.ProductSku;
+		productRequest.ProductStatus = product.ProductStatus;
+		productRequest.ProductTeaser = product.ProductTeaser;
+		productRequest.ProductTheme = product.ProductTheme;
+		productRequest.ProductTitle = product.ProductTitle;
+		productRequest.ProductType = product.ProductType;
+		productRequest.RequiresShipping = Convert.ToInt32(!isRequireShipping);
+		productRequest.RetailPrice = product.RetailPrice;
+		productRequest.SalePrice = product.SalePrice;
+		productRequest.ProductImage = product.ProductImage;
+		productRequest.ShippingClass = product.ShippingClass;
+		productRequest.TrackInventory = product.TrackInventory;
+		productRequest.Images = product.Images;
+		productRequest.ProductInventory = product.ProductInventory != null && product.ProductInventory.Count > 0 ? product.ProductInventory.Where(x => (x.Id > 0 || x.Id == 0 && x.AvailableQty > 0)).ToList() : new List<ProductInventoryModel>(); ;
+		productRequest.BackorderedMessage = product.BackorderedMessage;
+		productRequest.MetaData = product.MetaData;
+		if (vendors.Count > 0 && vendorName != "None")
+		{
+			productRequest.Vendor = string.IsNullOrEmpty(vendorName) ? 0 : vendors.Where(x => x.VendorCompany.ToLower() == vendorName.ToLower()).FirstOrDefault().VendorId;
+		}
+		else
+		{
+			productRequest.Vendor = product.Vendor;
+		}
+
+		productRequest.VolumeUnit = product.VolumeUnit;
+		if (!string.IsNullOrEmpty(product.VolumeValue) && !string.IsNullOrEmpty(volumeType))
+		{
+			productRequest.VolumeValue = product.VolumeValue + "-" + volumeType;
+		}
+		else
+		{
+			productRequest.VolumeValue = product.VolumeValue;
+		}
+		productRequest.WeightUnit = product.WeightUnit;
+		productRequest.WeightValue = product.WeightValue;
+		productRequest.Channels = new List<ProductChannelModel>();
+		if (isWebChannel)
+		{
+			ProductChannelModel productChannel = new ProductChannelModel
+				{
+					Channel = (int)Channels.Web,
+					ProductId = product.Id
+				};
+			productRequest.Channels.Add(productChannel);
+		}
+		if (isClubChannel)
+		{
+			ProductChannelModel productChannel = new ProductChannelModel
+				{
+					Channel = (int)Channels.Club,
+					ProductId = product.Id
+				};
+			productRequest.Channels.Add(productChannel);
+		}
+		if (isPosChannel)
+		{
+			ProductChannelModel productChannel = new ProductChannelModel
+				{
+					Channel = (int)Channels.POS,
+					ProductId = product.Id
+				};
+			productRequest.Channels.Add(productChannel);
+		}
+		productRequest.MetaData = new List<ProductMetaDataModel>();
+		if (!product.ChargeSalesTax)
+		{
+			if (eCommerceSettingName == ThirdPartyType.Commerce7.ToString())
+			{
+				if (!string.IsNullOrEmpty(categoryType.MetaValue))
+				{
+					categoryType.ProductId = product.Id;
+					categoryType.MetaNamespace = ProductMetaNamespace.Commerce7;
+					categoryType.MetaKey = ProductMetaKey.Commerce7CategoryType;
+					categoryType.ValueType = (int)ValueTypeEnum.String;
+					categoryType.MetaValue = itemSKU.MetaValue;
+					productRequest.MetaData.Add(categoryType);
+				}
+			}
+		}
+		if (product.ChargeSalesTax)
+		{
+			if (!string.IsNullOrEmpty(taxType.MetaValue))
+			{
+				taxType.ProductId = product.Id;
+				taxType.MetaNamespace = ProductMetaNamespace.Commerce7;
+				taxType.MetaKey = ProductMetaKey.Commerce7TaxType;
+				taxType.ValueType = (int)ValueTypeEnum.String;
+				productRequest.MetaData.Add(taxType);
+			}
+
+			if (!string.IsNullOrEmpty(itemType.MetaValue))
+			{
+				itemType.ProductId = product.Id;
+				itemType.MetaNamespace = ProductMetaNamespace.Commerce7;
+				itemType.MetaKey = ProductMetaKey.Commerce7ItemType;
+				itemType.ValueType = (int)ValueTypeEnum.String;
+				productRequest.MetaData.Add(itemType);
+			}
+
+			if (!string.IsNullOrEmpty(itemSKU.MetaValue))
+			{
+				itemSKU.ProductId = product.Id;
+				itemSKU.MetaNamespace = ProductMetaNamespace.Commerce7;
+				itemSKU.MetaKey = ProductMetaKey.Commerce7ItemSKU;
+				itemSKU.ValueType = (int)ValueTypeEnum.String;
+				productRequest.MetaData.Add(itemSKU);
+			}
+		}
+
+		if (!string.IsNullOrEmpty(metaBrandKey.MetaValue))
+		{
+			metaBrandKey.ProductId = product.Id;
+			metaBrandKey.MetaNamespace = ProductMetaNamespace.Compliance;
+			metaBrandKey.MetaKey = ProductMetaKey.ComplianceBrandKey;
+			metaBrandKey.ValueType = (int)ValueTypeEnum.String;
+			productRequest.MetaData.Add(metaBrandKey);
+		}
+
+		if (!string.IsNullOrEmpty(metaProductKey.MetaValue))
+		{
+			metaProductKey.ProductId = product.Id;
+			metaProductKey.MetaNamespace = ProductMetaNamespace.Compliance;
+			metaProductKey.MetaKey = ProductMetaKey.ComplianceProductKey;
+			metaProductKey.ValueType = (int)ValueTypeEnum.String;
+			productRequest.MetaData.Add(metaProductKey);
+		}
+
+		if (!string.IsNullOrEmpty(departmentName) && departmentName != "None")
+		{
+			department.ProductId = product.Id;
+			department.MetaNamespace = ProductMetaNamespace.Department;
+			department.MetaKey = ProductMetaKey.Department;
+			department.ValueType = (int)ValueTypeEnum.Integer;
+			department.Description = departmentName;
+			if (departments.Count > 0)
+			{
+				department.MetaValue = departments.Where(x => x.DepartmentName == departmentName).FirstOrDefault().Id.ToString();
+			}
+			productRequest.MetaData.Add(department);
+		}
+
+		if (!string.IsNullOrEmpty(externalPurchaseUrl.MetaValue))
+		{
+			externalPurchaseUrl.ProductId = product.Id;
+			externalPurchaseUrl.MetaNamespace = ProductMetaNamespace.ExternalPurchaseUrl;
+			externalPurchaseUrl.MetaKey = ProductMetaKey.ExternalPurchaseURL;
+			externalPurchaseUrl.ValueType = (int)ValueTypeEnum.String;
+			productRequest.MetaData.Add(externalPurchaseUrl);
+		}
+
+		if (!string.IsNullOrEmpty(customField1.MetaValue))
+		{
+			customField1.ProductId = product.Id;
+			customField1.MetaNamespace = ProductMetaNamespace.CustomFields;
+			customField1.MetaKey = ProductMetaKey.CustomField1;
+			customField1.ValueType = (int)ValueTypeEnum.String;
+			productRequest.MetaData.Add(customField1);
+		}
+
+		if (!string.IsNullOrEmpty(customField2.MetaValue))
+		{
+			customField2.ProductId = product.Id;
+			customField2.MetaNamespace = ProductMetaNamespace.CustomFields;
+			customField2.MetaKey = ProductMetaKey.CustomField2;
+			customField2.ValueType = (int)ValueTypeEnum.String;
+			productRequest.MetaData.Add(customField2);
+		}
+
+		if (!string.IsNullOrEmpty(template.MetaValue))
+		{
+			template.ProductId = product.Id;
+			template.MetaNamespace = ProductMetaNamespace.Template;
+			template.MetaKey = ProductMetaKey.Template;
+			template.ValueType = (int)ValueTypeEnum.String;
+			productRequest.MetaData.Add(template);
+		}
+
+		if (!string.IsNullOrEmpty(taxClass) && taxClass != "None")
+		{
+			selectedTaxClass.ProductId = product.Id;
+			selectedTaxClass.MetaNamespace = ProductMetaNamespace.Commerce7;
+			selectedTaxClass.MetaKey = ProductMetaKey.Commerce7TaxClass;
+			selectedTaxClass.ValueType = (int)ValueTypeEnum.Integer;
+			selectedTaxClass.Description = taxClass;
+			if (TaxClassesList.Count > 0)
+			{
+				selectedTaxClass.MetaValue = TaxClassesList.Where(x => x.TaxClassName == taxClass).FirstOrDefault().Id.ToString();
+			}
+			productRequest.MetaData.Add(selectedTaxClass);
+		}
+
+		if(product.CustomBusinessMetaDatas != null && product.CustomBusinessMetaDatas.Any())
+		{
+			foreach (var item in product.CustomBusinessMetaDatas)
+			{
+				ProductMetaDataModel productMetaDataModel = new ProductMetaDataModel()
+					{
+						Id = item.Id,
+						ProductId = product.Id,
+						MetaNamespace = "CustomProductMeta",
+						MetaKey = item.BusinessMetaDataId.ToString(),
+						MetaValue = item.DefaultValue,
+						ValueType = (int)ValueTypeEnum.String
+					};
+				if (item.ContentType == (int)MetaDataContentType.Date)
+				{
+					if (item.DateDefaultValue.HasValue)
+					{
+						productMetaDataModel.MetaValue = ((DateTime)item.DateDefaultValue).ToLongDateString();
+					}
+					//DateTime parsedDate;
+					//var dtResult = DateTime.TryParseExact(item.DateDefaultValue.ToString(), "MMddyyyy", new CultureInfo("en-US"), DateTimeStyles.None, out parsedDate);
+					//if (dtResult)
+					//{
+					//    productMetaDataModel.MetaValue = parsedDate.ToString();
+					//}
+				}
+				if (item.ContentType == (int)MetaDataContentType.Price)
+				{
+					productMetaDataModel.MetaValue = item.PriceDefaultValue.ToString();
+					productMetaDataModel.ValueType = (int)ValueTypeEnum.Integer;
+				}
+				if (item.ContentType == (int)MetaDataContentType.Boolean)
+				{
+					productMetaDataModel.MetaValue = item.SwitchDefaultValue ? "true" : "false";
+					productMetaDataModel.ValueType = (int)ValueTypeEnum.Boolean;
+				}
+				productRequest.MetaData.Add(productMetaDataModel);
+			}
+		}
+
+		if (product.Variants != null && product.Variants.Count > 0)
+		{
+			productRequest.Variants = new List<ProductVariantModel>();
+			foreach (var item in product.Variants)
+			{
+				ProductVariantModel variantModel = new ProductVariantModel
+					{
+						Id = item.Id,
+						ProductId = product.Id,
+						VariantProductId = item.VariantProductId
+					};
+				productRequest.Variants.Add(variantModel);
+			}
+		}
+
+		productRequest.Collections = new List<int>();
+		if (product.Collections != null)
+		{
+			foreach (var item in product.Collections)
+			{
+				var collection = collections.Where(x => x.CollectionName == item).FirstOrDefault();
+				if (collection != null)
+				{
+					productRequest.Collections.Add(collection.Id);
+				}
+			}
+		}
+
+		productRequest.Tags = new List<ProductTagModel>();
+		if (tags != null && tags.Count > 0)
+		{
+			foreach (var item in tags)
+			{
+				ProductTagModel productTagModel = new ProductTagModel()
+					{
+						ProductId = product.Id,
+						Value = item
+					};
+				productRequest.Tags.Add(productTagModel);
+			}
+		}
+
+
+
+		var result = await _productViewModel.AddUpdateProduct(productRequest);
+		if (result.success)
+		{
+			isSaving = false;
+			if (Id == null)
+			{
+				toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+				_navigationManager.NavigateTo("/store/products/" + result.data.ProductGuid, forceLoad: true);
+			}
+			else
+			{
+				toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+			}
+		}
+		else
+		{
+			isSaving = false;
+			toastService.ShowToast(result.error_info.description, ToastLevel.Error);
+		}
+		StateHasChanged();
+	}
+
+	private void SelectProductVariant()
+	{
+		var variant = productVariants.Where(x => x.VariantName == selectedVariant).FirstOrDefault();
+		variant.VariantProductId = variant.ProductId;
+		product.Variants.Add(variant);
+		isShowModal = false;
+		selectedVariant = "";
+	}
+
+	private void showProductVariantModal()
+	{
+		isShowModal = true;
+	}
+
+	private void hideProductVariantModal()
+	{
+		isShowModal = false;
+		selectedVariant = "";
+	}
+
+	private async Task OnFilterVariants(FilteringEventArgs args)
+	{
+		args.PreventDefaultAction = true;
+		var query = new Query().Where(new WhereFilter() { Field = "VariantName", Operator = "contains", value = args.Text, IgnoreCase = true });
+
+		query = !string.IsNullOrEmpty(args.Text) ? query : new Query();
+
+		await filterVariantsObj.Filter(productVariants, query);
+	}
+
+	private async Task editDepartment()
+	{
+		if (departments.Count <= 0)
+		{
+			BusinessDepartmentListResponse departmentResponse = await _departmentViewModel.GetBusinessDepartmentListAsync(currentMember.Id);
+			if (departmentResponse.success)
+			{
+				departments = departmentResponse.data;
+			}
+		}
+	}
+
+	private async Task editVendor()
+	{
+		if (vendors.Count <= 0)
+		{
+			BusinessVendorListResponse vendorResponse = await _vendorViewModel.GetBusinessVendors(currentMember.Id);
+			if (vendorResponse.success)
+			{
+				vendors = vendorResponse.data;
+			}
+		}
+	}
+
+	private async Task editTaxClass()
+	{
+		if (TaxClassesList.Count <= 0)
+		{
+			await GetTaxClasses();
+		}
+	}
+
+	private async Task OnInputFileChange(InputFileChangeEventArgs e)
+	{
+		var maxAllowedFiles = 1;
+		var format = "image/png";
+		foreach (var imageFile in e.GetMultipleFiles(maxAllowedFiles))
+		{
+			selectedFileName = imageFile.Name;
+
+			var buffer = new byte[imageFile.Size];
+			await imageFile.OpenReadStream(buffer.LongLength).ReadAsync(buffer);
+			var imageDataUrl =
+				$"data:{format};base64,{Convert.ToBase64String(buffer)}";
+
+			await CropperModal.OnFileChange(imageDataUrl);
+			imageCroperActive = true;
+		}
+		StateHasChanged();
+	}
+
+	async Task OnCropped(string value)
+	{
+
+		imageCroperActive = false;
+
+		if (product.Id > 0)
+		{
+			if (isProductImgUpload)
+			{
+				var base64 = value.Substring(value.IndexOf(',') + 1);
+				ProductGalleryImageRequestModel productImg = new ProductGalleryImageRequestModel()
+					{
+						ImageContent = base64,
+						ProductId = product.Id,
+						ProductGuid = product.ProductGuid,
+						BusinessId = currentMember.Id,
+						ImageIndex = gallaryImagesIndex
+					};
+				if (changeImgId > 0)
+				{
+					productImg.Id = changeImgId;
+				}
+				product.Images = await _productViewModel.SaveProductGalleryImage(productImg);
+				changeImgId = 0;
+				isProductImgUpload = false;
+			}
+			else
+			{
+				imgUrl = value;
+				ImageUploadRequestModel requestModel = new ImageUploadRequestModel()
+					{
+						Image = value,
+						Id = product.Id,
+						BusinessId = currentMember.Id,
+						IdGuid = product.ProductGuid
+					};
+				UploadImageResponse response = await _productViewModel.UploadProductImage(requestModel);
+				if (response.success)
+				{
+					product.ProductImage = response.data.image_file_name;
+				}
+				//Modal.parsing = false;
+				//Modal.showModal = false;
+			}
+		}
+
+		StateHasChanged();
+	}
+
+	private async Task uploadImage()
+	{
+		imageCroperActive = false;
+		await CropperModal.TriggerFileSelect("inputDrop");
+	}
+	int gallaryImagesIndex = 0;
+	private async Task UploadProductGalleryImage()
+	{
+		gallaryImagesIndex = (product?.Images?.Count ?? 0) + 1;
+		isProductImgUpload = true;
+		imageCroperActive = false;
+		await CropperModal.TriggerFileSelect("inputDrop");
+	}
+
+	private async Task ChangeProductGalleryImage(int Id, int index)
+	{
+		gallaryImagesIndex = index;
+		changeImgId = Id;
+		isProductImgUpload = true;
+		imageCroperActive = false;
+		await CropperModal.TriggerFileSelect("inputDrop");
+	}
+
+	private void DialogClose() => openDeleteDialog = false;
+	private void DialogClose2() => openDeleteDialog2 = false;
+	private void DialogClose3() => openDeleteDialog3 = false;
+
+	private void DeleteDialogOpen(int id)
+	{
+		openDeleteDialog = true;
+		idForDelete = id;
+	}
+
+	async Task ConfirmDelete(int delId)
+	{
+		if (delId > 0)
+		{
+			openDeleteDialog = false;
+			product.Images = await _productViewModel.DeleteProductGalleryImage(delId, product.Id);
+		}
+	}
+
+	private void removeProductVariant(int productId)
+	{
+		openDeleteDialog3 = false;
+		var variant = product.Variants.Where(x => x.ProductId == productId).FirstOrDefault();
+		product.Variants.Remove(variant);
+		toastService.ShowToast(Constants.DeleteMessage, ToastLevel.Success);
+		StateHasChanged();
+	}
+
+	private void GenerateBarCode()
+	{
+		if (!string.IsNullOrEmpty(upc))
+		{
+			barCodeDialogVisibility = true;
+			StateHasChanged();
+		}
+	}
+
+	private void GetProductTeaserCount(Microsoft.AspNetCore.Components.ChangeEventArgs eventArgs)
+	{
+		var value = eventArgs.Value.ToString().Count();
+		productTeaserCount = 512 - value;
+		StateHasChanged();
+	}
+
+	private void GetProductDescriptionCount(Microsoft.AspNetCore.Components.ChangeEventArgs eventArgs)
+	{
+		var value = eventArgs.Value.ToString().Count();
+		productDescriptionCount = 5000 - value;
+		StateHasChanged();
+	}
+
+	private async Task GetTaxClasses()
+	{
+		var response = await _settingViewModel.GetBusinessTaxClassList(currentMember.Id);
+		if (response.success)
+		{
+			TaxClassesList.Add(new TaxClassModel() { Id = 0, TaxClassName = "Non Taxable", TaxCode = "" });
+			TaxClassesList.AddRange(response.data);
+		}
+	}
+
+	private async Task GetProductModifierGroup()
+	{
+		var response = await _ProductModifierGroupViewModel.GetProductModifierGroupListAsync(product.Id);
+		if (response.success && response.data != null)
+		{
+			productModifierGroupList = response.data.ToList();
+			modifierDataList = new ObservableCollection<PlaceholderData>();
+			appliedModifierDataList = new ObservableCollection<PlaceholderData>();
+			savedModifierDataList = new ObservableCollection<PlaceholderData>();
+			foreach (var item in response.data.Where(x => x.ProductId == null).OrderBy(x => x.ModifierGroupName))
+			{
+				var data = new PlaceholderData()
+					{
+						ProductModifierGroupId = item.Id,
+						Id = item.ModifierId,
+						ModifierGroupName = item.ModifierGroupName,
+						Modifiers = item.ModifierItemNames,
+						SortOrder = 0
+					};
+				modifierDataList.Add(data);
+			}
+			foreach (var item in response.data.Where(x => x.ProductId != null).OrderBy(x => x.SortOrder))
+			{
+				var data = new PlaceholderData()
+					{
+						ProductModifierGroupId = item.Id,
+						Id = item.ModifierId,
+						ModifierGroupName = item.ModifierGroupName,
+						Modifiers = item.ModifierItemNames,
+						SortOrder = (int)item.SortOrder
+					};
+				appliedModifierDataList.Add(data);
+				savedModifierDataList.Add(data);
+			}
+		}
+	}
+
+	private void AddModifier(PlaceholderData data)
+	{
+		modifierDataList.Remove(data);
+		appliedModifierDataList.Add(data);
+	}
+
+	private void DeleteAppliedModifier(PlaceholderData data)
+	{
+		modifierDataList.Add(data);
+		appliedModifierDataList.Remove(data);
+	}
+
+	private async void SaveProductModifierGroup()
+	{
+		List<ProductModifierGroupsRequestModel> requestItems = new List<ProductModifierGroupsRequestModel>();
+		int sortOrder = 0;
+		foreach (var item in appliedModifierDataList)
+		{
+			sortOrder++;
+			requestItems.Add(new ProductModifierGroupsRequestModel
+				{
+					BusinessModifierGroupId = item.Id,
+					Product_Id = product.Id,
+					ShowOnReceipts = false,
+					SortOrder = sortOrder
+				});
+		}
+		if (requestItems.Count > 0)
+		{
+			isLoading = true;
+			ProductModifierGroupRequestModel model = new ProductModifierGroupRequestModel()
+				{
+					ProductId = product.Id,
+					ProductModifierGroupItem = requestItems
+				};
+			var response = await _ProductModifierGroupViewModel.AddUpdateProductModifierGroupAsync(model);
+			isLoading = false;
+			if (response.success)
+			{
+				toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+				await GetProductModifierGroup();
+				ManageModModalVisibility = false;
+				StateHasChanged();
+			}
+			else
+			{
+				toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+			}
+		}
+	}
+
+	private async void RemoveModifier(PlaceholderData data)
+	{
+		modifierDataList.Add(data);
+		appliedModifierDataList.Remove(data);
+		savedModifierDataList.Remove(data);
+
+        openDeleteDialog2= false;
+		var response = await _ProductModifierGroupViewModel.DeleteProductModifierGroupByIdAsync((int)data.ProductModifierGroupId);
+		if (response.success)
+		{
+			toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+		}
+		else
+		{
+			toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+		}
+		StateHasChanged();
+	}
+
+	private async Task GetBusinessMenu()
+	{
+		var menuGroupItems = await _businessMenuViewModel.GetBusinessMenuGroupItemListAsync(null, product.Id);
+		CheckedNodes = new string[] { };
+		List<string> list = new List<string>();
+		foreach (var item in menuGroupItems.data)
+		{
+			list.Add("0-" + item.BusinessMenuGroupId.ToString());
+		}
+		CheckedNodes = list.ToArray();
+		var response = await _businessMenuViewModel.GetBusinessMenuListAsync();
+		if (response.success && response.data != null)
+		{
+			var groupDataList = new List<PlaceholderMenuData>();
+			foreach (var item in response.data.OrderBy(x => x.MenuName))
+			{
+				var groupResult = await _businessMenuViewModel.GetBusinessMenuGroupListAsync(item.Id);
+				if (groupResult.success && groupResult.data != null)
+				{
+					var child = new List<PlaceholderMenuData>();
+					foreach (var grpItem in groupResult.data.OrderBy(x => x.SortOrder))
+					{
+						//if (grpItem.ParentId == 0)
+						//{
+						//    List<PlaceholderMenuData> childGroup = new List<PlaceholderMenuData>();
+						//    foreach (var subItem in groupResult.data.Where(x => x.ParentId == grpItem.Id).OrderBy(x => x.SortOrder))
+						//    {
+						//        childGroup.Add(new PlaceholderMenuData { Id = subItem.Id, NodeId = "child-" + subItem.Id.ToString(), NodeText = subItem.GroupName });
+						//    }
+						//}
+						var isChecked = menuGroupItems.data != null && menuGroupItems.data.Exists(x => x.BusinessMenuGroupId == grpItem.Id);
+						child.Add(new PlaceholderMenuData { Id = grpItem.Id, IsChecked = isChecked, NodeId = "0-" + grpItem.Id.ToString(), NodeText = grpItem.GroupName, Expanded = true });
+					}
+					if (child.Count > 0)
+					{
+						groupDataList.Add(new PlaceholderMenuData { Id = item.Id, NodeId = item.Id.ToString(), NodeText = item.MenuName, Expanded = true, Child = child });
+					}
+				}
+			}
+			menuDataList = groupDataList;
+		}
+
+	}
+
+	private async void SaveMenus()
+	{
+		List<BusinessMenuGroupItemRequestModel> requestItems = new List<BusinessMenuGroupItemRequestModel>();
+		foreach (var item in CheckedNodes)
+		{
+			List<PlaceholderMenuData> tree1 = tree.GetTreeData(item);
+			if (tree1[0].NodeId != tree1[0].Id.ToString())
+			{
+				requestItems.Add(new BusinessMenuGroupItemRequestModel
+					{
+						BusinessMenuGroupId = tree1[0].Id,
+						Product_Id = product.Id,
+						Price = product.RetailPrice,
+						SortOrder = 0
+					});
+			}
+		}
+		if (requestItems.Count > 0)
+		{
+			isLoading = true;
+			BusinessMenuGroupProductRequestModel model = new BusinessMenuGroupProductRequestModel()
+				{
+					ProductId = product.Id,
+					MenuGroupItem = requestItems
+				};
+			var response = await _businessMenuViewModel.AddUpdateBusinessMenuGroupItemsAsync(model);
+			isLoading = false;
+			if (response.success)
+			{
+				toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+				StateHasChanged();
+			}
+			else
+			{
+				toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+			}
+		}
+	}
+
+	private void selectType(string type)
+	{
+		if (type == "Department")
+		{
+			departmentName = department.Description;
+		}
+		else if (type == "Vendor")
+		{
+			vendorName = product.VendorName;
+		}
+		else if (type == "TaxClass")
+		{
+			taxClass = selectedTaxClass.Description;
+		}
+	}
+
+	private async void SaveProductModifierGroupItem()
+	{
+		List<ProductModifierGroupItemsRequestModel> requestItems = new List<ProductModifierGroupItemsRequestModel>();
+		if (productModifierGroupModel.ModifierType == 0)
+		{
+			int sortOrder = 0;
+			foreach (var item in ProductModifierGroupItem)
+			{
+				sortOrder++;
+				requestItems.Add(new ProductModifierGroupItemsRequestModel
+					{
+						Id = item.Id.HasValue ? (int)item.Id : 0,
+						ProductModifierGroupId = (int)productModifierGroupModel.Id,
+						BusinessModifierGroupItemId = item.ModifierItemId,
+						IsDefault = item.IsDefault,
+						IsHidden = item.IsHidden
+					});
+			}
+		}
+		isLoading = true;
+		ProductModifierGroupItemRequestModel model = new ProductModifierGroupItemRequestModel()
+			{
+				Id = productModifierGroupModel.Id.HasValue ? (int)productModifierGroupModel.Id : 0,
+				ShowOnReceipts = productModifierGroupModel.ShowOnReceipts.HasValue ? (bool)productModifierGroupModel.ShowOnReceipts : false,
+				MinRequired = productModifierGroupModel.MinRequired.HasValue ? (int)productModifierGroupModel.MinRequired : 0,
+				MaxRequired = productModifierGroupModel.MaxRequired.HasValue ? (int)productModifierGroupModel.MaxRequired : 0,
+				IsRequired = productModifierGroupModel.IsRequired.HasValue ? (bool)productModifierGroupModel.IsRequired : false,
+				ProductModifierGroupItem = requestItems
+			};
+		var response = await _ProductModifierGroupViewModel.AddUpdateProductModifierGroupItemAsync(model);
+		isLoading = false;
+		if (response.success)
+		{
+			toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+			await GetProductModifierGroup();
+			this.ModModalVisibility = false;
+			StateHasChanged();
+		}
+		else
+		{
+			toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+		}
+	}
+
+	private async Task OpenModModal(PlaceholderData data)
+	{
+		productModifierGroupModel = new ProductModifierGroupModel();
+		if (data != null)
+		{
+			var modifierData = productModifierGroupList.Where(x => x.ModifierId == data.Id).FirstOrDefault();
+			if (modifierData != null)
+			{
+				productModifierGroupModel = modifierData;
+				if (modifierData.ModifierType == 0)
+				{
+					var response = await _ProductModifierGroupViewModel.GetProductModifierGroupItemListAsync(modifierData.Id, modifierData.BusinessModifierGroupId);
+					if (response.success && response.data != null)
+					{
+						ProductModifierGroupItem = new ObservableCollection<ProductModifierGroupItemModel>();
+						foreach (var item in response.data.OrderBy(x => x.SortOrder))
+						{
+							ProductModifierGroupItem.Add(item);
+						}
+					}
+				}
+			}
+		}
+		this.ModModalVisibility = true;
+	}
+
+	private void CloseModModal()
+	{
+		this.ModModalVisibility = false;
+	}
+
+	private async void SaveModifierSortOrder()
+	{
+		if (savedModifierDataList.Count > 0)
+		{
+			var collectionProductsListBox = ListBoxObj.GetDataList();
+			List<ProductModifierGroupsRequestModel> requestItems = new List<ProductModifierGroupsRequestModel>();
+			int sortOrder = 0;
+			foreach (var item in collectionProductsListBox)
+			{
+				sortOrder++;
+				requestItems.Add(new ProductModifierGroupsRequestModel
+					{
+						BusinessModifierGroupId = item.Id,
+						Product_Id = product.Id,
+						ShowOnReceipts = false,
+						SortOrder = sortOrder
+					});
+			}
+
+			if (requestItems.Count > 0)
+			{
+				isLoading = true;
+				ProductModifierGroupRequestModel model = new ProductModifierGroupRequestModel()
+					{
+						ProductId = product.Id,
+						ProductModifierGroupItem = requestItems
+					};
+				var response = await _ProductModifierGroupViewModel.AddUpdateProductModifierGroupAsync(model);
+				isLoading = false;
+				if (response.success)
+				{
+					toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+					savedModifierDataList = new ObservableCollection<PlaceholderData>();
+					foreach (var item in appliedModifierDataList.OrderBy(x => x.SortOrder))
+					{
+						savedModifierDataList.Add(item);
+					}
+					ManageModModalVisibility = false;
+					StateHasChanged();
+				}
+				else
+				{
+					toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+				}
+			}
+		}
+	}
+
+	private void OpenManageModModal()
+	{
+		this.ManageModModalVisibility = true;
+	}
+	private void CloseManageModModal()
+	{
+		this.ManageModModalVisibility = false;
+	}
+
+	private void OpenMenuModal()
+	{
+		this.MenuModalVisibility = true;
+	}
+	private void CloseMenuModal()
+	{
+		this.MenuModalVisibility = false;
+	}
+
+	private void OnInventoryModeDropdownChange(ChangeEventArgs<int, DropdownBindingModel> args)
+	{
+		if (args?.Value != null && args?.Value == 1)
+		{
+			product.TrackInventory = true;
+		}
+		else
+		{
+			product.TrackInventory = false;
+		}
+	}
+
+	private void OnBackOrderModeChange(ChangeEventArgs<int, DropdownBindingModel> args)
+	{
+		if (args?.Value != null && args?.Value == 1)
+		{
+			product.AvailableWhenOutofStock = true;
+		}
+		else
+		{
+			product.AvailableWhenOutofStock = false;
+		}
+	}
+
+	public class PlaceholderData
+	{
+		public int? ProductModifierGroupId { get; set; }
+		public int Id { get; set; }
+		public string ModifierGroupName { get; set; }
+		public string Modifiers { get; set; }
+		public int SortOrder { get; set; }
+	}
+
+	public List<PlaceholderData> PlaceholderModList = new List<PlaceholderData>()
+{
+	new PlaceholderData(){ Id=1, ModifierGroupName= "Temperature", Modifiers = "Rare, Medium Rare, Medium, Medium Well, Well Done" },
+	new PlaceholderData(){ Id=2, ModifierGroupName= "Hamburger Sides", Modifiers = "Side Salad, French Fries, Sweet Potato Fries" },
+	new PlaceholderData(){ Id=3, ModifierGroupName= "Hamburger Toppings", Modifiers = "American Cheese, Swiss Cheese, Cheddar Cheese, Bacon" },
+	};
+
+	public class PlaceholderMenuData
+	{
+		public int Id { get; set; }
+		public string NodeId { get; set; }
+		public string NodeText { get; set; }
+		public bool Expanded { get; set; }
+		public bool? IsChecked { get; set; }
+		public List<PlaceholderMenuData> Child;
+
+	}
+
+	List<SelectionDataModel> SelectionDataSource = new List<SelectionDataModel>()
+{
+	new SelectionDataModel{ Id = "1", Text = "Artwork"},
+	new SelectionDataModel{ Id = "2", Text = "Abstract"},
+	};
+
+	void OnDelete(SelectionDataModel selectionDataModel)
+	{
+		SelectionDataSource.RemoveAt(SelectionDataSource.ToList<SelectionDataModel>().FindIndex(e => e.Id == selectionDataModel.Id));
+	}
+
+	void AddItem()
+	{
+		SelectionDataSource.Add(new SelectionDataModel
+			{
+				Id = selectionValue,
+				Text = selectionValue,
+			});
+		selectionValue = "";
+	}
+
+	public class SelectionDataModel
+	{
+		public string Id { get; set; }
+		public string Text { get; set; }
+	}
+}
+<style>
+	.sfTree .e-list-item.e-level-2 .e-text-content.e-icon-wrapper .e-checkbox-wrapper {
+		display: initial !important;
+	}
+</style>

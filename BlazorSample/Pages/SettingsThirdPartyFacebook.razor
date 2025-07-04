@@ -1,0 +1,113 @@
+﻿@page "/settings/integrated-partners/facebook/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm Model="@facebook" Context="formContext" Class="row g-3">
+    <DataAnnotationsValidator />
+    <div class="card">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h5 class="mb-0"><a href="marketplace/partner/@Id" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-brands fa-facebook-square me-2"></span>Facebook</h5>
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-primary" @onclick="@(() => SaveFacebook(formContext))">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="card rounded-0" id="sectionFacebookPixel">
+                <div class="card-header border-bottom">
+                    <div class="row flex-between-center">
+                        <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                            <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-brands fa-facebook-f me-2"></span>Facebook Pixel</h5>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <form>
+                        <div class="mb-3">
+                            <label for="inputFacebookPixelId" class="form-label">Facebook Pixel ID</label>
+                            <InputText class="form-control" @bind-Value="facebook.FacebookPixelId" id="inputFacebookPixelId" type="text" placeholder="Pixel ID"></InputText>
+                            <ValidationMessage For="@(() => facebook.FacebookPixelId)" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputFacebook">Facebook Page URL</label>
+                            <InputText class="form-control" @bind-Value="facebook.FacebookPageURL" id="inputFacebook" type="text" placeholder="Your Facebook Page URL"></InputText>
+                            <ValidationMessage For="@(() => facebook.FacebookPageURL)" />
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "Facebook | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    Member currentMember = new Member();
+    FacebookRequestModel facebook = new FacebookRequestModel();
+    List<string> facebookMetaKeys = new List<string>(){
+        BusinessSettingsMetaKey.FacebookPageURL,
+        BusinessSettingsMetaKey.FacebookPixelId
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get business settings for facebook
+        var response = await _settingsViewModel.GetBusinessSettingsListAsync(currentMember.Id, BusinessSettingsMetaNamespace.Facebook);
+        foreach (var metaKey in facebookMetaKeys)
+        {
+            var metaValue = response?.data?.Where(x => x.MetaKey == metaKey)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+            Helper.SetPropertyValue(facebook, metaKey, metaValue);//Note: meta key and request model property name should be same
+        }
+        SpinnerVisibility = false;
+    }
+
+    public async Task SaveFacebook(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var businessSettings = await Helper.BusinessSettingsMapping(facebook, currentMember.Id, BusinessSettingsMetaNamespace.Facebook, facebookMetaKeys);
+            var response = await _settingsViewModel.CreateBusinessSettingListAsync(businessSettings);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+}

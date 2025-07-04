@@ -1,0 +1,96 @@
+﻿@page "/settings/taxes/test-sales-tax-calculator"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@inject ILocalStorageService localStorage
+@inject HttpClient _httpClient
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+
+<div class="card mb-3">
+
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings/taxes" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-calculator me-2"></span>Sales Tax Calculator</h5>
+            </div>
+            <div class="col-auto">
+
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <form class="row g-3">
+            <div class="col-12 col-sm-6">
+                <label class="form-label" for="inputProduct">Product</label>
+                <input type="text" class="form-control" id="inputProduct" placeholder="Search Products">
+            </div>  
+            <div class="col-12 col-sm-6">
+                <label class="form-label" for="inputZipCode">Zip Code</label>
+                 <input type="text" class="form-control" id="inputZipProduct" placeholder="">
+            </div>
+            <div class="col-12 text-end">
+                <button type="submit" class="btn btn-primary">Calculate Sales Tax</button>
+            </div>
+        </form>
+
+        <div class="my-4">
+            <div class="card shadow-none border">
+                <div class="card-header">
+                    Estimated Taxes
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-12 col-md-4 mb-3">
+                            <label for="staticZipCode" class="form-label mb-0">Zip Code</label>
+                            <input type="text" readonly class="form-control-plaintext" id="staticZipCode" value="94111 (San Francisco, CA)">
+                        </div>
+                        <div class="col-12 col-md-4 mb-3">
+                            <label for="staticZipCode" class="form-label mb-0">Test SKU</label>
+                            <input type="text" readonly class="form-control-plaintext" id="staticZipCode" value="123456">
+                        </div>
+                        <div class="col-12 col-md-4 mb-3">
+                            <label for="staticZipCode" class="form-label mb-0">Retail Price</label>
+                            <input type="text" readonly class="form-control-plaintext" id="staticZipCode" value="[[RetailPrice]]">
+                        </div>
+                        <div class="col-12 col-md-4 mb-3">
+                            <label for="staticZipCode" class="form-label mb-0">Rates</label>
+                            <input type="text" readonly class="form-control-plaintext" id="staticZipCode" value="[[6.2]]% (State), [[2.5]]% (County)">
+                        </div>
+                        <div class="col-12 col-md-4 mb-3">
+                            <label for="staticZipCode" class="form-label mb-0">Sales Tax</label>
+                            <input type="text" readonly class="form-control-plaintext" id="staticZipCode" value="$8.70">
+                        </div>
+                        <div class="col-12 col-md-4 mb-3">
+                            <label for="staticZipCode" class="form-label mb-0">Estimated Subtotal</label>
+                            <input type="text" readonly class="form-control-plaintext" id="staticZipCode" value="$98.70">
+                        </div>
+                        <div class="col-12 col-md-4 mb-3">
+                            <label for="staticZipCode" class="form-label mb-0">Tax Class</label>
+                            <input type="text" readonly class="form-control-plaintext" id="staticZipCode" value="[[TaxClass]]">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    private string title = "Sales Tax Calculator | Synergy Commerce";
+
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+
+
+}

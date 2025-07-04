@@ -1,0 +1,354 @@
+﻿@page  "/event-calendar"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.Blazor.Schedule
+@using System.Globalization
+@using CellarPassAppAdmin.Shared.Enums
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject ICalendarNoteViewModel _calendarNoteViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ToastService toastService
+@inject IBusinessPropertyViewModel _propertyViewModel
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<div class="card shadow-none border mb-3">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col">
+                <h5 class="mb-0"><span class="fa-regular fa-calendar-alt me-2"></span>Event Calendar</h5>
+            </div>
+            <div class="col-auto"></div>
+        </div>
+    </div>
+    <div class="card-body p-0 pt-4">
+
+        <SfSchedule TValue="AppointmentData" Height="550px" @bind-SelectedDate="@CurrentDate" @bind-CurrentView="@CurrentView">
+            <ScheduleWorkHours Start="12:00" End="12:00"></ScheduleWorkHours>
+            <ScheduleGroup ByDate="true" Resources="@Resources"></ScheduleGroup>
+            <ScheduleResources>
+                <ScheduleResource TItem="ResourceData" TValue="int" DataSource="@OwnersData" Field="OwnerId" Title="Owner" Name="Owners" TextField="OwnerText" IdField="Id" ColorField="OwnerColor"></ScheduleResource>
+            </ScheduleResources>
+            <ScheduleEvents TValue="AppointmentData" Navigating="OnNavigating"></ScheduleEvents>
+            <ScheduleEventSettings DataSource="@DataSource">
+                <Template>
+                    @{
+                        var appointment = (context as AppointmentData);
+                        <div>@(appointment.Subject)</div>
+                        <div> @(appointment.StartTime.ToShortTimeString()) - @(appointment.EndTime.ToShortTimeString())</div>
+                        <div>Max 25 Guests</div>
+                    }
+                </Template>
+            </ScheduleEventSettings>
+            <ScheduleViews>
+                <ScheduleView Option="View.Day"></ScheduleView>
+                <ScheduleView Option="View.Month"></ScheduleView>
+            </ScheduleViews>
+        </SfSchedule>
+        <button type="button" id="btnCalendarHours" class="btn-primary btn">Show Calendar Hours</button>
+        <button type="button" id="btnBusinessHours" class="btn-primary btn">Show Business Hours</button>
+        <button type="button" id="btnFullDay" class="btn-primary btn">Show Full Day</button>
+        <button type="button" class="btn btn-primary float-end" @onclick="@OpenModal">Status Legend</button>
+    </div>
+</div>
+<div class="card shadown-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md-auto">
+                <h5 class="mb-3 mb-md-0">Calendar Notes</h5>
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-sm btn-primary" @onclick="()=>OpenNoteModal(0)">Add New</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <ul class="list-group list-group-border p-2">
+            @{
+                if (calendarNotes.Count > 0)
+                {
+                    foreach (var calendarNote in calendarNotes)
+                    {
+                        <li class="list-group-item py-3 mb-2">
+                            <div class="row">
+                                <div class="col-sm-11">
+                                    <p class="mb-3">@((displayCalendarNoteDates)?calendarNote.StartDate.Value.ToString("M/d/yy") + " ":"")@calendarNote.StartTime.ToString("h:mmtt", CultureInfo.InvariantCulture) – @calendarNote.EndTime.ToString("h:mmtt", CultureInfo.InvariantCulture)  @calendarNote.Subject</p>
+                                    <p class="mb-1">@calendarNote.InternalNotes</p>
+                                </div>
+                                <div class="col-sm-1 text-end">
+                                    <a class="btn btn-link" href="javascript:void();" @onclick="() => OpenNoteModal(calendarNote.Id)"><span class="fa-regular fa-pencil"></span></a>
+                                </div>
+                            </div>
+                        </li>
+                    }
+                }
+                else
+                {
+                    <li class="list-group-item py-3 mb-2">No Calendar Notes</li>
+                }
+            }
+        </ul>
+    </div>
+</div>
+<SfDialog IsModal="true" Width="600px" ShowCloseIcon="true" @bind-Visible="ModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Event Status Legend</h5></Header>
+        <Content>
+            <div class="p-2">
+                <div class="row mb-3">
+                    <div class="col col-6"><b>Public Event(s)</b></div>
+                    <div class="col col-6"><b>Private Event(s)</b></div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col col-6">
+                        <img src="https://cdn.cellarpass.com/static/v2/admin/Common/images/NoBookings.png" width="35" height="35">&nbsp;No Bookings
+                    </div>
+                    <div class="col col-6">
+                        <img src="https://cdn.cellarpass.com/static/v2/admin/Common/images/PrivateBookedRecurring.png" width="35" height="35">&nbsp;Recurring Private Event
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col col-6">
+                        <img src="https://cdn.cellarpass.com/static/v2/admin/Common/images/BookingsReceived.png" width="35" height="35">&nbsp;Bookings Received
+                    </div>
+                    <div class="col col-6">
+                        <img src="https://cdn.cellarpass.com/static/v2/admin/Common/images/PrivateBookedNonRecurring.png" width="35" height="35">&nbsp;Non-Recurring Private Event
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col col-6">
+                        <img src="https://cdn.cellarpass.com/static/v2/admin/Common/images/SoldOutEvent.png" width="35" height="35">&nbsp;Sold Out Event
+                    </div>
+                    <div class="col col-6">
+                        <img src="https://cdn.cellarpass.com/static/v2/admin/Common/images/EventAutoClosed.png" width="35" height="35">&nbsp;Event (Auto-Closed)
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col col-6">
+                        <img src="https://cdn.cellarpass.com/static/v2/admin/Common/images/OverbookedEvent.png" width="35" height="35">&nbsp;Overbooked Event
+                    </div>
+                    <div class="col col-6">
+                        <img src="https://cdn.cellarpass.com/static/v2/admin/Common/images/EventClosed.png" width="35" height="35">&nbsp;Event Closed (Manually)
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col col-6">
+                        <img src="https://cdn.cellarpass.com/static/v2/admin/Common/images/EventAutoClosed.png" width="35" height="35">&nbsp;Event (Auto-Closed)
+                    </div>
+                    <div id="divCalendarNote" class="col col-6"><b>Calendar Notes</b></div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col col-6">
+                        <img src="https://cdn.cellarpass.com/static/v2/admin/Common/images/EventClosed.png" width="35" height="35">&nbsp;Event Closed (Manually)
+                    </div>
+                    <div id="divCalendarNoteIMG" class="col col-6">
+                        <img src="https://cdn.cellarpass.com/static/v2/admin/Common/images/Calendarnotes.png" width="35" height="35">&nbsp;Calendar Notes
+                    </div>
+                </div>
+            </div>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+<CalendarNoteModal BusinessProperties="businessProperties" StartTimeMinVal="startTimeMinVal" EndTimeMinVal="endTimeMinVal" OnDialogClose="CloseNoteModal" OnValidSubmit="AddUpdateCalendarNote" NoteModalVisibility="NoteModalVisibility" CalendarNote="calendarNote"></CalendarNoteModal>
+
+
+@code
+{
+    private string title = "Event Calendar | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility = true;
+    private DateTime CurrentDate = DateTime.Today;
+    private View CurrentView = View.Day;
+    private bool ModalVisibility { get; set; } = false;
+    private bool NoteModalVisibility { get; set; } = false;
+    private bool displayCalendarNoteDates = false;
+
+    Member currentMember = null;
+    public int CurrentBusinessProperty { get; set; }
+    public int CalendarNoteBusinessProperty { get; set; }
+    List<BusinessPropertyModel> businessProperties = new List<BusinessPropertyModel>();
+    List<CalendarNoteModel> totalCalendarNotes = new List<CalendarNoteModel>();
+    List<CalendarNoteModel> calendarNotes = new List<CalendarNoteModel>();
+    CalendarNoteModel calendarNote = new CalendarNoteModel();
+
+    const int _minuteInterval = 30;
+    const int _hourInterval = 60;
+    DateTime _minStartTime = DateTime.Today;
+    DateTime _startTime = DateTime.Today.AddHours(9);
+    DateTime _endTime = DateTime.Today.AddHours(17);
+    DateTime endTimeMinVal = DateTime.Today;
+    DateTime startTimeMinVal = DateTime.Today;
+    private SfDatePicker<DateTime?> DatePickerObj { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        //Get business property data
+        var businessPropertyResponse = await _propertyViewModel.GetBusinessProperties(currentMember.Id);
+        CurrentBusinessProperty = businessPropertyResponse?.FirstOrDefault()?.Id ?? 0;
+        CalendarNoteBusinessProperty = CurrentBusinessProperty;
+        businessProperties = businessPropertyResponse ?? new List<BusinessPropertyModel>();
+
+        //Get Calendar Notes
+        var response = await _calendarNoteViewModel.GetCalendarNotes();
+        if (response.success)
+        {
+            totalCalendarNotes = response.data;
+            RefreshCalendarNotes();
+        }
+        SpinnerVisibility = false;
+    }
+
+    private void RefreshCalendarNotes()
+    {
+        if (displayCalendarNoteDates)
+        {
+            calendarNotes = totalCalendarNotes.Where(x => x.StartDate.Value.Month >= CurrentDate.Month && x.EndDate.Value.Month <= CurrentDate.Month).OrderBy(y => y.StartDate).ThenBy(z => z.StartTime.TimeOfDay).ToList();
+        }
+        else
+        {
+            calendarNotes = totalCalendarNotes.Where(x => (x.StartDate.Value.Date >= CurrentDate && x.EndDate.Value.Date <= CurrentDate)).OrderBy(x => x.StartTime.TimeOfDay).ToList();
+        }
+    }
+
+    public string[] Resources { get; set; } = { "Owners" };
+    List<AppointmentData> DataSource = new List<AppointmentData>{
+        new AppointmentData { Id = 1, Subject = "Club Member Estate Tour & Tasting", StartTime = new DateTime(2020, 1, 31, 1, 30, 0) , EndTime = new DateTime(2020, 1, 31, 3, 0, 0), OwnerId = 1 }
+    };
+    public List<ResourceData> OwnersData { get; set; } = new List<ResourceData>{
+        new ResourceData{ OwnerText = "Encore", Id = 1, OwnerColor = "#1069b0" },
+        new ResourceData{ OwnerText = "Downtown", Id = 2, OwnerColor = "#1069b0" },
+        new ResourceData{ OwnerText = "Online Webinar", Id = 3, OwnerColor = "#1069b0" }
+    };
+    public class AppointmentData
+    {
+        public int Id { get; set; }
+        public string Subject { get; set; }
+        public string Location { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+        public string Description { get; set; }
+        public bool IsAllDay { get; set; }
+        public string RecurrenceRule { get; set; }
+        public string RecurrenceException { get; set; }
+        public Nullable<int> RecurrenceID { get; set; }
+        public int OwnerId { get; set; }
+    }
+    public class ResourceData
+    {
+        public int Id { get; set; }
+        public string OwnerText { get; set; }
+        public string OwnerColor { get; set; }
+    }
+    private void OpenModal()
+    {
+        this.ModalVisibility = true;
+    }
+    private void CloseModal()
+    {
+        this.ModalVisibility = false;
+    }
+    private void OpenNoteModal(int noteId)
+    {
+        if (noteId > 0)
+        {
+            var editCalNote = calendarNotes.Where(x => x.Id == noteId).FirstOrDefault();
+            if (editCalNote != null)
+            {
+                calendarNote = new CalendarNoteModel
+                {
+                    Id = editCalNote.Id,
+                    Subject = editCalNote.Subject,
+                    InternalNotes = editCalNote.InternalNotes,
+                    StartDate = editCalNote.StartDate,
+                    EndDate = editCalNote.EndDate,
+                    PropertyId = editCalNote.PropertyId,
+                    StartTime = editCalNote.StartTime,
+                    EndTime = editCalNote.EndTime
+                };
+            }
+            startTimeMinVal = calendarNote.StartTime.Date;
+            endTimeMinVal = startTimeMinVal.Date;
+        }
+        else
+        {
+            calendarNote = new CalendarNoteModel { PropertyId = CurrentBusinessProperty };
+            calendarNote.StartTime = _startTime;
+            calendarNote.EndTime = _endTime;
+            endTimeMinVal = DateTime.Today;
+            startTimeMinVal = DateTime.Today;
+        }
+
+        this.NoteModalVisibility = true;
+    }
+
+    private async Task CloseNoteModal()
+    {
+        this.NoteModalVisibility = false;
+    }
+   
+    private async Task AddUpdateCalendarNote()
+    {
+        SpinnerVisibility = true;
+        await CloseNoteModal();
+        var response = await _calendarNoteViewModel.AddUpdateCalendarNote(calendarNote);
+        if (response.success)
+        {
+            var getCalNotes = await _calendarNoteViewModel.GetCalendarNotes();
+            if (getCalNotes.success)
+            {
+                totalCalendarNotes = getCalNotes.data;
+                RefreshCalendarNotes();
+                if (calendarNote.Id > 0)
+                {
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                }
+                else
+                {
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                }
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.extra_info, ToastLevel.Error);
+            }
+        }
+        SpinnerVisibility = false;
+    }
+
+    private void OnNavigating(NavigatingEventArgs args)
+    {
+        displayCalendarNoteDates = false;
+        SpinnerVisibility = true;
+        string view = args.CurrentView.ToString();
+        CurrentDate = args.CurrentDate.Date;
+        if(view == EventCalendarViews.Month.ToString())
+        {
+            displayCalendarNoteDates = true;
+        }
+        RefreshCalendarNotes();
+        SpinnerVisibility = false;
+    }
+}
+
+
+<style>
+    .e-header-cells {
+        display: none !important;
+    }
+
+    .e-schedule .e-vertical-view .e-time-cells-wrap table td, .e-schedule .e-vertical-view .e-work-cells {
+        height: 35px;
+    }
+</style>

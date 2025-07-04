@@ -1,0 +1,133 @@
+﻿@page "/settings/meta-data-types"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Entities.v4;
+@using Syncfusion.Blazor.DropDowns;
+@using CellarPassAppAdmin.Shared.Models.RequestModel;
+@using CellarPassAppAdmin.Shared.Enums;
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject IGuestTagViewModel _guestTagViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col">
+                <h5 class="mb-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-database me-2"></span>Meta Data</h5>
+            </div>
+            <div class="col-md-auto"></div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        @*<div class="theme-wizard border-bottom p-3">
+            <ul class="nav justify-content-between nav-wizard">
+                <li class="nav-item">
+                    <a class="nav-link active fw-semi-bold" href="#bootstrap-wizard-tab1" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-1"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Click Add New</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab2" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-2"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Select Record Type</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab3" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-3"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Define Meta</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab4" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-4"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Assign Meta to Type</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab5" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-5"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Set Meta Order</span>
+                    </a>
+                </li>
+            </ul>
+        </div>*@
+
+        <div class="list-group list-group-flush">
+                <a href="/settings/product-meta-data" class="list-group-item list-group-item-action py-3">
+                    <div class="d-flex align-items-center position-relative">
+                        <span class="fa-regular fa-tag fa-2x fa-2x fa-fw"></span>
+                        <div class="flex-1 ms-3">
+                            <h6 class="mb-1 text-nowrap">Products</h6>
+                            <p class="mb-0 text-600 fs--1">Custom meta data attributes based on product types.</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/settings/order-meta-data" class="list-group-item list-group-item-action py-3">
+                    <div class="d-flex align-items-center position-relative">
+                        <span class="fa-regular fa-shopping-bag fa-2x fa-fw"></span>
+                        <div class="flex-1 ms-3">
+                            <h6 class="mb-1 text-nowrap">Orders</h6>
+                            <p class="mb-0 text-600 fs--1">Custom meta data attributes on orders.</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/settings/customer-meta-data" class="list-group-item list-group-item-action py-3">
+                    <div class="d-flex align-items-center position-relative">
+                        <span class="fa-regular fa-user fa-2x fa-fw"></span>
+                        <div class="flex-1 ms-3">
+                            <h6 class="mb-1 text-nowrap">Customers</h6>
+                            <p class="mb-0 text-600 fs--1">Custom meta data attributes for your customer.</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/settings/team-member-meta-data" class="list-group-item list-group-item-action py-3">
+                    <div class="d-flex align-items-center position-relative">
+                        <span class="fa-regular fa-user-tie fa-2x fa-fw"></span>
+                        <div class="flex-1 ms-3">
+                            <h6 class="mb-1 text-nowrap">Team Members</h6>
+                            <p class="mb-0 text-600 fs--1">Custom meta data attributes for your team members.</p>
+                        </div>
+                    </div>
+                </a>             
+                <a href="/settings/subscription-meta-data" class="list-group-item list-group-item-action py-3">
+                    <div class="d-flex align-items-center position-relative">
+                        <span class="fa-regular fa-box-open fa-2x fa-fw"></span>
+                        <div class="flex-1 ms-3">
+                            <h6 class="mb-1 text-nowrap">Subscriptions</h6>
+                            <p class="mb-0 text-600 fs--1">Custom meta data attributes for subscriptions.</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/settings/club-shipment-meta-data" class="list-group-item list-group-item-action py-3">
+                    <div class="d-flex align-items-center position-relative">
+                        <span class="fa-regular fa-gem fa-2x fa-fw"></span>
+                        <div class="flex-1 ms-3">
+                            <h6 class="mb-1 text-nowrap">Club Shipments</h6>
+                            <p class="mb-0 text-600 fs--1">Create custom meta data attributes for club shipments.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+    </div>
+</div>
+
+@code
+{
+    private bool SpinnerVisibility { get; set; } = false;
+    private string title = "Meta Data | Synergy Commerce Admin Panel";
+
+}

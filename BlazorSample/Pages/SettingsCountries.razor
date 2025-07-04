@@ -1,0 +1,199 @@
+﻿@page "/settings/countries"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Syncfusion.Blazor.Buttons
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-earth-americas me-2"></span>Countries</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+
+                <div class="mb-4">
+                    @{
+                        foreach (BusinessCountryStatesViewModel countryStates in countryStateGroup)
+                        {
+                            <h6 class="mb-0"><span class="@("flag-icon flag-icon-"+countryStates.CountryCode.ToLower()+" me-2")"></span>@countryStates.CountryName <span class="btn-reveal-trigger ms-2"><button @onclick="()=>BtnEditStateSettings(countryStates)" class="btn btn-link btn-sm btn-reveal"><span class="fa-regular fa-pencil"></span></button></span></h6>
+                            <p class="fs--2">Define States to operate in.</p>
+
+                            <div class="my-3">
+                                <div class="card shadow-none">
+                                    <div class="card-body">
+                                        <ul class="list-inline">
+
+                                            @foreach (BusinessStatesViewModel state in countryStates.CountryStates)
+                                            {
+                                                <li class="list-inline-item mb-2"><span class="badge @(state.IsActiveForBusiness ? "bg-primary" : "badge-soft-secondary") rounded-pill fw-normal">@state.StateName</span></li>
+                                            }
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <SfDialog IsModal="true" id="dialogEdit" Width="500px" ShowCloseIcon="true" @bind-Visible="EditDialogVisibility">
+            <DialogTemplates>
+                <Header><span class="@("flag-icon flag-icon-"+countryStateSettings.CountryCode.ToLower()+" me-2")"></span>@countryStateSettings?.CountryName</Header>
+                <Content>
+                    <div class="mt-2 mb-4">
+                        <div class="mb-3">
+                            <SfCheckBox @bind-Checked="IsAllSelected" @onchange="SelectAllOnChange" Label="Select All"></SfCheckBox><br />
+                        </div>
+                        <div class="row p-4">
+                            <ul class="list-unstyled column-count-2">
+                                @foreach (var state in countryStateSettings?.AllStates)
+                                {
+
+                                    <li class="form-check">
+                                        <SfCheckBox @bind-Checked="state.IsEnable" Label="@state?.StateName"></SfCheckBox><br />
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    </div>
+                </Content>
+            </DialogTemplates>
+            <DialogEvents></DialogEvents>
+            <DialogButtons>
+                <DialogButton Content="Cancel" OnClick="@OnCancelBtnClick" />
+                <DialogButton Content="Save" IsPrimary="true" OnClick="@OnSaveBtnClick" />
+            </DialogButtons>
+        </SfDialog>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    Member currentMember = new Member();
+    private string title = "Countries | Synergy Commerce Admin Panel";
+    private bool EditDialogVisibility { get; set; } = false;
+    private bool IsAllSelected { get; set; } = false;
+    private bool SpinnerVisibility { get; set; } = false;
+    string toastTitle = string.Empty;
+    string content = string.Empty;
+    /// <summary>
+    /// For list of counties and state
+    /// </summary>
+    List<BusinessCountryStatesViewModel> countryStateGroup = new List<BusinessCountryStatesViewModel>();
+    /// <summary>
+    /// Get all active countries with states (both enable disable) and then bind data on screen
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var result = await _settingsViewModel.GetBusinessStatesAsync(currentMember.Id);
+        countryStateGroup = result.data;
+        SpinnerVisibility = false;
+    }
+
+    /// <summary>
+    /// Default values for state setting dialog
+    /// </summary>
+    BusinessCountryStateSettingViewModel countryStateSettings = new BusinessCountryStateSettingViewModel()
+    {
+        CountryId = 0,
+        AllStates = new List<BusinessStateSettings>(),
+        CountryCode = string.Empty,
+        CountryName = string.Empty
+    };
+
+    /// <summary>
+    /// On edit business state setting button we will display all states in a dialog then user can disable/enable states
+    /// </summary>
+    /// <param name="businessCountryStatesViewModel"></param>
+    /// <returns></returns>
+    private async Task BtnEditStateSettings(BusinessCountryStatesViewModel businessCountryStatesViewModel)
+    {
+        IsAllSelected = businessCountryStatesViewModel.CountryStates.All(x => x.IsActiveForBusiness);
+        countryStateSettings = new BusinessCountryStateSettingViewModel()
+        {
+            CountryId = businessCountryStatesViewModel.CountryId,
+            AllStates = businessCountryStatesViewModel.CountryStates.Select(x => new BusinessStateSettings
+            {
+                IsEnable = x.IsActiveForBusiness,
+                StateCode = x.StateCode,
+                StateId = x.StateId,
+                StateName = x.StateName
+            }).ToList(),
+            CountryCode = businessCountryStatesViewModel.CountryCode,
+            CountryName = businessCountryStatesViewModel.CountryName
+        };
+        this.EditDialogVisibility = true;
+    }
+
+    /// <summary>
+    /// disable/enable all country states on select all checkbox click
+    /// </summary>
+    private void SelectAllOnChange()
+    {
+        countryStateSettings.AllStates.ForEach(x => x.IsEnable = IsAllSelected);
+    }
+
+    /// <summary>
+    /// Save business state setting in database
+    /// </summary>
+    /// <returns></returns>
+    private async Task OnSaveBtnClick()
+    {
+        //Save State Settings
+        SpinnerVisibility = true;
+        this.EditDialogVisibility = false;
+        var requestDto = new SettingCountriesRequestModel()
+        {
+            ActiveStateIds = countryStateSettings.AllStates.Where(x => x.IsEnable).Select(x => x.StateId).ToList(),
+            BusinessId = currentMember.Id,
+            CountryId = countryStateSettings.CountryId
+        };
+        var result = await _settingsViewModel.AddUpdateBusinessStateSettingsAsync(requestDto);
+        if (result.success)
+        {
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            await OnInitializedAsync();
+        }
+        else
+        {
+            toastService.ShowToast(result.error_info.description, ToastLevel.Error);
+        }
+        countryStateGroup = result.data;
+        SpinnerVisibility = false;
+    }
+
+    /// <summary>
+    /// Close dialog on cancel button click
+    /// </summary>
+    private void OnCancelBtnClick()
+    {
+        //Close Dialog
+        this.EditDialogVisibility = false;
+    }
+}

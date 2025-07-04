@@ -1,0 +1,118 @@
+﻿@page "/sa/business-account-status"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Client.ViewModels
+@inject IBusinessViewModel _businessViewModel
+@attribute [Authorize]
+
+
+<AuthorizeView>
+    <Authorized>
+        <SfSpinner @bind-Visible="isLoading"></SfSpinner>
+        <Title Value="@title"></Title>
+
+        <div class="py-3">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-0"><a href="/sa/configuration" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a>Business Account Status</h5>
+                </div>
+            </div>
+            <hr />
+        </div>
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@PlaceholderDataList" AllowFiltering="true" Width="100%">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates Context="iContext">
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && PlaceholderDataList.Count <= 0)
+                        {
+                            <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Account Status</h6>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn AllowFiltering="false" HeaderText="" TextAlign="TextAlign.Center" Width="30">
+                        <Template Context="iContext">
+                            @{
+                                var pholder = (iContext as PlaceholderData);
+                                @if (pholder.Color == "yellow")
+                                {
+                                    <span class="badge bg-warning">&nbsp;</span>
+                                }
+                                @if (pholder.Color == "blue")
+                                {
+                                    <span class="badge bg-primary">&nbsp;</span>
+                                }
+                                @if (pholder.Color == "green")
+                                {
+                                    <span class="badge bg-success">&nbsp;</span>
+                                }
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(PlaceholderData.IsWidget) HeaderText="Widget?" TextAlign="TextAlign.Center" DisplayAsCheckBox="true" Width="30" ></GridColumn>
+                    <GridColumn HeaderText="Contact" TextAlign="TextAlign.Left" Width="70">
+                        <Template Context="iContext">
+                            @{
+                                var contact = (iContext as PlaceholderData).Contact;
+                                <a href="javascript:void();">@contact</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(PlaceholderData.Date) HeaderText="Date" TextAlign="TextAlign.Left" Width="70" />
+                    <GridColumn HeaderText="Member Name" TextAlign="TextAlign.Left" Width="100">
+                        <Template Context="iContext">
+                            @{
+                                var memberName = (iContext as PlaceholderData).MemberName;
+                                <a href="javascript:void();">@memberName</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(PlaceholderData.Appellation) HeaderText="Appellation" TextAlign="TextAlign.Left" Width="70" />
+                    <GridColumn Field=@nameof(PlaceholderData.AVA) HeaderText="AVA" TextAlign="TextAlign.Left" Width="60" />
+                    <GridColumn Field=@nameof(PlaceholderData.Plan) HeaderText="Plan" TextAlign="TextAlign.Left" Width="60" />
+                    <GridColumn HeaderText="AccountManager" TextAlign="TextAlign.Left" Width="60">
+                        <Template Context="iContext">
+                            @{
+                                var accountManager = (iContext as PlaceholderData).AccountManager;
+                                <a href="javascript:void();">@accountManager</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+@code
+{
+    private string title = "Business Account Status | Synergy Commerce Admin Panel";
+    private bool isLoading = false;
+
+    public class PlaceholderData
+    {
+        public string Color { get; set; }
+        public bool IsWidget { get; set; }
+        public string Contact { get; set; }
+        public string Date { get; set; }
+        public string MemberName { get; set; }
+        public string Appellation { get; set; }
+        public string AVA { get; set; }
+        public string Plan { get; set; }
+        public string AccountManager { get; set; }
+    }
+
+    public List<PlaceholderData> PlaceholderDataList = new List<PlaceholderData>(){
+        new PlaceholderData(){ Color= "yellow", IsWidget=false, Contact="Mary Simmons", Date = "November 03 2021", MemberName= "Romeo Vineyards & Cellars", Appellation= "Napa Valley", AVA = "Calistoga", Plan = "PRO Annual PF", AccountManager= "" },
+        new PlaceholderData(){ Color= "yellow", IsWidget=false, Contact="Cori DeHore", Date = "October 25 2021", MemberName= "Temecula Valley Winegrowers Association", Appellation= "Southem California", AVA = "", Plan = "Passport TablePro Plan", AccountManager= "Jonathan Elliman" },
+        new PlaceholderData(){ Color= "blue", IsWidget=false, Contact="", Date = "January 01 2100", MemberName= "1882 Cantina", Appellation= "Temecula Valley", AVA = "", Plan = "", AccountManager= "" },
+        new PlaceholderData(){ Color= "green", IsWidget=false, Contact="", Date = "October 31 2021", MemberName= "Arteviono - Maple Creek Winery", Appellation= "Mendocino Country", AVA = "Andorson Valley", Plan = "", AccountManager= "Jonathan Elliman" },
+        new PlaceholderData(){ Color= "blue", IsWidget=false, Contact="", Date = "January 01 2100", MemberName= "Avensole Winery Restaurant", Appellation= "Temecula Valley", AVA = "", Plan = "", AccountManager= "" },
+        new PlaceholderData(){ Color= "blue", IsWidget=false, Contact="", Date = "January 01 2100", MemberName= "Baily's Restaurant", Appellation= "Temecula Valley", AVA = "", Plan = "", AccountManager= "" },
+   };
+
+}

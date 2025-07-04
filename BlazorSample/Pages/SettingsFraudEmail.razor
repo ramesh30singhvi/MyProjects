@@ -1,0 +1,142 @@
+﻿@page "/settings/fraud-tools/banned-email-addresses"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings/fraud-tools" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="far fa-users-slash me-2"></span>Banned Email Addresses</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="javascript:void(0)" @onclick="@OpenBannedModal">Add New</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@PlaceholderDataList" AllowPaging="true" Width="100%">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && PlaceholderDataList.Count <= 0)
+                    {
+                        <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                            <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Banned Email Addresses</h6>
+                        </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn HeaderText="Email Address" TextAlign="TextAlign.Left" Width="400px">
+                        <Template>
+                            @{
+                                var pholder = (context as PlaceholderData);
+                                <a href="javascript:void(0)" @onclick="@OpenBannedModal">@(pholder.EmailAddress)</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="Date Added" TextAlign="TextAlign.Left" Width="200">
+                        <Template>
+                            @{
+                                var pholder = (context as PlaceholderData);
+                                @(pholder.DateBanned)
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="" Width="50px">
+                        <Template>
+                            @{
+                                <a href="javascript:void(0)"><span class="fa-refular fa-trash-can"></span></a>
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+    <div class="card-footer">
+    </div>
+</div>
+
+
+<SfDialog IsModal="true" Width="400px" ShowCloseIcon="true" @bind-Visible="BannedModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Block Email Address</h5></Header>
+        <Content>
+            <div class="mb-3">
+                <label class="form-label" for="inputIpAddress">Email Address</label>
+                <input type="email" class="form-control" id="inputIpAddress">
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="selReason">Reason</label>
+                <select id="selReason" class="form-select">
+                    <option selected>Select Reason</option>
+                    <option value="1">One</option>
+                    <option value="2">Two</option>
+                    <option value="3">Three</option>
+                </select>
+            </div>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="@CloseBannedModal">Close</button>
+            <button type="button" class="btn btn-primary">Save</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+
+@code
+{
+    private string title = "Banned Email Addresses | Synergy Admin Panel";
+    private Boolean isLoading = true;
+
+    private bool BannedModalVisibility { get; set; } = false;
+
+    List<PlaceholderData> PlaceholderDataList = new List<PlaceholderData>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        PlaceholderDataList = PlaceholderList;
+        isLoading = false;
+    }
+
+    private void OpenBannedModal()
+    {
+        this.BannedModalVisibility = true;
+    }
+    private void CloseBannedModal()
+    {
+        this.BannedModalVisibility = false;
+    }
+
+    public class PlaceholderData
+    {
+        public int Id { get; set; }
+        public string EmailAddress { get; set; }
+        public string DateBanned { get; set; }
+    }
+
+    public List<PlaceholderData> PlaceholderList = new List<PlaceholderData>()
+    {
+    new PlaceholderData(){ Id=1, EmailAddress= "smith@email.com", DateBanned = "11/27/2021 10:12 AM" },
+    new PlaceholderData(){ Id=2, EmailAddress= "walker@email.com", DateBanned = "11/25/2021 5:12 PM" },
+    new PlaceholderData(){ Id=3, EmailAddress= "mr.hooper@email.com", DateBanned = "11/24/2021 9:12 AM" },
+     };
+
+
+}

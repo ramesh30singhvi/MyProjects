@@ -1,0 +1,140 @@
+﻿@page "/sa/ticket-order-utility"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Client.ViewModels
+@inject IBusinessViewModel _businessViewModel
+@attribute [Authorize]
+
+
+<AuthorizeView>
+    <Authorized>
+        <SfSpinner @bind-Visible="isLoading"></SfSpinner>
+        <Title Value="@title"></Title>
+
+        <div class="py-3">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-0"><a href="/sa/configuration" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a>Ticket Order Utility</h5>
+                </div>
+            </div>
+            <hr />
+        </div>
+        <div class="row mb-3 justify-content-between">
+            <div class="col-md-2">
+                <label class="form-label">Order Id or Ticket Number</label>
+            </div>
+            <div class="col-md-3">
+                <input type="text" class="form-control" id="inputOrderID">
+            </div>
+            <div class="col-md">
+                <button type="button" class="btn btn-sm btn-primary">Search</button>
+            </div>
+        </div>
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@PlaceholderDataList" Width="100%">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates Context="iContext">
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && PlaceholderDataList.Count <= 0)
+                        {
+                            <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Ticket Order</h6>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn HeaderText="Order #" TextAlign="TextAlign.Left" Width="40">
+                        <Template Context="iContext">
+                            @{
+                                var orderNumber = (iContext as PlaceholderData).OrderNumber;
+                                <a href="javascript:void();">@orderNumber</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="" TextAlign="TextAlign.Center" Width="30">
+                        <Template Context="iContext">
+                            @{
+                                var pholder = (iContext as PlaceholderData);
+                                @if (pholder.Color == "yellow")
+                                {
+                                    <span class="badge bg-warning">&nbsp;</span>
+                                }
+                                @if (pholder.Color == "blue")
+                                {
+                                    <span class="badge bg-primary">&nbsp;</span>
+                                }
+                                @if (pholder.Color == "green")
+                                {
+                                    <span class="badge bg-success">&nbsp;</span>
+                                }
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(PlaceholderData.Date) HeaderText="Date" TextAlign="TextAlign.Center" Width="60"></GridColumn>
+                    <GridColumn HeaderText="Ticket Buyer" TextAlign="TextAlign.Left" Width="70">
+                        <Template Context="iContext">
+                            @{
+                                var ticketBuyer = (iContext as PlaceholderData).TicketBuyer;
+                                <a href="javascript:void();">@ticketBuyer</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(PlaceholderData.Phone) HeaderText="Phone" TextAlign="TextAlign.Left" Width="70" />
+                    <GridColumn Field=@nameof(PlaceholderData.Quantity) HeaderText="Quantity" TextAlign="TextAlign.Left" Width="50" />
+                    <GridColumn Field=@nameof(PlaceholderData.Tickets) HeaderText="Tickets" TextAlign="TextAlign.Left" Width="40" />
+                    <GridColumn Field=@nameof(PlaceholderData.SvcFees) HeaderText="Svc Fees" TextAlign="TextAlign.Left" Width="40" />
+                    <GridColumn Field=@nameof(PlaceholderData.Total) HeaderText="Total" TextAlign="TextAlign.Left" Width="40" />
+                    <GridColumn Field=@nameof(PlaceholderData.CCFee) HeaderText="CC Fee" TextAlign="TextAlign.Left" Width="40" />
+                    <GridColumn AllowFiltering="false" HeaderText="" TextAlign="TextAlign.Center" Width="30">
+                        <Template Context="ItemTypeContext">
+                            @{
+                                <button class="delete_icon">
+                                    <span class="far fa-pencil"></span>
+                                </button>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn AllowFiltering="false" HeaderText="" TextAlign="TextAlign.Center" Width="30">
+                        <Template Context="ItemTypeContext">
+                            @{
+                                <button class="delete_icon">
+                                    <span class="far fa-close"></span>
+                                </button>
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+@code
+{
+    private string title = "Ticket Order Utility | Synergy Commerce Admin Panel";
+    private bool isLoading = false;
+
+    public class PlaceholderData
+    {
+        public string OrderNumber { get; set; }
+        public string Color { get; set; }
+        public string Date { get; set; }
+        public string TicketBuyer { get; set; }
+        public string Phone { get; set; }
+        public string Quantity { get; set; }
+        public string Tickets { get; set; }
+        public string SvcFees { get; set; }
+        public string Total { get; set; }
+        public string CCFee { get; set; }
+    }
+
+    public List<PlaceholderData> PlaceholderDataList = new List<PlaceholderData>(){
+        new PlaceholderData(){ Color= "green", OrderNumber="73358", Date = "4/8/2017 6:55 PM", TicketBuyer= "Felicia Bingaman", Phone= "+1 (585) 590-9531", Quantity = "5", Tickets = "$115.00", SvcFees= "$8.12", Total= "$130.85", CCFee= "N/A" },
+        new PlaceholderData(){ Color= "blue", OrderNumber="167539", Date = "11/15/2019 8:49 AM", TicketBuyer= "Susan Borenstein", Phone= "+1 (703) 307-9570", Quantity = "1", Tickets = "$0.00", SvcFees= "$0.00", Total= "$0.00" , CCFee= "N/A" },
+};
+
+
+
+}

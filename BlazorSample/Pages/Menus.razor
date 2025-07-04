@@ -1,0 +1,187 @@
+﻿@page "/settings/menu/menus"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject ToastService toastService
+@inject IBusinessMenuViewModel _businessMenuViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings/menu" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="far fa-burger-glass me-2"></span>Menus</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="settings/menu/menus/create">Add Menu</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="theme-wizard border-bottom p-3">
+            <ul class="nav justify-content-between nav-wizard">
+                <li class="nav-item">
+                    <a class="nav-link active fw-semi-bold" href="#bootstrap-wizard-tab1" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-1"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Click Add Menu</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab2" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-2"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Create Menu Groups</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab3" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-3"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Add Items</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab4" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-4"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Publish Menu</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@businessMenuData" AllowPaging="true" Width="100%" class="border-x-0">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && businessMenuData.Count <= 0)
+                        {
+                            <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Menus</h6>
+                                <button type="button" class="btn btn-outline-primary">Get Started</button>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn HeaderText="Menu Name" TextAlign="TextAlign.Left" Width="200px">
+                        <Template>
+                            @{
+                                var pholder = (context as BusinessMenuModel);
+                                <a href="settings/menu/menus/@pholder.IdGUID">@(pholder.MenuName)</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="Menu Groups" TextAlign="TextAlign.Left" Width="300">
+                        <Template>
+                            @{
+                                var pholder = (context as BusinessMenuModel);
+                                @(pholder.MenuGroups)
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="Publish" TextAlign="TextAlign.Left" Width="200">
+                        <Template>
+                            @{
+                                var pholder = (context as BusinessMenuModel);
+                                var publish = "";
+                                @if (pholder.TakeOutEnabled)
+                                {
+                                    publish += "Takeout";
+                                }
+                                @if (pholder.DeliveryEnabled)
+                                {
+                                    publish += publish == "" ? "Delivery" : ", Delivery";
+                                }
+                                @if (pholder.DineInEnabled)
+                                {
+                                    publish += publish == "" ? "Dine In" : ", Dine In";
+                                }
+                                @publish
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="" Width="50px">
+                        <Template>
+                            @{
+                                var pholder = (context as BusinessMenuModel);
+                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                    <a class="dropdown-item" href="javascript:void();">Archive</a>
+                                    <a class="dropdown-item" @onclick="()=>OpenDeleteDialog(pholder.Id)" href="javascript:void(0)">Delete</a>
+                                </div>
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+</div>
+@*Delete confimation dialog*@
+<DeleteConfirmation OpenDeleteDialog="DeleteDialogVisibility" OnDialogClose="CloseDeleteDialog" OnDeleteConfirmed="DeleteConfirmation"></DeleteConfirmation>
+
+@code
+{
+    private string title = "Menus | Synergy Admin Panel";
+    private Boolean isLoading = true;
+    private bool DeleteDialogVisibility { get; set; } = false;
+    int idForDelete = 0;
+    List<BusinessMenuModel> businessMenuData = new List<BusinessMenuModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetBusinessMenu();
+        isLoading = false;
+    }
+
+    private async Task GetBusinessMenu()
+    {
+        var response = await _businessMenuViewModel.GetBusinessMenuListAsync();
+        businessMenuData = response?.data ?? new List<BusinessMenuModel>();
+    }
+
+
+    //    public List<PlaceholderData> PlaceholderList = new List<PlaceholderData>()
+    //{
+    //        new PlaceholderData(){ Id=1, MenuName= "Breakfast", MenuGroups = "Appetizer, Entrée, Drinks", Publish = "Takeout, Delivery"  },
+    //        new PlaceholderData(){ Id=2, MenuName= "Brunch", MenuGroups = "Appetizer, Entrée, Drinks", Publish = "Takeout, Delivery" },
+    //        new PlaceholderData(){ Id=3, MenuName= "Carry Out", MenuGroups = "Appetizer, Entrée, Drinks, Dessert", Publish = "Takeout" },
+    //        new PlaceholderData(){ Id=4, MenuName= "Dinner", MenuGroups = "Appetizer, Entrée, Drinks, Cocktails", Publish = "Takeout, Dine In" },
+    //     };
+
+    private void CloseDeleteDialog() => DeleteDialogVisibility = false;
+
+
+    private async Task OpenDeleteDialog(int id)
+    {
+        DeleteDialogVisibility = true;
+        idForDelete = id;
+    }
+
+    private async Task DeleteConfirmation()
+    {
+        isLoading = true;
+        var response = await _businessMenuViewModel.DeleteBusinessMenuByIdAsync(idForDelete);
+        DeleteDialogVisibility = false;
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.DeleteMessage, ToastLevel.Success);
+            businessMenuData = response.data;
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+}

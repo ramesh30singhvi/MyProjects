@@ -1,0 +1,345 @@
+﻿@page  "/clubs/club-shipments"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Blazored.LocalStorage
+@inject IProductViewModel _productViewModel
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject IClubViewModel _clubViewModel
+@inject NavigationManager _navigationManager
+@inject ILocalStorageService localStorage
+@inject IClubViewModel _clubViewModel
+@inject IUserViewModel _userViewModel
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="/settings/club-management" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="far fa-box-open me-2"></span>Club Shipments</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="javascript:void();" @onclick="@OpenCreateShipmentModal">Add Shipment</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="theme-wizard border-bottom p-3">
+            <h6>How to create a new product</h6>
+            <ul class="nav justify-content-between nav-wizard">
+                <li class="nav-item">
+                    <a class="nav-link active fw-semi-bold" href="#bootstrap-wizard-tab1" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-1"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Add Product</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab2" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-2"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Set Ship + P/U Date(s)</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab3" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-3"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Skip Members</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab4" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-4"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Preflight Check + Reminders</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab5" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-5"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Schedule & Run Batch</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab6" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-6"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Review Orders</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <form>
+            <div class="row m-3">
+                <div class="col-12 col-md-12">
+                    <label class="form-label" for="inputAddressSearch">Search</label>
+                    <div class="input-group mb-3">
+                        <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                        <input type="text" class="form-control" @bind-value="searchText" @oninput="(EventArgs) => {SearchShipments(EventArgs.Value.ToString());}" placeholder="Search Shipments" />
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@shipmentList" AllowPaging="true" Width="100%" class="border-x-0">
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && shipmentList.Count <= 0)
+                        {
+                            <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Shipments Available</h6>
+                                <button type="button" class="btn btn-outline-primary">Get Started</button>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn HeaderText="Status" TextAlign="TextAlign.Center" Width="42">
+                        <Template Context="Context">
+                            @{
+                                var shipment = (Context as ShipmentListModel);
+                                <span class="badge rounded-pill d-block @(GetShipmentStatusClass(shipment.Status)) text-900">@(shipment.StatusText == "Shipment Ready" ? "Ready" : shipment.StatusText)</span>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(ShipmentListModel.TechnicalName) HeaderText="Shipment" TextAlign="TextAlign.Center" Width="40" />
+                    <GridColumn HeaderText="Club" TextAlign="TextAlign.Center" Width="78">
+                        <Template Context="Context">
+                            @{
+                                var shipment = (Context as ShipmentListModel);
+                                if (shipment.ClubType == ClubType.Custom)
+                                {
+                                    <a href="clubs/customer-preference-shipment-edit/@shipment.ShipmentGUID">@shipment.ClubName</a>
+                                }
+                                else if (shipment.ClubType == ClubType.Standard)
+                                {
+                                    <a href="clubs/standard-shipment-edit/@shipment.ShipmentGUID">@shipment.ClubName</a>
+                                }
+                                else
+                                {
+                                    <a href="javascript:void();">@shipment.ClubName</a>
+                                }
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="Shipments" TextAlign="TextAlign.Center" Width="35">
+                        <Template>
+                            @{
+                                var shipments = (context as ShipmentListModel).Shipments;
+                                <a href="/clubs/club-shipments/shipments">@shipments</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="Shipment Date" TextAlign="TextAlign.Center" Width="60">
+                        <Template>
+                            @{
+                                var shipment = (context as ShipmentListModel);
+                                if (shipment.ShipmentDate != DateTime.MinValue)
+                                {
+                                    var shipmentDate = shipment.ShipmentDate.AddMinutes(loggedInUser.OffsetMinutes);
+                                    @shipmentDate.ToString("MMMM d, yyyy")
+                                }
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(ShipmentListModel.Items) HeaderText="Items" TextAlign="TextAlign.Center" Width="30" />
+                    <GridColumn Field=@nameof(ShipmentListModel.Retail) Format="n2" HeaderText="Retail" TextAlign="TextAlign.Center" Width="40" />
+                    <GridColumn Field=@nameof(ShipmentListModel.SubTotal) Format="n2" HeaderText="SubTotal" TextAlign="TextAlign.Center" Width="40" />
+                    <GridColumn HeaderText="" Width="30">
+                        <Template>
+                            @{
+                                var shipment = (context as ShipmentListModel);
+                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                    <a class="dropdown-item" href="javascript:void();">Clone Shipment</a>
+                                    <div class="dropdown-divider"></div>
+                                    @foreach (var status in clubShipmentStatusList.Where(x => x.Key != (int)shipment.Status).ToList())
+                                    {
+                                        <a class="dropdown-item" href="javascript:void();" @onclick="()=>UpdateShipmentStatus(status.Key, shipment.Id, shipment.ShipmentGUID)">Set Status @status.Value</a>
+                                    }
+                                </div>
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+    <div class="card-footer">
+    </div>
+</div>
+
+<EditForm Model="@shipmentRequestModel" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="CreateShipmentModalVisibility">
+        <DialogTemplates>
+            <Header><h5 class="modal-title" id="modalLabel">Create Shipment</h5></Header>
+            <Content>
+                <div class="row">
+                    <div class="col-12 mb-3 sf-ddl">
+                        <label class="form-label" for="selSelectClub">Select Club</label>
+                        <SfDropDownList TValue="int" TItem="BusinessClubListModel" @bind-Value="shipmentRequestModel.BusinessClubId" DataSource="@businessClubs" Placeholder="Select Club">
+                            <DropDownListFieldSettings Text="ClubName" Value="Id"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => shipmentRequestModel.BusinessClubId)" />
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label" for="dpProcessingDate">Processing Date</label>
+                        <SfDatePicker id="dpProcessingDate" @bind-Value="shipmentRequestModel.DateToProcess" TValue="DateTime?">
+                            <DatePickerEvents TValue="DateTime?" ValueChange="(ChangedEventArgs<DateTime?> args)=>DateToProcessChangeHandler(args, formContext)"></DatePickerEvents>
+                        </SfDatePicker>
+                        <ValidationMessage For="@(() => shipmentRequestModel.DateToProcess)" />
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label" for="dpStandardShipDate">Standard Ship Date</label>
+                        <SfDatePicker id="dpStandardShipDate" @bind-Value="shipmentRequestModel.DateToShip" TValue="DateTime?"></SfDatePicker>
+                        <ValidationMessage For="@(() => shipmentRequestModel.DateToShip)" />
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label" for="dpCustomerPickupDate">Customer Pickup Date</label>
+                        <SfDatePicker id="dpCustomerPickupDate" @bind-Value="shipmentRequestModel.DateToPickup" TValue="DateTime?"></SfDatePicker>
+                        <ValidationMessage For="@(() => shipmentRequestModel.DateToPickup)" />
+                    </div>
+                </div>
+            </Content>
+            <FooterTemplate>
+                <button type="button" class="btn btn-secondary" @onclick="@CloseCreateShipmentModal">Cancel</button>
+                <button class="btn btn-primary" @onclick="@(()=>CreateShipment(formContext))">Create Shipment</button>
+            </FooterTemplate>
+        </DialogTemplates>
+    </SfDialog>
+</EditForm>
+
+@code
+{
+    private string title = "Club Shipments | Synergy Commerce Admin Panel";
+    private bool isLoading = false;
+    private bool CreateShipmentModalVisibility { get; set; } = false;
+    private Member currentMember = new Member();
+    List<BusinessClubListModel> businessClubs = new List<BusinessClubListModel>();
+    CreateShipmentRequestModel shipmentRequestModel = new CreateShipmentRequestModel();
+    List<ShipmentListModel> shipmentList = new List<ShipmentListModel>();
+    UserDetailModel loggedInUser = new UserDetailModel();
+    string searchText = "";
+    List<DropdownBindingModel> clubShipmentStatusList = Enum.GetValues(typeof(ClubShipmentStatus))
+            .Cast<ClubShipmentStatus>()
+            .Select(t => new DropdownBindingModel
+            {
+                Key = (int)t,
+                Value = EnumHelper.GetDescription(t)
+            }).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+
+        //Get Current Member
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get Current User
+        var getUserData = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+        var userByEmail = await _userViewModel.GetUserByEmail(getUserData.Email);
+        if (userByEmail.success)
+            loggedInUser = userByEmail.data;
+
+        //Get Clubs
+        var clubListResponse = await _clubViewModel.GetClubListAsync(currentMember.Id);
+        businessClubs = clubListResponse?.data ?? new List<BusinessClubListModel>();
+
+        //get shipments
+        await SearchShipments(searchText);
+
+        isLoading = false;
+    }
+    private async Task SearchShipments(string searchValue)
+    {
+        var shipmentListResponse = await _clubViewModel.GetShipmentListAsync(currentMember.Id, string.Empty, searchValue);
+        shipmentList = shipmentListResponse?.data ?? new List<ShipmentListModel>();
+        StateHasChanged();
+    }
+    private string GetShipmentStatusClass(ClubShipmentStatus shipmentStatus)
+    {
+        return shipmentStatus switch
+        {
+            ClubShipmentStatus.Draft => "bg-light",
+            //ClubShipmentStatus.NotReady => "badge-soft-warning",
+            //ClubShipmentStatus.ShipmentsCreated => "badge-soft-primary",
+            //ClubShipmentStatus.PreFlightComplete => "badge-soft-success",
+            ClubShipmentStatus.ShipmentReady => "badge-soft-primary",
+            //ClubShipmentStatus.BatchProcessed => "badge-soft-success",
+            //ClubShipmentStatus.DeclinedPayment => "badge-soft-warning",
+            //ClubShipmentStatus.BatchError => "badge-soft-warning",
+            _ => string.Empty
+        };
+    }
+    private void OpenCreateShipmentModal()
+    {
+        this.CreateShipmentModalVisibility = true;
+    }
+    private void CloseCreateShipmentModal()
+    {
+        shipmentRequestModel = new CreateShipmentRequestModel();
+        this.CreateShipmentModalVisibility = false;
+    }
+    public void DateToProcessChangeHandler(ChangedEventArgs<DateTime?> args, EditContext editContext)
+    {
+        if (args != null && args.Value != null)
+        {
+            shipmentRequestModel.DateToPickup = args.Value.Value;
+            shipmentRequestModel.DateToShip = args.Value.Value;
+            editContext.Validate();
+        }
+    }
+    private async Task CreateShipment(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            isLoading = true;
+            var selectedClub = businessClubs.FirstOrDefault(c => c.Id == shipmentRequestModel.BusinessClubId);
+            var createShipmentResponse = await _clubViewModel.CreateShipmentAsync(shipmentRequestModel);
+            isLoading = false;
+            if (createShipmentResponse.success)
+            {
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                CloseCreateShipmentModal();
+                if (selectedClub.ClubType == ClubType.Custom)
+                    _navigationManager.NavigateTo($"/clubs/customer-preference-shipment-edit/{createShipmentResponse.data.IdGuid}");
+                if (selectedClub.ClubType == ClubType.Standard)
+                    _navigationManager.NavigateTo($"/clubs/standard-shipment-edit/{createShipmentResponse.data.IdGuid}");
+            }
+            else
+            {
+                toastService.ShowToast(createShipmentResponse.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+    private async Task UpdateShipmentStatus(int status, int shipmentId, Guid shipmentGuid)
+    {
+        return;//For now we have no idea of this functionality
+
+        isLoading = true;
+        var updateShipmentStatusRequest = new UpdateShipmentStatusRequestModel
+        {
+            ShipmentGUID = shipmentGuid.ToString(),
+            ShipmentId = shipmentId,
+            Status = (ClubShipmentStatus)status
+        };
+        var updateShipmentStatusResponse = await _clubViewModel.UpdateShipmentStatus(updateShipmentStatusRequest);
+        isLoading = false;
+        if (updateShipmentStatusResponse.success)
+        {
+            toastService.ShowToast("Status " + Constants.UpdateMessage, ToastLevel.Success);
+            await SearchShipments(searchText);
+        }
+        else
+        {
+            toastService.ShowToast(updateShipmentStatusResponse.error_info.description, ToastLevel.Error);
+        }
+    }
+}

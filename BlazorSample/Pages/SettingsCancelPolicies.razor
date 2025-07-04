@@ -1,0 +1,96 @@
+﻿@page "/settings/cancel-policies"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card">
+            <div class="card-header bg-light">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0">
+                            <span class="far fa-shield-alt me-2"></span>Cancellation Policies
+                        </h5>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-primary" href="#!">Add New</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body min-vh-50 p-0">
+
+                <div class="table-responsive scrollbar">
+                    <table class="table fs--1 mb-0">
+                        <thead class="bg-200 text-900">
+                            <tr>
+                                <th class="pe-1 align-middle white-space-nowrap"></th>
+                                <th class="pe-1 align-middle white-space-nowrap">Policy Description</th>
+                                <th class="pe-1 align-middle white-space-nowrap">Policy Name</th>
+                                <th class="pe-1 align-middle white-space-nowrap"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="" id="table-locations-body">
+                            <tr>
+                                <td class="align-middle white-space-nowrap"><a href="settings/cancel-policies/edit"><span class="far fa-pencil-alt"></span></a></td>
+                                <td class="align-middle">To cancel or change an appointment, you must do so [[CancelLeadTime]] before the event starts. Failure to attend the event or cancel later than our policy allows, you will be responsible for the fees.</td>
+                                <td class="align-middle white-space-nowrap">Bouchon </td>
+                                <td class="align-middle white-space-nowrap"><a href="#!"><span class="far fa-trash-alt"></span></a></td>
+                            </tr>
+                            <tr>
+                                <td class="align-middle white-space-nowrap"><a href="settings/cancel-policies/edit"><span class="far fa-pencil-alt"></span></a></td>
+                                <td class="align-middle">If you fail to attend the event, you will be responsible for the fees.</td>
+                                <td class="align-middle white-space-nowrap">Bouchon No Cancel</td>
+                                <td class="align-middle white-space-nowrap"><a href="#!"><span class="far fa-trash-alt"></span></a></td>
+                            </tr>
+                            <tr>
+                                <td class="align-middle white-space-nowrap"><a href="settings/cancel-policies/edit"><span class="far fa-pencil-alt"></span></a></td>
+                                <td class="align-middle">Terms and Conditions: Each CellarPass Napa Valley Passport must be activated prior to first use. Activated passports must be presented to each participating location to be redeemed for complimentary tasting. Due to local visitation laws, some participating businesses require a prior reservation; others may require reservations for groups of 6 or more. Passport not valid in conjunction with any other offers discounts or promotions. Not valid for gratuities. CellarPass will not replace Napa Valley Passports that are lost, stolen or damaged. Must be 21 years of age or older. Non transferrable or redeemable for cash, unless where required by law.</td>
+                                <td class="align-middle white-space-nowrap">Napa Passport</td>
+                                <td class="align-middle white-space-nowrap"><a href="#!"><span class="far fa-trash-alt"></span></a></td>
+                            </tr>
+                            <tr>
+                                <td class="align-middle white-space-nowrap"><a href="settings/cancel-policies/edit"><span class="far fa-pencil-alt"></span></a></td>
+                                <td class="align-middle">We understand your travel plans may change. In the event you cannot attend the event, you are responsible for properly cancelling your reservation by contacting the host directly.</td>
+                                <td class="align-middle white-space-nowrap">Private Event Policy</td>
+                                <td class="align-middle white-space-nowrap"><a href="#!"><span class="far fa-trash-alt"></span></a></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+            <div class="card-footer">
+            </div>
+        </div>
+
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    bool isDisabledModalVisible = false;
+
+    private string title = "Cancellation Policies | Synergy Commerce Admin Panel";
+
+
+    [Parameter]
+    public int Id { get; set; }
+
+
+}

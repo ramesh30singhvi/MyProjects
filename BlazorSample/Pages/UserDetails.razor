@@ -1,0 +1,2054 @@
+﻿@page "/people/team/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using CellarPassAppAdmin.Shared.Helpers
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Client.Models
+@using Microsoft.Extensions.Options;
+@using System.Globalization;
+@inject IOptions<SynergyAppSettings> _synergyAppSettings
+@inject ILoginViewModel _loginViewModel
+@inject ITeamViewModel _teamViewModel
+@inject IUserViewModel _userViewModel
+@inject ICountryViewModel _countryViewModel
+@inject IStateViewModel _stateViewModel
+@inject IBusinessPositionNameViewModel _businessPositionNameViewModel
+@inject IBusinessTeamCompensationViewModel _businessTeamCompensationViewModel
+@inject IBusinessTeamPositionViewModel _businessTeamPositionViewModel
+@inject IMessageViewModel _messageViewModel
+@inject IBookmarkViewModel _bookmarkViewModel
+@inject ToastService toastService
+@inject NavigationManager _navigationManager
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject HttpClient http
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+@if (user != null)
+{
+    <div class="card shadow-none border mb-3">
+        <div class="card-body">
+            <div class="row flex-between-center">
+                <div class="col-md">
+                    <h5 class="mb-2 mb-md-0"><a href="people/team" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-user-tie me-2"></span>Team</h5>
+                </div>
+                <div class="col-auto">
+                    <div class="dropdown font-sans-serif">
+                        <button class="btn btn-sm dropdown-toggle p-1 dropdown-caret-none" type="button" id="user-actions-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                        <div class="dropdown-menu dropdown-menu-end py-3" aria-labelledby="user-actions-toggle" style="">
+                            <a class="dropdown-item" href="#!">Change Password</a>
+                            <a class="dropdown-item" href="#!">Send Password Link</a>
+                            <a class="dropdown-item" hidden="@(user.CustomBusinessMetaDatas == null ? true : false)" href="javascript:void();" @onclick="@OpenEditMetaDataModal">Edit Meta Data</a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item text-danger" href="javascript:void();" @onclick="()=>IsRemoveTeamMemberModalVisible = true">Remove Team Member</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-0">
+        <div class="col-lg-6 pe-lg-2 mb-3">
+            <div class="card shadow-none border h-100">
+                <div class="card-body">
+
+                    <div class="row g-0">
+                        <div class="col px-0 mb-4 mb-sm-0 text-center">
+                            <div class="dropdown">
+                                <InputFile id="inputDrop" OnChange="OnInputFileChange" class="opacity-0 w-100 h-100 position-absolute" />
+                                <a class="pe-0 hover-actions-trigger" id="profileImageDropdown" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <div class="avatar avatar-4xl me-2">
+                                        @if (user != null && !string.IsNullOrEmpty(user.UserImageUrl))
+                                        {
+                                            <img class="rounded-circle" src="@(!String.IsNullOrEmpty(imgUrl) ? imgUrl : _synergyAppSettings.Value.SynergyCDNBaseUrl + "business/photos/users/" + user.UserImage + "?" + DateTime.Now)" alt="@(user.FirstName + ' ' + user.LastName + ' ' + "Photo")" hidden="@(String.IsNullOrEmpty(user.UserImage))"/>
+                                            <img class="rounded-circle" src="@(!String.IsNullOrEmpty(imgUrl) ? imgUrl : user.UserImageUrl)" alt="@(user.FirstName + ' ' + user.LastName + ' ' + "Photo")" hidden="@(!String.IsNullOrEmpty(user.UserImage))"/>
+                                        }
+                                        <div class="hover-actions top-50 translate-middle-y">
+                                            <div class="avatar avatar-4xl">
+                                                <div class="avatar-name rounded-circle d-flex justify-content-center align-items-center opacity-75 "><span class="far fa-pencil fs-0 top-50"></span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </a>
+                                <div class="dropdown-menu dropdown-menu-card py-0" aria-labelledby="profileImageDropdown">
+                                    <div class="bg-white rounded-lg py-2">
+                                        <a class="dropdown-item" href="javascript:void();" @onclick="() => uploadImage()">Upload Image</a>
+                                        <a class="dropdown-item text-warning" href="#">Remove Image</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-9">
+                            <div class="row g-0">
+                                <div id="profileClubMemberIcon" class="col-auto">
+                                    <h4 title="Club Member" class="toggleTooltip"><small class="far fa-gem fa-xs me-2"></small></h4>
+                                </div>
+                                <div class="col ps-0">
+                                    <h4 class="mb-1 btn-reveal-trigger">@(user != null ? user.FirstName : "") @(user != null ? user.LastName : "")<a class="btn btn-link btn-sm btn-reveal ms-2" href="javascript:void();" @onclick="@OpenUpdateUserDetailModel"><span class="fas fa-pencil-alt fs--1"></span></a></h4>
+                                    <h5 class="fs-0 fw-normal">@(user != null ? user.Salutation : "")</h5>
+                                    <p class="mb-1"><a href="mailto:@(user != null ? user.Email : "")" class="text-500">@(user != null ? user.Email : "")</a></p>
+                                    @*<h5 class="fs-0 fw-normal">@(string.IsNullOrEmpty(positionName) ? "Title:" : "") <a href="javascript:void();" @onclick="() => OpenAddPositionModal()">@(string.IsNullOrEmpty(positionName) ? "Set Title" : positionName) </a></h5>*@
+                                    <h5 class="fs-0 fw-normal text-wrap">@(!activePositions.Any() ? "Title:" : "") <a href="javascript:void();" @onclick="() => OpenAddPositionModal()">@(!activePositions.Any() ? "Set Title" : string.Join(", ", activePositions)) </a></h5>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 ps-lg-2 mb-3">
+            <div class="card shadow-none border h-100">
+                <div class="card-body fs--1">
+                    <div class="row mb-3">
+                        <div class="col-5 col-sm-4">
+                            <p class="font-weight-semi-bold mb-1"><span class="far fa-sign-in-alt fa-flip-horizontal me-2"></span>Last Login</p>
+                        </div>
+                        <div class="col @(Helper.HasMutedText(user.FormattedLoginDate) ? "text-muted" : "")">
+                            @(user != null ? user.FormattedLoginDate : "")
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button @onclick="(() => displayChangePasswordModal = true)" class="btn btn-primary">Change Password</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-none border mb-3" id="profileTabs">
+        <div class="card-header border-bottom">
+            <ul class="nav nav-tabs border-0" id="guestTabs" role="tablist">
+                <li class="nav-item"><a class="nav-link active" id="contact-tab" @onclick="@(async () => await selectTab("tab-contact"))" data-bs-toggle="tab" href="#tab-contact" role="tab" aria-controls="tab-contact"><span class="far fa-user d-block d-sm-none"></span><span class="d-none d-sm-block">Contact</span></a></li>
+                <li class="nav-item"><a class="nav-link" id="preferences-tab" @onclick="@(async () => await selectTab("tab-preferences"))" data-bs-toggle="tab" href="#tab-preferences" role="tab" aria-controls="tab-preferences"><span class="far fa-lock-alt d-block d-sm-none"></span><span class="d-none d-sm-block">Preferences</span></a></li>
+                <li class="nav-item"><a class="nav-link" id="permissions-tab" @onclick="@(async () => await selectTab("tab-permissions"))" data-bs-toggle="tab" href="#tab-permissions" role="tab" aria-controls="tab-permissions"><span class="far fa-lock-alt d-block d-sm-none"></span><span class="d-none d-sm-block">Permissions</span></a></li>
+            </ul>
+        </div>
+        <div class="card-body px-0 border-top">
+
+            <div class="tab-content p-3" id="guestTabContent">
+
+                @if (selectedNavTab == "tab-contact")
+                {
+                    <div class="tab-pane fade show active" id="tab-contact" role="tabpanel" aria-labelledby="contact-tab">
+                        @if (user != null)
+                        {
+
+                            <div class="fs--1">
+
+                                <div class="row">
+                                    <div class="col-12 col-md-3">
+                                        @if (!string.IsNullOrEmpty(user.Company))
+                                        {
+                                            <h6>Company</h6>
+                                            <p class="white-space-nowrap">@(user.Company)</p>
+                                        }
+
+                                        <h6 class="">Address <a href="javascript:void();" @onclick="@OpenAddressModal">VIEW ALL</a></h6>
+                                        @foreach (var item in user.Address)
+                                        {
+                                            @if (item.IsDefaultBilling)
+                                            {
+                                                <p>
+                                                    @item.Address1<br /> @item.Address2
+                                                    @if (!string.IsNullOrEmpty(item.Address1) && !string.IsNullOrEmpty(item.Address2))
+                                                    {
+                                                        <br />
+                                                    }
+                                                    @(!string.IsNullOrEmpty(item.City) ? @item.City + ',' : "") @item.State @item.ZipCode <br /> @item.Country
+                                                </p>
+                                            }
+                                        }
+
+                                        <h6 class="">Date of Birth</h6>
+                                        @if (user.DOB != null && user.DOB.Value.Year > 1910)
+                                        {
+                                            <p>
+                                                @user.FormattedDOB
+                                                @if (user.Age != null)
+                                                {
+                                                    <span class="text-muted ms-2">(@user.Age years old)</span>
+                                                }
+                                            </p>
+                                        }
+                                        else
+                                        {
+                                            <p class="font-italic text-400 mb-1">Not Provided</p>
+                                        }
+                                    </div>
+                                    <div class="col-12 col-md-3">
+                                        @if (!string.IsNullOrEmpty(user.HomePhoneFormatted))
+                                        {
+                                            <h6>Home Phone</h6>
+                                            <p><a href="tel:@user.HomePhoneFormatted">@user.HomePhoneFormatted</a></p>
+                                        }
+
+                                        @if (!string.IsNullOrEmpty(user.CellPhone))
+                                        {
+                                            <h6 class="">Mobile Phone</h6>
+                                            <p><a href="tel:@user.CellPhone">@user.CellPhone</a></p>
+                                        }
+
+                                        @if (!string.IsNullOrEmpty(user.WorkPhoneFormatted))
+                                        {
+                                            <h6 class="">Work Phone</h6>
+                                            <p><a href="tel:@user.WorkPhoneFormatted">@user.WorkPhoneFormatted</a></p>
+                                        }
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <div id="customMetaData">
+                                            @if (user.CustomBusinessMetaDatas != null)
+                                            {
+                                                <CustomMetaData customBusinessMetaData="@user.CustomBusinessMetaDatas" isReadOnly="true" />
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                @if (userPreferencesLoaded && selectedNavTab == "tab-preferences")
+                {
+                    <div class="tab-pane fade show active" id="tab-preferences" role="tabpanel" aria-labelledby="preferences-tab">
+                        <div class="card-body">
+                            <div class="row mb-2">
+                                <div class="col-12 col-md-6 sf-ddl">
+                                    <label class="form-label" for="selDefaultAdminAccount">Default Admin Account</label>
+                                    <SfDropDownList TValue="int" @bind-Value="DefaultAdminAccountId" TItem="UserBusinessTeamModel" DataSource="@userBusinessTeams">
+                                        <DropDownListFieldSettings Value="BusinessId" Text="BusinessName"></DropDownListFieldSettings>
+                                        <DropDownListEvents ValueChange="OnAdminAccountDropdownChange" TItem="UserBusinessTeamModel" TValue="int"></DropDownListEvents>
+                                    </SfDropDownList>
+                                    <label><span>The member account set as default when signed in to the admin area</span></label>
+                                </div>
+                                <div class="col-12 col-md-6 sf-ddl">
+                                    <label class="form-label" for="selDefaultDateRange">Default Date Range</label>
+                                    <SfDropDownList TValue="int?" @bind-Value="DefaultDateRange" TItem="DropdownBindingModel" DataSource="@dateRangeList">
+                                        <DropDownListFieldSettings Value="Key" Text="Value"></DropDownListFieldSettings>
+                                        <DropDownListEvents ValueChange="OnDefaultDateRangeDropdownChange" TItem="DropdownBindingModel" TValue="int?"></DropDownListEvents>
+                                    </SfDropDownList>
+                                </div>
+                            </div>
+                            <h5 class="my-3">Bookmarks</h5>
+                            <div class="row">
+                                @foreach (var preference in bookmarkPreferences)
+                                {
+                                    <div class="col-12 col-md-4 mb-3 sf-ddl">
+                                        @{var preferenceIndex = preference.UserPrefBookmarkMetaKey.Substring(preference.UserPrefBookmarkMetaKey.Length - 1); }
+                                        <label class="form-label" for="selFavorite1">Favorite #@preferenceIndex</label>
+                                        <SfDropDownList TValue="int" @bind-Value="preference.BookmarkId" TItem="CPBookmarkModel" DataSource="@preference.CPBookmarkOptions">
+                                            <DropDownListFieldSettings Value="Id" Text="ButtonName"></DropDownListFieldSettings>
+                                            <DropDownListEvents ValueChange="()=>OnPreferencesDropdownChange(preference)" TItem="CPBookmarkModel" TValue="int"></DropDownListEvents>
+                                        </SfDropDownList>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+                @if (selectedNavTab == "tab-permissions")
+                {
+                    <div class="tab-pane fade show active" id="tab-permissions" role="tabpanel" aria-labelledby="permissions-tab">
+
+                        <ul class="list-group">
+                            <li class="list-group-item p-4 d-flex justify-content-between align-items-center">
+                                <div class="me-2">
+                                    <h6 class="mb-1">Administrator Role</h6>
+                                    <p class="mb-0">Assign the Administrator role to Users that need access to the entire CellarPass platform. No other Roles are required to be assigned.</p>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" id="chkAdminRole" type="checkbox" name="radioRole" checked="@(user.RoleNames.Contains("Admin"))" />
+                                    <label class="sr-only" for="chkAdminRole">Admin Role Checkbox</label>
+                                </div>
+                            </li>
+                            <li class="list-group-item p-4 d-flex justify-content-between align-items-center">
+                                <div class="me-2">
+                                    <h6 class="mb-1">Basic Role</h6>
+                                    <p class="mb-0">This role provides limited access to the platform and should be assigned to day-to-day team members that need access to book, modify and view guest bookings.</p>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" id="chkBasicRole" type="checkbox" name="radioRole" checked="@(user.RoleNames.Contains("Host"))" />
+                                    <label class="sr-only" for="chkBasicRole">Basic Role Checkbox</label>
+                                </div>
+                            </li>
+                            <li class="list-group-item p-4 d-flex justify-content-between align-items-center">
+                                <div class="me-2">
+                                    <h6 class="mb-1">Accounting Role</h6>
+                                    <p class="mb-0">If you have an internal or 3rd party bookkeeper, assign the Accounting role to provide limited access to view & print CellarPass invoices. Do not combine this role with any other roles.</p>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" id="chkAccountingRole" type="checkbox" name="radioRole" checked="@(user.RoleNames.Contains("Accounting"))" />
+                                    <label class="sr-only" for="chkAccountingRole">Accounting Role Checkbox</label>
+                                </div>
+                            </li>
+                            <li class="list-group-item p-4 d-flex justify-content-between align-items-center">
+                                <div class="me-2">
+                                    <h6 class="mb-1">Server Role <span class="text-muted fs--2">(Table Pro Only)</span></h6>
+                                    <p class="mb-0">This role should be assigned to User accounts to be displayed as assignable Servers within Table Pro.</p>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" id="chkServerRole" type="checkbox" checked="@(user.RoleNames.Contains("Server"))" />
+                                    <label class="sr-only" for="chkServerRole">Server Role Checkbox</label>
+                                </div>
+                            </li>
+                        </ul>
+
+                        <div class="my-4">
+                            <h6>Passcode (Point of Sale)</h6>
+                            <p>The PIN passcode can be used to access all areas of the Point of Sale system.</p>
+                            <div class="row">
+                                <div class="col-12" style="width:400px">
+                                    <div class="input-group">
+                                        <span class="input-group-text">PIN</span>
+                                        @if (user.PIN != null && user.PIN != 0)
+                                        {
+                                            @foreach (var item in pinList.Select((value, i) => new { i, value }))
+                                            {
+                                                <input type="text" value="@item.value" aria-label="Digit @(item.i + 1)" class="form-control bg-white" readonly>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <input type="text" aria-label="Digit 1" class="form-control bg-white" readonly>
+                                            <input type="text" aria-label="Digit 2" class="form-control bg-white" readonly>
+                                            <input type="text" aria-label="Digit 3" class="form-control bg-white" readonly>
+                                            <input type="text" aria-label="Digit 4" class="form-control bg-white" readonly>
+                                        }
+
+                                        <button class="btn btn-outline-secondary" @onclick="()=>GenereateUserPin()" type="button">Generate</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                }
+            </div>
+
+        </div>
+    </div>
+
+    @* <div class="card">
+        <div class="card-header">
+        <div class="row align-items-center">
+        <div class="col">
+        <h5 class="mb-0">Account Notes</h5>
+        </div>
+        <div class="col-auto"><a class="btn btn-falcon-default btn-sm" href="#!">Add note</a></div>
+        </div>
+        </div>
+        <div class="card-body border-top bg-light">
+        <div class="d-flex mb-2 hover-actions-trigger align-items-center bg-white rounded-lg p-2">
+        <span class="far fa-comment-alt-lines"></span>
+        <div class="ms-3 flex-shrink-1 flex-grow-1">
+        <p class="mb-1">This guest is a whale. Be sure to assign them your best host.</p>
+        <div class="fs--1"><span class="text-600 fs--2">BackOffice User</span><span class="text-500 fs--2 ms-2">Tuesday, November 3, 2020</span></div>
+        <div class="hover-actions end-0 top-50 translate-middle-y"><a href="#" class="btn btn-light border-300 btn-sm me-1 text-600" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Delete"><span class="fas fa-trash-alt"></span></a><a href="#" class="btn btn-light border-300 btn-sm me-1 text-600 shadow-none" type="button" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Edit"><span class="fas fa-edit"></span></a></div>
+        </div>
+        </div>
+        <hr class="bg-200">
+        <div class="d-flex mb-2 hover-actions-trigger align-items-center  bg-white rounded-lg p-2">
+        <span class="far fa-comment-alt-lines"></span>
+        <div class="ms-3 flex-shrink-1 flex-grow-1">
+        <p class="mb-1">This is another note left on the users account. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Risus nec feugiat in fermentum posuere urna. Tortor dignissim convallis aenean et. Augue neque gravida in fermentum et sollicitudin ac.</p>
+        <div class="fs--1"><span class="text-600 fs--2">Jonathan Elliman</span><span class="text-500 fs--2 ms-2">Tuesday, November 3, 2020</span></div>
+        <div class="hover-actions end-0 top-50 translate-middle-y"><a href="#" class="btn btn-light border-300 btn-sm me-1 text-600" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Delete"><span class="fas fa-trash-alt"></span></a><a href="#" class="btn btn-light border-300 btn-sm me-1 text-600 shadow-none" type="button" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Edit"><span class="fas fa-edit"></span></a></div>
+        </div>
+        </div>
+        </div>
+        </div>*@
+
+    <ImageCropper @ref="CropperModal" IsVisible="imageCroperActive" CropperConfiguration="cropperConfiguration" Cropped="OnCropped"></ImageCropper>
+    @*<ImageUploaderModal @ref="Modal" Cropped="OnCropped"></ImageUploaderModal>*@
+
+    <SfDialog IsModal="true" Width="650px" ShowCloseIcon="true" @bind-Visible="AddPositionModalVisibility" CssClass="sf-dialog-header-95">
+        <DialogTemplates>
+            <Header>
+                <div class="row justify-content-between align-items-center">
+                    <div class="col">
+                        <h5 class="modal-title" id="modalLabel">Job & Compensation</h5>
+                    </div>
+                    <div class="col-auto">
+                        @if (activeBusinessTeamPositions.Count == 1)
+                        {
+                            <button class="btn btn-sm btn-outline-dark" @onclick="@(() => AddAdditionalPosition())">Add Position</button>
+                        }
+                    </div>
+                </div>
+            </Header>
+            <Content>
+                <EditForm Model="@businessTeamPositionRequestModel" Context="businessTeamPositionFormContext">
+                    <DataAnnotationsValidator />
+                    @if (activeBusinessTeamPositions.Count > 0)
+                    {
+                        @foreach (var item in activeBusinessTeamPositions.OrderBy(x => x.PositionName))
+                        {
+                            <div class="card shadow-none border mb-3">
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <label class="col-sm-4 form-label">@(item.IsPrimary ? "Primary" : "Secondary") Position</label>
+                                        <label class="col-sm-8 fw-normal"><a href="javascript:void();" @onclick="@(() => OpenChangePositionModal(item))">@item.PositionName</a></label>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <label class="col-sm-4 form-label">Employment Type</label>
+                                        <label class="col-sm-8 fw-normal">@((EmploymentType)Enum.Parse(typeof(EmploymentType), item.PositionType.ToString()))</label>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <label class="col-sm-4 form-label">Pay Type</label>
+                                        <label class="col-sm-8 fw-normal">@((PayType)Enum.Parse(typeof(PayType), item.PayType.ToString()))</label>
+                                    </div>
+                                    @if (item.PayType == (int)PayType.Hourly)
+                                    {
+                                        <div class="row mb-3">
+                                            <label class="col-sm-4 form-label">Hourly Rate</label>
+                                            <label class="col-sm-8 fw-normal">$@item.HourlyRate.ToString("n2")</label>
+                                        </div>
+                                    }
+                                    @if (item.PayType == (int)PayType.Salary)
+                                    {
+                                        <div class="row mb-3">
+                                            <label class="col-sm-4 form-label">Annual Salary</label>
+                                            <label class="col-sm-8 fw-normal">$@item.AnnualSalary.ToString("n2")</label>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <label class="col-sm-4 form-label">Weekly Hours (Max)</label>
+                                            <label class="col-sm-8 fw-normal">@item.WeeklyHours</label>
+                                        </div>
+                                    }
+                                    <div class="row mb-3">
+                                        <label class="col-sm-4 form-label">Earn Tips</label>
+                                        <div class="col-sm-8">
+                                            <div class="d-flex justify-content-between">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="form-check form-switch">
+                                                        <input class="form-check-input" type="checkbox" disabled @bind-value="@item.TipsAllowed" checked="@item.TipsAllowed">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    @if (additionalPosition)
+                    {
+                        <div class="card shadow-none border mb-3">
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <label for="selPrimaryJobTitle" class="col-sm-4 form-label">@(activeBusinessTeamPositions.Count > 0 ? "Secondary" : "Primary") Position</label>
+                                    <div class="col-sm-8">
+                                        <InputSelect @bind-Value="@businessTeamPositionRequestModel.Position" class="form-select">
+                                            @if (@businessTeamPositionRequestModel.Position == null)
+                                                    {
+                                                <option value="@businessTeamPositionRequestModel.Position">@businessTeamPositionRequestModel.Position</option>
+                                                    }
+                                            @foreach (var businessPositionName in businessPositionNames.OrderBy(x => x.TitleName))
+                                                    {
+                                                <option value="@businessPositionName.Id">@businessPositionName.TitleName</option>
+                                                    }
+                                        </InputSelect>
+                                        <ValidationMessage For="@(() => businessTeamPositionRequestModel.Position)" />
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <label for="selEmploymentType" class="col-sm-4 form-label">Employment Type</label>
+                                    <div class="col-sm-8">
+                                        <InputSelect @bind-Value="@businessTeamPositionRequestModel.PositionType" class="form-select">
+                                            @if (@businessTeamPositionRequestModel.PositionType == null)
+                                                    {
+                                                <option value="@businessTeamPositionRequestModel.PositionType">@businessTeamPositionRequestModel.PositionType</option>
+                                                    }
+                                            @foreach (var employmentType in employmentTypeList)
+                                                    {
+                                                <option value="@employmentType.Key">@employmentType.Value</option>
+                                                    }
+                                        </InputSelect>
+                                        <ValidationMessage For="@(() => businessTeamPositionRequestModel.PositionType)" />
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <label for="selPayType" class="col-sm-4 form-label">Pay Type</label>
+                                    <div class="col-sm-8">
+                                        <InputSelect @bind-Value="@businessTeamPositionRequestModel.PayType" class="form-select">
+                                            @if (@businessTeamPositionRequestModel.PayType == null)
+                                                    {
+                                                <option value="@businessTeamPositionRequestModel.PayType">@businessTeamPositionRequestModel.PayType</option>
+                                                    }
+                                            @foreach (var payType in payTypeList)
+                                                    {
+                                                <option value="@payType.Key">@payType.Value</option>
+                                                    }
+                                        </InputSelect>
+                                        <ValidationMessage For="@(() => businessTeamPositionRequestModel.PayType)" />
+                                    </div>
+                                </div>
+                                @if (businessTeamPositionRequestModel.PayType == (int)PayType.Hourly)
+                                {
+                                    <div class="row mb-3">
+                                        <label for="inputHourlyRate" class="col-sm-4 form-label">Hourly Rate</label>
+                                        <div class="col-sm-8">
+                                            <InputNumber TValue="decimal" class="form-control" @bind-Value="@businessTeamPositionRequestModel.HourlyRate" placeholder="$0.00" />
+                                        </div>
+                                    </div>
+                                }
+                                @if (businessTeamPositionRequestModel.PayType == (int)PayType.Salary)
+                                {
+                                    <div class="row mb-3">
+                                        <label for="inputAnnualSalary" class="col-sm-4 form-label">Annual Salary</label>
+                                        <div class="col-sm-8">
+                                            <InputNumber TValue="decimal" class="form-control" @bind-Value="@businessTeamPositionRequestModel.AnnualSalary" placeholder="$0.00" />
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <label for="inputWeeklyHoursMax" class="col-sm-4 form-label">Weekly Hours (Max)</label>
+                                        <div class="col-sm-8">
+                                            <InputNumber TValue="int" class="form-control" @bind-Value="@businessTeamPositionRequestModel.WeeklyHours" placeholder="00" />
+                                        </div>
+                                    </div>
+                                }
+                                <div class="row mb-3">
+                                    <label for="switchEarnTips" class="col-sm-4 form-label">Earn Tips</label>
+                                    <div class="col-sm-8">
+                                        <div class="d-flex justify-content-between">
+                                            <div class="d-flex align-items-center">
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox" @bind-value="@businessTeamPositionRequestModel.TipsAllowed" checked="@businessTeamPositionRequestModel.TipsAllowed">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    <div class="card shadow-none border">
+                        <div class="card-body">
+                            <div class="d-flex flex-row mb-3">
+                                <div class="p-2">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" id="switchOvertimeExempt" type="checkbox" @bind-value="@businessTeamCompensationRequestModel.IsOvertimeExempt" checked="@businessTeamCompensationRequestModel.IsOvertimeExempt">
+                                    </div>
+                                </div>
+                                <div class="p-2">
+                                    <h6 class="mb-0">Overtime Exempt</h6>
+                                    <p><span class="form-text">This team member is not exempt from overtime FLSA rules.</span></p>
+                                    <p><a href="javascript:void();">Learn more></a></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @if (pastBusinessTeamPositions.Count > 0)
+                    {
+                        var pastPositions = pastBusinessTeamPositions.OrderByDescending(x => x.TerminationDate);
+                        if (pastPositions.Any())
+                        {
+                            <div class="mt-4">
+                                <h5 class="fs-0 mb-3">Past Positions</h5>
+                            </div>
+
+                            @foreach (var item in pastPositions)
+                            {
+                                <div class="card shadow-none border mb-3">
+                                    <div class="card-body">
+                                        <div class="row mb-3">
+                                            <label class="col-sm-4 form-label">Position</label>
+                                            <label class="col-sm-8 fw-normal">@item.PositionName</label>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <label class="col-sm-4 form-label">Employment Type</label>
+                                            <label class="col-sm-8 fw-normal">@((EmploymentType)Enum.Parse(typeof(EmploymentType), item.PositionType.ToString()))</label>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <label class="col-sm-4 form-label">Pay Type</label>
+                                            <label class="col-sm-8 fw-normal">@((PayType)Enum.Parse(typeof(PayType), item.PayType.ToString()))</label>
+                                        </div>
+                                        @if (item.PayType == (int)PayType.Hourly)
+                                        {
+                                            <div class="row mb-3">
+                                                <label class="col-sm-4 form-label">Hourly Rate</label>
+                                                <label class="col-sm-8 fw-normal">$@item.HourlyRate.ToString("n2")</label>
+                                            </div>
+                                        }
+                                        @if (item.PayType == (int)PayType.Salary)
+                                        {
+                                            <div class="row mb-3">
+                                                <label class="col-sm-4 form-label">Annual Salary</label>
+                                                <label class="col-sm-8 fw-normal">$@item.AnnualSalary.ToString("n2")</label>
+                                            </div>
+                                            <div class="row mb-3">
+                                                <label class="col-sm-4 form-label">Weekly Hours (Max)</label>
+                                                <label class="col-sm-8 fw-normal">@item.WeeklyHours</label>
+                                            </div>
+                                        }
+                                        <div class="row mb-3">
+                                            <label class="col-sm-4 form-label">Earn Tips</label>
+                                            <div class="col-sm-8">
+                                                <div class="d-flex justify-content-between">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="form-check form-switch">
+                                                            <input class="form-check-input" type="checkbox" disabled @bind-value="@item.TipsAllowed" checked="@item.TipsAllowed">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <label class="col-sm-4 form-label">Employment Dates</label>
+                                            <label class="col-sm-8 fw-normal">@(item.EffectiveDate != null ? item.EffectiveDate.Value.ToString("MM/dd/yyyy"):"") - @(item.TerminationDate != null ? item.TerminationDate.Value.ToString("MM/dd/yyyy"):"")</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+                        }
+                    }
+                    <div class="e-footer-content">
+                        <button type="button" class="btn btn-primary" @onclick="@(() => SaveBusinessTeamPosition(businessTeamPositionFormContext))">Save</button>
+                    </div>
+                </EditForm>
+            </Content>
+        </DialogTemplates>
+    </SfDialog>
+
+    <SfDialog IsModal="true" Width="650px" ShowCloseIcon="true" @bind-Visible="ChangePositionModalVisibility">
+        <DialogTemplates>
+            <Header><h5 class="modal-title" id="modalLabel">Position Details</h5></Header>
+            <Content>
+                <EditForm Model="@businessTeamPositionRequestModel" Context="businessTeamPositionFormContext">
+                    <DataAnnotationsValidator />
+                    <div class="p-3">
+                        <div class="row mb-3">
+                            <label class="col-sm-4 form-label">Previous Title</label>
+                            <label class="col-sm-8 form-label">@businessTeamPositionRequestModel.OldPositionName</label>
+                        </div>
+                        <div class="row mb-3">
+                            <label for="selPrimaryJobTitle" class="col-sm-4 form-label">Position</label>
+                            <div class="col-sm-8">
+                                <InputSelect @bind-Value="@businessTeamPositionRequestModel.Position" class="form-select">
+                                    @if (@businessTeamPositionRequestModel.Position == null)
+                                        {
+                                        <option value="@businessTeamPositionRequestModel.Position">@businessTeamPositionRequestModel.Position</option>
+                                        }
+                                    @foreach (var businessPositionName in businessPositionNames.OrderBy(x => x.TitleName))
+                                        {
+                                        <option value="@businessPositionName.Id">@businessPositionName.TitleName</option>
+                                        }
+                                    @if (!@businessTeamPositionRequestModel.IsPrimary)
+                                        {
+                                        <option value="-5">Remove Position</option>
+                                        }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => businessTeamPositionRequestModel.Position)" />
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label for="selEmploymentType" class="col-sm-4 form-label">Employment Type</label>
+                            <div class="col-sm-8">
+                                <InputSelect @bind-Value="@businessTeamPositionRequestModel.PositionType" class="form-select">
+                                    @if (@businessTeamPositionRequestModel.PositionType == null)
+                                        {
+                                        <option value="@businessTeamPositionRequestModel.PositionType">@businessTeamPositionRequestModel.PositionType</option>
+                                        }
+                                    @foreach (var employmentType in employmentTypeList)
+                                        {
+                                        <option value="@employmentType.Key">@employmentType.Value</option>
+                                        }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => businessTeamPositionRequestModel.PositionType)" />
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label for="selPayType" class="col-sm-4 form-label">Pay Type</label>
+                            <div class="col-sm-8">
+                                <InputSelect @bind-Value="@businessTeamPositionRequestModel.PayType" class="form-select">
+                                    @if (@businessTeamPositionRequestModel.PayType == null)
+                                        {
+                                        <option value="@businessTeamPositionRequestModel.PayType">@businessTeamPositionRequestModel.PayType</option>
+                                        }
+                                    @foreach (var payType in payTypeList)
+                                        {
+                                        <option value="@payType.Key">@payType.Value</option>
+                                        }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => businessTeamPositionRequestModel.PayType)" />
+                            </div>
+                        </div>
+                        @if (businessTeamPositionRequestModel.PayType == (int)PayType.Hourly)
+                        {
+                            <div class="row mb-3">
+                                <label for="inputHourlyRate" class="col-sm-4 form-label">Hourly Rate</label>
+                                <div class="col-sm-8">
+                                    <SfNumericTextBox CssClass="form-control" Placeholder="$0.00" TValue="decimal" Format="c2" ValidateDecimalOnType="true" Min="Convert.ToDecimal(0.00)" Decimals=2 ShowSpinButton="false" @bind-Value=@businessTeamPositionRequestModel.HourlyRate></SfNumericTextBox>
+                                </div>
+                            </div>
+                        }
+                        @if (businessTeamPositionRequestModel.PayType == (int)PayType.Salary)
+                        {
+                            <div class="row mb-3">
+                                <label for="inputAnnualSalary" class="col-sm-4 form-label">Annual Salary</label>
+                                <div class="col-sm-8">
+                                    <SfNumericTextBox CssClass="form-control" Placeholder="$0.00" TValue="decimal" Format="c2" ValidateDecimalOnType="true" Min="Convert.ToDecimal(0.00)" Decimals=2 ShowSpinButton="false" @bind-Value=@businessTeamPositionRequestModel.AnnualSalary></SfNumericTextBox>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <label for="inputWeeklyHoursMax" class="col-sm-4 form-label">Weekly Hours (Max)</label>
+                                <div class="col-sm-8">
+                                    <InputNumber TValue="int" class="form-control" @bind-Value="@businessTeamPositionRequestModel.WeeklyHours" placeholder="00" />
+                                </div>
+                            </div>
+                        }
+                        <div class="row mb-3">
+                            <label for="switchEarnTips" class="col-sm-4 form-label">Earn Tips</label>
+                            <div class="col-sm-8">
+                                <div class="d-flex justify-content-between">
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" @bind-value="@businessTeamPositionRequestModel.TipsAllowed" checked="@businessTeamPositionRequestModel.TipsAllowed">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label class="col-sm-4 form-label">Start Date</label>
+                            <div class="col-sm-8">
+                                <SfDatePicker TValue="DateTime?" @bind-Value="@businessTeamPositionRequestModel.EffectiveDate" />
+                                <ValidationMessage For="@(() => businessTeamPositionRequestModel.EffectiveDate)" />
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label class="col-sm-4 form-label">Termination Date</label>
+                            <div class="col-sm-8">
+                                <SfDatePicker TValue="DateTime?" @bind-Value="@businessTeamPositionRequestModel.TerminationDate" />
+                                <ValidationMessage For="@(() => businessTeamPositionRequestModel.TerminationDate)" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="e-footer-content">
+                        <button type="button" class="btn btn-secondary" @onclick="@CloseChangePositionModal">Cancel</button>
+                        <button type="button" class="btn btn-primary" @onclick="@(() => ChangeBusinessTeamPosition(businessTeamPositionFormContext))">Save</button>
+                    </div>
+                </EditForm>
+            </Content>
+        </DialogTemplates>
+    </SfDialog>
+
+    <SfDialog IsModal="true" ShowCloseIcon="true" CssClass="syncfusion-dialog-size syncfusion-dialog-size-md" @bind-Visible="AddressModalVisibility">
+        <DialogEvents Opened="@onOpenAddressModalFocus"></DialogEvents>
+        <DialogTemplates>
+            <Header>
+                <h5>Default Address</h5>
+            </Header>
+            <Content>
+                @if (user != null)
+                {
+                    <div class="row">
+                        @if (user.Address.Where(x => x.IsDefaultBilling == true).FirstOrDefault() != null)
+                        {
+                            <div class="col-sm-6 mb-5">
+                                <h6 class="fw-bold">Default Billing Address</h6>
+                                @foreach (var item in user.Address)
+                                {
+                                    @if (item.IsDefaultBilling)
+                                    {
+                                        <div class="card shadow-none border h-100">
+                                            <div class="card-body">
+                                                <button class="btn btn-sm btn-falcon-primary float-end mt-n2 dropdown-toggle btn-reveal dropdown-caret-none" type="button" id="dropdown-btn-user" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--2"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown-btn-user">
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(async () =>await OpenAddUpdateAddressModal(item))">Edit Address</a>
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => RemoveUserAddress(item.AddresGuid))">Delete Address</a>
+                                                </div>
+                                                <p class="text-start">
+                                                    @item.FirstName @item.LastName<br />
+                                                    @if (!string.IsNullOrEmpty(@item.Company))
+                                                    {
+                                                        @item.Company<br />
+                                                    }
+                                                    @item.Address1<br />
+                                                    @if (!string.IsNullOrEmpty(item.Address2))
+                                                    {
+                                                        @item.Address2<br />
+                                                    }
+                                                    @item.City, @item.State @item.ZipCode<br />
+                                                    @item.Country<br /><br />
+                                                    @item.PhoneFormatted
+                                                </p>
+                                                <button class="btn btn-sm btn-outline-primary" @onclick="@(() => UpdateDefaultShippingAddress(item.AddresGuid))">Use for Shipping</button>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        }
+
+                        @if (user.Address.Where(x => x.IsDefaultShipping == true).FirstOrDefault() != null)
+                        {
+                            <div class="col-sm-6 mb-5">
+                                <h6 class="fw-bold">Default Shipping Address</h6>
+                                @foreach (var item in user.Address)
+                                {
+                                    @if (item.IsDefaultShipping)
+                                    {
+                                        <div class="card shadow-none border h-100">
+                                            <div class="card-body">
+                                                <button class="btn btn-sm btn-falcon-primary float-end mt-n2 dropdown-toggle btn-reveal dropdown-caret-none" type="button" id="dropdown-btn-user" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--2"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown-btn-user">
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => OpenAddUpdateAddressModal(item))">Edit Address</a>
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => RemoveUserAddress(item.AddresGuid))">Delete Address</a>
+                                                </div>
+                                                <p class="text-start">
+                                                    @item.FirstName @item.LastName<br />
+                                                    @if (!string.IsNullOrEmpty(@item.Company))
+                                                    {
+                                                        @item.Company<br />
+                                                    }
+                                                    @item.Address1<br />
+                                                    @if (!string.IsNullOrEmpty(item.Address2))
+                                                    {
+                                                        @item.Address2<br />
+                                                    }
+                                                    @item.City, @item.State @item.ZipCode<br />
+                                                    @item.Country<br /><br />
+                                                    @item.PhoneFormatted
+                                                </p>
+                                                <button class="btn btn-sm btn-outline-primary" @onclick="@(() => UpdateDefaultBillingAddress(item.AddresGuid))">Use for Purchases</button>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        }
+                    </div>
+                    @if (user.Address.Where(x => x.IsDefaultBilling == false && x.IsDefaultShipping == false).FirstOrDefault() != null)
+                    {
+                        <div class="row">
+                            <h6 class="fw-bold">Other Addresses</h6>
+                            @foreach (var item in user.Address.Select((value, i) => new { i, value }))
+                            {
+                                @if (!item.value.IsDefaultShipping && !item.value.IsDefaultBilling)
+                                {
+                                    <div class="col-sm-6 mb-3">
+                                        <div class="card shadow-none border h-100">
+                                            <div class="card-body">
+                                                <button class="btn btn-sm btn-falcon-primary float-end mt-n2 dropdown-toggle btn-reveal dropdown-caret-none" type="button" id="dropdown-btn-user" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--2"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown-btn-user">
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => OpenAddUpdateAddressModal(item.value))">Edit Address</a>
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => RemoveUserAddress(item.value.AddresGuid))">Delete Address</a>
+                                                </div>
+                                                <p class="text-start">
+                                                    @item.value.FirstName @item.value.LastName<br />
+                                                    @if (!string.IsNullOrEmpty(@item.value.Company))
+                                                    {
+                                                        @item.value.Company<br />
+                                                    }
+                                                    @item.value.Address1<br />
+                                                    @if (!string.IsNullOrEmpty(item.value.Address2))
+                                                    {
+                                                        @item.value.Address2<br />
+                                                    }
+                                                    @item.value.City, @item.value.State @item.value.ZipCode<br />
+                                                    @item.value.Country<br /><br />
+                                                    @item.value.PhoneFormatted
+                                                </p>
+                                                <button class="btn btn-sm btn-outline-primary" @onclick="@(() => UpdateDefaultBillingAddress(item.value.AddresGuid))">Use for Purchases</button>
+                                                <button class="btn btn-sm btn-outline-primary" @onclick="@(() => UpdateDefaultShippingAddress(item.value.AddresGuid))">Use for Shipping</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    }
+                }
+            </Content>
+            <FooterTemplate>
+                <button type="button" class="btn btn-primary float-start" @onclick="@(() => OpenAddUpdateAddressModal(null))">Add New</button>
+                <button type="button" class="btn btn-secondary" @onclick="@CloseAddressModal">Close</button>
+            </FooterTemplate>
+        </DialogTemplates>
+    </SfDialog>
+
+    <SfDialog IsModal="true" CssClass="syncfusion-dialog-size syncfusion-dialog-size-sm" ShowCloseIcon="true" @bind-Visible="UpdateAddressModalVisibility">
+        <DialogTemplates>
+            <Header><h5 class="modal-title" id="modalLabel">@(addressRequestModel.AddressGUID != null ? "Update Address" : "Add New Address")</h5></Header>
+            <Content>
+                <EditForm Model="@addressRequestModel" Context="addressFormContext">
+                    <DataAnnotationsValidator />
+                    <div class="row gx-2">
+                        <div class="col-sm-6 mb-3">
+                            <label class="form-label" for="inputFirstName">First Name</label>
+                            <InputText id="inputFirstName" class="form-control" @bind-Value="@addressRequestModel.FirstName" placeholder="First Name" />
+                            <ValidationMessage For="@(() => addressRequestModel.FirstName)" />
+                        </div>
+                        <div class="col-sm-6 mb-3">
+                            <label class="form-label" for="inputLastName">Last Name</label>
+                            <InputText id="inputLastName" class="form-control" @bind-Value="@addressRequestModel.LastName" placeholder="Last Name" />
+                            <ValidationMessage For="@(() => addressRequestModel.LastName)" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Company</label>
+                        <input type="text" class="form-control" @bind-value="@addressRequestModel.Company" id="inputCompany" placeholder="Company" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date of Birth</label>
+                        <SfMaskedTextBox Placeholder='Date of Birth' Mask="00/00/0000" @bind-Value="@UserAddressDob" @ref="UserAddressDobObj"></SfMaskedTextBox>
+                    </div>
+                    <div class="mb-3">
+                        <AddressControl countries="@countries" states="@states" @bind-address1="@addressRequestModel.Address1" @bind-address2="@addressRequestModel.Address2" @bind-selectedCountry="@addressRequestModel.CountryCode" @bind-stateCode="@addressRequestModel.StateCode" @bind-city="@addressRequestModel.City" @bind-zipCode="@addressRequestModel.ZipCode" />
+                    </div>
+                    @if (showPhoneControl)
+                    {
+                        <div class="mb-3">
+                            <PhoneNumber PhoneCountry="@addressRequestModel.PhoneCountry" phoneMasks="@phoneMasks" countries="@countries" @bind-phone="@addressRequestModel.Phone" label="Phone" />
+                        </div>
+                    }
+                    <div class="mb-3">
+                            <SfCheckBox Label="Set as Default Billing Address" @bind-Checked="@addressRequestModel.IsDefaultBilling"></SfCheckBox>
+                    </div>
+                    <div class="mb-3">
+                        <SfCheckBox Label="Set as Default Shipping Address" @bind-Checked="@addressRequestModel.IsDefaultShipping"></SfCheckBox> 
+                    </div>
+
+                    <hr />
+                    <div class="float-end pb-3">
+                        <button type="button" class="btn btn-secondary" @onclick="@CloseUpdateAddressModal">Cancel</button>
+                        <button type="button" class="btn btn-primary" @onclick="@(() => SaveUserAddress(addressFormContext))">Save</button>
+                    </div>
+                </EditForm>
+            </Content>
+        </DialogTemplates>
+    </SfDialog>
+
+    <SfDialog IsModal="true" CssClass="syncfusion-dialog-size syncfusion-dialog-size-sm" ShowCloseIcon="true" @bind-Visible="UpdateUserDetailModalVisibility">
+        <DialogTemplates>
+            <Header><h5 class="modal-title" id="modalLabel">Update User Detail</h5></Header>
+            <Content>
+                <EditForm Model="@userRequestModel" Context="userFormContext">
+                    <DataAnnotationsValidator />
+                    <div class="row gx-2">
+                        <div class="col-sm-6 mb-3">
+                            <label class="form-label" for="inputFirstName">First Name</label>
+                            <InputText id="inputFirstName" class="form-control" @bind-Value="@userRequestModel.FirstName" placeholder="First Name" />
+                            <ValidationMessage For="@(() => userRequestModel.FirstName)" />
+                        </div>
+                        <div class="col-sm-6 mb-3">
+                            <label class="form-label" for="inputLastName">Last Name</label>
+                            <InputText id="inputLastName" class="form-control" @bind-Value="@userRequestModel.LastName" placeholder="Last Name" />
+                            <ValidationMessage For="@(() => userRequestModel.LastName)" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Company</label>
+                        <input type="text" class="form-control" @bind-value="@userRequestModel.Company" id="inputCompany" placeholder="Company" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="text" class="form-control" @bind-value="@userRequestModel.Email" id="inputEmail" placeholder="Email Address" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date of Birth</label>
+                        <SfMaskedTextBox Placeholder='Date of Birth' Mask="00/00/0000" @bind-Value="@UserDob" @ref="UserDobObj"></SfMaskedTextBox>
+                    </div>
+                    @if (showPhoneControl)
+                    {
+                        <div class="mb-3">
+                            <PhoneNumber PhoneCountry="@userRequestModel.WorkPhoneCountry" phoneMasks="@phoneMasks" countries="@countries" @bind-phone="@userRequestModel.WorkPhone" label="Work Phone" />
+                        </div>
+                        <div class="mb-3">
+                            <PhoneNumber PhoneCountry="@userRequestModel.PhoneCountry" phoneMasks="@phoneMasks" countries="@countries" @bind-phone="@userRequestModel.Phone" label="Mobile Phone" />
+                        </div>
+                        <div class="mb-3">
+                            <PhoneNumber PhoneCountry="@userRequestModel.HomePhoneCountry" phoneMasks="@phoneMasks" countries="@countries" @bind-phone="@userRequestModel.HomePhone" label="Home Phone" />
+                        </div>
+
+                    }
+                    <hr />
+                    <div class="float-end pb-3">
+                        <button type="button" class="btn btn-secondary" @onclick="@CloseUpdateUserDetailModel">Close</button>
+                        <button type="button" class="btn btn-primary" @onclick="@(() => SaveUserDetail(userFormContext))">Save</button>
+                    </div>
+                </EditForm>
+            </Content>
+        </DialogTemplates>
+    </SfDialog>
+
+    <SfDialog Width="400px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsRemoveTeamMemberModalVisible">
+        <DialogEvents OnOverlayClick="() => IsRemoveTeamMemberModalVisible = false">
+        </DialogEvents>
+        <DialogTemplates>
+            <Header>Remove Team Member</Header>
+            <Content>
+                <p class="mb-3">You have requested to remove this Team Member.</p>
+                <p class="mb-3">Are you sure?</p>
+            </Content>
+        </DialogTemplates>
+        <DialogButtons>
+            <DialogButton Content="Cancel" OnClick="() => IsRemoveTeamMemberModalVisible = false" />
+            <DialogButton Content="Confirm" OnClick="()=>RemoveBusinessTeamMember(user.Team)" IsPrimary="true" />
+        </DialogButtons>
+    </SfDialog>
+
+    <SfDialog IsModal="true" ShowCloseIcon="true" CssClass="syncfusion-dialog-size syncfusion-dialog-size-md" @bind-Visible="EditMetaDataModalVisibility">
+        <DialogTemplates>
+            <Header>
+                <h5>Edit Meta Data</h5>
+            </Header>
+            <Content>
+                @if (user.CustomBusinessMetaDatas != null)
+                {
+                    <CustomMetaData customBusinessMetaData="@user.CustomBusinessMetaDatas" isReadOnly="false" />
+                }
+            </Content>
+            <FooterTemplate>
+                <button type="button" class="btn btn-secondary" @onclick="@CloseEditMetaDataModal">Close</button>
+                <button type="button" class="btn btn-primary" @onclick="@(() => SaveEditMetaData())">Save</button>
+            </FooterTemplate>
+        </DialogTemplates>
+    </SfDialog>
+
+    @if (displayChangePasswordModal)
+    {
+        <SfDialog IsModal="true" Width="700px" ShowCloseIcon="true" CssClass="syncfusion-dialog-size syncfusion-dialog-size-md" @bind-Visible="displayChangePasswordModal">
+            <DialogTemplates>
+                <Header>
+                    <h5>Change Password</h5>
+                </Header>
+                <Content>
+                    <PeopleUsersPasswordReset @ref="peopleUsersPasswordReset"></PeopleUsersPasswordReset>
+                </Content>
+            </DialogTemplates>
+        </SfDialog>
+    }
+}
+
+@code
+{
+    bool isEditModalVisible = false;
+
+    private string selectedNavTab = "tab-contact";
+    private TeamDetailViewModel user = null;
+    private string title = "";
+    private bool? showPermissionTab = null;
+    private ImageUploaderModal Modal { get; set; }
+    string imgUrl;
+    private bool imageCroperActive = false;
+    private ImageCropperConfiguration cropperConfiguration = new ImageCropperConfiguration();
+    private ImageCropper CropperModal { get; set; }
+    private Member currentMember = new Member();
+    private bool isLoading;
+    private List<int> pinList;
+    private bool AddPositionModalVisibility { get; set; } = false;
+    private bool ChangePositionModalVisibility { get; set; } = false;
+    private bool showPhoneControl;
+    private bool AddressModalVisibility { get; set; } = false;
+    private bool UpdateAddressModalVisibility { get; set; } = false;
+    private bool UpdateUserDetailModalVisibility { get; set; } = false;
+    private bool EditMetaDataModalVisibility { get; set; } = false;
+    private bool IsRemoveTeamMemberModalVisible { get; set; }
+    private UserAddressRequestModel addressRequestModel = new UserAddressRequestModel();
+    private UpdateUserRequestModel userRequestModel = new UpdateUserRequestModel();
+    private List<CpCountry> countries = new List<CpCountry>();
+    private List<CpState> states = new List<CpState>();
+    private List<PhoneMask> phoneMasks = new List<PhoneMask>();
+    SfMaskedTextBox UserAddressDobObj;
+    SfMaskedTextBox UserDobObj;
+    private string UserAddressDob;
+    private string UserDob;
+    List<BusinessPositionNameModel> businessPositionNames = new List<BusinessPositionNameModel>();
+    List<BusinessTeamPositionModel> activeBusinessTeamPositions = new List<BusinessTeamPositionModel>();
+    List<BusinessTeamPositionModel> pastBusinessTeamPositions = new List<BusinessTeamPositionModel>();
+    private BusinessTeamCompensationRequestModel businessTeamCompensationRequestModel = new BusinessTeamCompensationRequestModel();
+    private BusinessTeamPositionRequestModel businessTeamPositionRequestModel = new BusinessTeamPositionRequestModel();
+    private int DefaultAdminAccountId { get; set; }
+    private int CurrentUserId { get; set; }
+    private bool additionalPosition { get; set; } = false;
+    private string positionName { get; set; } = "";
+    string[] activePositions = new string[] { };
+    private int offSetMinutes = 0;
+    private bool FirstRender { get; set; }
+    private bool userPreferencesLoaded { get; set; }
+    List<CPBookmarkModel> cPBookmarks = new List<CPBookmarkModel>();
+    List<BookmarkPreference> bookmarkPreferences = new List<BookmarkPreference>();
+    List<UserMetafieldModel> userMetafields = new List<UserMetafieldModel>();
+    List<UserBusinessTeamModel> userBusinessTeams = new List<UserBusinessTeamModel>();
+    //private int DefaultAdminAccountId { get; set; }
+    private int? DefaultDateRange { get; set; }
+    List<string> UserPrefBookmarkMetaKeys = new List<string>(){
+        UserMetafieldKey.UserPrefBookmark1,
+        UserMetafieldKey.UserPrefBookmark2,
+        UserMetafieldKey.UserPrefBookmark3,
+        UserMetafieldKey.UserPrefBookmark4,
+        UserMetafieldKey.UserPrefBookmark5,
+        UserMetafieldKey.UserPrefBookmark6,
+        UserMetafieldKey.UserPrefBookmark7,
+        UserMetafieldKey.UserPrefBookmark8,
+        UserMetafieldKey.UserPrefBookmark9
+    };
+    private bool displayChangePasswordModal { get; set; }
+    private PeopleUsersPasswordReset peopleUsersPasswordReset;
+    List<DropdownBindingModel> dateRangeList = Enum.GetValues(typeof(DateRange))
+                          .Cast<DateRange>()
+                          .Select(t => new DropdownBindingModel
+                          {
+                              Key = (int)t,
+                              Value = Helper.GetDisplayName(t)
+                          }).ToList();
+    List<DropdownBindingModel> employmentTypeList = Enum.GetValues(typeof(EmploymentType))
+                  .Cast<EmploymentType>()
+                  .Select(t => new DropdownBindingModel
+                  {
+                      Key = (int)t,
+                      Value = Helper.GetDisplayName(t)
+                  }).ToList();
+    List<DropdownBindingModel> payTypeList = Enum.GetValues(typeof(PayType))
+                       .Cast<PayType>()
+                       .Select(t => new DropdownBindingModel
+                       {
+                           Key = (int)t,
+                           Value = Helper.GetDisplayName(t)
+                       }).ToList();
+
+    [Parameter]
+    public Guid Id { get; set; }
+
+    public void ShowEditModal()
+    {
+        isEditModalVisible = true;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get Current User
+        var getUserData = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+        CurrentUserId = getUserData?.Id ?? 0;
+        offSetMinutes = getUserData?.OffsetMinutes ?? 0;
+        await GetTeamDetail();
+        if (CurrentUserId > 0)
+        {
+            //Get Business Teams for current user
+            var userBusinessTeamsResponse = await _teamViewModel.GetUserBusinessTeams(CurrentUserId);
+            userBusinessTeams = userBusinessTeamsResponse?.data ?? new List<UserBusinessTeamModel>();
+            DefaultAdminAccountId = userBusinessTeams.Where(x => x.IsDefault)?.FirstOrDefault()?.BusinessId ?? 0;
+
+            await GetBusinessPositionNames();
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadUserPreferences()
+    {
+        FirstRender = true;
+
+        if (CurrentUserId > 0)
+        {
+            //Get Default Date Range
+            var DefaultDateRangeResponse = await _userViewModel.GetUserMetafieldListAsync(CurrentUserId, DefaultAdminAccountId, UserMetafieldNamespace.UserPrefDateRange);
+            if (DefaultDateRangeResponse?.data?.FirstOrDefault()?.MetaValue != null)
+            {
+                DefaultDateRange = Convert.ToInt32(DefaultDateRangeResponse.data.FirstOrDefault().MetaValue);
+            }
+
+            //Get all bookmarks
+            var bookmarkResponse = await _bookmarkViewModel.GetBookmarksAsync(null, null);
+            cPBookmarks = bookmarkResponse?.data ?? new List<CPBookmarkModel>();
+
+            //Get User Metafield settings
+            await GetUserMetafieldsettings();
+        }
+    }
+
+    private async Task GetTeamDetail()
+    {
+        TeamDetailResponse response = await _teamViewModel.GetBusinessTeamDetail(Id);
+        if (response.success)
+        {
+            user = response.data;
+            title = user.FirstName + " " + user.LastName + " | Synergy Commerce Admin Panel";
+            if (user.RoleNames.Contains("Admin") || user.RoleNames.Contains("Host") || user.RoleNames.Contains("Server") || user.RoleNames.Contains("Accounting"))
+            {
+                showPermissionTab = true;
+            }
+            else
+            {
+                showPermissionTab = false;
+            }
+
+            if (user.PIN != 0)
+            {
+                pinList = user.PIN.ToString().Select(x => Convert.ToInt32(x.ToString())).ToList();
+            }
+
+            if (user.CustomBusinessMetaDatas != null && user.CustomBusinessMetaDatas.Count > 0)
+            {
+                foreach (var item in user.CustomBusinessMetaDatas)
+                {
+                    if (!string.IsNullOrEmpty(item.ContentChoices))
+                    {
+                        item.MetaDropdownItemData = System.Text.Json.JsonSerializer.Deserialize<List<MetaDropdownItem>>(item.ContentChoices);
+                    }
+                }
+            }
+            else
+            {
+                user.CustomBusinessMetaDatas = new List<CustomBusinessMetaDataModel>();
+            }
+
+            await GetBusinessTeamCompensation();
+        }
+        StateHasChanged();
+    }
+
+    protected async Task selectTab(string selectedTab)
+    {
+        selectedNavTab = selectedTab;
+
+        if (selectedTab == "tab-permissions")
+        {
+            title = user.FirstName + " " + user.LastName + " | Permissions";
+            StateHasChanged();
+        }
+
+        if (selectedTab == "tab-preferences")
+        {
+            title = user.FirstName + " " + user.LastName + " | Preferences";
+            if (!userPreferencesLoaded)
+            {
+                userPreferencesLoaded = true;
+                isLoading = true;
+                await LoadUserPreferences();
+                isLoading = false;
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        var maxAllowedFiles = 1;
+        var format = "image/png";
+        foreach (var imageFile in e.GetMultipleFiles(maxAllowedFiles))
+        {
+            var buffer = new byte[imageFile.Size];
+            await imageFile.OpenReadStream().ReadAsync(buffer);
+            var imageDataUrl =
+                $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+
+            await CropperModal.OnFileChange(imageDataUrl);
+            imageCroperActive = true;
+        }
+        StateHasChanged();
+    }
+
+    async Task OnCropped(string value)
+    {
+        imgUrl = value;
+        imageCroperActive = false;
+
+        if (user.Id > 0)
+        {
+            ImageUploadRequestModel requestModel = new ImageUploadRequestModel()
+            {
+                Image = value,
+                UserGUID = Id
+            };
+            UploadImageResponse response = await _loginViewModel.UploadUserProfileImage(requestModel);
+            if (response.success)
+            {
+                user.UserImageUrl = response.data.item_image_url;
+                user.UserImage = response.data.image_file_name;
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task uploadImage()
+    {
+        imageCroperActive = false;
+        await CropperModal.TriggerFileSelect("inputDrop");
+    }
+
+    private async Task RemoveBusinessTeamMember(int teamId)
+    {
+        RemoveTeamMemberResponse response = await _teamViewModel.RemoveBusinessTeamMember(teamId, currentMember.Id);
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+            _navigationManager.NavigateTo("/people/team");
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+
+
+
+    private async Task GenereateUserPin()
+    {
+        user.PIN = await _teamViewModel.GenerateUserPin(Id);
+        pinList = user.PIN.ToString().Select(x => Convert.ToInt32(x.ToString())).ToList();
+        StateHasChanged();
+    }
+
+    private void OpenAddPositionModal()
+    {
+        if (activeBusinessTeamPositions.Count == 0)
+        {
+            additionalPosition = true;
+        }
+        AddPositionModalVisibility = true;
+    }
+    private void CloseAddPositionModal()
+    {
+        AddPositionModalVisibility = false;
+    }
+    private void OpenChangePositionModal(BusinessTeamPositionModel item)
+    {
+        businessTeamPositionRequestModel = new BusinessTeamPositionRequestModel()
+        {
+            Id = item.Id,
+            Business_Team_Compensation_Id = item.Business_Team_Compensation_Id,
+            IsPrimary = item.IsPrimary,
+            Position = item.Position,
+            OldPositionName = item.PositionName,
+            PositionType = item.PositionType,
+            PayType = item.PayType,
+            TipsAllowed = item.TipsAllowed,
+            HourlyRate = item.HourlyRate,
+            AnnualSalary = item.AnnualSalary,
+            WeeklyHours = item.WeeklyHours,
+            EffectiveDate = item.EffectiveDate ?? DateTime.UtcNow,
+            TerminationDate = item.TerminationDate ?? (item.EffectiveDate ?? DateTime.UtcNow)
+        };
+        ChangePositionModalVisibility = true;
+        AddPositionModalVisibility = false;
+    }
+    private void CloseChangePositionModal()
+    {
+        ChangePositionModalVisibility = false;
+    }
+
+    private void OpenAddressModal()
+    {
+        isLoading = true;
+        this.AddressModalVisibility = true;
+        isLoading = false;
+        StateHasChanged();
+    }
+    private void CloseAddressModal()
+    {
+        this.AddressModalVisibility = false;
+    }
+
+    private void OpenEditMetaDataModal()
+    {
+        isLoading = true;
+        this.EditMetaDataModalVisibility = true;
+        isLoading = false;
+        StateHasChanged();
+    }
+    private void CloseEditMetaDataModal()
+    {
+        this.EditMetaDataModalVisibility = false;
+    }
+
+    private async Task OpenAddUpdateAddressModal(UserAddressModel address)
+    {
+        isLoading = true;
+        if (address != null)
+        {
+            addressRequestModel = new UserAddressRequestModel()
+            {
+                AddressGUID = address.AddresGuid,
+                UserGUID = Id,
+                FirstName = address.FirstName,
+                LastName = address.LastName,
+                Company = address.Company,
+                DOB = address.DOB,
+                Address1 = address.Address1,
+                Address2 = address.Address2,
+                AddressSource = (int)AddressSource.Website,
+                City = address.City,
+                Country = address.Country,
+                CountryCode = address.CountryCode,
+                Phone = address.PhoneFormatted,
+                State = address.State,
+                StateCode = address.StateCode,
+                ZipCode = address.ZipCode,
+                IsDefaultBilling = address.IsDefaultBilling,
+                IsDefaultShipping = address.IsDefaultShipping
+            };
+
+            if (addressRequestModel.DOB.HasValue)
+            {
+                UserAddressDob = addressRequestModel.DOB.Value.ToString("MM/dd/yyyy");
+            }
+
+        }
+        else
+        {
+            addressRequestModel = new UserAddressRequestModel()
+            {
+                CountryCode = "US",
+                StateCode = "",
+                UserGUID = Id,
+                Active = true
+            };
+            UserAddressDob = string.Empty;
+        }
+
+
+        if (countries.Count <= 0)
+        {
+            CountryResponse res = await _countryViewModel.GetCountries();
+            if (res.success)
+            {
+                countries = res.data;
+            }
+        }
+
+        if (states.Count <= 0)
+        {
+            StateResponse stateResponse = await _stateViewModel.GetStates();
+            if (stateResponse.success)
+            {
+                states = stateResponse.data;
+            }
+        }
+
+        if (phoneMasks.Count <= 0)
+        {
+            phoneMasks = await http.GetFromJsonAsync<List<PhoneMask>>("PhoneMasks.json");
+        }
+
+        if (address != null && !string.IsNullOrEmpty(address.Phone))
+        {
+            string[] splittedPhone = address.Phone.Split("| ");
+            if (splittedPhone.Length > 1)
+            {
+                addressRequestModel.PhoneCountry = splittedPhone[1].Trim();
+            }
+            else
+            {
+                addressRequestModel.PhoneCountry = "US";
+            }
+        }
+        else
+        {
+            addressRequestModel.PhoneCountry = "US";
+        }
+
+        this.AddressModalVisibility = false;
+        this.UpdateAddressModalVisibility = true;
+        showPhoneControl = true;
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void CloseUpdateAddressModal()
+    {
+        UpdateAddressModalVisibility = false;
+        AddressModalVisibility = true;
+        StateHasChanged();
+    }
+
+    private void onOpenAddressModalFocus(Syncfusion.Blazor.Popups.OpenEventArgs args)
+    {
+        args.PreventFocus = true;
+    }
+
+    private async Task OpenUpdateUserDetailModel()
+    {
+        isLoading = true;
+        userRequestModel = new UpdateUserRequestModel()
+        {
+            UserGUID = Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Company = user.Company,
+            Email = user.Email,
+            DOB = user.DOB,
+            Phone = user.CellPhone,
+            HomePhone = user.HomePhoneFormatted,
+            WorkPhone = user.WorkPhoneFormatted
+        };
+        if (userRequestModel.DOB.HasValue)
+        {
+            UserDob = userRequestModel.DOB.Value.ToString("MM/dd/yyyy");
+        }
+        else
+        {
+            UserDob = string.Empty;
+        }
+
+        if (!string.IsNullOrEmpty(user.Phone))
+        {
+            string[] splittedPhone = user.Phone.Split("| ");
+            if (splittedPhone.Length > 1)
+            {
+                userRequestModel.PhoneCountry = splittedPhone[1].Trim();
+            }
+            else
+            {
+                userRequestModel.PhoneCountry = "US";
+            }
+        }
+        else
+        {
+            userRequestModel.PhoneCountry = "US";
+        }
+
+        if (!string.IsNullOrEmpty(user.HomePhone))
+        {
+            string[] splittedPhone = user.HomePhone.Split("| ");
+            if (splittedPhone.Length > 1)
+            {
+                userRequestModel.HomePhoneCountry = splittedPhone[1].Trim();
+            }
+            else
+            {
+                userRequestModel.HomePhoneCountry = "US";
+            }
+        }
+        else
+        {
+            userRequestModel.HomePhoneCountry = "US";
+        }
+
+        if (!string.IsNullOrEmpty(user.WorkPhone))
+        {
+            string[] splittedPhone = user.WorkPhone.Split("| ");
+            if (splittedPhone.Length > 1)
+            {
+                userRequestModel.WorkPhoneCountry = splittedPhone[1].Trim();
+            }
+            else
+            {
+                userRequestModel.WorkPhoneCountry = "US";
+            }
+        }
+        else
+        {
+            userRequestModel.WorkPhoneCountry = "US";
+        }
+
+        if (countries.Count <= 0)
+        {
+            CountryResponse res = await _countryViewModel.GetCountries();
+            if (res.success)
+            {
+                countries = res.data;
+            }
+        }
+
+        if (phoneMasks.Count <= 0)
+        {
+            phoneMasks = await http.GetFromJsonAsync<List<PhoneMask>>("PhoneMasks.json");
+        }
+
+        showPhoneControl = true;
+        UpdateUserDetailModalVisibility = true;
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void CloseUpdateUserDetailModel()
+    {
+        UpdateUserDetailModalVisibility = false;
+        StateHasChanged();
+    }
+
+    private async Task SaveUserAddress(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            if (string.IsNullOrEmpty(addressRequestModel.Phone))
+            {
+                toastService.ShowToast("Please enter the phone number.", ToastLevel.Error);
+                return;
+            }
+            isLoading = true;
+            if (!string.IsNullOrEmpty(addressRequestModel.StateCode))
+            {
+                addressRequestModel.State = states.Where(x => x.StateCode == addressRequestModel.StateCode).FirstOrDefault()?.State;
+            }
+
+            if (!string.IsNullOrEmpty(addressRequestModel.CountryCode))
+            {
+                addressRequestModel.Country = countries.Where(x => x.CountryCode == addressRequestModel.CountryCode).FirstOrDefault()?.Name;
+            }
+
+            if (!String.IsNullOrEmpty(UserAddressDob))
+            {
+                var dob = UserAddressDobObj.GetMaskedValue();
+                addressRequestModel.DOB = Convert.ToDateTime(dob);
+            }
+
+
+            var response = await _userViewModel.AddUpdateUserAddress(addressRequestModel);
+            if (response.success)
+            {
+                await GetTeamDetail();
+                if (addressRequestModel.AddressGUID == Guid.Empty)
+                {
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                }
+                else
+                {
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                }
+                UpdateAddressModalVisibility = false;
+                AddressModalVisibility = true;
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async void SaveUserDetail(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            if (string.IsNullOrEmpty(userRequestModel.Phone) && string.IsNullOrEmpty(userRequestModel.HomePhone) && string.IsNullOrEmpty(userRequestModel.WorkPhone))
+            {
+                toastService.ShowToast("Please enter at least one phone number.", ToastLevel.Error);
+                return;
+            }
+            isLoading = true;
+            if (!String.IsNullOrEmpty(UserDob))
+            {
+                var dob = UserDobObj.GetMaskedValue();
+                userRequestModel.DOB = Convert.ToDateTime(dob);
+            }
+            var response = await _userViewModel.UpdateUserDetail(userRequestModel);
+            if (response.success)
+            {
+                await GetTeamDetail();
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                UpdateUserDetailModalVisibility = false;
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+
+    private async void UpdateDefaultBillingAddress(Guid addressguid)
+    {
+        isLoading = true;
+        var response = await _userViewModel.UpdateUserDefaultBillingAddress(addressguid);
+        if (response.success)
+        {
+            await GetTeamDetail();
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async void UpdateDefaultShippingAddress(Guid addressguid)
+    {
+        isLoading = true;
+        var response = await _userViewModel.UpdateUserDefaultShippingAddress(addressguid);
+        if (response.success)
+        {
+            await GetTeamDetail();
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async void RemoveUserAddress(Guid addressguid)
+    {
+        isLoading = true;
+        var response = await _userViewModel.RemoveUserAddress(addressguid);
+        if (response.success)
+        {
+            await GetTeamDetail();
+            toastService.ShowToast(Constants.DeleteMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task GetBusinessPositionNames()
+    {
+        var response = await _businessPositionNameViewModel.GetBusinessPositionNameListAsync(DefaultAdminAccountId);
+        businessPositionNames = response?.data ?? new List<BusinessPositionNameModel>();
+    }
+
+    private async Task GetBusinessTeamCompensation()
+    {
+        businessTeamCompensationRequestModel = new BusinessTeamCompensationRequestModel()
+        {
+            Business_Team_Id = user.Team,
+        };
+        var response = await _businessTeamCompensationViewModel.GetBusinessTeamCompensationListAsync(user.Team);
+        if (response.success)
+        {
+            var businessTeamCompensation = response?.data.FirstOrDefault() ?? new BusinessTeamCompensationModel();
+            if (businessTeamCompensation.Id != null)
+            {
+                businessTeamCompensationRequestModel = new BusinessTeamCompensationRequestModel()
+                {
+                    Id = (int)businessTeamCompensation.Id,
+                    Business_Team_Id = (int)businessTeamCompensation.Business_Team_Id,
+                    IsOvertimeExempt = (bool)businessTeamCompensation.IsOvertimeExempt
+                };
+                await GetBusinessTeamPosition();
+            }
+        }
+    }
+
+    private async Task GetBusinessTeamPosition()
+    {
+        var response = await _businessTeamPositionViewModel.GetBusinessTeamPositionListAsync((int)businessTeamCompensationRequestModel.Id);
+        var businessTeamPosition = response?.data ?? new List<BusinessTeamPositionModel>();
+        if (businessTeamPosition.Count > 0)
+        {
+            var primaryPosition = businessTeamPosition.Where(x => x.IsPrimary = true).FirstOrDefault();
+            if (primaryPosition != null)
+                positionName = primaryPosition.PositionName;
+            activeBusinessTeamPositions = businessTeamPosition.Where(x => x.TerminationDate.HasValue && !(x.TerminationDate.Value.Date.AddDays(1) < DateTime.UtcNow.AddMinutes(offSetMinutes))).OrderBy(x => x.PositionName).ToList();
+            pastBusinessTeamPositions = businessTeamPosition.Where(x => x.TerminationDate.HasValue && (x.TerminationDate.Value.Date.AddDays(1) <= DateTime.UtcNow.AddMinutes(offSetMinutes))).OrderBy(x => x.PositionName).ToList();
+            activePositions = activeBusinessTeamPositions.Select(x => x.PositionName).ToArray();
+
+        }
+    }
+
+    private void SendAccessPositionNotification()
+    {
+        var requestPositionNotifyModel = new NotifyPositionAccessChangedModel
+        {
+            UserId = user.Id,
+            Roles = activeBusinessTeamPositions?.Select(x => x.Position.ToString()).ToList() ?? new List<string>()
+        };
+        _messageViewModel.NotifyPositionAccessChanged(requestPositionNotifyModel);
+    }
+
+    private async Task SaveBusinessTeamPosition(EditContext editContext)
+    {
+        isLoading = true;
+        var response = await _businessTeamCompensationViewModel.AddUpdateBusinessTeamCompensationListAsync(businessTeamCompensationRequestModel);
+        if (response.success)
+        {
+            if (editContext.Validate())
+            {
+                if (activeBusinessTeamPositions.Count == 0)
+                {
+                    businessTeamPositionRequestModel.IsPrimary = true;
+                }
+                var employmentType = (EmploymentType)businessTeamPositionRequestModel.PositionType;
+                businessTeamPositionRequestModel.PositionTypeName = employmentType.ToString();
+                var payType = (PayType)businessTeamPositionRequestModel.PayType;
+                businessTeamPositionRequestModel.PayTypeName = payType.ToString();
+                businessTeamPositionRequestModel.Business_Team_Compensation_Id = (int)response.data.Id;
+                if (businessTeamPositionRequestModel.Id <= 0)
+                {
+                    businessTeamPositionRequestModel.EffectiveDate = businessTeamPositionRequestModel.EffectiveDate ?? DateTime.UtcNow.AddMinutes(offSetMinutes);
+                    businessTeamPositionRequestModel.TerminationDate = businessTeamPositionRequestModel.TerminationDate ?? businessTeamPositionRequestModel.EffectiveDate.Value.AddDays(7);
+                }
+                var responsePosition = await _businessTeamPositionViewModel.AddUpdateBusinessTeamPositionListAsync(businessTeamPositionRequestModel);
+                if (responsePosition.success)
+                {
+                    await GetBusinessTeamCompensation();
+                    SendAccessPositionNotification();
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                    AddPositionModalVisibility = false;
+                    businessTeamPositionRequestModel = new BusinessTeamPositionRequestModel();
+                    additionalPosition = false;
+                }
+                else
+                {
+                    toastService.ShowToast(responsePosition.error_info.description, ToastLevel.Error);
+                }
+                isLoading = false;
+            }
+            {
+                toastService.ShowToast("Overtime Exempt saved successfully.", ToastLevel.Success);
+                isLoading = false;
+            }
+
+            StateHasChanged();
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            isLoading = false;
+        }
+    }
+    private void AddAdditionalPosition()
+    {
+        additionalPosition = true;
+    }
+    private async Task ChangeBusinessTeamPosition(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            isLoading = true;
+            Console.WriteLine(businessTeamPositionRequestModel.Position);
+            //To remove position
+            if (businessTeamPositionRequestModel.Position == -5)
+            {
+                businessTeamPositionRequestModel.IsRemovePosition = true;
+            }
+            if (businessTeamPositionRequestModel.PayType == (int)PayType.Hourly)
+            {
+                businessTeamPositionRequestModel.AnnualSalary = 0;
+                businessTeamPositionRequestModel.WeeklyHours = 0;
+            }
+            if (businessTeamPositionRequestModel.PayType == (int)PayType.Salary)
+            {
+                businessTeamPositionRequestModel.HourlyRate = 0;
+            }
+            Console.WriteLine(businessTeamPositionRequestModel.PositionType);
+            var employmentType = (EmploymentType)businessTeamPositionRequestModel.PositionType;
+            businessTeamPositionRequestModel.PositionTypeName = employmentType.ToString();
+            var payType = (PayType)businessTeamPositionRequestModel.PayType;
+            businessTeamPositionRequestModel.PayTypeName = payType.ToString();
+            var responsePosition = await _businessTeamPositionViewModel.AddUpdateBusinessTeamPositionListAsync(businessTeamPositionRequestModel);
+            if (responsePosition.success)
+            {
+                await GetBusinessTeamCompensation();
+                SendAccessPositionNotification();
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                ChangePositionModalVisibility = false;
+                businessTeamPositionRequestModel = new BusinessTeamPositionRequestModel();
+            }
+            else
+            {
+                toastService.ShowToast(responsePosition.error_info.description, ToastLevel.Error);
+            }
+            isLoading = false;
+        }
+        StateHasChanged();
+    }
+
+    private async void SaveEditMetaData()
+    {
+        isLoading = true;
+
+        List<UserMetafieldRequestModel>
+    CustomMetaData = new List<UserMetafieldRequestModel>
+        ();
+        foreach (var item in user.CustomBusinessMetaDatas)
+        {
+            UserMetafieldRequestModel metaDataModel = new UserMetafieldRequestModel()
+            {
+                Id = item.Id,
+                BusinessId = DefaultAdminAccountId,
+                UserId = user.Id,
+                MetaNamespace = "CustomTeamMemberMeta",
+                MetaKey = item.BusinessMetaDataId.ToString(),
+                MetaValue = item.DefaultValue,
+                ValueType = (int)ValueTypeEnum.String,
+                Title = string.Empty,
+                Description = string.Empty
+            };
+            if (item.ContentType == (int)MetaDataContentType.Date)
+            {
+                if (item.DateDefaultValue.HasValue)
+                {
+                    metaDataModel.MetaValue = ((DateTime)item.DateDefaultValue).ToLongDateString();
+                }
+            }
+            if (item.ContentType == (int)MetaDataContentType.Price)
+            {
+                metaDataModel.MetaValue = item.PriceDefaultValue.ToString();
+                metaDataModel.ValueType = (int)ValueTypeEnum.Integer;
+            }
+            if (item.ContentType == (int)MetaDataContentType.Boolean)
+            {
+                metaDataModel.MetaValue = item.SwitchDefaultValue ? "true" : "false";
+                metaDataModel.ValueType = (int)ValueTypeEnum.Boolean;
+            }
+            CustomMetaData.Add(metaDataModel);
+        }
+        var response = await _userViewModel.AddUpdateUserMetafieldListAsync(CustomMetaData);
+        if (response.success)
+        {
+            toastService.ShowToast("Custom metadata saved successfully.", ToastLevel.Success);
+            CloseEditMetaDataModal();
+            await GetTeamDetail();
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task GetUserMetafieldsettings()
+    {
+        userMetafields = new List<UserMetafieldModel>();
+        bookmarkPreferences = new List<BookmarkPreference>();
+        var response = await _userViewModel.GetUserMetafieldListAsync(CurrentUserId, DefaultAdminAccountId, UserMetafieldNamespace.UserPrefBookmark);
+        userMetafields = response?.data ?? new List<UserMetafieldModel>();
+        foreach (var metaKey in UserPrefBookmarkMetaKeys)
+        {
+            var metaValue = response?.data?.Where(x => x.MetaKey == metaKey)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+            int number;
+            bool isNumeric = int.TryParse(metaValue, out number);
+            var bookmarkId = isNumeric ? number : 0;
+            List<int> selectedBookmarksId = userMetafields.Select(x => Convert.ToInt32(x.MetaValue)).Where(x => x != bookmarkId).ToList();
+            bookmarkPreferences.Add(new BookmarkPreference
+            {
+                BookmarkId = bookmarkId,
+                UserPrefBookmarkMetaKey = metaKey,
+                CPBookmarkOptions = cPBookmarks.Where(x => !selectedBookmarksId.Contains(x.Id)).ToList()
+            });
+        }
+    }
+
+    private async Task OnAdminAccountDropdownChange(ChangeEventArgs<int, UserBusinessTeamModel> args)
+    {
+        if (!FirstRender)
+        {
+            //Set Default Business Team
+            var updateResponse = await _teamViewModel.SetDefaultBusinessTeam(CurrentUserId, DefaultAdminAccountId);
+            if (updateResponse?.success ?? false)
+            {
+                toastService.ShowToast("Default member account set successfully.", ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(updateResponse.error_info.description, ToastLevel.Error);
+            }
+
+            //Get User Metafield settings
+            await GetUserMetafieldsettings();
+        }
+        else
+            FirstRender = false;
+    }
+
+    private async Task OnDefaultDateRangeDropdownChange(ChangeEventArgs<int?, DropdownBindingModel> args)
+    {
+        if (!FirstRender)
+        {
+            if (args?.Value != null)
+                isLoading = true;
+            var metaFieldSetting = new UserMetafieldRequestModel
+            {
+                BusinessId = DefaultAdminAccountId,
+                UserId = CurrentUserId,
+                MetaNamespace = UserMetafieldNamespace.UserPrefDateRange,
+                MetaKey = UserMetafieldKey.UserDefaultDateRange,
+                MetaValue = Convert.ToString(args.Value),
+                ValueType = (int)ValueTypeEnum.Integer,
+                Title = string.Empty,
+                Description = string.Empty
+            };
+            var response = await _userViewModel.AddUpdateUserMetafieldListAsync(new List<UserMetafieldRequestModel>
+{
+            metaFieldSetting
+            });
+            isLoading = false;
+            if (response.success)
+            {
+                toastService.ShowToast("Default date range set successfully.", ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+        else
+            FirstRender = false;
+    }
+
+    private async Task OnPreferencesDropdownChange(BookmarkPreference preference)
+    {
+        if (preference?.BookmarkId > 0 && !string.IsNullOrEmpty(preference?.UserPrefBookmarkMetaKey))
+        {
+            if (userMetafields.Any(x => x.MetaValue == Convert.ToString(preference.BookmarkId)))
+            {
+                toastService.ShowToast("This bookmark preference is already selected.", ToastLevel.Error);
+                return;
+            }
+            isLoading = true;
+            var metaFieldSetting = new UserMetafieldRequestModel
+            {
+                BusinessId = DefaultAdminAccountId,
+                UserId = CurrentUserId,
+                MetaNamespace = UserMetafieldNamespace.UserPrefBookmark,
+                MetaKey = preference.UserPrefBookmarkMetaKey,
+                MetaValue = Convert.ToString(preference.BookmarkId),
+                ValueType = (int)ValueTypeEnum.Integer,
+                Title = string.Empty,
+                Description = string.Empty
+            };
+            var response = await _userViewModel.AddUpdateUserMetafieldListAsync(new List<UserMetafieldRequestModel>
+            {
+                 metaFieldSetting
+                });
+            isLoading = false;
+            if (response.success)
+            {
+                userMetafields = userMetafields.Where(x => x.MetaKey != Convert.ToString(preference.UserPrefBookmarkMetaKey)).ToList();
+                userMetafields.Add(response.data.FirstOrDefault());
+                foreach (var prefItem in bookmarkPreferences)
+                {
+                    List<int> selectedBookmarksId = userMetafields.Select(x => Convert.ToInt32(x.MetaValue)).Where(x => x != prefItem.BookmarkId).ToList();
+                    prefItem.CPBookmarkOptions = cPBookmarks.Where(x => !selectedBookmarksId.Contains(x.Id)).ToList();
+                }
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    private class BookmarkPreference
+    {
+        public int BookmarkId { get; set; }
+        public string UserPrefBookmarkMetaKey { get; set; }
+        public List<CPBookmarkModel> CPBookmarkOptions { get; set; }
+    }
+
+}

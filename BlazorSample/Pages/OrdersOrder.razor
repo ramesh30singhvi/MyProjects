@@ -1,0 +1,2293 @@
+﻿@page "/store/orders/order/{OrderGUID:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Syncfusion.Blazor.InPlaceEditor
+@using Blazored.LocalStorage
+@using Syncfusion.Blazor.DropDowns
+@using System
+@using Microsoft.AspNetCore.WebUtilities
+@using System.ComponentModel.DataAnnotations;
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using System.Text.RegularExpressions
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA
+@using AutoMapper
+@inject IMapper _mapper
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject IOrderViewModel _orderViewModel
+@inject ISettingsViewModel _settingsViewModel
+@inject IBusinessLocationViewModel _businessLocationViewModel
+@inject IUserViewModel _userViewModel
+@inject ITeamViewModel _teamViewModel
+@inject ILocalStorageService localStorage
+@inject ToastService toastService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized Context="Order_Details">
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="SpinnerVisibility" Label="@spinnerLabel"></SfSpinner>
+        @if (order != null)
+        {
+            <div class="card shadow-none border mb-4">
+                <div class="card-header border-bottom">
+                    <div class="row justify-content-between align-items-center">
+                        <div class="col-md">
+                            <h5 class="mb-3 mb-md-0">
+                                <a href="javascript:history.go(-1)" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left mr-1"></span></a>
+                                @if (!isOrderInReturnRefundMode && orderDetails == null)
+                                {
+                                    <span class="@(isOrderInReturnRefundMode?"far fa-shopping-bag me-2":"")"></span>
+                                    @($"Order #{order.FormattedOrderNumber}")
+                                }
+                            </h5>
+                        </div>
+                        <div class="col-md-6 justify-content-end d-flex">
+                            @if (order.OrderStatus == OrderStatus.Completed || order.OrderStatus == OrderStatus.Fraudulent)
+                            {
+                                <a class="btn btn-sm btn-outline-primary me-2" href="javascript:void(0)" hidden="@isOrderInReturnRefundMode" @onclick="OnRefundOrderClick">Refund Order</a>
+                            }
+                            <a class="btn btn-sm btn-outline-dark me-2" href="javascript:void(0)" @onclick="() => SearchOrderModalOpen()">Search</a>
+                            <a class="btn btn-sm btn-outline-dark @(isLatestOrder?"disabled":"") me-1" href="javascript:void(0)" @onclick="DisplayMostRecentOrder">@("<")</a>
+                            <a class="btn btn-sm btn-outline-dark @(isOldestOrder?"disabled":"") me-2" href="javascript:void(0)" @onclick="DisplayOlderOrder" type="button">@(">")</a>
+                            @if (orderDetails == null)
+                            {
+                                <div class="dropdown font-sans-serif btn-reveal-trigger">
+                                    <button class="btn btn-falcon-primary btn-sm dropdown-toggle btn-reveal dropdown-caret-none" type="button" id="dropdown-btn-order" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--2"></span></button>
+                                    <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown-btn-order">
+                                        @{
+                                            if (order.OrderStatus == OrderStatus.Suspended)
+                                            {
+                                                <a class="dropdown-item" href="/store/create-order/@order.OrderGuid">
+                                                    Edit Order
+                                                </a>
+                                            }
+                                        }
+                                        <a class="dropdown-item" href="#!">
+                                            Print Packing Slip
+                                        </a>
+                                        <a class="dropdown-item" @onclick="PrintReceiptPDF" href="javascript:void(0)">
+                                            Print 8.5 X 11 Receipt
+                                        </a>
+                                        <a class="dropdown-item" href="#!">
+                                            Print Thermal Receipt
+                                        </a>
+                                        <a @onclick="OpenResendReceiptDialog" class="dropdown-item" href="javascript:void(0)">
+                                            Resend Order Receipt
+                                        </a>
+                                        @{
+                                            if (order.OrderStatus == OrderStatus.OnHold || order.OrderStatus == OrderStatus.Fraudulent)
+                                            {
+                                                <a class="dropdown-item" href="javascript:void(0)" @onclick="() => ChangeOrderStatus(OrderStatus.Completed)">
+                                                    Mark Order as Complete
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a class="dropdown-item" href="javascript:void(0)" @onclick="() => ChangeOrderStatus(OrderStatus.OnHold)">
+                                                    Place Order on Hold
+                                                </a>
+                                            }
+
+                                        }
+                                        <a class="dropdown-item" hidden="@(order.CustomBusinessMetaDatas == null ? true : false)" href="javascript:void();" @onclick="@OpenEditMetaDataModal">Edit Meta Data</a>
+                                        <a class="dropdown-item" href="javascript:void(0)" @onclick="OnDuplicateOrderClick">
+                                            Duplicate Order
+                                        </a>
+                                        @if (order.OrderStatus != OrderStatus.Fraudulent)
+                                        {
+                                            <hr class="m-0 mt-2" />
+                                            <a class="dropdown-item text-danger" href="javascript:void(0)" @onclick="() => ChangeOrderStatus(OrderStatus.Fraudulent)">Mark Order as Fraud</a>
+                                        }
+
+                                    </div>
+                                </div>
+                            }
+
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-12 col-md-9">
+
+                            <div class="row mb-4">
+                                <div class="col-12 col-md-6">
+                                    <h5 class="mb-3 fs-0 text-uppercase text-500">Bill To</h5>
+                                    @{
+                                        if (order.BillingCustomer != null)
+                                        {
+                                            <h6 class="mb-2"><a href="javascript:void(0)">@((!string.IsNullOrWhiteSpace(order.BillingCustomer.FirstName)?order.BillingCustomer.FirstName+" ":"")+(!string.IsNullOrWhiteSpace(order.BillingCustomer.LastName)?order.BillingCustomer.LastName:""))</a></h6>
+                                            if (order.BillToAddress != null)
+                                            {
+                                                var billingAddress = order.BillToAddress;
+                                                if (!string.IsNullOrWhiteSpace(billingAddress.Address1))
+                                                {
+                                                    <p class="mb-1 fs--1">@billingAddress.Address1</p>
+                                                }
+                                                if (!string.IsNullOrWhiteSpace(billingAddress.Address2))
+                                                {
+                                                    <p class="mb-1 fs--1">@billingAddress.Address2</p>
+                                                }
+                                                <p class="mb-1 fs--1">
+                                                    @((!string.IsNullOrWhiteSpace(billingAddress.City)? billingAddress.City+", ":"")+
+                                                                        (!string.IsNullOrWhiteSpace(billingAddress.State)?billingAddress.State+", ":"")+
+                                                                        (!string.IsNullOrWhiteSpace(billingAddress.ZipCode)?billingAddress.ZipCode+" ":"")+
+                                                                        ((!string.IsNullOrWhiteSpace(billingAddress.Country) && billingAddress.Country.ToUpper() != _USCountry) ?billingAddress.Country:""))
+                                                </p>
+                                                <p class="mb-0 fs--1"><a href="mailto:@order.BillingCustomer.Email">@order.BillingCustomer.Email</a></p>
+                                                <p class="mb-0 fs--1"><a href="tel:@order.BillingCustomer.PhoneFormatted">@order.BillingCustomer.PhoneFormatted</a></p>
+                                            }
+
+                                        }
+                                        else
+                                        {
+                                            @("No Customer")
+                                        }
+                                    }
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    @{
+                                        if (order.DeliveryMethod == OrderDeliveryMethod.CarryOut || order.DeliveryMethod == OrderDeliveryMethod.Pickup)
+                                        {
+
+                                        }
+                                        else
+                                        {
+                                            <h5 class="mb-3 fs-0 text-uppercase text-500">Ship To</h5>
+                                            if (order.ShippingCustomer != null)
+                                            {
+                                                var shippingCustomer = order.ShippingCustomer;
+                                                <h6 class="mb-2">@((!string.IsNullOrWhiteSpace(shippingCustomer.FirstName)?shippingCustomer.FirstName+" ":"")+(!string.IsNullOrWhiteSpace(shippingCustomer.LastName)?shippingCustomer.LastName:""))</h6>
+                                                if (order.ShipToAddress != null)
+                                                {
+                                                    var shippingAddress = order.ShipToAddress;
+                                                    if (!string.IsNullOrWhiteSpace(shippingAddress.Address1))
+                                                    {
+                                                        <p class="mb-1 fs--1">@(shippingAddress.Address1)</p>
+                                                    }
+                                                    if (!string.IsNullOrWhiteSpace(shippingAddress.Address2))
+                                                    {
+                                                        <p class="mb-1 fs--1">@shippingAddress.Address2</p>
+                                                    }
+                                                    <p class="mb-1 fs--1">
+                                                        @((!string.IsNullOrWhiteSpace(shippingAddress.City)? shippingAddress.City+", ":"")+
+                                                                            (!string.IsNullOrWhiteSpace(shippingAddress.State)? shippingAddress.State+", ":"")+
+                                                                            (!string.IsNullOrWhiteSpace(shippingAddress.ZipCode)? shippingAddress.ZipCode+" ":"")+
+                                                                            ((!string.IsNullOrWhiteSpace(shippingAddress.Country) && shippingAddress.Country.ToUpper() != _USCountry)? shippingAddress.Country:""))
+                                                    </p>
+                                                    <p class="mb-0 fs--1"><a href="mailto:@shippingCustomer.Email">@shippingCustomer.Email</a></p>
+                                                    <p class="mb-0 fs--1"><a href="tel:@shippingCustomer.PhoneFormatted">@shippingCustomer.PhoneFormatted</a></p>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                @("No Customer")
+                                            }
+                                        }
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="row row-cols-1 row-cols-sm-3 row-cols-lg-5 g-4 mb-4" hidden="@isOrderInReturnRefundMode">
+                                <div class="col">
+                                    <div class="card shadow-none border h-100 text-center fs--2">
+                                        <div class="card-body p-1">
+                                            <div class="mx-auto my-2 icon-item icon-item-sm rounded-circle bg-warning text-white shadow-none"><span class="far fa-heart-rate"></span></div>
+                                            <h6 class="text-uppercase fs--2">Order Status</h6>
+                                            <h6 class="text-uppercase fs--2 @(order.OrderStatus == OrderStatus.Completed?"text-success": (order.OrderStatus == OrderStatus.ShoppingCart)? "text-info": "text-warning")">@(order.OrderStatusText)</h6>
+                                            @{
+                                                var createdDate = order.CreatedDate;
+                                                createdDate = createdDate.AddMinutes(offsetMinutes);
+                                            }
+                                            @(createdDate.ToString("MMMM dd, yyyy"))<br />
+                                            @(createdDate.ToString("hh:mm tt"))
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card shadow-none border h-100 text-center fs--2">
+                                        <div class="card-body p-1">
+                                            <div class="mx-auto my-2 icon-item icon-item-sm rounded-circle bg-200 shadow-none"><span class="far fa-shopping-cart"></span></div>
+                                            <h6 class="text-uppercase fs--2">Order Source</h6>
+                                            <h6 class="fs--2 text-uppercase">@order.OrderSource-@order.OrderType</h6>
+                                            @{
+                                                if (order.OrderStatusUpdateDate != null)
+                                                {
+                                                    var orderStatusUpdatedDate = order.OrderStatusUpdateDate.Value;
+                                                    orderStatusUpdatedDate = orderStatusUpdatedDate.AddMinutes(offsetMinutes);
+                                                    @(orderStatusUpdatedDate.ToString("MMMM dd, yyyy"))<br />
+                                                    @(orderStatusUpdatedDate.ToString("hh:mm tt"))
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card shadow-none border h-100 text-center fs--2">
+                                        <div class="card-body p-1">
+                                            <div class="mx-auto my-2 icon-item icon-item-sm rounded-circle bg-info text-white shadow-none"><span class="far fa-envelope-open-dollar"></span></div>
+                                            <h6 class="text-uppercase fs--2">Payment</h6>
+                                            <h6 class="text-uppercase fs--2 @(order.PaymentStatus == OrderPaymentStatus.Paid? "text-success": "text-warning")">@(order.PaymentStatusText)</h6>
+                                            @{
+
+                                                if (order.PaymentStatus != OrderPaymentStatus.Paid)
+                                                {
+                                                    <p class="fs--2">@order.Currency@order.BalanceDue.ToString("n2") DUE <a class="btn btn-link btn-sm btn-reveal text-600 p-0" href="javascript:void(0)" @onclick="() => PaymentLogModalShow()"><span class="fas fa-external-link-alt"></span></a></p>
+                                                }
+                                                else
+                                                {
+                                                    <p class="fs--2">@order.Currency@order.AmountPaid.ToString("n2") <a class="btn btn-link btn-sm btn-reveal text-600 p-0" href="javascript:void(0)" @onclick="() => PaymentLogModalShow()"><span class="fas fa-external-link-alt"></span></a></p>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card shadow-none border h-100 text-center fs--2">
+                                        <div class="card-body p-1">
+                                            <div class="mx-auto my-2 icon-item icon-item-sm rounded-circle bg-success text-white shadow-none"><span class="far fa-clipboard-check"></span></div>
+                                            <h6 class="text-uppercase fs--2">Compliance</h6>
+                                            @{
+                                                string compliance = "";
+                                                if (order.OrderSource == OrderSource.POS && order.DeliveryMethod == OrderDeliveryMethod.CarryOut)
+                                                {
+                                                    compliance = EnumHelper.GetDescription(OrderComplianceStatus.NoComplianceRequired);
+                                                }
+                                                <h6 class="text-uppercase fs--2 text-success">@(! string.IsNullOrWhiteSpace(compliance)? compliance: order.ComplianceStatusText)</h6>
+                                                if (order.ComplianceStatus != OrderComplianceStatus.NoComplianceRequired)
+                                                {
+                                                    var creationDate = order.CreatedDate;
+                                                    creationDate = creationDate.AddMinutes(offsetMinutes);
+                                                    <p class="fs--2">@(creationDate.ToString("MMMM dd, yyyy hh:mm tt"))</p>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="card shadow-none border h-100 text-center fs--2">
+                                        <div class="card-body p-1">
+                                            <div class="mx-auto my-2 icon-item icon-item-sm rounded-circle bg-warning text-white shadow-none"><span class="far fa-box-open"></span></div>
+                                            <h6 class="text-uppercase fs--2">Fulfillment</h6>
+                                            <h6 class="text-uppercase fs--2 @(order.FulfillmentStatus == OrderFulfillmentStatus.Fulfilled?"text-success":"text-warning")">@order.FulfillmentStatusText</h6>
+                                            <label class="fs--2 text-uppercase">@(order.DeliveryMethodText)</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @{
+                                if (order.REFReturn > 0)
+                                {
+                                    <div class="alert alert-info d-flex align-items-center px-2 py-1" role="alert">
+                                        <span class="far fa-sync me-2"></span> <a class="mb-0 flex-1" href="#!">123789</a>
+                                    </div>
+                                }
+                            }
+
+                            @{
+                                if (orderItems != null)
+                                {
+                                    <div class="card shadow-none border card-block">
+                                        <div class="card-body p-0">
+                                            <SfGrid DataSource="@orderItems" AllowPaging="false" Width="100%">
+                                                <GridTemplates>
+                                                    <EmptyRecordTemplate>
+                                                        @if (orderItems.Count <= 0)
+                                                        {
+                                                            <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Items</h6>
+                                                            </div>
+                                                        }
+                                                    </EmptyRecordTemplate>
+                                                </GridTemplates>
+                                                <GridColumns>
+                                                    <GridColumn Visible="isOrderInReturnRefundMode" HeaderText="" TextAlign="TextAlign.Left" Width="60px">
+                                                        <Template>
+                                                            @{
+                                                                var item = context as ReturnProductModel;
+                                                                <a class="btn btn-sm btn-link" href="javascript:void();" @onclick="() => DisplayReturnProductModal(item.Id)"><span class="fa-regular fa-pencil"></span></a>
+                                                            }
+                                                        </Template>
+                                                    </GridColumn>
+                                                    <GridColumn HeaderText="QTY" Field="@nameof(ReturnProductModel.Quantity)" TextAlign="TextAlign.Center" Width="100px"> </GridColumn>
+                                                    <GridColumn Field=@nameof(ReturnProductModel.ProductName) HeaderText="ITEM" TextAlign="TextAlign.Left" Width="350px" />
+                                                    <GridColumn Visible="@isOrderInReturnRefundMode" HeaderText="RETURN" TextAlign="TextAlign.Center" Width="100px">
+                                                        <Template>
+                                                            @{
+                                                                var item = context as ReturnProductModel;
+                                                            }
+                                                            <span>@item.ReturnQty</span>
+                                                        </Template>
+                                                    </GridColumn>
+                                                    <GridColumn HeaderText="PRICE" TextAlign="TextAlign.Center" Width="100px">
+                                                        <Template>
+                                                            @{
+                                                                var item = context as ReturnProductModel;
+                                                            }
+                                                            <span>@order.Currency@item.ProductPrice.ToString("n2")</span>
+                                                            @if (item.ListPrice > item.ProductPrice && !isOrderInReturnRefundMode)
+                                                            {
+                                                                <br />
+                                                                <span><s>@order.Currency@item.ListPrice.ToString("n2")</s></span>
+                                                            }
+                                                        </Template>
+                                                    </GridColumn>
+                                                    <GridColumn HeaderText="EXTENDED" TextAlign="TextAlign.Center" Width="150px">
+                                                        <Template>
+                                                            @{
+                                                                var item = context as ReturnProductModel;
+                                                            }
+                                                            @order.Currency@(isOrderInReturnRefundMode ? (item.ReturnQty * item.ProductPrice).ToString("n2") : (item.ProductPrice * item.Quantity).ToString("n2"))
+                                                        </Template>
+                                                    </GridColumn>
+                                                </GridColumns>
+                                            </SfGrid>
+                                            <div class="d-flex justify-content-end">
+                                                <div class="m-3">
+                                                    <table class="fs--1">
+                                                        <tbody>
+                                                            <tr>
+                                                                <td class="white-space-nowrap py-1 pe-4">Subtotal</td>
+                                                                <td class="text-end py-1">@(checkAnyReturnProduct?"-":"")@(GetReturnProductsSubtotal().ToString("c2"))</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="white-space-nowrap py-1 pe-4">
+                                                                    @{
+                                                                        if (isOrderInReturnRefundMode)
+                                                                        {
+                                                                            <a href="javascript:void(0)" @onclick="DisplayAdjustShippingModal">
+                                                                                Shipping
+                                                                            </a>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            @("Shipping")
+                                                                        }
+                                                                    }
+                                                                </td>
+                                                                <td class="text-end py-1">
+                                                                    <span class="@((order.TotalShipping < order.ShippingSubTotal)? "text-info me-2":"")">@order.Currency@order.TotalShipping.ToString("n2") </span>
+                                                                    @if (order.ShippingSubTotal > order.TotalShipping)
+                                                                    {
+                                                                        <span><s>  @order.Currency@order.ShippingSubTotal.ToString("n2")</s></span>
+                                                                    }
+                                                                </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="white-space-nowrap py-1 pe-4">Discounts</td>
+                                                                <td class="text-end  py-1">@order.Currency@((checkAnyReturnProduct ? 0 : order.TotalDiscounts).ToString("n2"))</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td class="white-space-nowrap py-1 pe-4">Sales Tax (8.25%)</td>
+                                                                <td class="text-end py-1">@(checkAnyReturnProduct ? $"-{order.Currency}{GetTaxForReturnProducts().ToString("n2")}": $"{order.Currency}{@order.TotalTax.ToString("n2")}")</td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td>
+                                                                    @{
+                                                                        if (isOrderInReturnRefundMode)
+                                                                        {
+                                                                            <a href="javascript:void(0)" @onclick="DisplayAdjustGratuityModal">Gratuity</a>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            @("Gratuity")
+                                                                        }
+                                                                    }
+                                                                </td>
+                                                                <td class="text-end py-1">@order.TotalGratuity.ToString("c2")</td>
+                                                            </tr>
+                                                            <tr class="border-top-2 border-secondary">
+                                                                <td class="white-space-nowrap text-uppercase py-2 pe-4 fs-1"><h5>Total</h5></td>
+                                                                <td class="text-end py-2 fs-1"><h5>@order.GrandTotal.ToString("c2")</h5></td>
+                                                            </tr>
+
+                                                            @if (isOrderInReturnRefundMode)
+                                                            {
+                                                                <tr class="mt-4">
+                                                                    <td class="white-space-nowrap text-uppercase py-2 pe-4 fs-1"><h5>Refund Due</h5></td>
+                                                                    <td class="text-end py-2 fs-1"><h5>@(GetRefundTotalForReturnProducts().ToString("c2"))</h5></td>
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    @("No Items to display")
+                                }
+                            }
+
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <div class="card shadow-none border h-100 mb-4">
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label btn-reveal-trigger d-flex flex-between-center" for="salesReps">Sales Reps <button class="btn btn-link btn-sm btn-reveal text-600" @onclick="@ShowSalesRepsModal"><span class="fas fa-plus"></span></button></label>
+                                        @if (bindedSalesReps.Any())
+                                        {
+                                            List<string> salesRepsNames = new List<string>();
+                                            foreach (var rep in bindedSalesReps)
+                                            {
+                                                var salesRep = teamUsers.Where(x => x.UserId == rep).FirstOrDefault();
+                                                if (salesRep != null)
+                                                {
+                                                    salesRepsNames.Add(salesRep.FirstName + " " + salesRep.LastName);
+                                                }
+                                            }
+                                            <p class="text-wrap">@Helper.GetCommaSeparatedStringFromList(salesRepsNames)</p>
+                                        }
+                                    </div>
+                                    <hr class="mt-4 mb-3" />
+                                    <div class="mb-3">
+                                        <label class="form-label btn-reveal-trigger d-flex flex-between-center" for="orderTags">Order Tags <button class="btn btn-link btn-sm btn-reveal text-600" @onclick="@ShowTagsModal"><span class="fas fa-plus"></span></button></label>
+                                        @if (bindedTags.Any())
+                                        {
+                                            <p class="text-wrap">@string.Join(", ", bindedTags)</p>
+                                        }
+                                    </div>
+                                    <hr class="mt-4 mb-3" />
+                                    <div class="mb-3">
+                                        @{
+                                            if (order.OrderNotes != null)
+                                            {
+                                                var customerNotes = order.OrderNotes.OrderByDescending(x => x.CreatedDate).Where(x => x.NoteType == (int)OrderNote.Customer).ToList();
+                                                <label class="form-label btn-reveal-trigger d-flex flex-between-center" for="selItemType">Customer Notes <button class="btn btn-link btn-sm btn-reveal text-600" @onclick="() => ModalNoteShowDefault(OrderNote.Customer)"><span class="fas fa-plus"></span></button></label>
+                                                if (customerNotes.Count > 0)
+                                                {
+                                                    foreach (var customerNote in customerNotes)
+                                                    {
+                                                        <p class="form-label btn-reveal-trigger d-flex flex-between-center" for="selItemType">
+                                                            @customerNote.Note
+                                                            <span class="d-flex flex-between-center">
+                                                                @if (orderDetails != null)
+                                                                {
+                                                                    <button class=" btn btn-link btn-sm btn-reveal text-600" @onclick="() => DisplayNoteDeleteConfirmation(customerNote)"><span class="far fa-trash-alt"></span></button>
+                                                                }
+                                                                <button class=" btn btn-link btn-sm btn-reveal text-600" @onclick="() => ModalNoteShow(customerNote)"><span class="fas fa-pencil-alt"></span></button>
+                                                            </span>
+                                                        </p>
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    </div>
+                                    <hr class="mt-4 mb-3" />
+                                    <div class="mb-3">
+                                        @{
+                                            if (order.OrderNotes != null)
+                                            {
+                                                var shippingNotes = order.OrderNotes.OrderByDescending(x => x.CreatedDate).Where(x => x.NoteType == (int)OrderNote.Shipping).ToList();
+                                                <label class="form-label btn-reveal-trigger d-flex flex-between-center" for="selItemType">Shipping Notes <button class="btn btn-link btn-sm btn-reveal text-600" @onclick="() => ModalNoteShowDefault(OrderNote.Shipping)"><span class="fas fa-plus"></span></button></label>
+                                                if (shippingNotes.Count > 0)
+                                                {
+                                                    foreach (var shippingNote in shippingNotes)
+                                                    {
+                                                        <p class="form-label btn-reveal-trigger d-flex flex-between-center" for="selItemType">
+                                                            @shippingNote.Note
+                                                            <span class="d-flex flex-between-center">
+                                                                @if (orderDetails != null)
+                                                                {
+                                                                    <button class=" btn btn-link btn-sm btn-reveal text-600" @onclick="() => DisplayNoteDeleteConfirmation(shippingNote)"><span class="far fa-trash-alt"></span></button>
+                                                                }
+                                                                <button class=" btn btn-link btn-sm btn-reveal text-600" @onclick="() => ModalNoteShow(shippingNote)"><span class="fas fa-pencil-alt"></span></button>
+                                                            </span>
+                                                        </p>
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    </div>
+                                    <hr class="mt-4 mb-3" />
+                                    <div class="mb-3">
+                                        @{
+                                            if (order.OrderNotes != null)
+                                            {
+                                                var giftNotes = order.OrderNotes.OrderByDescending(x => x.CreatedDate).Where(x => x.NoteType == (int)OrderNote.Gift).ToList();
+                                                <label class="form-label btn-reveal-trigger d-flex flex-between-center" for="selItemType">Gift Notes <button class="btn btn-link btn-sm btn-reveal text-600" @onclick="() => ModalNoteShowDefault(OrderNote.Gift)"><span class="fas fa-plus"></span></button></label>
+                                                if (giftNotes.Count > 0)
+                                                {
+                                                    foreach (var giftNote in giftNotes)
+                                                    {
+                                                        <p class="form-label btn-reveal-trigger d-flex flex-between-center" for="selItemType">
+                                                            @giftNote.Note
+                                                            <span class="d-flex flex-between-center">
+                                                                @if (orderDetails != null)
+                                                                {
+                                                                    <button class=" btn btn-link btn-sm btn-reveal text-600" @onclick="() => DisplayNoteDeleteConfirmation(giftNote)"><span class="far fa-trash-alt"></span></button>
+                                                                }
+                                                                <button class=" btn btn-link btn-sm btn-reveal text-600" @onclick="() => ModalNoteShow(giftNote)"><span class="fas fa-pencil-alt"></span></button>
+                                                            </span>
+                                                        </p>
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    </div>
+
+                                </div>
+                                @{
+                                    if (orderDetails != null)
+                                    {
+                                        <div class="card shadow-none border">
+                                            <div class="card-body">
+                                                @{
+                                                    if (order.BalanceDue > 0)
+                                                    {
+                                                        <div class="d-grid gap-2 mb-2">
+                                                            <button class="btn btn-sm btn-outline-primary" @onclick="ShowApplyTenderModal">Add Tender</button>
+                                                        </div>
+                                                    }
+                                                    <div class="d-grid gap-2">
+                                                        <button id="submitOrderBtn" class="btn btn-sm p-2 @((order.BalanceDue > 0 )?"btn-outline-secondary":"btn-primary")" @onclick="CreateDuplicateOrder">Submit Order</button>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @if (orderDetails == null)
+            {
+                <div class="card shadow-none border mb-4">
+                    <div class="card-body p-0">
+                        <ul class="nav nav-tabs text-uppercase my-2">
+                            @if (!isOrderInReturnRefundMode)
+                            {
+                                <li class="nav-item"><a class="nav-link @(activeTabs["OrderActivityTab"]?"active":"")" @onclick="@(() => SetTabActive("OrderActivityTab"))" id="activity-tab" data-bs-toggle="tab" href="#tab-activity" role="tab" aria-controls="tab-activity" aria-selected="false">Order Activity</a></li>
+                                <li class="nav-item"><a class="nav-link @(activeTabs["EmailActivityTab"]?"active":"")" @onclick="@(() => SetTabActive("EmailActivityTab"))" id="emailactivity-tab" data-bs-toggle="tab" href="#tab-emailactivity" role="tab" aria-controls="tab-emailactivity" aria-selected="true">Email Activity</a></li>
+                                <li class="nav-item"><a class="nav-link @(activeTabs["MerchantNotesTab"]?"active":"")" @onclick="@(() => SetTabActive("MerchantNotesTab"))" id="merchantnotes-tab" data-bs-toggle="tab" href="#tab-merchantnotes" role="tab" aria-controls="tab-merchantnotes" aria-selected="true">Merchant Notes</a></li>
+                            }
+                            <li class="nav-item"><a class="nav-link @(activeTabs["MetaDataTab"]?"active":"")" @onclick="@(() => SetTabActive("MetaDataTab"))" id="metadata-tab" data-bs-toggle="tab" href="#tab-metadata" role="tab" aria-controls="tab-metadata" aria-selected="true">Meta Data</a></li>
+
+                        </ul>
+                        <div class="tab-content p-3" id="nav-tabContent">
+                            @if (!isOrderInReturnRefundMode)
+                            {
+                                <div class="tab-pane fade" id="tab-merchantnotes" role="tabpanel" aria-labelledby="merchantnotes-tab-tab">
+                                    <div class="text-end mb-3">
+                                        <a class="btn btn-outline-dark btn-sm" href="javascript:void(0)" @onclick="() => ModalNoteShowDefault(OrderNote.Private)">Add Note</a>
+                                    </div>
+                                    @{
+                                        if (order.OrderNotes != null)
+                                        {
+                                            var merchantNotes = order.OrderNotes.OrderByDescending(x => x.CreatedDate).Where(x => x.NoteType == (int)OrderNote.Private).ToList();
+                                            if (merchantNotes.Count > 0)
+                                            {
+                                                foreach (var merchantNote in merchantNotes)
+                                                {
+                                                    <div class="d-flex mb-2 hover-actions-trigger align-items-center bg-white border rounded-3 p-3">
+                                                        <span class="far fa-comment-alt-lines"></span>
+                                                        <div class="ms-3 flex-shrink-1 flex-grow-1">
+                                                            <p class="mb-1">@merchantNote.Note</p>
+                                                            @{
+                                                                var merchantNoteCreatedDate = merchantNote.CreatedDate.AddMinutes(offsetMinutes).ToString("MMMM dd, yyyy hh:mm tt");
+                                                                var user = users.Where(x => x.Id == merchantNote.UserId).FirstOrDefault();
+                                                                if (user != null)
+                                                                {
+                                                                    <div class="fs--1"><span class="text-600 fs--2">@user.FirstName @user.LastName</span><span class="text-500 fs--2 ms-2">@merchantNoteCreatedDate</span></div>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <div class="fs--1"><span class="text-900 fs--2 ms-2">@merchantNoteCreatedDate</span></div>
+                                                                }
+                                                                if (merchantNote.NotifyUsers?.Count > 0)
+                                                                {
+                                                                    var notifyUsers = String.Join(", ", merchantNote.NotifyUsers.Select(x => x.Name).ToList());
+                                                                    <div class="fs--1"><span class="text-600 fs--2">Notified:</span><span class="text-500 fs--2 ms-2">@notifyUsers</span></div>
+                                                                }
+                                                            }
+                                                            <div class="hover-actions end-0 top-50 translate-middle-y">
+                                                                @if (orderDetails != null)
+                                                                {
+                                                                    <a href="javascript:void(0)" @onclick="() => DisplayNoteDeleteConfirmation(merchantNote)" class="btn btn-light border-300 btn-sm me-1 text-800" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Delete"><span class="fas fa-trash-alt"></span></a>
+                                                                }
+                                                                <a href="javascript:void(0)" class="btn btn-light border-300 btn-sm me-1 text-800" @onclick="() => ModalNoteShow(merchantNote)" type="button" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Edit"><span class="fas fa-edit"></span></a>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            }
+                                        }
+                                    }
+                                </div>
+                            }
+                            @if (activeTabs["MetaDataTab"])
+                            {
+                                <div class="tab-pane  @(activeTabs["MetaDataTab"]?"d-block":"fade")" id="tab-metadata" role="tabpanel" aria-labelledby="metadata-tab">
+                                    <div id="customMetaData">
+                                        @if (order.CustomBusinessMetaDatas != null)
+                                        {
+                                            <CustomMetaData customBusinessMetaData="@order.CustomBusinessMetaDatas" isReadOnly="true" />
+                                        }
+                                    </div>
+                                    @*<div id="customMetaData">
+                                        <div class="row">
+                                            <div class="col-12 col-md-6 mb-3">
+                                                <label for="customMetaTextbox" class="form-label">Meta Textbox Example</label>
+                                                <SfTextBox id="customMetaTextbox" class="form-control"></SfTextBox>
+                                            </div>
+                                            <div class="col-12 col-md-6 mb-3">
+                                                <label for="customMetaPrice" class="form-label">Meta Price Example</label>
+                                                <SfNumericTextBox id="customMetaPrice" TValue="decimal?" Format="c2"></SfNumericTextBox>
+                                            </div>
+                                            <div class="col-12 col-md-6 mb-3">
+                                                <label for="customMetaDate" class="form-label">Meta Date Example</label>
+                                                <SfDatePicker id="customMetaDate" TValue="DateTime?" Placeholder="Choose a Date" ShowClearButton="true"></SfDatePicker>
+                                            </div>
+                                            <div class="col-12 col-md-6 mb-3">
+                                                <label for="customMetaUrl" class="form-label">Meta URL Example</label>
+                                                <SfTextBox id="customMetaUrl" class="form-control"></SfTextBox>
+                                            </div>
+                                            <div class="col-12 col-md-6 mb-3">
+                                                <label for="customMetaDropdown" class="form-label">Meta Dropdown Example</label>
+                                                <select id="customMetaDropdown" class="form-select">
+                                                    <option selected>Choose...</option>
+                                                    <option>...</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-12 col-md-6 mb-3">
+                                                <label for="customMetaSwitch" class="form-label">Meta Switch Example</label>
+                                                <div class="form-check form-switch">
+                                                    <input id="customMetaSwitch" class="form-check-input" type="checkbox">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        </div>*@
+                                </div>
+                            }
+                            @if (!isOrderInReturnRefundMode)
+                            {
+                                <div class="tab-pane fade show active" id="tab-activity" role="tabpanel" hidden="@isOrderInReturnRefundMode" aria-labelledby="activity-tab">
+                                    @if (order.OrderActivity != null && order.OrderActivity.Count > 0)
+                                    {
+                                        <div id="activity-section" class="card-body scrollbar ps-2">
+                                            @{
+                                                foreach (var activity in order.OrderActivity)
+                                                {
+                                                    <div class="row timeline timeline-primary timeline-current g-3 pb-card">
+                                                        <div class="col-auto ps-4 ms-2">
+                                                            <div class="ps-2">
+                                                                <div class="icon-item icon-item-sm rounded-circle bg-200 shadow-none"><span class="text-primary @GetOrderActivityLogo(activity.ActivityType)"></span></div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col">
+                                                            <div class="row gx-0 border-bottom pb-card">
+                                                                <div class="col">
+                                                                    <h6 class="text-800 mb-1">@activity.ActivityTypeText</h6>
+                                                                    <p class="fs--1 text-600 mb-0">@activity.ActivityData</p>
+                                                                </div>
+                                                                <div class="col-auto">
+                                                                    @{
+                                                                        var activityDate = activity.DateCreated;
+                                                                        activityDate = activityDate.AddMinutes(offsetMinutes);
+                                                                        <p class="fs--2 text-500 mb-0">@(activityDate.ToString("MMMM dd, yyyy hh:mm tt"))</p>
+                                                                    }
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            }
+
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <p>No Order Activity</p>
+                                    }
+                                </div>
+                                <div class="tab-pane fade" id="tab-emailactivity" role="tabpanel" hidden="@isOrderInReturnRefundMode" aria-labelledby="emailactivity-tab">
+
+                                    <div id="email-activity-section" class="card-body scrollbar ps-2">
+                                        @if (order.EmailActivity != null && order.EmailActivity.Any())
+                                        {
+                                            foreach (var emailActivity in order.EmailActivity)
+                                            {
+                                                <div class="row timeline timeline-primary timeline-current g-3 pb-card">
+                                                    <div class="col-auto ps-4 ms-2">
+                                                        <div class="ps-2">
+                                                            <div class="icon-item icon-item-sm rounded-circle bg-200 shadow-none"><span class="text-primary fa-solid fa-triangle-exclamation"></span></div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col">
+                                                        <div class="row gx-0 border-bottom pb-card">
+                                                            <div class="col">
+                                                                <h6 class="text-800 mb-1">@emailActivity.ActivityTypeText</h6>
+                                                                <p class="fs--1 text-600 mb-0">@emailActivity.ActivityData</p>
+                                                            </div>
+                                                            <div class="col-auto">
+                                                                <p class="fs--2 text-500 mb-0">@(emailActivity.DateCreated.ToString("MMMM dd, yyyy hh:mm tt"))</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <SfDialog Width="500px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@NoteModalVisible">
+                <DialogTemplates>
+                    <Header>
+                        @noteHeader
+                    </Header>
+                    <Content>
+                        <EditForm id="NoteForm" Model="note" Context="formContext">
+                            <DataAnnotationsValidator />
+                            <div class="mb-3">
+                                <SfTextBox Multiline="true" placeholder="Enter the note" maxlength="@_noteCharLimit" class="form-control" @bind-Value="@note.Note" @onchange="HandleNoteInput" id="textCustomerNote" rows="4"></SfTextBox>
+                                <ValidationMessage For="() => note.Note" />
+                                <p class="@(noteCharRemaining > 0 ? "text-success": "text-danger")">(@noteCharRemaining Remaining)</p>
+                            </div>
+                            @if (!(isOrderInReturnRefundMode && note.NoteType == (int)OrderNote.Customer && note.Id <= 0))
+                            {
+                                <div class="mb-3">
+                                    <label class="form-label" for="inputNotifyUsers">Notify</label>
+                                    <SfMultiSelect TValue="int[]" @bind-value="@bindedNotifyTeamMembers" TItem="CustomTeamUserModel" Mode="VisualMode.Box" DataSource="@teamUsers" FilterType="Syncfusion.Blazor.DropDowns.FilterType.Contains" AllowFiltering="true">
+                                        <MultiSelectFieldSettings Text="Name" Value="UserId"></MultiSelectFieldSettings>
+                                    </SfMultiSelect>
+                                </div>
+                            }
+                            <hr />
+                            <div class="mt-3">
+                                <button type="submit" style="display: none" aria-hidden="true"></button>
+                                <button class="btn form-button btn-primary" @onclick="ModalNoteSave" type="button">@(((bindedNotifyTeamMembers != null && bindedNotifyTeamMembers.Any() && (bindedNotifyTeamMembers[0] > 0)) )?"Send":"Save")</button>
+                            </div>
+                        </EditForm>
+                    </Content>
+                </DialogTemplates>
+            </SfDialog>
+
+            <SfDialog CssClass="syncfusion-dialog-size syncfusion-dialog-size-sm" ShowCloseIcon="true" Width="800px" ID="transaction-log" IsModal="true" @bind-Visible="@IsPaymentLogDialogVisible">
+                <DialogEvents OnOverlayClick="@OnOverlayclick">
+                </DialogEvents>
+                <DialogTemplates>
+                    <Header>
+                        Transaction Log
+                    </Header>
+                    <Content>
+                        @{
+                            if (order.OrderTenders != null && order.OrderTenders.Any())
+                            {
+                                foreach (var tender in Enumerable.Reverse(order.OrderTenders))
+                                {
+                                    if (tender.TenderType == TenderType.Cash)
+                                    {
+                                        <div class="row">
+                                            <div class="col-4 border text-center">
+                                                <p class="mt-2">@tender.TenderTypeText.ToUpper()</p>
+                                                @{
+                                                    var paymentDate = tender.TransactionDate;
+                                                    paymentDate = paymentDate.AddMinutes(offsetMinutes);
+                                                }
+                                                @(paymentDate.ToString("MMMM d, yyyy"))<br />
+                                                @(paymentDate.ToString("hh:mm tt"))
+                                            </div>
+                                            <div class="col-8 border">
+                                                <div class="row mt-2">
+                                                    <div class="col-4 p-0 text-end">
+                                                        <p class="successful-payments">@PaymentTransactionType.sale.ToString().ToUpper():</p>
+                                                    </div>
+                                                    <div class="col-8 text-start">
+                                                        <p>@order.Currency@((tender.Amount - tender.Change).ToString("n2"))</p>
+                                                    </div>
+                                                </div>
+                                                <div class="row mt-2 mb-0">
+                                                    <div class="col-4 p-0 text-end">
+                                                        <p>Tendered:</p>
+                                                    </div>
+                                                    <div class="col-8 text-start">
+                                                        <p>@order.Currency@tender.Amount.ToString("n2")</p>
+                                                    </div>
+                                                </div>
+                                                <div class="row mb-0">
+                                                    <div class="col-4 p-0 text-end">
+                                                        <p>Change:</p>
+                                                    </div>
+                                                    <div class="col-8 text-start">
+                                                        <p>@order.Currency@tender.Change.ToString("n2")</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        if (order.OrderTransactions != null && order.OrderTransactions.Any())
+                                        {
+                                            var transactions = order.OrderTransactions.Where(x => x.TenderId == tender.Id).ToList();
+
+                                            foreach (var transaction in transactions)
+                                            {
+                                                <div class="row">
+                                                    <div class="col-4 border text-center">
+                                                        <p class="mt-2 text-uppercase">@tender.TenderTypeText</p>
+                                                        @{
+                                                            var paymentDate = tender.TransactionDate;
+                                                            paymentDate = paymentDate.AddMinutes(offsetMinutes);
+                                                        }
+                                                        @(paymentDate.ToString("MMMM d, yyyy"))<br />
+                                                        @(paymentDate.ToString("hh:mm tt"))
+                                                    </div>
+                                                    <div class="col-8 border">
+                                                        @{
+                                                            if (transaction.ErrorCode != _invalidCardErrorCode)
+                                                            {
+                                                                <div class="row mt-2">
+                                                                    <div class="col-4 p-0 text-end">
+                                                                        <p class="successful-payments">@transaction.TransactionType.ToString().ToUpper():</p>
+                                                                    </div>
+                                                                    <div class="col-8 text-start">
+                                                                        <p>@order.Currency@transaction.Amount.ToString("n2")</p>
+                                                                    </div>
+                                                                </div>
+                                                            }
+                                                            else
+                                                            {
+                                                                <div class="row mt-2">
+                                                                    <div class="col-4 p-0 text-end">
+                                                                        <p class="failure-payments">DECLINED:</p>
+                                                                    </div>
+                                                                    <div class="col-8 text-start">
+                                                                        <p>@order.Currency@transaction.Amount.ToString("n2")</p>
+                                                                    </div>
+                                                                </div>
+                                                            }
+                                                            <div class="row mt-2">
+                                                                <div class="col-4 p-0 text-end">
+                                                                    <p>Approval:</p>
+                                                                </div>
+                                                                <div class="col-8 text-start">
+                                                                    <p>@transaction.GatewayApprovalCode</p>
+                                                                </div>
+                                                            </div>
+                                                            <div class="row mt-2">
+                                                                <div class="col-4 p-0 text-end">
+                                                                    <p>Transaction:</p>
+                                                                </div>
+                                                                <div class="col-8 text-start">
+                                                                    <p>@transaction.GatewayTransactionId</p>
+                                                                </div>
+                                                            </div>
+                                                            <div class="row mt-2">
+                                                                <div class="col-4 p-0 text-end">
+                                                                    <p>Card:</p>
+                                                                </div>
+                                                                <div class="col-8 text-start">
+                                                                    <p>@transaction.CreditCardType.ToString() - @transaction.CreditCardLastFour exp @transaction.CreditCardExpMonth/@transaction.CreditCardExpYear</p>
+                                                                </div>
+                                                            </div>
+                                                        }
+
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                    }
+                                }
+                                if (order.OrderGiftCard != null && order.OrderGiftCard.Any())
+                                {
+                                    foreach (var giftCard in order.OrderGiftCard)
+                                    {
+                                        <div class="row">
+                                            <div class="col-4 border text-center">
+                                                <p class="mt-2 text-uppercase">@EnumHelper.GetDescription(TenderType.GiftCard)</p>
+                                            </div>
+                                            <div class="col-8 border">
+                                                @{
+                                                    <div class="row mt-2">
+                                                        <div class="col-4 successful-payments">
+                                                            <p class="text-end">@PaymentTransactionType.sale.ToString().ToUpper():</p>
+                                                        </div>
+                                                        <div class="col-8 text-start">
+                                                            <p>@order.Currency@giftCard.AmountUsed.ToString("n2")</p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row mt-2">
+                                                        <div class="col-4 p-0 text-end">
+                                                            <p>Gift Card Number:</p>
+                                                        </div>
+                                                        <div class="col-8 text-start">
+                                                            <p>@("XXXXXXXXXXXX"+giftCard.GiftCardLastFour)</p>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                <hr />
+                                <p>@("No Transaction history")</p>
+                            }
+                        }
+                    </Content>
+                </DialogTemplates>
+            </SfDialog>
+
+            <SfDialog Width="500px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsSearchOrderDialogVisible">
+                <DialogTemplates>
+                    <Header>
+                        Search Orders
+                    </Header>
+                    <Content>
+                        <form @onsubmit="@SearchOrders">
+                            <content>
+                                <div class="mb-3">
+                                    <label class="form-label" for="OrderNumber">Order #</label>
+                                    <input class="form-control" placeholder="Enter Order Number" @bind-value="@searchOrderNumber" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="OrderLastName">Last Name</label>
+                                    <input class="form-control" placeholder="Enter Last Name" @bind-value="@searchOrderLastName" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="SearchOrderPhone">Phone</label>
+                                    <input class="form-control" placeholder="Enter Phone Number" @bind-value="@searchOrderPhone" />
+                                </div>
+                            </content>
+                            <div class="e-footer-content px-0">
+                                <button class="btn btn-primary" type="submit">Search</button>
+                            </div>
+                        </form>
+                    </Content>
+                </DialogTemplates>
+
+            </SfDialog>
+
+            <SfDialog Width="500px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsTagsDialogVisible">
+                <DialogEvents OnOverlayClick="@OnOverlayclick">
+                </DialogEvents>
+                <DialogTemplates>
+                    <Header>
+                        Order Tags
+                    </Header>
+                    <Content>
+                        <div class="row">
+                            <div class="mb-3 col-10">
+                                <SfMultiSelect Placeholder="Select" TValue="string[]" @bind-Value="orderTags" HtmlAttributes="@(new Dictionary<string,object>() { { "maxLength", "100" } })" TItem="CustomTagModel" AllowCustomValue="true" DataSource="@tags" AllowFiltering="true" Mode="@VisualMode.Box">
+                                    <MultiSelectFieldSettings Text="Value" Value="Value"></MultiSelectFieldSettings>
+                                </SfMultiSelect>
+                            </div>
+                            <div class="col-2 p-0">
+                                <a href="javascript:void(0)" class="btn btn-sm btn-primary" @onclick="@OnActionSuccessHandler" type="button">Save</a>
+                            </div>
+                        </div>
+                    </Content>
+                </DialogTemplates>
+            </SfDialog>
+            <SfDialog Width="500px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsSalesRepsModalVisible">
+                <DialogEvents OnOverlayClick="@OnOverlayclick">
+                </DialogEvents>
+                <DialogTemplates>
+                    <Header>
+                        Sales Reps
+                    </Header>
+                    <Content>
+                        <div class="row">
+                            <div class="mb-3 col-10">
+                                <SfMultiSelect TValue="int[]" @bind-Value="@salesReps" TItem="CustomTeamUserModel" Mode="VisualMode.Box" DataSource="@teamUsers" FilterType="Syncfusion.Blazor.DropDowns.FilterType.Contains" AllowFiltering="true">
+                                    <MultiSelectFieldSettings Text="Name" Value="UserId"></MultiSelectFieldSettings>
+                                </SfMultiSelect>
+                            </div>
+                            <div class="col-2 p-0">
+                                <a href="javascript:void(0)" class="btn btn-sm btn-primary" @onclick="@SaveSalesRepresentatives" type="button">Save</a>
+                            </div>
+                        </div>
+                    </Content>
+                </DialogTemplates>
+            </SfDialog>
+            <SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="ResendReceiptDialogVisibility">
+                <DialogTemplates>
+                    <Header>
+                        <h5 class="modal-title mb-1" id="modalLabel">Resend Order Receipt</h5>
+                        <div class="">
+                            <label class="form-label" for="">Order #@order.FormattedOrderNumber</label>
+                        </div>
+                        <div class="">
+                            <label class="form-label" for="">@(order.BillingCustomer?.Email ?? "")</label>
+                        </div>
+                    </Header>
+                    <Content>
+                        <div class="mb-3">
+                            <p>You have selected to resend the confirmation email.</p>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" checked="@SendToAlternativeEmail" @bind-value="@SendToAlternativeEmail">
+                                <label class="form-check-label" for="">
+                                    Send to Alternative Email Address(es)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <input @bind-value="AlternativeEmails" disabled="@(!SendToAlternativeEmail)" class="form-control" type="text" placeholder="Enter up to 3 email addresses, separated by commas" />
+                        </div>
+                    </Content>
+                    <FooterTemplate>
+                        <button type="button" @onclick="CloseResendReceiptDialog" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" @onclick="ResendOrderReceiptEmail" class="btn btn-primary">Send</button>
+                    </FooterTemplate>
+                </DialogTemplates>
+            </SfDialog>
+
+            <SfDialog IsModal="true" ShowCloseIcon="true" CssClass="syncfusion-dialog-size syncfusion-dialog-size-md" @bind-Visible="EditMetaDataModalVisibility">
+                <DialogTemplates>
+                    <Header>
+                        <h5>Edit Meta Data</h5>
+                    </Header>
+                    <Content>
+                        @if (order != null)
+                        {
+                            @if (order.CustomBusinessMetaDatas != null)
+                            {
+                                <CustomMetaData customBusinessMetaData="@order.CustomBusinessMetaDatas" isReadOnly="false" />
+                            }
+                        }
+                    </Content>
+                    <FooterTemplate>
+                        <button type="button" class="btn btn-secondary" @onclick="@CloseEditMetaDataModal">Close</button>
+                        <button type="button" class="btn btn-primary" @onclick="@(() => SaveEditMetaData())">Save</button>
+                    </FooterTemplate>
+                </DialogTemplates>
+            </SfDialog>
+
+            <SfDialog Width="500px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsAdjustGratuityModalVisible">
+                <DialogEvents OnOverlayClick="() => IsAdjustGratuityModalVisible = false">
+                </DialogEvents>
+                <DialogTemplates>
+                    <Header>Adjust Gratuity</Header>
+                    <Content>
+                        <div class="row">
+                            <div class="mb-3 col-10">
+                                <SfNumericTextBox TValue="decimal" ValidateDecimalOnType="true" Format="c2" Decimals=2 ShowSpinButton="false" @bind-Value=@bindedGratuity Min="0"></SfNumericTextBox>
+                            </div>
+                            <div class="col-2 p-0">
+                                <a href="javascript:void(0)" class="btn btn-sm btn-primary" @onclick="@SaveOrderGratuity" type="button">Save</a>
+                            </div>
+                        </div>
+                    </Content>
+                </DialogTemplates>
+            </SfDialog>
+
+            <SfDialog CssClass="syncfusion-dialog-size syncfusion-dialog-size-sm" ShowCloseIcon="true" Width="800px" ID="return-product" IsModal="true" @bind-Visible="@IsReturnProductModalVisible">
+                <DialogEvents OnOverlayClick="() => IsReturnProductModalVisible = false">
+                </DialogEvents>
+                <DialogTemplates>
+                    <Header>
+                        <div>
+                            <h3 id="return-product-name">Return @returnProduct.ProductName</h3>
+                            <h5 class="text-500">SKU: @returnProduct.ProductSku</h5>
+                        </div>
+                    </Header>
+                    <Content>
+                        <EditForm @ref="returnProductForm" Model="returnProduct">
+                            <DataAnnotationsValidator />
+                            <div class="row">
+                                <div class="col-6 border border-right-dark">
+                                    <div class="row mt-2">
+                                        <div class="col-6">
+                                            <label class="form-label text-500">Purchased Qty</label><br />
+                                            <label class="mx-4">@returnProduct.Quantity</label>
+                                        </div>
+                                        <div class="col-6 text-center">
+                                            <label class="form-label text-500">Price Sold</label><br />
+                                            <label class="mx-4">@returnProduct.ProductPrice.ToString("c2")</label>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-12 mb-3">
+                                            <label class="form-label">Return Reason</label><br />
+                                            <SfDropDownList TValue="int" TItem="DropdownBindingModel" Placeholder="Select Return Reason" AllowFiltering="true" @bind-Value="returnProduct.ReturnReason" DataSource="@returnReasons">
+                                                <DropDownListFieldSettings Text="Value" Value="Key" />
+                                            </SfDropDownList>
+                                            <ValidationMessage For="() => returnProduct.ReturnReason" />
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-1">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" id="switchReturnToInventory" type="checkbox" @bind-value="returnProduct.ReturnToInventory" checked="@returnProduct.ReturnToInventory">
+                                            </div>
+                                        </div>
+                                        <div class="col-11">
+                                            <label class="form-label mb-3" for="switchReturnToInventory">Return to Inventory</label>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-12">
+                                            <label class="form-label">Inventory Location</label><br />
+                                            <SfDropDownList TValue="int" TItem="DropdownBindingModel" Placeholder="Select Inventory Location" AllowFiltering="true" @bind-Value="returnProduct.InventoryLocation" DataSource="@inventoryLocations">
+                                                <DropDownListFieldSettings Text="Value" Value="Key" />
+                                            </SfDropDownList>
+                                        </div>
+                                    </div>
+
+                                </div>
+                                <div class="col-6 border border-left-dark">
+                                    <div class="row mt-2">
+                                        <div class="col-8 mx-3 text-center">
+                                            <label class="form-label me-2">Return Qty</label>
+                                            <div class="border-1 d-flex justify-content-center">
+                                                <a class="btn btn-sm btn-outline-dark @(returnProduct.ReturnQty == 0 ? "disabled":"")" href="javascript:void(0)" @onclick="@(() => HandleReturnAmountsOnQtyChange(false))">-</a>
+                                                <div class="text-center me-2 mx-2"><span>@returnProduct.ReturnQty</span></div>
+                                                <a class="btn btn-sm btn-outline-dark me-3 @(returnProduct.ReturnQty == returnProduct.Quantity ? "disabled":"")" href="javascript:void(0)" @onclick="@(() => HandleReturnAmountsOnQtyChange(true))">+</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row mt-2">
+                                        <div class="col-8 text-center">
+                                            <label class="form-label">Return Amount</label><br />
+                                            <SfNumericTextBox CssClass="form-control" TValue="decimal" ValidateDecimalOnType="true" Format="c2" Placeholder="0.00" Min="Convert.ToDecimal(0.00)" Max="@(returnProduct.Quantity*returnProduct.ProductPrice)" Decimals=2 ShowSpinButton="false" @bind-Value="returnProduct.Extended"></SfNumericTextBox>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </EditForm>
+
+                    </Content>
+                </DialogTemplates>
+                <DialogButtons>
+                    <DialogButton Content="Close" OnClick="() => IsReturnProductModalVisible = false" />
+                    <DialogButton Content="Save" OnClick="SaveReturnProduct" IsPrimary="true" />
+                </DialogButtons>
+            </SfDialog>
+
+            <DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="DeleteCustomerNote"></DeleteConfirmation>
+            <AdjustShippingModal @ref="adjustShippingModalRef" IsAdjustShippingModalVisible="isAdjustShippingModalVisible" SaveOrderShippingCharges="SaveOrderShippingCharges" ShippingCharge="bindedShippingCharge" ShippingDate="bindedShippingDate"></AdjustShippingModal>
+            <OrderTender @ref="orderTender" BusinessId="@(currentMember != null ? currentMember.Id : 0)" ApplyCashTender="(e) => ApplyCashTender(e)" ApplyTenderToOrder="(e) => ApplyTender(e.TenderChargeAmt, e.SelectedTenderType, e.GiftCardDetail)" ShowChargeCreditCardModal="ShowChargeCreditCardModal"></OrderTender>
+        }
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    [Parameter]
+    public Guid? OrderGUID { get; set; }
+    private string title = "Order Details | Synergy Commerce";
+    private string noteHeader = "Customer Notes";
+    private bool NoteModalVisible { get; set; } = false;
+    private bool IsPaymentLogDialogVisible { get; set; } = false;
+    private bool IsTagsDialogVisible = false;
+    private bool IsSalesRepsModalVisible = false;
+    private bool EditMetaDataModalVisibility { get; set; } = false;
+    private bool isAdjustShippingModalVisible { get; set; }
+    private bool IsAdjustGratuityModalVisible { get; set; }
+    private bool IsReturnProductModalVisible { get; set; }
+
+    Member currentMember = null;
+    bool SpinnerVisibility = true;
+    string spinnerLabel = "";
+    OrderDetailFullModel order { get; set; }
+    OrderDetailFullModel orderDetails { get; set; } // Used for handling the Order Details as back up while creating the Duplicate Order
+    OrderRequestModel duplicateOrder { get; set; }
+    OrderNoteModel note = new OrderNoteModel();
+    List<UserDetailViewModel> users = new List<UserDetailViewModel>();
+    List<CustomTeamUserModel> teamUsers = new List<CustomTeamUserModel>();
+    List<CustomOrderListModel> orders = new List<CustomOrderListModel>();
+    List<DropdownBindingModel> returnReasons = new List<DropdownBindingModel>();
+    List<DropdownBindingModel> inventoryLocations = new List<DropdownBindingModel>();
+    int loggedInUserId { get; set; }
+    int offsetMinutes { get; set; }
+    int[] salesReps = new int[] { };
+    int[] bindedSalesReps = new int[] { };
+    int[] bindedNotifyTeamMembers = new int[] { };
+    const int _noteCharLimit = 512;
+    const decimal _salesTax = 0.0825M;
+    private int noteCharRemaining = _noteCharLimit;
+    private bool isLatestOrder { get; set; }
+    private bool isOldestOrder { get; set; }
+    private bool IsSearchOrderDialogVisible { get; set; }
+    const string _USCountry = "UNITED STATES";
+    const string _invalidCardErrorCode = "0456";
+    private decimal bindedShippingCharge { get; set; }
+    private DateTime bindedShippingDate { get; set; }
+    EditForm returnProductForm;
+    bool checkAnyReturnProduct => isOrderInReturnRefundMode && orderItems.Any(x => x.ReturnQty > 0);
+    CreditCardRequestModel creditCard = new CreditCardRequestModel();
+    GiftCardDetail giftCard = new GiftCardDetail();
+    OrderNoteModel orderNote;
+    private bool openDeleteDialog { get; set; }
+
+    private string searchOrderNumber { get; set; }
+    private string searchOrderLastName { get; set; }
+    private string searchOrderPhone { get; set; }
+    public bool ResendReceiptDialogVisibility { get; set; }
+    public bool SendToAlternativeEmail { get; set; }
+    public string AlternativeEmails { get; set; }
+    public bool isOrderInReturnRefundMode { get; set; }
+    private decimal bindedGratuity { get; set; }
+    private ReturnProductModel returnProduct = new ReturnProductModel();
+    private List<ReturnProductModel> orderItems = new List<ReturnProductModel>();
+    private Dictionary<string, bool> activeTabs = new Dictionary<string, bool>()
+                                                {
+                                                        {"OrderActivityTab", true },
+                                                        {"EmailActivityTab", false },
+                                                        {"MerchantNotesTab", false },
+                                                        {"MetaDataTab", false },
+                                                    };
+
+    AdjustShippingModal adjustShippingModalRef;
+    OrderTender orderTender { get; set; }
+
+    public string[] orderTags;
+    public string[] bindedTags;
+
+
+    List<CustomTagModel> tags = new List<CustomTagModel>();
+    private RenderMode Mode = RenderMode.Inline;
+
+    public class CustomTagModel
+    {
+        public string Id { get; set; }
+        public string Value { get; set; }
+    }
+
+    private class CustomOrderListModel
+    {
+        public int Id { get; set; }
+        public Guid IdGUID { get; set; }
+    }
+
+    public class InplaceModes
+    {
+        public string value { get; set; }
+        public string text { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var endDate = DateTime.UtcNow;
+        var startDate = endDate.AddDays(-30);
+
+        if (OrderGUID.HasValue)
+        {
+            var ordersList = _orderViewModel.GetSearchOrdersAsync(currentMember.Id, -1, startDate, endDate);
+            var getUserData = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+            if (getUserData is not null)
+            {
+                loggedInUserId = getUserData.Id;
+                offsetMinutes = getUserData.OffsetMinutes;
+            }
+            var response = await _userViewModel.GetUsers();
+            if (response.success)
+            {
+                users = response.data;
+            }
+
+            var teamResponse = await _teamViewModel.GetBusinessTeams(currentMember.Id);
+            if (teamResponse.success)
+            {
+                var teamUsersResponse = teamResponse.data;
+                teamUsers = teamUsersResponse.Select(x => new CustomTeamUserModel { UserId = x.UserId, FirstName = x.FirstName, LastName = x.LastName, Email = x.Email, Name = $"{x.LastName}, {x.FirstName} ({x.Email})" }).ToList();
+            }
+
+            await GetOrderDetails();
+
+            var ordersListResponse = await ordersList;
+            if (ordersListResponse.success)
+                orders = ordersListResponse.data?.Select(x => new CustomOrderListModel { Id = x.Id, IdGUID = x.OrderGuid }).ToList() ?? new List<CustomOrderListModel>();
+            if (order.Id == ordersListResponse.data?.OrderByDescending(x => x.CreatedDate).FirstOrDefault().Id)
+            {
+                isLatestOrder = true;
+            }
+            if (order.Id == ordersListResponse.data?.OrderBy(x => x.CreatedDate).FirstOrDefault().Id)
+            {
+                isOldestOrder = true;
+            }
+        }
+        SpinnerVisibility = false;
+    }
+
+    public async Task GetOrderDetails()
+    {
+        var result = await _orderViewModel.GetOrderDetailsAsync(0, 0, 0, OrderGUID.Value.ToString());
+        if (result.success)
+        {
+            order = result.data;
+            order.OrderActivity.Reverse();
+
+            if (order.OrderSalesRep != null)
+            {
+                salesReps = order.OrderSalesRep.Select(x => x.UserId).ToArray();
+                bindedSalesReps = salesReps;
+            }
+            if (order.OrderTags != null)
+            {
+                tags = order.OrderTags.Select(x => new CustomTagModel { Id = x.Value.ToString(), Value = x.Value.ToString() }).ToList();
+                tags.Distinct();
+                orderTags = tags.Select(x => x.Value).ToArray();
+                bindedTags = orderTags;
+            }
+
+            if (order.CustomBusinessMetaDatas != null && order.CustomBusinessMetaDatas.Count > 0)
+            {
+                foreach (var item in order.CustomBusinessMetaDatas)
+                {
+                    if (!string.IsNullOrEmpty(item.ContentChoices))
+                    {
+                        item.MetaDropdownItemData = System.Text.Json.JsonSerializer.Deserialize<List<MetaDropdownItem>>(item.ContentChoices);
+                    }
+                }
+            }
+            else
+            {
+                order.CustomBusinessMetaDatas = new List<CustomBusinessMetaDataModel>();
+            }
+
+            if (order.OrderItems != null)
+            {
+                orderItems = JsonConvert.DeserializeObject<List<ReturnProductModel>>(JsonConvert.SerializeObject(order.OrderItems));
+                order.OrderItems = null;
+            }
+        }
+    }
+
+    public async Task SaveSalesRepresentatives()
+    {
+        IsSalesRepsModalVisible = false;
+        SpinnerVisibility = true;
+        AddUpdateOrderSalesRepsRequestModel request = new AddUpdateOrderSalesRepsRequestModel { OrderId = order.Id, SalesReps = new List<AddUpdateSalesRepsRequest>() };
+        DeleteOrderSalesRepsRequestModel delRequest = new DeleteOrderSalesRepsRequestModel { OrderId = order.Id, SalesReps = new List<int> { } };
+
+        if (salesReps == null)
+        {
+            salesReps = new int[] { };
+        }
+
+        var removeSalesReps = bindedSalesReps.Where(x => !salesReps.Any(o => o == x)).ToArray();
+        var newSalesReps = salesReps.Where(t => !bindedSalesReps.Any(o => o == t)).ToArray();
+        if (removeSalesReps.Length > 0 && orderDetails == null)
+        {
+            foreach (var removeSalesRep in removeSalesReps)
+            {
+                delRequest.SalesReps.Add(Convert.ToInt32(removeSalesRep));
+            }
+            var response = await _orderViewModel.DeleteOrderSalesReps(delRequest);
+            if (response.success)
+            {
+                order.OrderActivity.Insert(0, new OrderActivityModel { ActivityData = "Sales Rep Removed", ActivityType = OrderActivityType.SalesRepModified, DateCreated = DateTime.UtcNow });
+                if (newSalesReps.Length == 0)
+                {
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                }
+            }
+            else
+            {
+                toastService.ShowToast(Constants.InternalServerError, ToastLevel.Error);
+            }
+        }
+        if (newSalesReps.Length > 0 && orderDetails == null)
+        {
+            foreach (var newSalesRep in newSalesReps)
+            {
+                request.SalesReps.Add(new AddUpdateSalesRepsRequest { Id = 0, UserId = Convert.ToInt32(newSalesRep) });
+            }
+            var response = await _orderViewModel.AddUpdateOrderSalesReps(request);
+            if (response.success)
+            {
+                order.OrderActivity.Insert(0, new OrderActivityModel { ActivityData = "Sales Rep Added", ActivityType = OrderActivityType.SalesRepAdded, DateCreated = DateTime.UtcNow });
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(Constants.InternalServerError, ToastLevel.Error);
+            }
+        }
+        bindedSalesReps = salesReps;
+        SpinnerVisibility = false;
+    }
+
+    private void ShowTagsModal()
+    {
+        IsTagsDialogVisible = true;
+        orderTags = bindedTags;
+    }
+
+    private void ShowSalesRepsModal()
+    {
+        IsSalesRepsModalVisible = true;
+        salesReps = bindedSalesReps;
+    }
+
+    private async Task OnActionSuccessHandler()
+    {
+        SpinnerVisibility = true;
+        IsTagsDialogVisible = false;
+        AddUpdateOrderTagRequestModel addTagsRequest = new AddUpdateOrderTagRequestModel { OrderId = order.Id, OrderTags = new List<AddUpdateTagRequest>() };
+        DeleteOrderTagRequestModel deleteTagsRequest = new DeleteOrderTagRequestModel { OrderId = order.Id, Tags = new List<string>() };
+
+        if (orderTags == null)
+        {
+            orderTags = new string[] { };
+        }
+
+        var removeOrderTags = tags.Where(t => !orderTags.Any(s => s == t.Value)).ToList();
+        var newTags = orderTags.Where(t => !tags.Any(o => o.Value == t)).ToArray();
+        if (removeOrderTags.Count > 0 && orderDetails != null)
+        {
+            foreach (var removeTag in removeOrderTags)
+            {
+                deleteTagsRequest.Tags.Add(removeTag.Value);
+            }
+            var response = await _orderViewModel.DeleteOrderTag(deleteTagsRequest);
+            if (response.success)
+            {
+                if (newTags.Length == 0)
+                {
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                }
+            }
+            else
+            {
+                toastService.ShowToast(Constants.InternalServerError, ToastLevel.Error);
+            }
+        }
+
+
+        if (newTags.Length > 0 && orderDetails != null)
+        {
+            foreach (var newTag in newTags)
+            {
+                addTagsRequest.OrderTags.Add(new AddUpdateTagRequest { Value = newTag });
+            }
+            var response = await _orderViewModel.AddUpdateOrderTagAsync(addTagsRequest);
+            if (response.success)
+            {
+                order.OrderActivity.Insert(0, new OrderActivityModel { ActivityType = OrderActivityType.OrderTagAdded, DateCreated = DateTime.UtcNow });
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(Constants.InternalServerError, ToastLevel.Error);
+            }
+        }
+        tags = orderTags.Select(x => new CustomTagModel { Id = x, Value = x }).ToList();
+        bindedTags = orderTags;
+        SpinnerVisibility = false;
+    }
+
+    private void ModalNoteShowDefault(OrderNote noteType)
+    {
+        note = new OrderNoteModel();
+        bindedNotifyTeamMembers = new int[] { };
+        noteCharRemaining = _noteCharLimit;
+        if (noteType == OrderNote.Customer)
+        {
+            noteHeader = "Customer Notes";
+            note.NoteType = (int)OrderNote.Customer;
+        }
+        else if (noteType == OrderNote.Shipping)
+        {
+            noteHeader = "Shipping Notes";
+            note.NoteType = (int)OrderNote.Shipping;
+        }
+        else if (noteType == OrderNote.Gift)
+        {
+            noteHeader = "Gift Notes";
+            note.NoteType = (int)OrderNote.Gift;
+        }
+        else if (noteType == OrderNote.Private)
+        {
+            noteHeader = "Merchant Notes";
+            note.NoteType = (int)OrderNote.Private;
+        }
+
+        if (orderDetails != null)
+            orderNote = null;
+        this.NoteModalVisible = true;
+    }
+
+    private void ModalNoteShow(OrderNoteModel reqNote)
+    {
+        note = new OrderNoteModel
+        {
+            Id = reqNote.Id,
+            Note = reqNote.Note,
+            CreatedDate = reqNote.CreatedDate,
+            NoteType = reqNote.NoteType,
+            OrderId = reqNote.OrderId,
+            UserId = reqNote.UserId
+        };
+
+        if (reqNote.NotifyUsers != null)
+        {
+            bindedNotifyTeamMembers = reqNote.NotifyUsers.Select(x => x.Id).ToArray();
+        }
+        else
+        {
+            bindedNotifyTeamMembers = new int[] { };
+        }
+
+        noteCharRemaining = (_noteCharLimit - note.Note.Length);
+        if (note.NoteType == (int)OrderNote.Customer)
+        {
+            noteHeader = "Customer Notes";
+        }
+        else if (note.NoteType == (int)OrderNote.Shipping)
+        {
+            noteHeader = "Shipping Notes";
+        }
+        else if (note.NoteType == (int)OrderNote.Gift)
+        {
+            noteHeader = "Gift Notes";
+        }
+        else if (note.NoteType == (int)OrderNote.Private)
+        {
+            noteHeader = "Merchant Notes";
+        }
+        if (orderDetails != null)
+            orderNote = reqNote;
+
+        this.NoteModalVisible = true;
+    }
+
+    private async Task ModalNoteSave()
+    {
+        if (string.IsNullOrWhiteSpace(note.Note))
+        {
+            toastService.ShowToast("Please enter the Note.", ToastLevel.Error);
+            return;
+        }
+        else
+        {
+            this.NoteModalVisible = false;
+            SpinnerVisibility = true;
+            note.OrderId = order.Id;
+            note.UserId = loggedInUserId;
+
+            AddUpdateOrderNoteRequestModel reqNote = JsonConvert.DeserializeObject<AddUpdateOrderNoteRequestModel>(JsonConvert.SerializeObject(note));
+            if (bindedNotifyTeamMembers != null && bindedNotifyTeamMembers.Any())
+            {
+                reqNote.NotifyUsers = new List<NoteNotifyUserModel>();
+                foreach (var notifyUser in bindedNotifyTeamMembers)
+                {
+                    var notifyUserModel = new NoteNotifyUserModel();
+                    var requiredUser = teamUsers.FirstOrDefault(x => x.UserId == notifyUser);
+                    notifyUserModel.Id = requiredUser.UserId;
+                    notifyUserModel.Name = requiredUser.FirstName + " " + requiredUser.LastName;
+                    notifyUserModel.Email = requiredUser.Email;
+                    reqNote.NotifyUsers.Add(notifyUserModel);
+                }
+            }
+
+            //reqNote.BusinessId = currentMember.Id;
+            reqNote.NoteId = note.Id;
+            if (orderDetails == null)
+            {
+                var response = await _orderViewModel.AddUpdateOrderNoteAsync(reqNote);
+                if (response.success)
+                {
+                    if (reqNote.NoteId > 0)
+                    {
+                        foreach (var existingNote in order.OrderNotes)
+                        {
+                            if (existingNote.Id == response.data.Id)
+                            {
+                                existingNote.Note = note.Note;
+                                existingNote.UserId = note.UserId;
+                                existingNote.NotifyUsers = reqNote.NotifyUsers;
+                            }
+                        }
+                        List<string> mails = new List<string>();
+                        if(reqNote.NotifyUsers != null && reqNote.NotifyUsers.Any())
+                        {
+                            foreach (var item in reqNote.NotifyUsers)
+                            {
+                                mails.Add(item.Email);
+                            }
+                        }
+                        toastService.ShowToast(mails.Any() ? $"Mail Sent To: {string.Join(", ",mails)}" : Constants.SaveMessage, ToastLevel.Success);
+                    }
+                    else
+                    {
+                        note.Id = response.data.Id;
+                        note.CreatedDate = DateTime.UtcNow;
+                        note.NotifyUsers = reqNote.NotifyUsers;
+                        order.OrderNotes.Add(note);
+                        order.OrderNotes = order.OrderNotes.OrderByDescending(x => x.CreatedDate).ToList();
+                        toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                    }
+                    StateHasChanged();
+                }
+                else
+                {
+                    toastService.ShowToast(Constants.InternalServerError, ToastLevel.Error);
+                }
+            }
+            else
+            {
+                if (orderNote == null)
+                {
+                    note.CreatedDate = DateTime.UtcNow;
+                    note.NotifyUsers = reqNote.NotifyUsers;
+                    order.OrderNotes.Add(note);
+                    order.OrderNotes = order.OrderNotes.OrderByDescending(x => x.CreatedDate).ToList();
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                }
+                else
+                {
+                    orderNote.Note = note.Note;
+                    orderNote.UserId = note.UserId;
+                    orderNote.NotifyUsers = reqNote.NotifyUsers;
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                }
+            }
+            SpinnerVisibility = false;
+        }
+    }
+
+    private void DisplayNoteDeleteConfirmation(OrderNoteModel orderNoteData)
+    {
+        orderNote = orderNoteData;
+        openDeleteDialog = true;
+    }
+
+    private void DialogClose()
+    {
+        openDeleteDialog = false;
+    }
+
+    private void DeleteCustomerNote()
+    {
+        order.OrderNotes.Remove(orderNote);
+        openDeleteDialog = false;
+        toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+    }
+
+    private async Task ChangeOrderStatus(OrderStatus orderStatus)
+    {
+        SpinnerVisibility = true;
+        UpdateOrderStatusRequestModel statusUpdate = new UpdateOrderStatusRequestModel { OrderId = order.Id, OrderGUID = OrderGUID.Value.ToString(), OrderStatus = orderStatus, UpdatedByUserId = loggedInUserId };
+        var result = await _orderViewModel.UpdateOrderStatusAsync(statusUpdate);
+        if (result.success == true)
+        {
+            order.OrderStatusUpdateDate = DateTime.UtcNow;
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            await GetOrderDetails();
+        }
+        else
+        {
+            toastService.ShowToast(Constants.InternalServerError, ToastLevel.Error);
+        }
+        SpinnerVisibility = false;
+    }
+
+    private void HandleNoteInput(ChangeEventArgs args)
+    {
+        var checkCharLength = (_noteCharLimit - args.Value.ToString().Length);
+        if (checkCharLength > 0)
+        {
+            note.Note = args.Value.ToString();
+            noteCharRemaining = checkCharLength;
+        }
+        else
+        {
+            noteCharRemaining = 0;
+        }
+    }
+
+    private void PaymentLogModalShow()
+    {
+        IsPaymentLogDialogVisible = true;
+    }
+
+    private void OnOverlayclick(MouseEventArgs arg)
+    {
+        IsPaymentLogDialogVisible = false;
+        IsTagsDialogVisible = false;
+        IsSalesRepsModalVisible = false;
+        NoteModalVisible = false;
+    }
+
+    private void DisplayMostRecentOrder()
+    {
+        SpinnerVisibility = true;
+        var currentOrderId = order.Id;
+        var index = orders.FindIndex(x => x.Id == currentOrderId);
+        var moreRecentOrder = orders[index - 1];
+        NavigationManager.NavigateTo(string.Format("/store/orders/order/{0}", moreRecentOrder.IdGUID), true);
+        StateHasChanged();
+    }
+
+    private void DisplayOlderOrder()
+    {
+        SpinnerVisibility = true;
+        var currentOrderId = order.Id;
+        var index = orders.FindIndex(x => x.Id == currentOrderId);
+        var moreOlderOrder = orders[index + 1];
+        NavigationManager.NavigateTo(string.Format("/store/orders/order/{0}", moreOlderOrder.IdGUID), true);
+        StateHasChanged();
+    }
+
+    private void SearchOrders()
+    {
+        IsSearchOrderDialogVisible = false;
+        var query = new Dictionary<string, string> { };
+        if (searchOrderNumber != null)
+        {
+            query.Add("OrderNumber", searchOrderNumber);
+        }
+        if (searchOrderLastName != null)
+        {
+            query.Add("LastName", searchOrderLastName);
+        }
+        if (searchOrderPhone != null)
+        {
+            query.Add("Phone", searchOrderPhone);
+        }
+        NavigationManager.NavigateTo(QueryHelpers.AddQueryString("/store/orders", query));
+    }
+
+    private void SearchOrderModalOpen()
+    {
+        IsSearchOrderDialogVisible = true;
+    }
+
+    private string GetOrderActivityLogo(OrderActivityType activity)
+    {
+        return activity switch
+        {
+            OrderActivityType.ComplianceChecked => "far fa-clipboard-check",
+            OrderActivityType.OrderCreated => "far fa-heart-rate",
+            _ => "fas fa-tasks"
+        };
+    }
+
+    private void DisplayAdjustShippingModal()
+    {
+        bindedShippingCharge = order.TotalShipping;
+        bindedShippingDate = DateTime.Today;
+        isAdjustShippingModalVisible = true;
+    }
+
+    private void DisplayAdjustGratuityModal()
+    {
+        bindedGratuity = order.TotalGratuity;
+        IsAdjustGratuityModalVisible = true;
+    }
+
+    private void SaveOrderShippingCharges()
+    {
+        isAdjustShippingModalVisible = false;
+        order.GrandTotal = order.GrandTotal - order.TotalShipping + adjustShippingModalRef.ShippingCharge;
+        order.TotalShipping = adjustShippingModalRef.ShippingCharge;
+        toastService.ShowToast("Shipping Charges applied succesfully.", ToastLevel.Success);
+    }
+
+    private void SaveOrderGratuity()
+    {
+        IsAdjustGratuityModalVisible = false;
+        order.GrandTotal = order.GrandTotal + order.TotalGratuity - bindedGratuity;
+        order.TotalGratuity = bindedGratuity;
+        toastService.ShowToast("Gratuity Charges applied succesfully.", ToastLevel.Success);
+    }
+
+    private void SetTabActive(string tabName)
+    {
+        foreach (var key in activeTabs.Keys)
+        {
+            if (key == tabName)
+                activeTabs[key] = true;
+            else
+                activeTabs[key] = false;
+        }
+    }
+
+    #region Return Refunds
+    private class ReturnProductModel : OrderItemFullModel
+    {
+        public int OrderItemId { get; set; }
+        public int ReturnQty { get; set; }
+        [Range(1, int.MaxValue, ErrorMessage = "Please select Return Reason")]
+        public int ReturnReason { get; set; }
+        public int InventoryLocation { get; set; }
+        public bool ReturnToInventory { get; set; } = true;
+        public decimal Extended { get; set; }
+    }
+
+    private void OnRefundOrderClick()
+    {
+        isOrderInReturnRefundMode = true;
+        SetTabActive("MetaDataTab");
+    }
+
+    private async Task DisplayReturnProductModal(int orderItemId)
+    {
+        SpinnerVisibility = true;
+        returnProduct = new ReturnProductModel();
+        if (!returnReasons.Any())
+        {
+            var getBusinessReturnRasons = await _settingsViewModel.GetBusinessReturnReasonList();
+            if (getBusinessReturnRasons.success)
+                returnReasons = getBusinessReturnRasons.data?.OrderBy(x => x.ReasonName).Select(x => new DropdownBindingModel { Key = x.Id, Value = x.ReasonName }).ToList() ?? new List<DropdownBindingModel>();
+        }
+        if (!inventoryLocations.Any())
+        {
+            var getLocationsResponse = await _businessLocationViewModel.GetBusinessLocations(currentMember.Id);
+            if (getLocationsResponse.success)
+                inventoryLocations = getLocationsResponse.data?.OrderBy(x => x.LocationName).Select(x => new DropdownBindingModel { Key = x.Id, Value = x.LocationName }).ToList() ?? new List<DropdownBindingModel>();
+        }
+
+        var requiredItemToReturn = orderItems.FirstOrDefault(x => x.Id == orderItemId);
+        returnProduct = JsonConvert.DeserializeObject<ReturnProductModel>(JsonConvert.SerializeObject(requiredItemToReturn));
+        returnProduct.InventoryLocation = order.LocationId;
+        IsReturnProductModalVisible = true;
+        SpinnerVisibility = false;
+    }
+
+    private void HandleReturnAmountsOnQtyChange(bool isAdd)
+    {
+        if (isAdd)
+            returnProduct.ReturnQty += 1;
+        else
+            returnProduct.ReturnQty -= 1;
+        returnProduct.Extended = returnProduct.ReturnQty * returnProduct.ProductPrice;
+    }
+
+    private decimal GetReturnProductsSubtotal()
+    {
+        var subtotal = checkAnyReturnProduct ? orderItems.Sum(x => x.Extended) : order.SubTotal;
+        return subtotal;
+    }
+
+    private decimal GetTaxForReturnProducts()
+    {
+        var totalTax = Math.Round(_salesTax * (orderItems.Where(x => x.ReturnQty > 0 && x.Taxable).Sum(x => x.ListPrice * x.ReturnQty)), 2);
+        return totalTax;
+    }
+
+    private decimal GetRefundTotalForReturnProducts()
+    {
+        var refundTotal = checkAnyReturnProduct ? (GetTaxForReturnProducts() + GetReturnProductsSubtotal() + order.TotalGratuity + order.TotalShipping) : 0;
+        return refundTotal;
+    }
+
+    private void SaveReturnProduct()
+    {
+        if (returnProductForm.EditContext.Validate())
+        {
+            IsReturnProductModalVisible = false;
+            foreach (var item in orderItems)
+            {
+                if (item.Id == returnProduct.Id)
+                {
+                    //item.ReturnAmount = returnProduct.Extended;
+                    item.Extended = returnProduct.Extended;
+                    item.ReturnQty = returnProduct.ReturnQty;
+                    item.ReturnReason = returnProduct.ReturnReason;
+                    item.ReturnToInventory = returnProduct.ReturnToInventory;
+                }
+            }
+            order.LocationId = returnProduct.InventoryLocation;
+        }
+    }
+    #endregion Return Refunds
+
+    //Resend Order Receipt
+    private void CloseResendReceiptDialog() => ResendReceiptDialogVisibility = false;
+    private void OpenResendReceiptDialog()
+    {
+        SendToAlternativeEmail = false;
+        AlternativeEmails = string.Empty;
+        ResendReceiptDialogVisibility = true;
+    }
+    private async Task ResendOrderReceiptEmail()
+    {
+        if (SendToAlternativeEmail && string.IsNullOrEmpty(AlternativeEmails))
+        {
+            toastService.ShowToast("Please enter up to 3 alternative email addresses.", ToastLevel.Error);
+            return;
+        }
+        var receiverEmails = new List<Receiver>();
+        if (SendToAlternativeEmail && !string.IsNullOrEmpty(AlternativeEmails))
+        {
+            AlternativeEmails = AlternativeEmails.Replace(" ", "");
+            string[] emailsArr = AlternativeEmails.Split(',');
+            if (emailsArr.Length > 3)
+            {
+                toastService.ShowToast($"You have entered {emailsArr.Length} alternative email addresses. Please enter up to 3 alternative email addresses.", ToastLevel.Error);
+                return;
+            }
+            foreach (string email in emailsArr)
+            {
+                if (!Regex.IsMatch(email, @"^([\w\.\-]+)@([\w\.\-]+)((\.(\w){2,3})+)$"))
+                {
+                    toastService.ShowToast(email + " is not a valid email address.", ToastLevel.Error);
+                    return;
+                }
+                receiverEmails.Add(new Receiver { Email = email });
+            }
+        }
+        else
+        {
+            if (!Regex.IsMatch(order.BillingCustomer.Email, @"^([\w\.\-]+)@([\w\.\-]+)((\.(\w){2,3})+)$"))
+            {
+                toastService.ShowToast(order.BillingCustomer.Email + " is not a valid email address.", ToastLevel.Error);
+                return;
+            }
+            receiverEmails.Add(new Receiver { Email = order.BillingCustomer.Email });
+        }
+        SpinnerVisibility = true;
+        var resendEmailResponse = await _orderViewModel.SendOrderEmailToBusQueue(new EmailNotificationRequestModel
+        {
+            NotificationType = NotificationsTypes.OrderReceipt,
+            RefId = Convert.ToString(order.OrderGuid),
+            ToEmails = receiverEmails,
+            IsPreviewEmail = false
+        });
+        SpinnerVisibility = false;
+        if (resendEmailResponse.success)
+        {
+            toastService.ShowToast("Order receipt sent.", ToastLevel.Success);
+            ResendReceiptDialogVisibility = false;
+        }
+        else
+        {
+            toastService.ShowToast(resendEmailResponse.error_info.description, ToastLevel.Error);
+        }
+    }
+
+
+    //Print PDF
+    private async Task PrintReceiptPDF()
+    {
+        SpinnerVisibility = true;
+        spinnerLabel = "Preparing to Print";
+        var orderPdfRequest = _mapper.Map<OrderPDFRequestModel>(order);
+        orderPdfRequest.CreatedDate = order.CreatedDate.AddMinutes(offsetMinutes);
+        if (order.OrderStatusUpdateDate != null)
+            orderPdfRequest.OrderStatusUpdateDate = order.OrderStatusUpdateDate.Value.AddMinutes(offsetMinutes);
+        orderPdfRequest.SalesRepsNames = teamUsers?.Where(x => salesReps.Contains(x.UserId))?.Select(x => x.FirstName + " " + x.LastName)?.ToList() ?? new List<string>();
+        var response = await _orderViewModel.PrintOrderReceiptPDF(new PrintOrderReceiptPDFRequestModel
+        {
+            OrderData = orderPdfRequest
+        });
+        SpinnerVisibility = false;
+        spinnerLabel = "";
+        if (response.success)
+        {
+            var bytes = response.data;
+            await JSRuntime.InvokeAsync<object>(
+                "previewPDF",
+                $"Order_#{order.FormattedOrderNumber}.pdf",
+                Convert.ToBase64String(bytes));
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+
+    private void OpenEditMetaDataModal()
+    {
+        SpinnerVisibility = true;
+        this.EditMetaDataModalVisibility = true;
+        SpinnerVisibility = false;
+        StateHasChanged();
+    }
+    private void CloseEditMetaDataModal()
+    {
+        this.EditMetaDataModalVisibility = false;
+    }
+
+    private async void SaveEditMetaData()
+    {
+        SpinnerVisibility = true;
+
+        List<OrderMetafieldRequestModel> CustomMetaData = new List<OrderMetafieldRequestModel>();
+        foreach (var item in order.CustomBusinessMetaDatas)
+        {
+            OrderMetafieldRequestModel metaDataModel = new OrderMetafieldRequestModel()
+            {
+                Id = item.Id,
+                OrderId = order.Id,
+                MetaNamespace = "CustomOrderMeta",
+                MetaKey = item.BusinessMetaDataId.ToString(),
+                MetaValue = item.DefaultValue,
+                ValueType = (int)ValueTypeEnum.String,
+                Title = string.Empty,
+                Description = string.Empty
+            };
+            if (item.ContentType == (int)MetaDataContentType.Date)
+            {
+                if (item.DateDefaultValue.HasValue)
+                {
+                    metaDataModel.MetaValue = ((DateTime)item.DateDefaultValue).ToLongDateString();
+                }
+            }
+            if (item.ContentType == (int)MetaDataContentType.Price)
+            {
+                metaDataModel.MetaValue = item.PriceDefaultValue.ToString();
+                metaDataModel.ValueType = (int)ValueTypeEnum.Integer;
+            }
+            if (item.ContentType == (int)MetaDataContentType.Boolean)
+            {
+                metaDataModel.MetaValue = item.SwitchDefaultValue ? "true" : "false";
+                metaDataModel.ValueType = (int)ValueTypeEnum.Boolean;
+            }
+            CustomMetaData.Add(metaDataModel);
+        }
+        var response = await _orderViewModel.AddUpdateOrderMetafieldListAsync(CustomMetaData);
+        if (response.success)
+        {
+            toastService.ShowToast("Custom metadata saved successfully.", ToastLevel.Success);
+            CloseEditMetaDataModal();
+            await GetOrderDetails();
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        SpinnerVisibility = false;
+        StateHasChanged();
+    }
+
+    #region Duplicate Order
+
+    private void OnDuplicateOrderClick()
+    {
+        //duplicateOrder = new OrderRequestModel { OrderTenders = new List<OrderTenderRequestModel>(), OrderFulfillment = new List<OrderFulfillmentRequestModel> { new OrderFulfillmentRequestModel() } };
+        orderDetails = JsonConvert.DeserializeObject<OrderDetailFullModel>(JsonConvert.SerializeObject(order));
+        order.Id = 0;
+        order.OrderNumber = 0;
+        order.AmountPaid = 0;
+        order.REFReturn = 0;
+        order.OrderNotes = new List<OrderNoteModel>();
+        order.OrderGuid = Guid.Empty;
+        order.OrderFulfillment = new List<OrderFulfillmentModel>();
+        order.OrderGiftCard = new List<OrderGiftCardModel>();
+        order.OrderActivity = new List<OrderActivityModel>();
+        order.OrderPreFix = null;
+        order.OrderStatus = OrderStatus.InProcess;
+        order.PaymentStatus = OrderPaymentStatus.Unpaid;
+        order.OrderTenders = new List<OrderTenderModel>();
+    }
+
+    private async Task ShowApplyTenderModal()
+    {
+        //if (order.DeliveryMethod == OrderDeliveryMethod.Ship && !IsShipToAddressAdded())
+        //{
+        //    infoModel = new DisplayInfoModal
+        //    {
+        //        HeaderText = "Customer Information Required",
+        //        ContentMessage = "To add a Tender to a Ship to Customer order, you must first select a customer and choose a shipping method."
+        //    };
+        //    infoModalVisible = true;
+        //    return;
+        //}
+        var customerId = order.BillingCustomer != null ? order.BillingCustomer.UserId : 0;
+        await orderTender.DisplayApplyTenderModal(order.BalanceDue, false, (int)TenderType.Cash, false, false, customerId, order.BalanceDue, 0);
+    }
+
+    private void ShowChargeCreditCardModal()
+    {
+        var creditCard = new CreditCardRequestModel();
+        if (order.BillingCustomer != null && order.BillingCustomer.Id > 0)
+        {
+            creditCard.CardHolderName = order.BillingCustomer.FirstName + " " + order.BillingCustomer.LastName;
+            creditCard.SaveCardOnFile = true;
+        }
+        orderTender.DisplayChargeCreditCardModal(creditCard.CardHolderName, creditCard.SaveCardOnFile, (int)TenderType.CreditCard);
+    }
+
+    private void ApplyCashTender(decimal tenderChargeAmt)
+    {
+        ApplyTender(tenderChargeAmt, (int)TenderType.Cash);
+    }
+
+    private void ApplyTender(decimal tenderChargeAmt, int selectedTenderType, GiftCardDetail giftCardData = null)
+    {
+        if (selectedTenderType == -1)
+        {
+            selectedTenderType = (int)TenderType.CreditCard;
+        }
+
+        if (order.OrderTenders == null)
+        {
+            order.OrderTenders = new List<OrderTenderModel>();
+        }
+        var tender = new OrderTenderModel
+        {
+            TenderType = (TenderType)selectedTenderType,
+            Amount = tenderChargeAmt,
+            UserId = currentMember.Id,
+            CreatedDate = DateTime.UtcNow,
+            TransactionDate = DateTime.UtcNow
+        };
+        if (selectedTenderType == (int)TenderType.Cash && tenderChargeAmt > order.BalanceDue)
+        {
+            tender.Change = tenderChargeAmt - order.BalanceDue;
+        }
+        if (selectedTenderType == (int)TenderType.CreditCard)
+        {
+            creditCard = orderTender.creditCard;
+            tender.OrderTransactions = new List<OrderTransactionRequestModel>();
+            var creditCardObj = new OrderTransactionRequestModel
+            {
+                UserId = order.BillingCustomer.Id,
+                Amount = tenderChargeAmt,
+                CreditCardExpMonth = creditCard.ExpirationMonth,
+                CreditCardExpYear = creditCard.ExpirationYear,
+                TransactionType = PaymentTransactionType.sale,
+                CreditCardLastFour = creditCard.LastFourDigits,
+                CreditCardToken = creditCard.CardToken,
+                CreditCardType = creditCard.CardType
+            };
+            tender.OrderTransactions.Add(creditCardObj);
+        }
+        if (selectedTenderType == (int)TenderType.GiftCard && !(giftCard.BalanceAmount < tenderChargeAmt))
+        {
+            giftCard = giftCardData;
+            giftCard.BalanceAmount -= tenderChargeAmt;
+            if (order.OrderGiftCard is null)
+            {
+                order.OrderGiftCard = new List<OrderGiftCardModel>();
+            }
+
+            var existingCheck = order.OrderGiftCard.Where(x => x.GiftCardId == giftCard.Id).FirstOrDefault();
+
+            if (existingCheck is null)
+            {
+                var giftCardItem = new OrderGiftCardModel
+                {
+                    AmountUsed = tenderChargeAmt,
+                    Balance = giftCard.BalanceAmount,
+                    GiftCardId = giftCard.Id,
+                    GiftCardLastFour = giftCard.AccountNumber.Substring(giftCard.AccountNumber.Length - 4)
+                };
+                order.OrderGiftCard.Add(giftCardItem);
+            }
+            else
+            {
+                existingCheck.Balance = giftCard.BalanceAmount;
+                existingCheck.AmountUsed += tenderChargeAmt;
+            }
+        }
+        order.OrderTenders.Add(tender);
+
+        order.AmountPaid += tenderChargeAmt;
+
+        if (order.AmountPaid > 0 && order.BalanceDue > 0)
+            order.PaymentStatus = OrderPaymentStatus.PartiallyPaid;
+        else if (order.AmountPaid == 0)
+            order.PaymentStatus = OrderPaymentStatus.Unpaid;
+        else
+            order.PaymentStatus = OrderPaymentStatus.Paid;
+
+        toastService.ShowToast("Tender applied successfully.", ToastLevel.Success);
+    }
+
+    private async Task CreateDuplicateOrder()
+    {
+        if (order.BalanceDue > 0)
+        {
+            toastService.ShowToast("To submit an Order, please make sure all the payment is paid in full.", ToastLevel.Error);
+            return;
+        }
+        SpinnerVisibility = true;
+        var orderRequest = new OrderRequestModel();
+        orderRequest.BusinessId = currentMember.Id;
+        orderRequest.OrderStatus = OrderStatus.Completed;
+        orderRequest.OrderSource = OrderSource.OMS;
+        orderRequest.DeliveryMethod = order.DeliveryMethod;
+        orderRequest.GrandTotal = order.GrandTotal;
+        orderRequest.SubTotal = order.SubTotal;
+        orderRequest.TotalShipping = order.TotalShipping;
+        orderRequest.TotalTax = order.TotalTax;
+        orderRequest.TotalDiscounts = order.TotalDiscounts;
+        orderRequest.TeamMemberId = loggedInUserId;
+        orderRequest.LocationId = order.LocationId;
+        orderRequest.Currency = order.Currency;
+        orderRequest.OrderNotes = JsonConvert.DeserializeObject<List<OrderNoteRequestModel>>(JsonConvert.SerializeObject(order.OrderNotes));
+        orderRequest.OrderItems = JsonConvert.DeserializeObject<List<OrderItemRequestModel>>(JsonConvert.SerializeObject(orderItems));
+        orderRequest.OrderFulfillment = JsonConvert.DeserializeObject<List<OrderFulfillmentRequestModel>>(JsonConvert.SerializeObject(order.OrderFulfillment));
+        orderRequest.OrderGiftCard = JsonConvert.DeserializeObject<List<OrderGiftCardRequestModel>>(JsonConvert.SerializeObject(order.OrderGiftCard));
+        orderRequest.BillingAddress = JsonConvert.DeserializeObject<OrderAddressRequestModel>(JsonConvert.SerializeObject(order.BillToAddress));
+        orderRequest.BillToCustomer = JsonConvert.DeserializeObject<OrderCustomerRequestModel>(JsonConvert.SerializeObject(order.BillingCustomer));
+        orderRequest.ShippingAddress = JsonConvert.DeserializeObject<OrderAddressRequestModel>(JsonConvert.SerializeObject(order.ShipToAddress));
+        orderRequest.ShipToCustomer = JsonConvert.DeserializeObject<OrderCustomerRequestModel>(JsonConvert.SerializeObject(order.ShippingCustomer));
+        orderRequest.OrderTenders = JsonConvert.DeserializeObject<List<OrderTenderRequestModel>>(JsonConvert.SerializeObject(order.OrderTenders));
+        orderRequest.OrderFulfillment.Add(new OrderFulfillmentRequestModel());
+
+        if (bindedSalesReps != null)
+            orderRequest.OrderSalesRep = bindedSalesReps.Select(x => new OrderSalesRepRequestModel { UserId = x }).ToList();
+
+        if (bindedTags != null)
+            orderRequest.OrderTags = bindedTags.Select(x => new OrderTagRequestModel { Value = x }).ToList();
+
+        foreach (var fulfillment in order.OrderFulfillment)
+        {
+            fulfillment.FulfillmentType = (int)order.DeliveryMethod;
+
+            switch (order.DeliveryMethod)
+            {
+                case (OrderDeliveryMethod.Pickup):
+                    fulfillment.FulfillmentStatus = (int)OrderFulfillmentStatus.NotFulfilled;
+                    break;
+                case (OrderDeliveryMethod.CarryOut):
+                    fulfillment.FulfillmentStatus = (int)OrderFulfillmentStatus.Fulfilled;
+                    break;
+                case (OrderDeliveryMethod.Ship):
+                    fulfillment.FulfillmentStatus = (int)OrderFulfillmentStatus.NotFulfilled;
+                    break;
+                case (OrderDeliveryMethod.Delivery):
+                    fulfillment.FulfillmentStatus = (int)OrderFulfillmentStatus.NotFulfilled;
+                    break;
+            }
+        }
+
+        var submitOrderRequest = await _orderViewModel.CreateOrderAsync(orderRequest);
+        SpinnerVisibility = false;
+        if (submitOrderRequest.success)
+        {
+            toastService.ShowToast("Order Submitted Successfully.", ToastLevel.Success);
+            NavigationManager.NavigateTo("/store/orders");
+        }
+        else
+        {
+            toastService.ShowToast(submitOrderRequest.error_info.description, ToastLevel.Error);
+        }
+    }
+
+    #endregion Duplicate Order
+}
+
+
+<style>
+    #return-product-name {
+        font-size: 25px;
+    }
+
+    #return-product_dialog-content {
+        padding: 0px 14px
+    }
+</style>

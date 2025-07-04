@@ -1,0 +1,521 @@
+﻿@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Client.ViewModels
+@using System.ComponentModel.DataAnnotations;
+@using CellarPassAppAdmin.Shared.Models
+@using System.Text.RegularExpressions;
+@inject IPaymentViewModel _paymentViewModel
+@inject IProductViewModel _productViewModel
+@inject ToastService toastService
+
+
+<SfDialog Width="400px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsApplyTenderModalVisible">
+    <DialogEvents OnOverlayClick="@CloseApplyTenderModal">
+    </DialogEvents>
+    <DialogTemplates>
+        <Header>Apply Tender</Header>
+        <Content>
+            <div class="mb-3">
+                <label class="form-label">Charge Amount</label>
+                <SfNumericTextBox TValue="decimal" ValidateDecimalOnType="true" Format="c2" Decimals=2 ShowSpinButton="false" @bind-Value=@tenderChargeAmount Min="0" Max="@((selectedTenderType == (int)TenderType.CreditCard && creditCardAdded)?balanceDue:decimal.MaxValue)"></SfNumericTextBox>
+            </div>
+            @{
+                if (tenderChargeAmount > 0)
+                {
+                    if (!isCreditCardsTenderApplication)
+                    {
+                        <div class="mb-3">
+                            <div class="d-grid gap-">
+                                <button class="btn btn-sm p-2 btn-primary" @onclick="@OnApplyCashTenderClick">Cash</button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-grid gap-">
+                                <button class="btn btn-sm p-2 @((selectedTenderType == (int)TenderType.CreditCard && creditCardAdded)?"btn-success":"btn-primary")" @onclick="@OnShowChargeCreditCardClick">Credit Card</button>
+                            </div>
+                        </div>
+
+                        DateTime currentDate = DateTime.Now;
+
+                        if (customerId > 0 && cardsOnFile.Any(x => !(Convert.ToInt32(x.ExpirationYear) < currentDate.Year || (Convert.ToInt32(x.ExpirationYear) == currentDate.Year && Convert.ToInt32(x.ExpirationMonth) < currentDate.Month))))
+                        {
+                            <div class="mb-3">
+                                <div class="d-grid gap-">
+                                    <button class="btn btn-sm p-2 @((selectedTenderType == -1 && creditCardAdded)?"btn-success":"btn-primary")" @onclick="@OnCardOnFileClick">Card on File</button>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">@creditCard.CardType-@creditCard.LastFourDigits exp @creditCard.ExpirationMonth/@creditCard.ExpirationYear</label>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="d-grid gap-">
+                                <button class="btn btn-sm btn-secondary p-1" @onclick="ChangeTender">Change Tender</button>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="mb-3 text-center">
+                        <span class="fs-2 me-2 fab fa-cc-visa fa-lg"></span>
+                        <span class="fs-2 me-2 fab fa-cc-mastercard fa-lg"></span>
+                        <span class="fs-2 me-2 fab fa-cc-discover fa-lg"></span>
+                        <span class="fs-2 fab fa-cc-amex fa-lg"></span>
+                    </div>
+
+                    if (!isCreditCardsTenderApplication)
+                    {
+                        <div class="mb-3">
+                            <div class="d-grid gap-">
+                                <button class="btn btn-sm p-2 @((selectedTenderType == (int)TenderType.GiftCard)?"btn-success":"btn-primary")" @onclick="@ShowApplyGiftCardTenderModal">Gift Card</button>
+                            </div>
+                        </div>
+                    }
+                }
+            }
+        </Content>
+    </DialogTemplates>
+    <DialogButtons>
+        <DialogButton CssClass="btn-danger" Content="Cancel" OnClick="@CloseApplyTenderModal" />
+        @{
+            if (creditCardAdded || (isValidGiftCard && !(giftCard.BalanceAmount < tenderChargeAmount)))
+            {
+                <DialogButton Content="Submit Charge" OnClick="@OnApplyTenderClick" IsPrimary="true" />
+            }
+        }
+
+    </DialogButtons>
+</SfDialog>
+
+<SfDialog Width="400px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsChargeCreditCardModalVisible">
+    <DialogEvents Closed="CloseChargeCreditCardModal" OnOverlayClick="CloseChargeCreditCardModal">
+    </DialogEvents>
+    <DialogTemplates>
+        <Header>Charge Credit Card</Header>
+        <Content>
+            <EditForm Model="creditCard" OnValidSubmit="SaveCreditCard">
+                <DataAnnotationsValidator />
+                <div class="mb-3">
+                    <label class="form-label" for="inputCreditCardNumber">Credit Card Number</label>
+                    <SfMaskedTextBox ID="inputVendorPhone" Mask="@_defaultCreditCardMask" PromptChar="@promptCharacter" @bind-Value="@creditCard.CreditCardNumber" CssClass="form-control form-control-sm" Placeholder="Card Number"></SfMaskedTextBox>
+                    <ValidationMessage For="() => creditCard.CreditCardNumber" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="inputCardholderName">Cardholder Name</label>
+                    <InputText @bind-Value="@creditCard.CardHolderName" placeholder="Cardholder Name" class="form-control" id="inputCardholderName" />
+                    <ValidationMessage For="() => creditCard.CardHolderName" />
+                </div>
+                <div class="row">
+                    <div class="col-sm-6 mb-3">
+                        <label class="form-label">Expiration Date</label>
+                        <InputText @bind-Value="@creditCard.ExpirationMonth" class="form-control" id="inputMonth" placeholder="Month" />
+                        <ValidationMessage For="() => creditCard.ExpirationMonth" />
+                    </div>
+                    <div class="col-sm-6 mb-3">
+                        <label class="form-label"></label>
+                        <br />
+                        <InputText @bind-Value="@creditCard.ExpirationYear" class="form-control mt-2" id="inputYear" placeholder="Year" />
+                        <ValidationMessage For="() => creditCard.ExpirationYear" />
+                    </div>
+                    <div class="col-sm-6 mb-3">
+                        <label class="form-label">CVV</label>
+                        <br />
+                        <InputText @bind-Value="@creditCard.CVV" class="form-control mt-2" id="inputCVV" placeholder="CVV" />
+                        <ValidationMessage For="() => creditCard.CVV" />
+                    </div>
+                </div>
+                <div class="row">
+                    @{
+                        if (customerId > 0)
+                        {
+                            <div class="col-sm-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input mt-1" type="checkbox" id="switchSaveCardonFile" @bind-value="@creditCard.SaveCardOnFile" checked="@creditCard.SaveCardOnFile">
+                                    <label class="form-check-label" for="switchSaveCardonFile">Save Card on File</label>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input mt-1" type="checkbox" id="switchSaveasDefault" @bind-value="@creditCard.SaveAsDefault" checked="@creditCard.SaveAsDefault">
+                                    <label class="form-check-label" for="switchSaveasDefault">Save as Default</label>
+                                </div>
+                            </div>
+                        }
+                    }
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseChargeCreditCardModal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Credit Card</button>
+                </div>
+            </EditForm>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+
+<SfDialog Width="450px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsCardsonFileModalVisible">
+    <DialogEvents Closed="CloseCardsOnFile" OnOverlayClick="CloseCardsOnFile">
+    </DialogEvents>
+    <DialogTemplates>
+        <Header>Cards on File</Header>
+        <Content>
+            @{
+                var date = DateTime.Now;
+                var reqCards = cardsOnFile.Where(x => x.CustomerId == customerId && !(Convert.ToInt32(x.ExpirationYear) < date.Year || (Convert.ToInt32(x.ExpirationYear) == date.Year && Convert.ToInt32(x.ExpirationMonth) < date.Month))).ToList();
+                foreach (var card in reqCards.OrderByDescending(x => x.SaveAsDefault))
+                {
+                    var cardType = "";
+                    switch (card.CardType)
+                    {
+                        case ("Visa"):
+                            cardType = "visa";
+                            break;
+                        case ("AmericanExpress"):
+                            cardType = "amex";
+                            break;
+                        case ("MasterCard:"):
+                            cardType = "mastercard";
+                            break;
+                        case ("Discover"):
+                            cardType = "discover";
+                            break;
+                    }
+                    <div class="row mb-3">
+                        <div class="col-2">
+                            <span class="fs-4 me-2 fab fa-cc-@cardType fa-lg"></span>
+                        </div>
+                        <div class="col-5">
+                            <p>@card.LastFourDigits Expires @card.ExpirationMonth/@card.ExpirationYear</p>
+                        </div>
+                        <div class="col-5 text-end">
+                            <a href="javascript:void(0)" class="btn btn-sm btn-primary mx-2" @onclick="() => ApplyCardOnFile(card)" type="button">Apply</a>
+                        </div>
+                    </div>
+                }
+            }
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+<SfDialog Width="400px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsApplyGiftCardModalVisible">
+    <DialogEvents OnOverlayClick="CloseApplyGiftCardModal">
+    </DialogEvents>
+    <DialogTemplates>
+        <Header>Apply Gift Card</Header>
+        <Content>
+            <EditForm Model="getGiftCard" @ref="getGiftCardForm" Context="formContext">
+                <DataAnnotationsValidator />
+                <label class="form-label" for="search-gift-card">
+                    Gift Card Number
+                </label>
+                <SfMaskedTextBox @ref="GiftCardMask" ID="search-gift-card" Mask="0000-0000-0000-0000" @onchange="ApplyGiftCard" @bind-Value="@getGiftCard.GiftCardNumber" CssClass="form-control form-control-sm" Placeholder="Gift Card Number"></SfMaskedTextBox>
+                <ValidationMessage For="() => getGiftCard.GiftCardNumber" />
+
+                @if (isValidGiftCard)
+                {
+                    <label class="form-label mt-2" for="gift-card-price">
+                        Available Balance: $@giftCard.BalanceAmount.ToString("n2")
+                    </label>
+                }
+            </EditForm>
+        </Content>
+    </DialogTemplates>
+    <DialogButtons>
+        <DialogButton Content="Cancel" OnClick="CloseApplyGiftCardModal" />
+        <DialogButton Content="Apply" OnClick="ApplyGiftCardToTender" Disabled="!isValidGiftCard" IsPrimary="true" />
+    </DialogButtons>
+</SfDialog>
+
+
+
+
+@code{
+
+    private bool IsApplyTenderModalVisible { get; set; }
+    private decimal tenderChargeAmount { get; set; }
+    private bool isCreditCardsTenderApplication { get; set; }
+    private bool IsChargeCreditCardModalVisible { get; set; }
+    private bool IsCardsonFileModalVisible { get; set; }
+    private bool IsApplyGiftCardModalVisible { get; set; }
+    private bool IsPurchaseGiftCardToOrderModalVisible { get; set; }
+    private bool IsSelectGiftCardDesignModalVisible { get; set; }
+    private int selectedTenderType = (int)TenderType.Cash;
+    private bool creditCardAdded { get; set; }
+    private bool isValidGiftCard { get; set; }
+    private int customerId { get; set; }
+    private decimal balanceDue { get; set; }
+    List<CreditCardRequestModel> cardsOnFile = new List<CreditCardRequestModel>();
+    public CreditCardRequestModel creditCard = new CreditCardRequestModel();
+    const string _defaultCreditCardMask = "[1-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]";
+    private string creditCardMask = _defaultCreditCardMask;
+    private char promptCharacter = 'X';
+    private int paymentProfile { get; set; }
+    private string cardHolderName { get; set; }
+    private CustomGetGiftCardModel getGiftCard = new CustomGetGiftCardModel();
+    GiftCardDetail giftCard = new GiftCardDetail();
+    EditForm getGiftCardForm;
+    SfMaskedTextBox GiftCardMask;
+
+    [Parameter]
+    public int BusinessId { get; set; }
+
+    [Parameter]
+    public List<OrderGiftCardRequestModel> OrderGiftCard { get; set; }
+
+    [Parameter]
+    public EventCallback<decimal> ApplyCashTender { get; set; }
+
+    [Parameter]
+    public EventCallback<ApplyTenderModel> ApplyTenderToOrder { get; set; }
+
+    [Parameter]
+    public EventCallback ShowChargeCreditCardModal { get; set; }
+
+    private class CustomGetGiftCardModel : IValidatableObject
+    {
+        [Required(ErrorMessage = "Please enter the Gift Card number")]
+        public string GiftCardNumber { get; set; }
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (!(Regex.IsMatch(GiftCardNumber, "^[1-9][0-9]{15}$")))
+            {
+                yield return new ValidationResult(
+                    errorMessage: "Please enter a valid Gift Card Number",
+                    memberNames: new[] { "GiftCardNumber" }
+                );
+            }
+        }
+    }
+
+    public async Task DisplayApplyTenderModal(decimal tenderChargeAmt, bool isCreditCardsTenderApplication, int selectedTenderType, bool creditCardAdded, bool isValidGiftCard, int customerId, decimal balanceDue, int paymentProfile)
+    {
+        this.isCreditCardsTenderApplication = isCreditCardsTenderApplication;
+        this.selectedTenderType = selectedTenderType;
+        tenderChargeAmount = balanceDue;
+        this.creditCardAdded = creditCardAdded;
+        this.isValidGiftCard = false;
+        this.customerId = customerId;
+        this.paymentProfile = paymentProfile;
+
+        if (this.customerId > 0)
+        {
+            await GetCardsOnFile();
+        }
+        else
+        {
+            cardsOnFile = new List<CreditCardRequestModel>();
+        }
+
+        IsApplyTenderModalVisible = true;
+
+    }
+
+    private async Task GetCardsOnFile()
+    {
+        var request = new BusinessCustomerCardRequestModel
+        {
+            BusinessCustomerId = customerId,
+            BusinessPaymentProfileId = paymentProfile,
+            IsTestMode = true
+        };
+        var getCardsOnFileResponse = await _paymentViewModel.GetTokenizedCardsByCustomer(request);
+        if (getCardsOnFileResponse.success)
+        {
+            cardsOnFile = new List<CreditCardRequestModel>();
+            foreach (var card in getCardsOnFileResponse.data)
+            {
+                var reqCard = new CreditCardRequestModel
+                {
+                    CustomerId = customerId,
+                    CardHolderName = card.Customer_Name,
+                    CardToken = card.Card_Token,
+                    CardType = card.Card_Type,
+                    IsExpired = card.Is_Expired,
+                    LastFourDigits = card.Last_Four_Digits,
+                    ExpirationMonth = card.Card_Exp_Month,
+                    ExpirationYear = card.Card_Exp_Year,
+                    SaveAsDefault = card.IsDefault
+                };
+                cardsOnFile.Add(reqCard);
+            }
+        }
+    }
+
+    private async Task OnApplyCashTenderClick()
+    {
+        IsApplyTenderModalVisible = false;
+        await ApplyCashTender.InvokeAsync(tenderChargeAmount);
+    }
+
+    private void CloseApplyTenderModal()
+    {
+        IsApplyTenderModalVisible = false;
+    }
+
+    private async Task OnShowChargeCreditCardClick()
+    {
+        IsApplyTenderModalVisible = false;
+        await ShowChargeCreditCardModal.InvokeAsync();
+    }
+
+    public void DisplayChargeCreditCardModal(string cardHolderName, bool saveCardOnFile, int selectedTenderType)
+    {
+        creditCard = new CreditCardRequestModel { CardHolderName = cardHolderName, SaveCardOnFile = saveCardOnFile };
+        this.cardHolderName = cardHolderName;
+        IsChargeCreditCardModalVisible = true;
+    }
+
+    private void CloseChargeCreditCardModal()
+    {
+        IsChargeCreditCardModalVisible = false;
+        IsApplyTenderModalVisible = true;
+        //await GetCardsOnFile();
+    }
+
+    private async Task SaveCreditCard()
+    {
+        TokenizeCardRequestModel tokenizeCard = new TokenizeCardRequestModel
+        {
+            BusinessCustomerId = customerId,
+            BusinessPaymentProfileId = paymentProfile,
+            BusinessId = this.BusinessId,
+            Card_Last_Four_Digits = creditCard.CreditCardNumber.Substring(creditCard.CreditCardNumber.Length - 4),
+            Card_Type = Helper.GetCardType(creditCard.CreditCardNumber),
+            Cust_Name = cardHolderName,
+            Cvv2 = creditCard.CVV,
+            Exp_Month = creditCard.ExpirationMonth,
+            Exp_Year = creditCard.ExpirationYear,
+            Number = creditCard.CreditCardNumber,
+            SaveCard = creditCard.SaveCardOnFile,
+            Ignore_AVS_Error = true,
+            Card_Token = string.Empty,
+            IsDefault = creditCard.SaveAsDefault
+        };
+        var tockenizeCardResponse = await _paymentViewModel.TokenzieCard(tokenizeCard);
+        if (tockenizeCardResponse.success && !string.IsNullOrWhiteSpace(tockenizeCardResponse.data.Card_Token))
+        {
+            creditCard.CardToken = tockenizeCardResponse.data.Card_Token;
+            creditCard.LastFourDigits = tockenizeCardResponse.data.Last_Four_Digits;
+            creditCard.CardType = tockenizeCardResponse.data.Card_Type;
+            creditCard.IsExpired = tockenizeCardResponse.data.Is_Expired;
+            IsChargeCreditCardModalVisible = false;
+            creditCard.CustomerId = customerId;
+            creditCardAdded = true;
+            toastService.ShowToast("Card tokenized successfully", ToastLevel.Success);
+            await GetCardsOnFile();
+            isCreditCardsTenderApplication = true;
+            CloseChargeCreditCardModal();
+        }
+        else
+        {
+            toastService.ShowToast(tockenizeCardResponse.data.ErrorMessage, ToastLevel.Error);
+        }
+    }
+
+    private void OnCardOnFileClick()
+    {
+        IsApplyTenderModalVisible = false;
+        IsCardsonFileModalVisible = true;
+    }
+
+    private void CloseCardsOnFile()
+    {
+        IsCardsonFileModalVisible = false;
+        IsApplyTenderModalVisible = true;
+    }
+
+    private void ApplyCardOnFile(CreditCardRequestModel cardOnFile)
+    {
+        IsCardsonFileModalVisible = false;
+        selectedTenderType = -1;
+        creditCard = cardOnFile;
+        creditCardAdded = true;
+        isCreditCardsTenderApplication = true;
+        IsApplyTenderModalVisible = true;
+    }
+
+    private void ChangeTender()
+    {
+        if (selectedTenderType == -1)
+        {
+            creditCardAdded = false;
+            IsApplyTenderModalVisible = false;
+            IsCardsonFileModalVisible = true;
+        }
+        else if (selectedTenderType == (int)TenderType.CreditCard)
+            creditCardAdded = false;
+        isCreditCardsTenderApplication = false;
+    }
+
+    private void ShowApplyGiftCardTenderModal()
+    {
+        IsApplyTenderModalVisible = false;
+        getGiftCard = new CustomGetGiftCardModel();
+        giftCard = new GiftCardDetail();
+        isValidGiftCard = false;
+        IsApplyGiftCardModalVisible = true;
+    }
+
+    private void CloseApplyGiftCardModal()
+    {
+        IsApplyGiftCardModalVisible = false;
+        isValidGiftCard = false;
+        IsApplyTenderModalVisible = true;
+    }
+
+    private async Task ApplyGiftCard(Microsoft.AspNetCore.Components.ChangeEventArgs changedEventArgs)
+    {
+        isValidGiftCard = false;
+        if (!string.IsNullOrWhiteSpace(getGiftCard.GiftCardNumber) && getGiftCard.GiftCardNumber.Length == 16)
+        {
+            getGiftCardForm.EditContext.Validate();
+            if (getGiftCardForm.EditContext.Validate())
+            {
+                var getGiftCardResponse = await _productViewModel.GetBusinessGiftCardDetails(string.Empty, 0, getGiftCard.GiftCardNumber);
+                if (getGiftCardResponse.success)
+                {
+                    giftCard = getGiftCardResponse.data;
+                    if (OrderGiftCard != null && OrderGiftCard.Any())
+                    {
+                        var appliedGiftCardCheck = OrderGiftCard.OrderBy(x => x.Balance).Where(x => x.GiftCardId == giftCard.Id).FirstOrDefault();
+                        if (appliedGiftCardCheck != null)
+                        {
+                            giftCard.BalanceAmount = appliedGiftCardCheck.Balance;
+                        }
+                    }
+                    isValidGiftCard = true;
+                }
+                else
+                {
+                    toastService.ShowToast(getGiftCardResponse.error_info.description, ToastLevel.Error);
+                }
+            }
+        }
+    }
+
+    private void ApplyGiftCardToTender()
+    {
+        selectedTenderType = (int)TenderType.GiftCard;
+        IsApplyGiftCardModalVisible = false;
+        IsApplyTenderModalVisible = true;
+    }
+
+    private void ClosePurchaseGiftCardModal()
+    {
+        IsPurchaseGiftCardToOrderModalVisible = false;
+        IsSelectGiftCardDesignModalVisible = false;
+    }
+
+    private async Task OnApplyTenderClick()
+    {
+        IsApplyTenderModalVisible = false;
+        var applyTender = new ApplyTenderModel { GiftCardDetail = giftCard, SelectedTenderType = selectedTenderType, TenderChargeAmt = tenderChargeAmount };
+        await ApplyTenderToOrder.InvokeAsync(applyTender);
+    }
+
+}

@@ -1,0 +1,207 @@
+﻿@page  "/settings/club-wait-lists"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject IClubViewModel _clubViewModel
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col">
+                <h5 class="mb-0"><a href="/settings/club-management" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="fa-regular fa-user-clock me-2"></span>Club Wait Lists</h5>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-sm btn-primary">Sign Up</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+
+        <ul class="nav nav-tabs mt-4 text-uppercase">
+            <li class="nav-item"><a class="nav-link active" id="All-tab" @onclick="@(() => FilterWaitList(""))" data-bs-toggle="tab" href="#tab-All" role="tab" aria-controls="tab-All" aria-selected="true">All</a></li>
+            @foreach (var club in clubs)
+            {
+                <li class="nav-item"><a class="nav-link" id="@club-tab" @onclick="@(() => FilterWaitList(club))" data-bs-toggle="tab" href="#tab-All" role="tab" aria-controls="tab-@club" aria-selected="false">@club</a></li>
+            }
+            @*<li class="nav-item"><a class="nav-link" id="CLUBNAME2-tab" data-bs-toggle="tab" href="#tab-CLUBNAME2" role="tab" aria-controls="tab-CLUBNAME2" aria-selected="false">[[CLUBNAME2]]</a></li>
+                <li class="nav-item"><a class="nav-link" id="CLUBNAME3-tab" data-bs-toggle="tab" href="#tab-CLUBNAME3" role="tab" aria-controls="tab-CLUBNAME3" aria-selected="false">[[CLUBNAME3]]</a></li>*@
+        </ul>
+        <div class="tab-content p-3 mb-2" id="productTabContent">
+            <div class="tab-pane fade show active" id="tab-All" role="tabpanel" aria-labelledby="All-tab">
+                <form>
+                    <div class="px-2">
+                        <div class="row my-3">
+                            <div class="col-12 col-md-12">
+                                <label class="form-label" for="inputGroupSearch">Search</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                                    <input type="text" class="form-control" placeholder="Search Customers" aria-label="Search Customers">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                <div class="sf-grid min-vh-75">
+                    <SfGrid DataSource="@MemberDataList" AllowPaging="false" Width="100%">
+                        <GridTemplates>
+                            <EmptyRecordTemplate>
+                                @if (!isLoading && MemberDataList.Count <= 0)
+                                {
+                                    <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                        <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Data</h6>
+                                    </div>
+                                }
+                            </EmptyRecordTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            <GridColumn HeaderText="Customer" TextAlign="TextAlign.Left" Width="40">
+                                <Template>
+                                    @{
+                                        var pholder = (context as MemberData);
+                                        <a href="javascript:void();">@(pholder.FirstName +" "+ pholder.LastName)</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(MemberData.Club) HeaderText="Club" TextAlign="TextAlign.Left" Width="60" />
+                            <GridColumn Field=@nameof(MemberData.Position) HeaderText="Position" TextAlign="TextAlign.Center" Width="30" />
+                            <GridColumn Field=@nameof(MemberData.JoinDate) HeaderText="Wait List Date" TextAlign="TextAlign.Left" Width="50" />
+                            <GridColumn Field=@nameof(MemberData.Frequency) HeaderText="Frequency" TextAlign="TextAlign.Left" Width="40" />
+                            <GridColumn Field=@nameof(MemberData.Gift) HeaderText="Gift" TextAlign="TextAlign.Left" Width="20" />
+                            <GridColumn Field=@nameof(MemberData.FulfillMent) HeaderText="FulfillMent" TextAlign="TextAlign.Left" Width="40" />
+                            <GridColumn Field=@nameof(MemberData.Source) HeaderText="Source" TextAlign="TextAlign.Left" Width="30" />
+                            <GridColumn HeaderText="" Width="20">
+                                <Template>
+                                    @{
+                                        <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                        <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                            <a class="dropdown-item" href="javascript:void();">Move to Top Position</a>
+                                            <a class="dropdown-item" href="javascript:void();">Move to Bottom Position</a>
+                                            <a class="dropdown-item" href="javascript:void();" @onclick="@OpenSetCustomWaitListPositionModal">Choose Custom Position</a>
+                                            <a class="dropdown-item" href="javascript:void();">Convert to Membership</a>
+                                            <div class="dropdown-divider"></div>
+                                            <a class="dropdown-item text-danger" href="javascript:void();">Cancel Wait List</a>
+                                        </div>
+                                    }
+                                </Template>
+                            </GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+            @*<div class="tab-pane fade" id="tab-CLUBNAME1" role="tabpanel" aria-labelledby="CLUBNAME1-tab"></div>
+                <div class="tab-pane fade" id="tab-CLUBNAME2" role="tabpanel" aria-labelledby="CLUBNAME2-tab"></div>
+                <div class="tab-pane fade" id="tab-CLUBNAME3" role="tabpanel" aria-labelledby="CLUBNAME3-tab"></div>*@
+        </div>
+    </div>
+</div>
+
+<SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="SetCustomWaitListPositionModalVisibility">
+    <DialogTemplates>
+        <Header>Set Custom Wait List Position</Header>
+        <Content>
+            <div class="row">
+                <div class="col-12 mb-3">
+                    <label class="form-label">Set Custom Position</label>
+                    <label class="form-label">Current Position Range (1 – [[NumberofClubIDWaitListRecords]])</label>
+                    <input type="text" class="form-control" />
+                </div>
+            </div>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="@CloseSetCustomWaitListPositionModal">Cancel</button>
+            <button type="button" class="btn btn-primary">Save</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+
+    private string title = "Club Wait Lists | Synergy Commerce Admin Panel";
+
+    private Boolean isLoading = true;
+    private bool SetCustomWaitListPositionModalVisibility { get; set; } = false;
+    private Member currentMember = new Member();
+    List<string> clubs = new List<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        //Get Current Member
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        clubs = AllMemberDataList.Select(c => c.Club).Distinct().OrderBy(x => x).ToList();
+        MemberDataList = AllMemberDataList.OrderBy(x => x.Club).ThenBy(x => x.Position).ToList();
+
+        var clubWaitListResponse = await _clubViewModel.GetClubWaitListAsync(currentMember.Id, string.Empty);
+        isLoading = false;
+    }
+
+    private void OpenSetCustomWaitListPositionModal()
+    {
+        this.SetCustomWaitListPositionModalVisibility = true;
+    }
+    private void CloseSetCustomWaitListPositionModal()
+    {
+        this.SetCustomWaitListPositionModalVisibility = false;
+    }
+
+    public class MemberData
+    {
+        public string Position { get; set; }
+        private string lastName;
+        public string LastName
+        {
+            get { return Helper.ToTitleCase(lastName); }
+            set { lastName = value; }
+        }
+        private string firstName;
+        public string FirstName
+        {
+            get { return Helper.ToTitleCase(firstName); }
+            set { firstName = value; }
+        }
+        public string Club { get; set; }
+        public string JoinDate { get; set; }
+        public string Frequency { get; set; }
+        public string Gift { get; set; }
+        public string FulfillMent { get; set; }
+        public string Source { get; set; }
+        public string CancelDate { get; set; }
+        public string Reason { get; set; }
+        public string VacationStartDate { get; set; }
+        public string VacationEndDate { get; set; }
+    }
+    List<MemberData> MemberDataList = new List<MemberData>();
+    public List<MemberData> AllMemberDataList = new List<MemberData>(){
+        new MemberData(){ Position="[[1]]", LastName= "Smith", FirstName = "Jack", Club= "Red Classic Club", JoinDate= "11/21/2021 10:34 AM", Frequency = "Monthly", Gift = "", FulfillMent= "Pick Up", Source = "Web"},
+        new MemberData(){ Position="[[3]]", LastName= "Kalaniya", FirstName = "Javed", Club= "Red Classic Club", JoinDate= "11/21/2021 11:27 AM", Frequency = "Monthly", Gift = "Yes", FulfillMent= "Ship", Source = "POS"},
+        new MemberData(){ Position="[[2]]", LastName= "Kalaniya", FirstName = "Javed", Club= "Red Classic Club", JoinDate= "11/21/2021 1:33 PM", Frequency = "Monthly", Gift = "", FulfillMent= "Ship", Source = "Web"},
+        new MemberData(){ Position="[[1]]", LastName= "Bodarya", FirstName = "j", Club= "Meritage Club", JoinDate= "11/17/2021 10:34 AM", Frequency = "Monthly", Gift = "", FulfillMent= "Ship", Source = "POS"},
+        new MemberData(){ Position="[[4]]", LastName= "Elliman", FirstName = "Jonathan", Club= "Red Classic Club", JoinDate= "11/31/2021 1:35 PM", Frequency = "Monthly", Gift = "", FulfillMent= "Ship", Source = "POS"},
+        new MemberData(){ Position="[[5]]", LastName= "Elliman", FirstName = "Sarah", Club= "Red Classic Club", JoinDate= "11/11/2021 11:27 AM", Frequency = "Monthly", Gift = "Yes", FulfillMent= "Ship", Source = "POS"},
+        new MemberData(){ Position="[[2]]", LastName = "Thakkar", FirstName = "Chirag", Club= "Meritage Club", JoinDate= "11/10/2021 6:45 PM", Frequency = "Monthly", Gift = "", FulfillMent= "Ship", Source = "Web"},
+    };
+
+    private async Task FilterWaitList(string clubName)
+    {
+        if (string.IsNullOrEmpty(clubName))
+            MemberDataList = AllMemberDataList.OrderBy(x => x.Club).ThenBy(x => x.Position).ToList();
+        else
+            MemberDataList = AllMemberDataList.Where(x => x.Club == clubName).OrderBy(x => x.Position).ToList();
+    }
+}

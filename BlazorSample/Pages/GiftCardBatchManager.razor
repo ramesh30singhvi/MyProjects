@@ -1,0 +1,342 @@
+﻿@page  "/gift-cards/batch-manager"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject IProductViewModel _productViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject IGiftCardBatchViewModel _giftCardBatchViewModel
+@inject IUserViewModel _userViewModel
+@inject ToastService toastService
+@inject ITeamViewModel _teamViewModel
+@inject ILocalStorageService localStorage
+@inject IJSRuntime JSRuntime
+@using System.IO;
+@using CellarPassAppAdmin.Shared.Enums
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md-auto mb-2 mb-md-0">
+                <h5 class="mb-0"><a href="/payments/gift-cards" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="fa-regular fa-gift-card me-2"></span>Gift Card Batch Manager</h5>
+            </div>
+            <div class="col-auto">
+                <button type="button" @onclick="() => ShowBatchModal()" class="btn btn-sm btn-outline-primary">Create Batch</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0 mt-2">
+        <div class="sf-grid min-vh-75">
+            <SfGrid DataSource="@businessGiftCardBatchList" Width="100%" class="border-x-0">
+                <GridTemplates>
+                    <DetailTemplate>
+                        @{
+                            var batch = (context as BusinessGiftCardBatchListModel);
+                            <SfGrid DataSource="@batch.BatchNumbers" Query="@(new Query().Where("BusinessGiftCardBatchId", "equal", batch.Id))">
+                                <GridColumns>
+                                    <GridColumn Field=@nameof(BusinessGiftCardBatchNumberModel.CardNumber) HeaderText="Number" Width="110"> </GridColumn>
+                                    <GridColumn Field=@nameof(BusinessGiftCardBatchNumberModel.CardPin) HeaderText="Pin" Width="110"></GridColumn>
+                                    <GridColumn HeaderText="Value" Width="110">
+                                        <Template Context="BatchAmountContext">
+                                            @{
+                                                var batchNumber = (BatchAmountContext as BusinessGiftCardBatchNumberModel);
+                                            }
+                                            <span>$@String.Format("{0:0.00}", batchNumber.Amount)</span>
+                                        </Template>
+                                    </GridColumn>
+                                    <GridColumn HeaderText="Expiration" Width="110">
+                                        <Template Context="BatchNumberContext">
+                                            @{
+                                                var batchNumber = (BatchNumberContext as BusinessGiftCardBatchNumberModel);
+                                                if (batchNumber.ExpirationDate == null)
+                                                {
+                                                    <span>N/A</span>
+                                                }
+                                                else
+                                                {
+                                                    <span>@batchNumber.ExpirationDate</span>
+                                                }
+                                            }
+                                        </Template>
+                                    </GridColumn>
+                                    <GridColumn Field=@nameof(BusinessGiftCardBatchNumberModel.NumberStatus) HeaderText="Status" Width="110"></GridColumn>
+                                </GridColumns>
+                            </SfGrid>
+                        }
+                    </DetailTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn Field=@nameof(BusinessGiftCardBatchListModel.BatchName) HeaderText="Batch" Width="110"> </GridColumn>
+                    <GridColumn Field=@nameof(BusinessGiftCardBatchListModel.BatchCount) HeaderText="Count" Width="60"></GridColumn>
+                    <GridColumn HeaderText="Amount" Width="100">
+                        <Template>
+                            @{
+                                var batch = (context as BusinessGiftCardBatchListModel);
+                                <span>$@String.Format("{0:0.00}", batch.BatchAmount)</span>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(BusinessGiftCardBatchListModel.ExpirationDate) HeaderText="Date" Width="100"></GridColumn>
+                    <GridColumn HeaderText="" TextAlign="TextAlign.Center" Width="20">
+                        <Template Context="BatchContext">
+                            @{
+                                var batch = (BatchContext as BusinessGiftCardBatchListModel);
+                                <a href="javascript:void(0)" title="Download" @onclick="() => CreateDocument(batch.BatchName, batch.BatchNumbers)"><span class="fa-regular fa-lg fa-file-arrow-down"></span></a>
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+</div>
+<EditForm Model="@businessGiftCardBatchRequestModel" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog Width="400px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsBatchModalVisible">
+        <DialogTemplates>
+            <Header>Create Gift Card Batch</Header>
+            <Content>
+                <div class="mb-3">
+                    <label for="inputBatchTitle" class="form-label">Batch Title</label>
+                    <SfTextBox class="form-control" id="inputBatchTitle" placeholder="" @bind-Value="@businessGiftCardBatchRequestModel.BatchName" />
+                    <ValidationMessage For="@(() => businessGiftCardBatchRequestModel.BatchName)" />
+                </div>
+                <div class="mb-3">
+                    <label for="inputBatchCount" class="form-label">Number of Gift Cards</label>
+                    <SfNumericTextBox id="inputBatchCount" TValue="int" Min=0 Max=1000 Step="50" @bind-Value="@businessGiftCardBatchRequestModel.BatchCount"></SfNumericTextBox>
+                    <ValidationMessage For="@(() => businessGiftCardBatchRequestModel.BatchCount)" />
+                </div>
+                <div class="mb-3">
+                    <label for="dpExpDate" class="form-label">Expiration Date</label>
+                    <SfDatePicker id="dpExpDate" TValue="DateTime?" Placeholder="Choose a Date" ShowClearButton="true" @bind-Value="@businessGiftCardBatchRequestModel.ExpirationDate"></SfDatePicker>
+                </div>
+                <div class="row">
+                    <div class="col-sm-7"><label for="inputAmount" class="form-label">Gift Card Amount</label></div>
+                    <div class="col-sm-5">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" @onchange="changeRangeValue" checked="@businessGiftCardBatchRequestModel.UseRangeValue">
+                            <label class="form-check-label">
+                                Use Range
+                            </label>
+                        </div>
+                    </div>
+                    @if (businessGiftCardBatchRequestModel.UseRangeValue)
+                    {
+                        <div class="col-sm-5">
+                            <label for="minimum_value" class="form-label">Minimum Value</label>
+                            <SfNumericTextBox id="inputMinimumAmount" TValue="decimal" Format="c2" Step=25 @bind-Value="@businessGiftCardBatchRequestModel.BatchAmount" @onchange="()=> validateMinAmount()"></SfNumericTextBox>
+                            @if (isMinAmountInvalid)
+                            {
+                                <div class="validation-message">@minerrorMessage</div>
+                            }
+                        </div>
+                        <div class="col-sm-2" style="text-align: center; margin-top: 35px;"><span> - </span></div>
+                        <div class="col-sm-5">
+                            <label for="maximum_value" class="form-label">Maximum Value</label>
+                            <SfNumericTextBox id="inputMaximumAmount" TValue="decimal?" Format="c2" Step=25 @bind-Value="@businessGiftCardBatchRequestModel.AmountMax" @onchange="()=> validateMaxAmount()"></SfNumericTextBox>
+                            @if (isMaxAmountInvalid)
+                            {
+                                <div class="validation-message">@maxerrorMessage</div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="col-sm-12">
+                            <SfNumericTextBox id="inputAmount" TValue="decimal" Format="c2" Step=25 @bind-Value="@businessGiftCardBatchRequestModel.BatchAmount" @onchange="()=> validateGiftCardAmount()"></SfNumericTextBox>
+                            @if (isBatchAmountInvalid)
+                            {
+                                <div class="validation-message">@errorMessage</div>
+                            }
+                        </div>
+                    }
+                </div>
+            </Content>
+        </DialogTemplates>
+        <DialogButtons>
+            <DialogButton Content="Cancel" OnClick="() => IsBatchModalVisible = false" />
+            <DialogButton Content="Create Batch" IsPrimary="true" OnClick="() => SaveBatch(formContext)" />
+        </DialogButtons>
+    </SfDialog>
+</EditForm>
+@code
+{
+
+    private string title = "Gift Card Batch Manager | Synergy Commerce Admin Panel";
+
+    private Boolean isLoading = true;
+    private bool IsBatchModalVisible = false;
+    BusinessGiftCardBatchRequestModel businessGiftCardBatchRequestModel = new BusinessGiftCardBatchRequestModel();
+    private Member currentMember = new Member();
+    UserDetailModel loggedInUser = new UserDetailModel();
+    TeamDetailResponse teamResponse = new TeamDetailResponse();
+    List<BusinessGiftCardBatchListModel> businessGiftCardBatchList = new List<BusinessGiftCardBatchListModel>();
+    private decimal minimumGCAmount;
+    private decimal maximumGCAmount;
+    private bool isBatchAmountInvalid = false;
+    private bool isMinAmountInvalid = false;
+    private bool isMaxAmountInvalid = false;
+    private string errorMessage = string.Empty;
+    private string minerrorMessage = string.Empty;
+    private string maxerrorMessage = string.Empty;
+
+    private void ShowBatchModal()
+    {
+        IsBatchModalVisible = true;
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var getUserData = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+        var userByEmail = await _userViewModel.GetUserByEmail(getUserData.Email);
+        if (userByEmail.success)
+        {
+            loggedInUser = userByEmail.data;
+            teamResponse = await _teamViewModel.GetBusinessTeamDetail(loggedInUser.UserGUID);
+        }
+        await GetBusinessGiftCartBatchList();
+        GetProductGiftCardDetailsResponse resultProduct = await _productViewModel.GetProductGiftCardDetails(currentMember.Id, 0);
+        if (resultProduct.success)
+        {
+            minimumGCAmount = resultProduct.data.MinimumGCAmount;
+            maximumGCAmount = resultProduct.data.MaximumGCAmount;
+        }
+    }
+    private async Task GetBusinessGiftCartBatchList()
+    {
+        var businessGiftCardBatchResponse = await _giftCardBatchViewModel.GetBusinessGiftCardBatchList(currentMember.Id);
+        if (businessGiftCardBatchResponse.success)
+        {
+            businessGiftCardBatchList = businessGiftCardBatchResponse.data;
+            isLoading = false;
+        }
+    }
+    private async Task SaveBatch(EditContext editContext)
+    {
+        if (!editContext.Validate())
+            return;
+        if (!businessGiftCardBatchRequestModel.UseRangeValue && validateGiftCardAmount())
+            return;
+        if (businessGiftCardBatchRequestModel.UseRangeValue && validateMinAmount())
+            return;
+        if (businessGiftCardBatchRequestModel.UseRangeValue && validateMaxAmount())
+            return;
+        businessGiftCardBatchRequestModel.BusinessId = currentMember.Id;
+        businessGiftCardBatchRequestModel.BusinessTeamId = teamResponse.data.Team;
+        var result = await _giftCardBatchViewModel.AddBusinessGiftCardBatch(businessGiftCardBatchRequestModel);
+        if (result.success)
+        {
+            toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+            businessGiftCardBatchRequestModel = new BusinessGiftCardBatchRequestModel();
+            IsBatchModalVisible = false;
+            await GetBusinessGiftCartBatchList();
+        }
+        else
+        {
+            toastService.ShowToast(result.error_info.description, ToastLevel.Error);
+        }
+    }
+
+    MemoryStream excelStream;
+
+    public async Task CreateDocument(string batchName, List<BusinessGiftCardBatchNumberModel> batchNumbers)
+    {
+        excelStream = _giftCardBatchViewModel.CreateBatchNumbersExcel(batchNumbers);
+        await JSRuntime.InvokeAsync<object>(
+                       "fileSaveAs",
+                        $"Batch_#{batchName}.xlsx",
+                       Convert.ToBase64String(excelStream.ToArray()));
+
+    }
+
+    private bool validateGiftCardAmount()
+    {
+        if (businessGiftCardBatchRequestModel.BatchAmount < minimumGCAmount)
+        {
+            isBatchAmountInvalid = true;
+            errorMessage = "Gift card must be at least the minimum value allowed " + minimumGCAmount.ToString("0.00");
+            return true;
+        }
+        else if (businessGiftCardBatchRequestModel.BatchAmount > maximumGCAmount)
+        {
+            isBatchAmountInvalid = true;
+            errorMessage = "Gift card must not exceed the maximum value allowed " + maximumGCAmount.ToString("0.00");
+            return true;
+        }
+        else
+        {
+            isBatchAmountInvalid = false;
+            return false;
+        }
+    }
+
+    private bool validateMinAmount()
+    {
+        if (businessGiftCardBatchRequestModel.BatchAmount < minimumGCAmount)
+        {
+            isMinAmountInvalid = true;
+            minerrorMessage = "Minimum value allowed " + minimumGCAmount.ToString("0.00");
+            return true;
+        }
+        else if (businessGiftCardBatchRequestModel.BatchAmount > businessGiftCardBatchRequestModel.AmountMax)
+        {
+            isMinAmountInvalid = true;
+            minerrorMessage = "Minimum value can not be greater than maximum value";
+            return true;
+        }
+        else
+        {
+            isMinAmountInvalid = false;
+            return false;
+        }
+    }
+
+    private bool validateMaxAmount()
+    {
+        if (businessGiftCardBatchRequestModel.AmountMax > maximumGCAmount)
+        {
+            isMaxAmountInvalid = true;
+            maxerrorMessage = "Maximum value allowed " + maximumGCAmount.ToString("0.00");
+            return true;
+        }
+        else if (businessGiftCardBatchRequestModel.AmountMax < businessGiftCardBatchRequestModel.BatchAmount)
+        {
+            isMaxAmountInvalid = true;
+            maxerrorMessage = "Maximum value can not be smaller than minimum value";
+            return true;
+        }
+        else
+        {
+            isMaxAmountInvalid = false;
+            return false;
+        }
+    }
+
+    private void changeRangeValue(ChangeEventArgs args)
+    {
+        businessGiftCardBatchRequestModel.UseRangeValue = Convert.ToBoolean(args.Value);
+        if (businessGiftCardBatchRequestModel.UseRangeValue)
+        {
+            businessGiftCardBatchRequestModel.BatchAmount = minimumGCAmount;
+            businessGiftCardBatchRequestModel.AmountMax = maximumGCAmount;
+        }
+        else
+        {
+            businessGiftCardBatchRequestModel.BatchAmount = 0;
+            businessGiftCardBatchRequestModel.AmountMax = null;
+        }
+    }
+}

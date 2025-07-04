@@ -1,0 +1,205 @@
+﻿@page "/settings/business-profiles/{Id:guid}"
+@page "/settings/business-profiles/create"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums
+@using Syncfusion.Blazor.Spinner
+@using Syncfusion.Blazor.DropDowns
+@inject IBusinessViewModel _businessViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject IBusinessAddressViewModel _businessAddressViewModel
+@*@inject IBusinessPropertyService _businessPropertyService*@
+@inject IBusinessTypeViewModel _businessTypeViewModel
+@inject IBusinessPropertyViewModel _businessPropertyViewModel
+@inject ToastService toastService
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized Context="another_name">
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+
+        @if (@BusinessProfileDetails != null)
+        {
+            <EditForm Model="@BusinessProfileDetails" OnValidSubmit="@SaveBusinessProperty">
+                <ObjectGraphDataAnnotationsValidator />
+                @*<ValidationSummary />*@
+
+                <div class="card shadow-none border">
+                    <div class="card-header border-bottom">
+                        <div class="row justify-content-between align-items-center">
+                            <div class="col-md">
+                                <h5 class="mb-3 mb-md-0"><a href="settings/business-profiles" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-shop me-2"></span>Business Profile</h5>
+                            </div>
+                            <div class="col-auto">
+                                <button type="submit" class="btn btn-sm btn-primary" href="javascript:void(0)">Save</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+
+                        <div class="card rounded-0">
+                            <div class="card-header border-bottom">
+                                <div class="row flex-between-center">
+                                    <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                                        <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-shop me-2"></span>Profile</h5>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label" for="inputProfileName">Business Profile Name</label>
+                                    @*<input id="inputProfileName" class="form-control" @bind-value="@BusinessProfileDetails.PropertyName" type="text" placeholder="The business profile name" />*@
+                                    <InputText @bind-Value=@BusinessProfileDetails.PropertyName class="form-control" Placeholder="The business profile name" id="Name" />
+                                    <ValidationMessage For="() => BusinessProfileDetails.PropertyName" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="sfLocationAddress">Location Address</label>
+                                    <SfDropDownList id=sfLocationAddress TValue="int" @bind-Value="@BusinessProfileDetails.Address" TItem="BusinessAddressViewModel" Placeholder="Select Address" AllowFiltering="true" DataSource="@BusinessAddresses">
+                                        <DropDownListFieldSettings Text="DisplayAddress" Value="Id"></DropDownListFieldSettings>
+                                    </SfDropDownList>
+                                    <ValidationMessage For="() => BusinessProfileDetails.Address" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="selBusinessType">Business Type</label>
+                                    @*<select id="selBusinessType" class="form-select" aria-label="Business Types">
+                                            <option value="0" selected>Default</option>
+                                            <option value="2">Winery &amp; Tasting Rooms</option>
+                                        </select>*@
+                                    <SfDropDownList id=selBusinessType TValue="int" @bind-Value="@BusinessProfileDetails.BusinessType"
+                                                    TItem="BusinessTypeViewModel" Placeholder="Select Business Type" AllowFiltering="true"
+                                                    DataSource="@BusinessTypes">
+                                        <DropDownListEvents TItem="BusinessTypeViewModel" TValue="int" ValueChange="@onBusinessTypeChange"></DropDownListEvents>
+                                        <DropDownListFieldSettings Text="Name" Value="Id"></DropDownListFieldSettings>
+                                    </SfDropDownList>
+                                    <ValidationMessage For="() => BusinessProfileDetails.BusinessType" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="inputProfileURL">Profile Page URL</label>
+                                    <div class="input-group mb-3">
+                                        <input id="inputProfileURL" @bind-value="@BusinessProfileDetails.ProfileURL" class="form-control" type="text" disabled />
+                                        <Clipboard Content="" />
+                                        <button class="btn btn-sm btn-outline-secondary">
+                                            <SfTooltip OffsetY="-10">
+                                                <TooltipTemplates><Content>View Profile Page</Content></TooltipTemplates>
+                                                <span class="fa-regular fa-eye" title="View"></span>
+                                            </SfTooltip>
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                        <div class="card rounded-0">
+                            <div class="card-header border-bottom">
+                                <div class="row flex-between-center">
+                                    <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                                        <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-address-card me-2"></span>Contact</h5>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label" for="inputFirstName">Contact First Name</label>
+                                        <InputText @bind-Value=@BusinessProfileDetails.Contact.ContactFirstName class="form-control" Placeholder="Enter first name" id="FirstName" />
+                                        <ValidationMessage For="@(() => BusinessProfileDetails.Contact.ContactFirstName)" />
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label" for="inputLastName">Contact Last Name</label>
+                                        <InputText @bind-Value=@BusinessProfileDetails.Contact.ContactLastName class="form-control" Placeholder="Enter last name" id="LastName" />
+                                        <ValidationMessage For="() => BusinessProfileDetails.Contact.ContactLastName" />
+                                    </div>
+                                </div>
+                                @if (showPhoneControl)
+                                {
+                                    <div class="mb-3">
+                                        <PhoneNumber @ref="PhoneNumber" phoneCountry="@BusinessProfileDetails.Contact.ContactCountry" @bind-phone="@BusinessProfileDetails.Contact.ContactPhone" />
+                                    </div>
+                                }
+                                <div class="mb-3">
+                                    <label class="form-label" for="inputEmailAddress">Contact Email Address</label>
+                                    <InputText @bind-Value="@BusinessProfileDetails.Contact.ContactEmail" type="email" class="form-control" Placeholder="Enter email Id" id="EmailAddress" />
+                                    <ValidationMessage For="() => BusinessProfileDetails.Contact.ContactEmail" />
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </EditForm>
+
+        }
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+
+    [Parameter]
+    public Guid? Id { get; set; }
+
+    private string title = "Business Profile | Synergy Commerce Admin Panel";
+    BusinessProfileViewModel BusinessProfileDetails;
+
+    List<BusinessAddressViewModel> BusinessAddresses { get; set; }
+    List<BusinessTypeViewModel> BusinessTypes { get; set; }
+
+    Member currentMember = null;
+    public bool SpinnerVisibility = true;
+    PhoneNumber PhoneNumber;
+    private bool showPhoneControl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        if (Id.HasValue)
+        {
+            BusinessProfileDetails = await _businessPropertyViewModel.GetBusinessProfilesDetails(Id.Value, "");
+        }
+        else
+        {
+            BusinessProfileDetails = new BusinessProfileViewModel { BusinessId = currentMember.Id };
+        }
+
+        BusinessProfileDetails.Contact.ContactCountry ??= "US";
+
+        BusinessAddresses = await _businessAddressViewModel.GetBusinessAddresses(currentMember.Id);
+        BusinessTypes = await _businessTypeViewModel.GetBusinessTypes();
+        showPhoneControl = true;
+        SpinnerVisibility = false;
+    }
+
+    private async Task SaveBusinessProperty()
+    {
+        SpinnerVisibility = true;
+
+        BusinessProfileDetails.Contact.ContactPhone = PhoneNumber.phone;
+        BusinessProfileDetails.Contact.ContactCountry = PhoneNumber.phoneCountry;
+
+        BusinessProfileDetails = await _businessPropertyViewModel.CreateBusinessPropertyAsync(BusinessProfileDetails);
+        SpinnerVisibility = false;
+        toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+        StateHasChanged();
+        NavigationManager.NavigateTo(string.Format("/settings/business-profiles/{0}", BusinessProfileDetails.PropertyGuid));
+    }
+
+    private void onBusinessTypeChange(ChangeEventArgs<int, BusinessTypeViewModel> args)
+    {
+        var currentBusinessType = BusinessTypes.Find(x => x.Id == args.Value);
+        BusinessProfileDetails.ProfileURL = currentBusinessType.FriendlyURL;
+    }
+}

@@ -1,0 +1,86 @@
+﻿@page "/loyalty/create-loyalty-redemption-order-discount"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="loyalty/create-loyalty-redemption" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-trophy-alt me-2"></span>Create Campaign</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-primary" href="#!">Save</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="fw-bold text-500">STEP 2 OF 2</h6>
+                        <h5>Discount on Entire Order</h5>
+                        <p>Set a fixed percentage or dollar discount for entire sale.</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12 col-xl-6">
+                        <div class="mb-3">
+                            <label class="form-label" for="inputAmountSpent">Discount Amount</label>
+                            <div class="d-flex">
+                                <input id="inputAmountSpent" class="form-control" type="text" />
+                                <button type="button" @onclick="EnablePercentage" class="btn btn-sm ms-2 @(percentageType ? "btn-secondary" : "btn-outline-secondary")">%</button>
+                                <button type="button" @onclick="EnableCurrency" class="btn btn-sm ms-2 @(currencyType ? "btn-secondary" : "btn-outline-secondary")">$</button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputAwarded">Reward Value</label>
+                            <input id="inputAwarded" class="form-control" type="text" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputRewardFriendlyName">Maximum Discount</label>
+                            <input id="inputRewardFriendlyName" class="form-control" type="text" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputRewardFriendlyName">Reward Friendly Name</label>
+                            <input id="inputRewardFriendlyName" class="form-control" type="text" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private string title = "Create Campaign | Synergy Commerce Admin Panel";
+    private bool percentageType = true;
+    private bool currencyType = false;
+
+    private void EnablePercentage()
+    {
+        currencyType = false;
+        percentageType = true;
+    }
+    private void EnableCurrency()
+    {
+        percentageType = false;
+        currencyType = true;
+    }
+}

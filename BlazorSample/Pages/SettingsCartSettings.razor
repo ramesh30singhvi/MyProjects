@@ -1,0 +1,185 @@
+﻿@page "/settings/cart-settings"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card shadow-none border">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="settings/sales-channels/web" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-cogs me-2"></span>Cart Settings</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-primary" href="#!">Save</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3 p-2">
+                    <div class="col-9 px-3">
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkDOB" checked>
+                                    <label class="form-check-label" for="chkDOB">Require Date of Birth</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-8">
+                                <label class="form-label" for="inputDOBError">Date of Birth Validation Error</label>
+                                <textarea id="inputDOBError" class="form-control" rows="3" draggable="false">We’re sorry, but you must be at least 21 years of age or older to purchase items in your shopping cart.</textarea>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkShipToState" checked>
+                                    <label class="form-check-label" for="chkShipToState">Show Available ShipTo States</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-8">
+                                <label class="form-label" for="inputRedirectionURL">New Account Redirection URL</label>
+                                <input type="text" id="inputRedirectionURL" class="form-control" value="https://www.synergycommerce.io/login" />
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkGiftWrapping" checked>
+                                    <label class="form-check-label" for="chkGiftWrapping">Offer Gift Wrapping</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-8">
+                                <label class="form-label" for="inputGiftWrapping">Charge for Gift Wrapping (per item)</label>
+                                <input type="text" id="inputGiftWrapping" class="form-control" value="5.00" />
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkChargeSalesTax" checked>
+                                    <label class="form-check-label" for="chkChargeSalesTax">Charge Sales Tax  on Gift Wrapping</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkOfferGiftMessage" checked>
+                                    <label class="form-check-label" for="chkOfferGiftMessage">Offer Gift Message</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-3 border p-3">
+                        <h5 class="mb-4">Customer Requirements</h5>
+                        <div class="mb-3 ps-3">
+                            <h6 class="mb-3">Bill To Requirements</h6>
+                            <div class="ps-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkBillFirstName" checked>
+                                    <label class="form-check-label" for="chkBillFirstName">First Name</label>
+                                </div>
+                            </div>
+                            <div class="ps-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkBillLastName" checked>
+                                    <label class="form-check-label" for="chkBillLastName">Last Name</label>
+                                </div>
+                            </div>
+                            <div class="ps-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkBillEmail" checked>
+                                    <label class="form-check-label" for="chkBillEmail">Email</label>
+                                </div>
+                            </div>
+                            <div class="ps-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkBillHomePhone" checked>
+                                    <label class="form-check-label" for="chkBillHomePhone">Home Phone</label>
+                                </div>
+                            </div>
+                            <div class="ps-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkBillMobilePhone" checked>
+                                    <label class="form-check-label" for="chkBillMobilePhone">Mobile Phone</label>
+                                </div>
+                            </div>
+                            <div class="ps-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkBillWorkPhone" checked>
+                                    <label class="form-check-label" for="chkBillWorkPhone">Work Phone</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3 ps-3">
+                            <h6 class="mb-3">Ship To Requirements</h6>
+                            <div class="ps-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkShipFirstName" checked>
+                                    <label class="form-check-label" for="chkShipFirstName">First Name</label>
+                                </div>
+                            </div>
+                            <div class="ps-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkShipLastName" checked>
+                                    <label class="form-check-label" for="chkShipLastName">Last Name</label>
+                                </div>
+                            </div>
+                            <div class="ps-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkShipEmail" checked>
+                                    <label class="form-check-label" for="chkShipEmail">Email</label>
+                                </div>
+                            </div>
+                            <div class="ps-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkShipHomePhone" checked>
+                                    <label class="form-check-label" for="chkShipHomePhone">Home Phone</label>
+                                </div>
+                            </div>
+                            <div class="ps-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkShipMobilePhone" checked>
+                                    <label class="form-check-label" for="chkShipMobilePhone">Mobile Phone</label>
+                                </div>
+                            </div>
+                            <div class="ps-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkShipWorkPhone" checked>
+                                    <label class="form-check-label" for="chkShipWorkPhone">Work Phone</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private string title = "Cart Settings | Synergy Commerce Admin Panel";
+}

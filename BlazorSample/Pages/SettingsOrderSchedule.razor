@@ -1,0 +1,221 @@
+﻿@page "/settings/orders/ordering-schedule"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+
+<div class="card">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md-auto">
+                <h5 class="mb-0"><a href="settings/orders" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-calendar-clock me-2"></span>Ordering Schedule</h5>
+            </div>
+            <div class="col-md-auto">
+                
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <p>Set your online ordering schedule for takeout and delivery. If you want to set your business hours go to <a href="settings/hours">business hours</a></p>
+        <div class="my-4">
+            <ul class="nav nav-tabs" role="tablist">
+                <li class="nav-item">
+                    <a id="tab-takeout" class="nav-link active" data-bs-toggle="tab" href="#tabTakeout">Takeout</a>
+                </li>
+                <li class="nav-item">
+                    <a id="tab-delivery" class="nav-link" data-bs-toggle="tab" href="#tabDelivery">Delivery</a>
+                </li>
+            </ul>
+            <div class="tab-content p-3" id="tabContent">
+                <div class="tab-pane p-2 fade show active" id="tabTakeout" role="tabpanel" aria-labelledby="tab-takeout">
+                    <SfGrid DataSource="@PlaceholderDataList" AllowPaging="false" Width="100%">
+                        <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                        <GridPageSettings PageSize="50"></GridPageSettings>
+                        <GridTemplates>
+                            <EmptyRecordTemplate>
+                                @if (!isLoading && PlaceholderDataList.Count <= 0)
+                                {
+                                <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                    <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Schedule</h6>
+                                    <button type="button" class="btn btn-outline-primary">Get Started</button>
+                                </div>
+                                }
+                            </EmptyRecordTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            <GridColumn HeaderText="Day" TextAlign="TextAlign.Left" Width="200px">
+                                <Template>
+                                    @{
+                                        var pholder = (context as PlaceholderData);
+                                        <a href="javascript:void(0)" @onclick="@OpenModal">@pholder.Day</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="Hours" TextAlign="TextAlign.Left" Width="300">
+                                <Template>
+                                    @{
+                                        var pholder = (context as PlaceholderData);
+                                        @(pholder.Hours)
+                                    }
+                                </Template>
+                            </GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+                <div class="tab-pane p-2 fade" id="tabDelivery" role="tabpanel" aria-labelledby="tab-delivery">
+                    <SfGrid DataSource="@PlaceholderDataList" AllowPaging="false" Width="100%">
+                        <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                        <GridPageSettings PageSize="50"></GridPageSettings>
+                        <GridTemplates>
+                            <EmptyRecordTemplate>
+                                @if (!isLoading && PlaceholderDataList.Count <= 0)
+                                {
+                                <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                    <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Schedule</h6>
+                                    <button type="button" class="btn btn-outline-primary">Get Started</button>
+                                </div>
+                                }
+                            </EmptyRecordTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            <GridColumn HeaderText="Day" TextAlign="TextAlign.Left" Width="200px">
+                                <Template>
+                                    @{
+                                        var pholder = (context as PlaceholderData);
+                                        <a href="javascript:void(0)" @onclick="@OpenModal">@pholder.Day</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="Hours" TextAlign="TextAlign.Left" Width="300">
+                                <Template>
+                                    @{
+                                        var pholder = (context as PlaceholderData);
+                                        @(pholder.Hours)
+                                    }
+                                </Template>
+                            </GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="ModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Edit Takeout Hours</h5></Header>
+        <Content>
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label id="lblOpen" class="form-label">Open</label>
+                    <SfTimePicker TValue="DateTime?" Placeholder="Select open time" ShowClearButton="true" aria-labelledby="lblOpen">
+                        <TimePickerEvents TValue="DateTime?"></TimePickerEvents>
+                    </SfTimePicker>
+                </div>
+                <div class="col-md-6">
+                    <label id="lblClose" class="form-label">Close</label>
+                    <SfTimePicker TValue="DateTime?" Placeholder="Select close time" ShowClearButton="true" aria-labelledby="lblClose">
+                        <TimePickerEvents TValue="DateTime?"></TimePickerEvents>
+                    </SfTimePicker>
+                </div>
+            </div>
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <button class="btn btn-outline-primary btn-sm"><span class="fa-solid fa-plus me-2"></span>Add Interval</button>
+                </div>
+                <div class="col-md-6">
+                    <input class="form-check-input" type="checkbox" value="" id="chkClosedAllDay">
+                    <label class="form-check-label" for="chkClosedAllDay">
+                        Closed all day
+                    </label>
+                </div>
+            </div>
+            <div class="my-4">
+                <h6>Apply hours to:</h6>
+                <div class="my-3">
+                    <button class="btn btn-outline-primary rounded-circle p-2 me-1 mb-1" type="button" data-bs-toggle="button" style="width:45px">Mo</button>
+                    <button class="btn btn-outline-primary rounded-circle p-2 me-1 mb-1" type="button" data-bs-toggle="button" style="width:45px">Tu</button>
+                    <button class="btn btn-outline-primary rounded-circle p-2 me-1 mb-1" type="button" data-bs-toggle="button" style="width:45px">We</button>
+                    <button class="btn btn-outline-primary rounded-circle p-2 me-1 mb-1" type="button" data-bs-toggle="button" style="width:45px">Th</button>
+                    <button class="btn btn-outline-primary rounded-circle p-2 me-1 mb-1" type="button" data-bs-toggle="button" style="width:45px">Fr</button>
+                    <button class="btn btn-outline-primary rounded-circle p-2 me-1 mb-1" type="button" data-bs-toggle="button" style="width:45px">Sa</button>
+                </div>
+            </div>
+            <div class="mb-3">
+                <input class="form-check-input" type="checkbox" value="" id="chkApplyToDelivery">
+                <label class="form-check-label" for="chkApplyToDelivery">
+                    Apply hours and days to Delivery
+                </label>
+            </div>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="@CloseModal">Close</button>
+            <button type="button" class="btn btn-primary">Save</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+    private string title = "Ordering Schedule | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    private Boolean isLoading = true;
+    private bool ModalVisibility { get; set; } = false;
+
+    List<PlaceholderData> PlaceholderDataList = new List<PlaceholderData>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+
+        PlaceholderDataList = PlaceholderList;
+
+        isLoading = false;
+        SpinnerVisibility = false;
+    }
+
+    private void OpenModal()
+    {
+        this.ModalVisibility = true;
+    }
+    private void CloseModal()
+    {
+        this.ModalVisibility = false;
+    }
+
+    public class PlaceholderData
+    {
+        public int Id { get; set; }
+        public string Day { get; set; }
+        public string Hours { get; set; }
+    }
+
+    public List<PlaceholderData> PlaceholderList = new List<PlaceholderData>()
+    {
+    new PlaceholderData(){ Id=1, Day= "Sunday", Hours = "10:00 AM - 5:00 PM" },
+    new PlaceholderData(){ Id=2, Day= "Monday", Hours = "10:00 AM - 5:00 PM" },
+    new PlaceholderData(){ Id=3, Day= "Tuesday", Hours = "10:00 AM - 5:00 PM" },
+    new PlaceholderData(){ Id=4, Day= "Wednesday", Hours = "10:00 AM - 5:00 PM" },
+    new PlaceholderData(){ Id=5, Day= "Thursday", Hours = "10:00 AM - 5:00 PM" },
+    new PlaceholderData(){ Id=6, Day= "Friday", Hours = "10:00 AM - 5:00 PM" },
+    new PlaceholderData(){ Id=7, Day= "Saturday", Hours = "10:00 AM - 5:00 PM" }
+     };
+
+
+}

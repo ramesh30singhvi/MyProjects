@@ -1,0 +1,99 @@
+﻿@page "/loyalty/loyalty-awards"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IProductViewModel _productViewModel
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<Feedback PageSection="PageSection.AwardCampaigns"></Feedback>
+<div class="card">
+    <div class="card-header bg-light">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings/loyalty" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-trophy-alt me-2"></span>Award Campaigns</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="loyalty/create-award-campaign">Add New</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@awardCampaigns" AllowPaging="true" Width="100%">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && awardCampaigns.Count <= 0)
+                        {
+                            <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Award Campaigns Available</h6>
+                                <button type="button" class="btn btn-outline-primary">Get Started</button>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn Field=@nameof(AwardCampaignsListModel.Status) HeaderText="Status" TextAlign="TextAlign.Center" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="100px" />
+                    <GridColumn HeaderText="Campaign Name" TextAlign="TextAlign.Left" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="200px">
+                        <Template>
+                            @{
+                                var campaignName = (context as AwardCampaignsListModel).CampaignName;
+                                <a href="#!">@($"{campaignName}")</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(AwardCampaignsListModel.Type) HeaderText="Type" TextAlign="TextAlign.Center" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="100px" />
+                    <GridColumn Field=@nameof(AwardCampaignsListModel.StartDate) HeaderText="Start Date" TextAlign="TextAlign.Center" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="100px" />
+                    <GridColumn Field=@nameof(AwardCampaignsListModel.EndDate) HeaderText="End Date" TextAlign="TextAlign.Center" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="100px" />
+                    <GridColumn Field=@nameof(AwardCampaignsListModel.LastVerified) HeaderText="Last Verified" TextAlign="TextAlign.Center" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="100px" />
+                   <GridColumn HeaderText="" Width="50px">
+                        <Template>
+                            @{
+                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                    <a class="dropdown-item" href="#!">Delete Campaign</a>
+                                </div>
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+    <div class="card-footer">
+    </div>
+</div>
+
+@code
+{
+    private string title = "Award Campaigns | Synergy Commerce Admin Panel";
+    private Boolean isLoading = false;
+    private class AwardCampaignsListModel
+    {
+        public string Status { get; set; }
+        public string CampaignName { get; set; }
+        public string Type { get; set; }
+        public string StartDate { get; set; }
+        public string EndDate { get; set; }
+        public string LastVerified { get; set; }
+    }
+    private List<AwardCampaignsListModel> awardCampaigns = new List<AwardCampaignsListModel>() {
+        new AwardCampaignsListModel(){ Status= "Active", CampaignName= "10 Points for Visit",Type="Visit",StartDate="8/9/2021",EndDate="9/9/2021", LastVerified="" },
+        new AwardCampaignsListModel(){ Status= "Expired", CampaignName= "Spend >$50",Type="Amount Spent",StartDate="1/9/2021",EndDate="1/10/2021", LastVerified="" },
+        new AwardCampaignsListModel(){ Status= "Active", CampaignName= "100 Points for Cabs",Type="Item Based",StartDate="8/9/2021",EndDate="9/31/2021", LastVerified="9/31/2021" },
+        new AwardCampaignsListModel(){ Status= "Expired", CampaignName= "10 Points for Reds",Type="Collection Based",StartDate="2/9/2021",EndDate="9/9/2021", LastVerified="" },
+        new AwardCampaignsListModel(){ Status= "Not Started", CampaignName= "50 Points for Private Event",Type="Visit",StartDate="8/9/2021",EndDate="9/9/2021", LastVerified="" },
+    };
+}

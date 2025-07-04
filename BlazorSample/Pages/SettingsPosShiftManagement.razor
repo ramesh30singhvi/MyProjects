@@ -1,0 +1,183 @@
+﻿@page "/settings/team-management/shift-management"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject IShiftBreakViewModel _shiftBreakViewModel
+@inject ITeamViewModel _teamViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ToastService toastService
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        <EditForm Model="@shiftBreaks" Context="formContext" Class="row">
+            <ObjectGraphDataAnnotationsValidator />
+            <div class="card">
+                <div class="card-header border-bottom">
+                    <div class="row justify-content-between">
+                        <div class="col-md-auto">
+                            <h5 class="mb-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="fa-regular fa-user-clock me-2"></span>Shift Management</h5>
+                        </div>
+                        <div class="col-md-auto">
+                            <button class="btn btn-sm btn-primary" @onclick="@(() => SaveShiftBreak(formContext))">Save</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-12 col-xl-8">
+                            <div class="row justify-content-between align-items-center mb-3 mt-3">
+                                <div class="col-md">
+                                    <label class="form-label mb-n1">Shift Breaks</label>
+                                </div>
+                                <div class="col-auto">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="()=>AddBreak()">Add Break</button>
+                                </div>
+                            </div>
+                            <div class="row mb-1">
+                                <div class="col-md-6 col-sm-6">
+                                    <label class="form-label">Break Name</label>
+                                </div>
+                                <div class="col-md-6 col-sm-6">
+                                    <label class="form-label">Break Duration (in minutes)</label>
+                                </div>
+                            </div>
+                            @foreach (var shiftBreak in shiftBreaks)
+                            {
+                                <div class="row mb-2">
+                                    <div class="col-md-6 col-sm-6">
+                                        <InputText class="form-control" @bind-Value="@shiftBreak.BreakName" />
+                                        <ValidationMessage For="@(() => shiftBreak.BreakName)" />
+                                    </div>
+                                    <div class="col-md-6 col-sm-6">
+                                        <InputNumber class="form-control" @bind-Value="@shiftBreak.BreakDuration"></InputNumber>
+                                        <ValidationMessage For="@(() => shiftBreak.BreakDuration)" />
+                                    </div>
+                                </div>
+                            }
+                            @*@for (int i = 0; i < shiftBreaks.Count; i++)
+                                {
+                                    int index = i;
+                                    <div class="row mb-2">
+                                        <div class="col-md-6 col-sm-6">
+                                            <InputText class="form-control" @bind-Value="@shiftBreaks[i].BreakName" />
+                                            <ValidationMessage For="@(() => shiftBreaks[i].BreakName)" />
+                                        </div>
+                                        <div class="col-md-6 col-sm-6">
+                                            <InputNumber class="form-control" @bind-Value="@shiftBreaks[i].BreakDuration"></InputNumber>
+                                            <ValidationMessage For="@(() => shiftBreaks[i].BreakDuration)" />
+                                        </div>
+                                    </div>
+                                }*@
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </EditForm>
+    </Authorized>
+</AuthorizeView>
+
+@code
+{
+    private string title = "Shift Management | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    List<ShiftBreakRequestModel> shiftBreaks = new List<ShiftBreakRequestModel>();
+    List<UserBusinessTeamModel> userBusinessTeams = new List<UserBusinessTeamModel>();
+
+    private int DefaultAdminAccountId { get; set; }
+    private int CurrentUserId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        //Get Current User
+        var getUserData = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+        CurrentUserId = getUserData?.Id ?? 0;
+        if (CurrentUserId > 0)
+        {
+            //Get Business Teams for current user
+            var userBusinessTeamsResponse = await _teamViewModel.GetUserBusinessTeams(CurrentUserId);
+            userBusinessTeams = userBusinessTeamsResponse?.data ?? new List<UserBusinessTeamModel>();
+            DefaultAdminAccountId = userBusinessTeams.Where(x => x.IsDefault)?.FirstOrDefault()?.BusinessId ?? 0;
+            //Get ShiftBreak
+            await GetShiftBreakSettings();
+        }
+        SpinnerVisibility = false;
+    }
+
+    private async Task GetShiftBreakSettings()
+    {
+        var response = await _shiftBreakViewModel.GetShiftBreakListAsync(DefaultAdminAccountId);
+        var shiftBreaksData = response?.data ?? new List<ShiftBreakModel>();
+        UpdateShiftBreakData(shiftBreaksData);
+    }
+
+    private void AddBreak()
+    {
+        shiftBreaks.Add(new ShiftBreakRequestModel { Business_Id = DefaultAdminAccountId, BreakName = "", BreakDuration = null });
+    }
+
+    private async Task SaveShiftBreak(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var shiftBreakGroups = shiftBreaks.GroupBy(i => i.BreakName);
+            foreach (var grp in shiftBreakGroups)
+            {
+                var total = grp.Count();
+                if (total > 1)
+                {
+                    toastService.ShowToast("Break name must be unique.", ToastLevel.Error);
+                    return;
+                }
+            }
+
+            var response = await _shiftBreakViewModel.AddUpdateShiftBreakListAsync(shiftBreaks);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast("Shift Break Added successfully.", ToastLevel.Success);
+                UpdateShiftBreakData(response.data);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    private void UpdateShiftBreakData(List<ShiftBreakModel> shiftBreaksData)
+    {
+        shiftBreaks = new List<ShiftBreakRequestModel>();
+        if (shiftBreaksData.Count > 0)
+        {
+            foreach (var shiftBreak in shiftBreaksData.OrderBy(x => x.BreakName))
+            {
+                shiftBreaks.Add(new ShiftBreakRequestModel
+                {
+                    Id = shiftBreak.Id,
+                    Business_Id = shiftBreak.Business_Id,
+                    BreakName = shiftBreak.BreakName,
+                    BreakDuration = shiftBreak.BreakDuration
+                });
+            }
+        }
+        else
+        {
+            shiftBreaks.Add(new ShiftBreakRequestModel { Business_Id = DefaultAdminAccountId, BreakName = "", BreakDuration = null });
+        }
+    }
+
+}

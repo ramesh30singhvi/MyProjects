@@ -1,0 +1,137 @@
+﻿@page "/sa/configuration/avalara-item-type-mapping"
+@layout SaLayout
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="py-3">
+            <div class="row justify-content-between">
+                <div class="col-md-auto mb-4 mb-md-0"><h5><a href="sa/configuration" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><i class="fa-regular fa-inbox-out me-2"></i>Avalara Item Type Mapping</h5></div>
+                <div class="col-md-auto">
+                    
+                </div>
+            </div>
+            <hr />
+        </div>
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@PlaceholderDataList" AllowPaging="false" Width="100%">
+                <GridColumns>
+                    <GridColumn HeaderText="Item Type" TextAlign="TextAlign.Left" Width="200">
+                        <Template Context="ItemTypeContext">
+                            @{
+                                var itemType = (ItemTypeContext as PlaceholderData);
+                                <a href="javascript:void(0)" @onclick="@OpenModal" class="btn btn-link text-800 fs--1">@itemType.ItemTypeName</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="Tax Code" Type="ColumnType.String" TextAlign="TextAlign.Left" Width="200">
+                        <Template Context="ItemTypeContext">
+                            @{
+                                var itemType = (ItemTypeContext as PlaceholderData);
+                                @(itemType.TaxCode)
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="" TextAlign="TextAlign.Right" Width="50">
+                        <Template Context="ItemTypeContext">
+                            @{
+                                var itemType = (ItemTypeContext as PlaceholderData);
+                                <button class="delete_icon" @onclick="()=>DeleteDialogOpen(itemType.Id)">
+                                    <span class="far fa-trash-alt"></span>
+                                </button>
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+
+
+        <SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="ModalVisibility">
+            <DialogTemplates>
+                <Header><h5 class="modal-title" id="modalLabel">Item Type</h5></Header>
+                <Content>
+                    <div class="mb-3">
+                        <label class="form-label" for="inputItemTypeName">Item Type Name</label>
+                        <input id="inputItemTypeName" class="form-control" type="text" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="inputItemTypeTaxCode">Tax Code</label>
+                        <input id="inputItemTypeTaxCode" class="form-control" type="text" />
+                    </div>
+                </Content>
+                <FooterTemplate>
+                    <button type="button" class="btn btn-secondary" @onclick="@CloseModal">Close</button>
+                    <button type="button" class="btn btn-primary">Save</button>
+                </FooterTemplate>
+            </DialogTemplates>
+        </SfDialog>
+
+        
+        @*Delete confimation dialog*@
+        <DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="DeleteItemType"></DeleteConfirmation>
+
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private string title = "Avalara Item Type Mapping | Synergy Commerce Super Admin  Panel";
+
+    bool openDeleteDialog = false;
+
+    private bool ModalVisibility { get; set; } = false;
+
+    private void OpenModal()
+    {
+        this.ModalVisibility = true;
+    }
+    private void CloseModal()
+    {
+        this.ModalVisibility = false;
+    }
+
+    List<PlaceholderData> PlaceholderDataList = new List<PlaceholderData>();
+
+    int idForDelete = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+
+        PlaceholderDataList = PlaceholderList;
+
+    }
+
+
+    private void DialogClose() => openDeleteDialog = false;
+
+    private void DeleteDialogOpen(int id)
+    {
+        openDeleteDialog = true;
+        idForDelete = id;
+    }
+    private async Task DeleteItemType()
+    {
+        //do something
+    }
+
+
+    public class PlaceholderData
+    {
+        public int Id { get; set; }
+        public string ItemTypeName { get; set; }
+        public string TaxCode { get; set; }
+    }
+
+    public List<PlaceholderData> PlaceholderList = new List<PlaceholderData>()
+{
+    new PlaceholderData(){ Id=1, ItemTypeName= "Wine", TaxCode = "PA2020300"  },
+    new PlaceholderData(){ Id=2, ItemTypeName= "Champagne", TaxCode = "PA2020301" },
+
+     };
+
+}

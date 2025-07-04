@@ -1,0 +1,90 @@
+﻿@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Enums
+
+@if (OnlySelectCustomerSection)
+{
+    <div class="col-12 col-md-6 sf-ddl">
+        <h5 class="mb-3 fs-0 text-uppercase text-500">
+            @FulfillmentTitle
+            <button class="btn btn-sm btn-primary" id="addNewCustomerBtn" href="javascript:void();" @onclick="@(() => OnAddNewCustomerBtnClick.InvokeAsync(ClubCustomerType))">Add New</button>
+        </h5>
+        <SfDropDownList @ref="CustomerDdlObj" TItem="CustomCustomerModel" Placeholder="Search Customer" TValue="string" AllowFiltering="true" DataSource="@Customers">
+            <DropDownListEvents TItem="CustomCustomerModel" TValue="string" OnValueSelect="OnCustomerSelection" Filtering="FilterCustomers"></DropDownListEvents>
+            <DropDownListFieldSettings Text="Name" Value="Id"></DropDownListFieldSettings>
+        </SfDropDownList>
+    </div>
+}
+else
+{
+    <div class="col-12 col-md-9">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h6 class="fw-bold text-500">@StepNumber</h6>
+                <h5>@Title</h5>
+            </div>
+            <div class="col-12">
+                <h5 class="mb-5 mt-4 fs-0 text-500">Membership: @SelectedClubName</h5>
+            </div>
+            <div class="col-12 col-md-6 sf-ddl">
+                <h5 class="mb-3 fs-0 text-uppercase text-500">
+                    @FulfillmentTitle
+                    <button class="btn btn-sm btn-primary" id="addNewCustomerBtn" href="javascript:void();" @onclick="@(() => OnAddNewCustomerBtnClick.InvokeAsync())">Add New</button>
+                </h5>
+                <SfDropDownList @ref="CustomerDdlObj" TItem="CustomCustomerModel" Placeholder="Search Customer" TValue="string" AllowFiltering="true" DataSource="@Customers">
+                    <DropDownListEvents TItem="CustomCustomerModel" TValue="string" OnValueSelect="OnCustomerSelection" Filtering="FilterCustomers"></DropDownListEvents>
+                    <DropDownListFieldSettings Text="Name" Value="Id"></DropDownListFieldSettings>
+                </SfDropDownList>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string StepNumber { get; set; }
+
+    [Parameter]
+    public bool OnlySelectCustomerSection { get; set; } = false;
+
+    [Parameter]
+    public string Title { get; set; }
+
+    [Parameter]
+    public string FulfillmentTitle { get; set; }
+
+    [Parameter]
+    public string SelectedClubName { get; set; }
+
+    public SfDropDownList<string, CustomCustomerModel> CustomerDdlObj { get; set; }
+
+    [Parameter]
+    public List<CustomCustomerModel> Customers { get; set; }
+
+    [Parameter]
+    public EventCallback<ClubCustomerType> OnAddNewCustomerBtnClick { get; set; }
+
+    [Parameter]
+    public EventCallback<SelectEventArgs<CustomCustomerModel>> OnExistingCustomerSelection { get; set; }
+
+    private async Task OnCustomerSelection(SelectEventArgs<CustomCustomerModel> args)
+    {
+        if (args != null && args.ItemData != null)
+        {
+            args.ItemData.ClubCustomerType = ClubCustomerType;
+            await OnExistingCustomerSelection.InvokeAsync(args);
+        }
+    }
+
+    [Parameter]
+    public EventCallback<FilteringEventArgs> FilterExistingCustomers { get; set; }
+
+    private async Task FilterCustomers(FilteringEventArgs args)
+    {
+        await FilterExistingCustomers.InvokeAsync(args);
+        if (CustomerDdlObj != null)
+            await CustomerDdlObj.FilterAsync(Customers, new Query());
+    }
+
+    [Parameter]
+    public ClubCustomerType ClubCustomerType { get; set; }
+}

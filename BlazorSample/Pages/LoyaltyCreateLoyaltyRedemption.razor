@@ -1,0 +1,84 @@
+﻿@page "/loyalty/create-loyalty-redemption"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject NavigationManager _navigationManager
+@inject ToastService toastService
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="loyalty/loyalty-redemptions" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-trophy-alt me-2"></span>Creating & Managing Redemption Campaigns</h5>
+                    </div>
+                    <div class="col-auto">
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="fw-bold text-500">STEP 1 OF 2</h6>
+                        <h5>Select an Award Program Type</h5>
+                        <p>Select a program type to determine how your customers will use their [[LoyaltyPluralName]].</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12 col-xl-6">
+                        <div class="list-group list-group-border">
+                            <a href="loyalty/create-loyalty-redemption-order-discount" class="list-group-item list-group-item-action mb-2" aria-current="true">
+                                <h5>Discount on the Entire Order</h5>
+                                <p class="fs--1">Set a fixed percentage or dollar discount for entire sale.</p>
+                            </a>
+                            <a href="loyalty/create-loyalty-redemption-product-discount" class="list-group-item list-group-item-action mb-2">
+                                <h5>Discount on a Specific Products(s)</h5>
+                                <p class="fs--1">Set a fixed percentage or dollar discount on specific items. For example, 25% off 2016 Encore Winery Cabernet Sauvignon.</p>
+                            </a>
+                            <a href="loyalty/create-loyalty-redemption-item-type-discount" class="list-group-item list-group-item-action mb-2">
+                                <h5>Discount on an Item Type(s)</h5>
+                                <p class="fs--1">Set a fixed percentage or dollar discount on specific Item Types. For example, 20% off all General Merchandise.</p>
+                            </a>
+                            <a href="loyalty/create-loyalty-redemption-collection-discount" class="list-group-item list-group-item-action mb-2">
+                                <h5>Discount on a Specific Collection</h5>
+                                <p class="fs--1">Set a fixed percentage or dollar discount on specific items. For example, 20% off all Library Wines.</p>
+                            </a>
+                            <a href="loyalty/create-loyalty-redemption-complimentary-product" class="list-group-item list-group-item-action mb-2">
+                                <h5>Complimentary Item</h5>
+                                <p class="fs--1">Select a specific complimentary item. For example, a complimentary glass of wine.</p>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private string title = "Create Campaign | Synergy Commerce Admin Panel";
+    
+
+  
+}

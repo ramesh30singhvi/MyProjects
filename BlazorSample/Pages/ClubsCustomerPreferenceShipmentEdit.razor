@@ -1,0 +1,1202 @@
+﻿@page "/clubs/customer-preference-shipment-edit/{Id:guid}"
+@layout AuthorizedLayout
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.DropDowns
+@using Syncfusion.Blazor.Calendars
+@using System.Collections.ObjectModel
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Client.Models
+@using Microsoft.Extensions.Options;
+@using Blazored.LocalStorage
+@using AutoMapper;
+@using System.Globalization;
+@inject IMapper _mapper
+@inject IOptions<SynergyAppSettings> _synergyAppSettings
+@inject IProductViewModel _productViewModel
+@inject IDepartmentViewModel _departmentViewModel
+@inject IVendorViewModel _vendorViewModel
+@inject ISettingsViewModel _settingViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject NavigationManager _navigationManager
+@inject ToastService toastService
+@inject IClubViewModel _clubViewModel
+@inject IShippingRatesViewModel _shippingRatesViewModel
+@inject IShippingCarrierViewModel _shippingCarrierViewModel
+@inject IUserViewModel _userViewModel
+@inject ILocalStorageService localStorage
+@inject IBusinessLocationViewModel _businessLocationViewModel
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+@if (clubShipmentDetail != null)
+{
+    <EditForm Model="@updateShipmentRequest" Context="formContext">
+        <DataAnnotationsValidator />
+        <div class="card shadow-none border mb-3">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0">
+                            <a href="/clubs/club-shipments" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-gem me-2"></span>@(clubData?.ClubName) - Shipment
+                        </h5>
+                    </div>
+                    <div class="col-auto">
+                        <a href="javascript:void();" class="btn btn-outline-dark me-2 @((ClubShipmentStatus)updateShipmentRequest.Status == ClubShipmentStatus.ShipmentReady ? " disabled" : "")" @onclick="@OpenActivateModal">Activate Shipment</a>
+                        <a class="btn btn-primary" @onclick="@(() => UpdateCustomerPreferenceShipment(formContext))" href="javascript:void();">Save</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12 col-md-8">
+                        <div class="row">
+                            <div class="col-12 col-md-4 d-flex align-items-center">
+                                <div class="card shadow-none border cover-image w-100 mb-4 mb-md-2">
+                                    <InputFile id="inputDrop" OnChange="OnInputFileChange" class="opacity-0 w-100 h-100 position-absolute" />
+                                    <a href="javascript:void();">
+                                        <img class="card-img-top p-2" src="@(String.IsNullOrEmpty(imgUrl) ? (_synergyAppSettings.Value.SynergyCDNBaseUrl + "business/photos/club/" + updateShipmentRequest.ShipmentImage + "?" + DateTime.Now) : imgUrl)" width="300" alt="@updateShipmentRequest.ShipmentName" hidden="@(string.IsNullOrEmpty(updateShipmentRequest.ShipmentImage))">
+                                        <div class="p-4 text-center" hidden="@(!string.IsNullOrEmpty(updateShipmentRequest.ShipmentImage))"><span class="far fa-image-polaroid text-400 fa-7x m-4"></span></div>
+                                    </a>
+                                    <label class="cover-image-file-input d-flex align-items-center" @onclick="() => UploadImage()">
+                                        <span class="far fa-cloud-upload-alt fa-2x me-2"></span>Change Shipment image
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-8">
+                                <div class="mb-3">
+                                    <label class="form-label" for="inputFriendlyName">Shipment Friendly Name</label>
+                                    <InputText @bind-Value="updateShipmentRequest.ShipmentName" id="inputFriendlyName" class="form-control" type="text"></InputText>
+                                    <ValidationMessage For="@(() => updateShipmentRequest.ShipmentName)" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="inputTechnicalName">Shipment Technical Name</label>
+                                    <InputText @bind-Value="updateShipmentRequest.TechnicalName" id="inputTechnicalName" class="form-control" type="text"></InputText>
+                                    <ValidationMessage For="@(() => updateShipmentRequest.TechnicalName)" />
+                                </div>
+                                <div clss="mb-3">
+                                    <label class="form-label" for="inputStaticClubType">Club Type</label>
+                                    <input type="text" readonly class="form-control-plaintext py-0" id="inputStaticClubType" value="Customer Preference">
+                                </div>
+                            </div>
+                        </div>
+
+                        <ul class="nav nav-tabs mt-4" id="productTabs" role="tablist">
+                            <li class="nav-item text-uppercase"><a class="nav-link@(isOverviewTabActive ? " active" : "")" @onclick="@(() => SetActiveTab("overview-tab"))" id="overview-tab" data-bs-toggle="tab" href="#tab-overview" role="tab" aria-controls="tab-overview" aria-selected="@(isOverviewTabActive ? "true" : "false")">Overview</a></li>
+                            <li class="nav-item text-uppercase"><a class="nav-link@(isFulfillmentTabActive ? " active" : "")" @onclick="@(() => SetActiveTab("fulfillment-tab"))" id="fulfillment-tab" data-bs-toggle="tab" href="#tab-fulfillment" role="tab" aria-controls="tab-fulfillment" aria-selected="@(isFulfillmentTabActive ? "true" : "false")">Fulfillment</a></li>
+                            <li class="nav-item text-uppercase"><a class="nav-link@(isInventoryTabActive ? " active" : "")" @onclick="@(() => SetActiveTab("inventory-tab"))" id="inventory-tab" data-bs-toggle="tab" href="#tab-inventory" role="tab" aria-controls="tab-inventory" aria-selected="@(isInventoryTabActive ? "true" : "false")">Inventory</a></li>
+                            <li class="nav-item text-uppercase"><a class="nav-link@(isCouponsPromosTabActive ? " active" : "")" @onclick="@(() => SetActiveTab("couponsPromos-tab"))" id="couponsPromos-tab" data-bs-toggle="tab" href="#tab-couponsPromos" role="tab" aria-controls="tab-couponsPromos" aria-selected="@(isCouponsPromosTabActive ? "true" : "false")">Promo Codes</a></li>
+                            <li class="nav-item text-uppercase"><a class="nav-link@(isMetaDataTabActive ? " active" : "")" @onclick="@(() => SetActiveTab("metadata-tab"))" id="metadata-tab" data-bs-toggle="tab" href="#tab-metadata" role="tab" aria-controls="tab-metadata" aria-selected="@(isMetaDataTabActive ? "true" : "false")">Meta Data</a></li>
+                            <li class="nav-item text-uppercase"><a class="nav-link@(isDocumentsTabActive ? " active" : "")" @onclick="@(() => SetActiveTab("documents-tab"))" id="documents-tab" data-bs-toggle="tab" href="#tab-documents" role="tab" aria-controls="tab-documents" aria-selected="@(isDocumentsTabActive ? "true" : "false")">Documents</a></li>
+                        </ul>
+                        <div class="tab-content border-x border-bottom p-3 mb-2" id="productTabContent">
+                            <div class="tab-pane fade@(isOverviewTabActive ? " active show" : "")" id="tab-overview" role="tabpanel" aria-labelledby="overview-tab">
+                                <div class="row mb-3 justify-content-between align-items-center">
+                                    <div class="col">
+                                        <h6>Shipment Requirements</h6>
+                                    </div>
+                                    <div class="col-auto">
+                                    </div>
+                                </div>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label" for="inputCost">Minimum Shipment Value</label>
+                                        <SfNumericTextBox @bind-Value="updateShipmentRequest.MinOrderValue" TValue="decimal" ValidateDecimalOnType="true" Decimals=2 ShowSpinButton="false"></SfNumericTextBox>
+                                    </div>
+                                </div>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label" for="inputMinimumItemQuantity">Minimum Item Quantity</label>
+                                        <SfNumericTextBox @bind-Value="updateShipmentRequest.MinProductQty" TValue="int" ShowSpinButton="false">
+                                            <NumericTextBoxEvents TValue="int" ValueChange="() => formContext.Validate()"></NumericTextBoxEvents>
+                                        </SfNumericTextBox>
+                                        <ValidationMessage For="@(() => updateShipmentRequest.MinProductQty)" />
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label" for="inputMaximumItemQuantity">Maximum Item Quantity</label>
+                                        <SfNumericTextBox @bind-Value="updateShipmentRequest.MaxProductQty" TValue="int" ShowSpinButton="false">
+                                            <NumericTextBoxEvents TValue="int" ValueChange="() => formContext.Validate()"></NumericTextBoxEvents>
+                                        </SfNumericTextBox>
+                                        <ValidationMessage For="@(() => updateShipmentRequest.MaxProductQty)" />
+                                    </div>
+                                </div>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-md-12">
+                                        <label class="form-label">Email Instructions</label>
+                                        <MessageInstruction @ref="mailInstruction" MaxTextCount="1000" RowsCount="3" MessageText="@updateShipmentRequest.EmailInstructions"></MessageInstruction>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade@(isFulfillmentTabActive ? " active show" : "")" id="tab-fulfillment" role="tabpanel" aria-labelledby="fulfillment-tab">
+                                <div class="row mb-3 justify-content-between align-items-center">
+                                    <div class="col">
+                                        <h6>Shipping Methods</h6>
+                                    </div>
+                                    <div class="col-auto">
+                                        <button type="button" @onclick="() => ShowAddShippingOptionModal()" class="btn btn-sm btn-primary">Add New</button>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <ClubShippingOptions @ref="ClubShippingOptionsComponent" ClubShippingOptionList="clubShippingOptions" RemoveShippingOption="RemoveShippingOption" SetDefaultShippingOption="SetDefaultShippingOption"></ClubShippingOptions>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade@(isInventoryTabActive ? " active show" : "")" id="tab-inventory" role="tabpanel" aria-labelledby="inventory-tab">
+                                <div class="row mb-3 justify-content-between align-items-center">
+                                    <div class="col">
+                                        <h6>Ship To Inventory</h6>
+                                    </div>
+                                    <div class="col-auto">
+                                    </div>
+                                </div>
+                                <div class="mb-3 sf-ddl">
+                                    <ShipmentInventoryPivotView @ref="ShipToPivotViewComponent" InventoryProducts="shipToInventoryProducts"></ShipmentInventoryPivotView>
+                                </div>
+                                @if (clubData?.AllowCustomerPickup ?? false && clubData?.ClubPickupLocation?.Count > 0)
+                                {
+                                    <div class="row mb-3 justify-content-between align-items-center">
+                                        <div class="col">
+                                            <h6>Customer Pickup Inventory</h6>
+                                        </div>
+                                        <div class="col-auto">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3 sf-ddl">
+                                        <ShipmentInventoryPivotView @ref="PickupPivotViewComponent" InventoryProducts="pickupInventoryProducts"></ShipmentInventoryPivotView>
+                                    </div>
+                                }
+                            </div>
+                            <div class="tab-pane fade@(isCouponsPromosTabActive ? " active show" : "")" id="tab-couponsPromos" role="tabpanel" aria-labelledby="couponsPromos-tab">
+                                <div class="mb-3 sf-ddl">
+                                    <label class="form-label" for="tags-multiselect">Coupons and Promotions</label>
+                                    <SfMultiSelect TValue="List<int>" @bind-Value="updateShipmentRequest.Coupons" TItem="BusinessDiscountForShipmentModel" Placeholder="Select Discounts" DataSource="@discountToBind" AllowFiltering="true">
+                                        <MultiSelectFieldSettings Text="DiscountCode" Value="Id"></MultiSelectFieldSettings>
+                                    </SfMultiSelect>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade@(isMetaDataTabActive ? " active show" : "")" id="tab-metadata" role="tabpanel" aria-labelledby="metadata-tab">
+                                <div class="row mb-3 justify-content-between align-items-center">
+                                    <div class="col">
+                                        <h6>Meta Data</h6>
+                                    </div>
+                                    <div class="col-auto">
+                                        <a href="javascript:void();" class="btn btn-sm btn-primary" @onclick="@OpenCustomAttributeModal">Add Custom Attribute</a>
+                                    </div>
+                                </div>
+                                <div class="row g-3 mb-3">
+                                    @for (int i = 0; i < customAttributeValues.Count; i++)
+                                    {
+                                        @if (customAttributeValues[i].AttributeType == "Text")
+                                        {
+                                            <div class="col-md-6">
+                                                <label class="form-label" for="inputCustomField1">@customAttributeValues[i].AttributeName</label>
+                                                <input id="inputCustomField1" class="form-control" type="text" @bind-value="@customAttributeValues[i].Value" />
+                                            </div>
+                                        }
+                                        @if (customAttributeValues[i].AttributeType == "Selection")
+                                        {
+                                            <div class="col-md-6">
+                                                <label class="form-label">@customAttributeValues[i].AttributeName</label>
+                                                <div class="col-sm-12 sf-ddl">
+                                                    <SfDropDownList id=sfLocationAddress TValue="string" TItem="SelectionDataModel" DataSource="@customAttributeValues[i].selectionDataModel">
+                                                        <DropDownListFieldSettings Text="Text" Value="Id"></DropDownListFieldSettings>
+                                                    </SfDropDownList>
+                                                </div>
+                                            </div>
+                                        }
+                                        @if (customAttributeValues[i].AttributeType == "Number")
+                                        {
+                                            <div class="col-md-6">
+                                                <label class="form-label" for="inputCustomField1">@customAttributeValues[i].AttributeName</label>
+                                                <input id="inputCustomField1" class="form-control" type="number" @bind-value="@customAttributeValues[i].Value" />
+                                            </div>
+                                        }
+                                        @if (customAttributeValues[i].AttributeType == "Toggle")
+                                        {
+                                            <div class="col-md-6">
+                                                <label class="form-label" for="inputCustomField1">@customAttributeValues[i].AttributeName</label>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" checked="@customAttributeValues[i].IsActive" @bind-value="@customAttributeValues[i].IsActive">
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                                <div class="mb-3 sf-ddl">
+                                    <label class="form-label" for="tags-multiselect">Shipment Tag(s)</label>
+                                    <SfMultiSelect Id="tags-multiselect" @bind-Value="@updateShipmentRequest.ShipmentTag" TValue="List<string>" TItem="ClubShipmentTagListModel" Placeholder="Add Tags" AllowCustomValue=true DataSource="@shipmentTagList">
+                                        <MultiSelectFieldSettings Text="Value" Value="Value"></MultiSelectFieldSettings>
+                                    </SfMultiSelect>
+                                </div>
+
+                                <div id="customMetaData">
+                                    @if (updateShipmentRequest.CustomBusinessMetaDatas != null)
+                                    {
+                                        <CustomMetaData customBusinessMetaData="@updateShipmentRequest.CustomBusinessMetaDatas" isReadOnly="false" />
+                                    }
+                                </div>
+
+                                <hr class="my-4" />
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label" for="inputCustomField1">Purchase URL</label>
+                                        <div class="input-group mb-3">
+                                            <input id="inputPurchaseURL" class="form-control" type="text" @bind="purchaseURL" disabled />
+                                            <Clipboard Content="@purchaseURL" />
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label" for="inputCustomField2">External Purchase URL</label>
+                                        <div class="input-group mb-3">
+                                            <input id="inputExternalPurchaseURL" class="form-control" type="text" @bind="@externalPurchaseUrl.MetaValue" placeholder="External Purchase URL" />
+                                            <Clipboard Content="@externalPurchaseUrl.MetaValue" />
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                            <div class="tab-pane fade@(isDocumentsTabActive ? " active show" : "")" id="tab-documents" role="tabpanel" aria-labelledby="documents-tab">
+                                <div class="row mb-3 justify-content-between align-items-center">
+                                    <div class="col">
+                                        <h6>Documents</h6>
+                                    </div>
+                                    <div class="col-auto">
+                                        <a class="btn btn-sm btn-primary" href="javascript:void(0)" @onclick="@OpenDocumentModal">Add Document</a>
+                                    </div>
+                                </div>
+                                <div class="min-vh-75 mb-3 sf-grid">
+                                    <ClubShipmentDocument @ref="ClubShipmentDocumentComponent" DocumentsDetailList="documentsDetailList" RemoveDocument="RemoveDocument"></ClubShipmentDocument>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="card shadow-none border mb-2">
+                            <div class="card-body">
+                                <div class="mb-3 sf-ddl">
+                                    <label class="form-label" for="inputShipmentStatus">Shipment Status</label>
+                                    <span class="badge badge-soft-dark bg-300 me-2 d-block">@(EnumHelper.GetDescription((ClubShipmentStatus)updateShipmentRequest.Status))</span>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="dpFirstReminderDate">First Reminder Date</label>
+                                    <SfDatePicker Enabled="false" @bind-Value="updateShipmentRequest.DateReminder1" id="dpFirstReminderDate" TValue="DateTime?"></SfDatePicker>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="dpFinalReminderDate">Final Reminder Date</label>
+                                    <SfDatePicker Enabled="false" @bind-Value="updateShipmentRequest.DateReminder2" id="dpFinalReminderDate" TValue="DateTime?"></SfDatePicker>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="dpCustomizationCutOffDate">Customization Cut Off Date</label>
+                                    <SfDatePicker Enabled="@(updateShipmentRequest.Status == (int)ClubShipmentStatus.ShipmentReady || updateShipmentRequest.Status == (int)ClubShipmentStatus.ShipmentsCreated || updateShipmentRequest.Status == (int)ClubShipmentStatus.BatchProcessed ? false : true)" @bind-Value="updateShipmentRequest.DateToCustomize" id="dpCustomizationCutOffDate" TValue="DateTime?"></SfDatePicker>
+                                    <ValidationMessage For="@(() => updateShipmentRequest.DateToCustomize)" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="dpAutomatedProcessingDate">Automated Processing Date</label>
+                                    <SfDatePicker Enabled="@(updateShipmentRequest.Status == (int)ClubShipmentStatus.ShipmentReady || updateShipmentRequest.Status == (int)ClubShipmentStatus.ShipmentsCreated || updateShipmentRequest.Status == (int)ClubShipmentStatus.BatchProcessed ? false : true)" @bind-Value="updateShipmentRequest.DateToProcess" id="dpAutomatedProcessingDate" TValue="DateTime?">
+                                        <DatePickerEvents TValue="DateTime?" ValueChange="(ChangedEventArgs<DateTime?> args) => DateToProcessChangeHandler(args, formContext)"></DatePickerEvents>
+                                    </SfDatePicker>
+                                    <ValidationMessage For="@(() => updateShipmentRequest.DateToProcess)" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="dpEarlyShipDate">Early Ship Date</label>
+                                    <SfDatePicker Enabled="@(updateShipmentRequest.Status == (int)ClubShipmentStatus.ShipmentReady || updateShipmentRequest.Status == (int)ClubShipmentStatus.ShipmentsCreated || updateShipmentRequest.Status == (int)ClubShipmentStatus.BatchProcessed ? false : true)" @bind-Value="updateShipmentRequest.DateToShipEarly" id="dpEarlyShipDate" TValue="DateTime?"></SfDatePicker>
+                                    <ValidationMessage For="@(() => updateShipmentRequest.DateToShipEarly)" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="dpStandardShipDate">Standard Ship Date</label>
+                                    <SfDatePicker Enabled="@(updateShipmentRequest.Status == (int)ClubShipmentStatus.ShipmentReady || updateShipmentRequest.Status == (int)ClubShipmentStatus.ShipmentsCreated || updateShipmentRequest.Status == (int)ClubShipmentStatus.BatchProcessed ? false : true)" @bind-Value="updateShipmentRequest.DateToShip" id="dpStandardShipDate" TValue="DateTime?"></SfDatePicker>
+                                    <ValidationMessage For="@(() => updateShipmentRequest.DateToShip)" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="dpCustomerPickupDate">Customer Pickup Date</label>
+                                    <SfDatePicker Enabled="@(updateShipmentRequest.Status == (int)ClubShipmentStatus.ShipmentReady || updateShipmentRequest.Status == (int)ClubShipmentStatus.ShipmentsCreated || updateShipmentRequest.Status == (int)ClubShipmentStatus.BatchProcessed ? false : true)" @bind-Value="updateShipmentRequest.DateToPickup" id="dpCustomerPickupDate" TValue="DateTime?"></SfDatePicker>
+                                    <ValidationMessage For="@(() => updateShipmentRequest.DateToPickup)" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card shadow-none border">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h6 class="mb-3 mb-md-0">Selected Products</h6>
+                    </div>
+                    <div class="col-auto">
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-12 col-md-6 sf-ddl">
+                        <label class="form-label" for="inputSearch">Search</label>
+                        <SfComboBox Enabled="@(!isBatchProcessedShipment)" ID="inputGroupSearch" @bind-Value="@selectedProduct" @ref="filterProductsObj" AllowFiltering="true" Placeholder="Search Products" DataSource="@products">
+                            <ComboBoxEvents TItem="ProductListModel" TValue="string" ValueChange="SelectProduct" Filtering="OnFilterProducts"></ComboBoxEvents>
+                            <ComboBoxFieldSettings Value="ProductTitle"></ComboBoxFieldSettings>
+                        </SfComboBox>
+                    </div>
+                    <div class="col-12 col-md-6 sf-ddl">
+                        <label class="form-label" for="selSortProductsBy">Sort</label>
+                        <SfDropDownList Enabled="@(!isBatchProcessedShipment)" id=sfItemType TValue="int" TItem="DropdownBindingModel" AllowFiltering="true" DataSource="@collectionSortTypes" @bind-Value="ProductSortType">
+                            <DropDownListEvents TItem="DropdownBindingModel" TValue="int" ValueChange="OnSortProducts"></DropDownListEvents>
+                            <DropDownListFieldSettings Text="Value" Value="Key"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <SfGrid @ref="shipmentItemGrid" DataSource="@shipmentProducts" Width="100%" AllowRowDragAndDrop="@allowRowDragAndDrop">
+                        <GridColumns>
+                            <GridColumn Visible="false" Field=@nameof(ProductItemsDetail.ProductId) HeaderText="Id" IsPrimaryKey="true" TextAlign="TextAlign.Left" Width="20" />
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Right" Width="15">
+                                <Template Context="ProductContext">
+                                    @{
+                                        var productContext = (ProductContext as ProductItemsDetail);
+                                        //<img class="img-fluid img-thumbnail me-2" alt="@productContext.ItemName" src="@(_synergyAppSettings.Value.SynergyCDNBaseUrl)business/photos/products/@productContext.ItemImage" width="50">
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="Product Name" TextAlign="TextAlign.Left" Width="60">
+                                <Template Context="ProductContext">
+                                    @{
+                                        var productContext = (ProductContext as ProductItemsDetail);
+                                        <div class="@(isBatchProcessedShipment ? "disabled-div" : "")">
+                                            <a href="javascript:void();" @onclick="() => ShowProductModal(productContext)">@($"{productContext.ItemName}")</a>
+                                        </div>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(ProductItemsDetail.DefaultQty) HeaderText="Default" TextAlign="TextAlign.Left" Width="20" />
+                            <GridColumn Field=@nameof(ProductItemsDetail.MinQty) HeaderText="Minimum" TextAlign="TextAlign.Left" Width="20" />
+                            <GridColumn Field=@nameof(ProductItemsDetail.MaxQty) HeaderText="Maximum" TextAlign="TextAlign.Left" Width="20" />
+                            <GridColumn HeaderText="Club Price" TextAlign="TextAlign.Left" Width="30">
+                                <Template Context="ProductContext">
+                                    @{
+                                        var productContext = (ProductContext as ProductItemsDetail);
+                                        <span>@(currencySymbol + productContext.ItemPrice.ToString("n2"))</span>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Right" Width="10">
+                                <Template>
+                                    @{
+                                        <button class="delete_icon me-2 @(isBatchProcessedShipment ? "disabled-div" : "")" @onclick="@(() => RemoveProduct((context as ProductItemsDetail)))">
+                                            <span class="far fa-trash-alt"></span>
+                                        </button>
+                                    }
+                                </Template>
+                            </GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+    <ImageCropper @ref="CropperModal" IsVisible="imageCroperActive" CropperConfiguration="cropperConfiguration" Cropped="OnCropped"></ImageCropper>
+}
+
+<!--#region Dialogs -->
+<EditForm Model="@productItem" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="EditProductModalVisibility">
+        <DialogTemplates>
+            <Header><h5 class="modal-title">@productItem.ItemName</h5></Header>
+            <Content>
+                <div class="row mb-3">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label" for="inputRetailPrice">Retail Price</label><br />
+                        <SfNumericTextBox @bind-Value="productItem.ItemRetailPrice" TValue="decimal" ValidateDecimalOnType="true" Decimals=2 ShowSpinButton="false"></SfNumericTextBox>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label" for="inputClubPrice">Club Price</label>
+                        <SfNumericTextBox @bind-Value="productItem.ItemPrice" TValue="decimal" ValidateDecimalOnType="true" Decimals=2 ShowSpinButton="false"></SfNumericTextBox>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label" for="inputDefaultQuantity">Default Qty</label>
+                        <SfNumericTextBox @bind-Value="productItem.DefaultQty" TValue="int" ShowSpinButton="false"></SfNumericTextBox>
+                    </div>
+                    <div class="col-12 col-md-6"></div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label" for="inputMinimumQuantity">Minimum Qty</label>
+                        <SfNumericTextBox @bind-Value="productItem.MinQty" TValue="int" ShowSpinButton="false">
+                            <NumericTextBoxEvents TValue="int" ValueChange="() => formContext.Validate()"></NumericTextBoxEvents>
+                        </SfNumericTextBox>
+                        <ValidationMessage For="@(() => productItem.MinQty)" />
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label" for="inputMaximumQuantity">Maximum Qty</label>
+                        <SfNumericTextBox @bind-Value="productItem.MaxQty" TValue="int" ShowSpinButton="false">
+                            <NumericTextBoxEvents TValue="int" ValueChange="() => formContext.Validate()"></NumericTextBoxEvents>
+                        </SfNumericTextBox>
+                        <ValidationMessage For="@(() => productItem.MaxQty)" />
+                    </div>
+                </div>
+            </Content>
+            <FooterTemplate>
+                <button type="button" class="btn btn-secondary" @onclick="() => HideProductModal()">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="() => UpdateProductDetail(formContext)">Save</button>
+            </FooterTemplate>
+        </DialogTemplates>
+    </SfDialog>
+</EditForm>
+
+<EditForm Model="documentsDetail" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="docModalVisibility">
+        <DialogTemplates>
+            <Header><h5 class="modal-title">Add Document</h5></Header>
+            <Content>
+                <div class="mb-3">
+                    <label class="form-label" for="inputCreateNew">Document Label</label>
+                    <InputText @bind-Value="documentsDetail.DocumentLabel" id="inpuyDocumentLabel" class="form-control" type="text"></InputText>
+                    <ValidationMessage For="@(() => documentsDetail.DocumentLabel)" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="inputCreateNew">Document URL</label>
+                    <InputText @bind-Value="documentsDetail.DocumentURL" id="inpuyDocumentLabel" class="form-control" type="text"></InputText>
+                    <ValidationMessage For="@(() => documentsDetail.DocumentURL)" />
+                </div>
+            </Content>
+            <FooterTemplate>
+                <button type="button" class="btn btn-secondary" @onclick="@CloseDocumentModal">Close</button>
+                <button type="button" class="btn btn-primary" @onclick="() => AddDocument(formContext)">Save</button>
+            </FooterTemplate>
+        </DialogTemplates>
+    </SfDialog>
+</EditForm>
+
+<EditForm Model="@clubShippingOption" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog Width="400px" IsModal="true" @bind-Visible="@displayAddShippingMethodModal">
+        <DialogTemplates>
+            <Header>Add Shipping Method</Header>
+            <Content>
+                <div class="mb-3 sf-ddl">
+                    <label class="form-label" for="inputAvailableMethods">Available Methods</label>
+                    <SfDropDownList id=inputAvailableMethods TValue="int" @bind-Value="clubShippingOption.ShipMethodId" TItem="ShippingCarrierCodeModel" DataSource="@serviceCodes.Where(x => !clubShippingOptions.Any(y => y.ShipMethodId == x.Id)).ToList()">
+                        <DropDownListFieldSettings Text="ServiceCodeName" Value="Id"></DropDownListFieldSettings>
+                    </SfDropDownList>
+                    <ValidationMessage For="@(() => clubShippingOption.ShipMethodId)" />
+                </div>
+            </Content>
+        </DialogTemplates>
+        <DialogButtons>
+            <DialogButton Content="Cancel" OnClick="@HideAddShippingOptionModal" />
+            <DialogButton Content="Save" IsPrimary="true" OnClick="@(() => AddShippingOption(formContext))" />
+        </DialogButtons>
+    </SfDialog>
+</EditForm>
+
+<SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="ActivateModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title"><span class="fa-solid fa-rocket-launch me-2"></span>Activate Shipment</h5></Header>
+        <Content>
+            <p>An active shipment can be processed. If applicable, customers will have access to customize and interact with their shipments.</p>
+            <p>You can not make changes to the shipment or set it back to draft once the shipment is activated.</p>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="@CloseActivateModal">Close</button>
+            <button type="button" class="btn btn-primary" @onclick="@UpdateShipmentStatus">Activate</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+<!--#endregion Dialogs -->
+@code
+{
+    #region Parameters and OnLoad
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "Create Customer Preference Shipment | Synergy Commerce Admin Panel";
+    private bool CustomAttributeModalVisibility { get; set; } = false;
+    private bool ActivateModalVisibility { get; set; } = false;
+    private string selectionValue;
+    private Member currentMember = new Member();
+    UserDetailModel loggedInUser = new UserDetailModel();
+    private bool isLoading = true;
+    private string purchaseURL = "https://www.cellarpass.com/pr/";
+    private ImageCropperConfiguration cropperConfiguration = new ImageCropperConfiguration();
+    private ImageCropper CropperModal { get; set; }
+    string imgUrl;
+    private bool imageCroperActive = false;
+    private ProductMetaDataModel externalPurchaseUrl = new ProductMetaDataModel();
+    private ClubShipmentDetailFullModel clubShipmentDetail = null;
+    private UpdateShipmentRequestModel updateShipmentRequest = new UpdateShipmentRequestModel { IsCustomerShipment = true };
+    List<ShippingRateModel> shippingRates = new List<ShippingRateModel>();
+    private List<ShippingCarrierCodeModel> serviceCodes = new List<ShippingCarrierCodeModel>();
+    ClubDetailFullModel clubData = null;
+    MessageInstruction mailInstruction;
+    public class TagModel
+    {
+        public string Name { get; set; }
+        public string Code { get; set; }
+    }
+    List<ClubShipmentTagListModel> shipmentTagList = new List<ClubShipmentTagListModel>();
+    private bool isBatchProcessedShipment = false;
+
+    List<DropdownBindingModel> clubShipmentStatusList = Enum.GetValues(typeof(ClubShipmentStatus))
+             .Cast<ClubShipmentStatus>()
+             .Select(t => new DropdownBindingModel
+                 {
+                     Key = (int)t,
+                     Value = EnumHelper.GetDescription(t)
+                 }).ToList();
+    private List<BusinessLocationModel> inventoryLocations = new List<BusinessLocationModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        isOverviewTabActive = true;
+        //Get Current Member
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        //Get Current User
+        var getUserData = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+        var userByEmail = await _userViewModel.GetUserByEmail(getUserData.Email);
+        if (userByEmail.success)
+            loggedInUser = userByEmail.data;
+
+        //Get shipping Rates
+        var shippingRatesResponse = await _shippingRatesViewModel.GetShippingRates(currentMember.Id);
+        if (shippingRatesResponse.success)
+        {
+            shippingRates = shippingRatesResponse.data;
+        }
+
+        //Get Shipping Carrier Service Codes
+        var shippingServiceCodesResponse = await _shippingCarrierViewModel.GetAllShippingCarrierServiceCodes();
+        if (shippingServiceCodesResponse.success)
+        {
+            foreach (var rate in shippingRates)
+            {
+                if (rate.IsClubSalesChannel)
+                {
+                    if (!serviceCodes.Any(x => x.Id == rate.ShippingServiceCode))
+                    {
+                        serviceCodes.Add(shippingServiceCodesResponse.data.Where(x => x.Id == rate.ShippingServiceCode).FirstOrDefault());
+                    }
+                }
+            }
+            serviceCodes = serviceCodes.OrderBy(x => x.ShippingCarrier).ThenBy(y => y.ServiceCodeName).ToList();
+        }
+        //Get Products
+        SearchProductResponse productResponse = await _productViewModel.SearchProducts(currentMember.Id, true, string.Empty,string.Empty);
+        if (productResponse.success)
+        {
+            allProducts = productResponse?.data?.OrderBy(x => x.ProductTitle).ToList();
+            currencySymbol = allProducts?.FirstOrDefault()?.CurrencySymbol ?? string.Empty;
+        }
+
+        //Get All Locations By Member Id
+        var locationResponse = await _businessLocationViewModel.GetBusinessLocations(currentMember.Id);
+        if (locationResponse.success)
+        {
+            //Get Inventory Locations Only
+            inventoryLocations = locationResponse?.data?.Where(x => x.IsInventoryLocation)?.OrderBy(x => x.DisplayLocationAddress)?.ToList() ?? new List<BusinessLocationModel>();
+        }
+
+        //Get All Shipment Tags By Business Id
+        var shipmentTagListResponse = await _clubViewModel.GetClubShipmentTagList(currentMember.Id);
+        shipmentTagList = shipmentTagListResponse?.data ?? new List<ClubShipmentTagListModel>();
+
+        if (Id.HasValue)
+        {
+            var shipmentDetailsResponse = await _clubViewModel.GetClubShipmentDetails(Id.ToString());
+            if (shipmentDetailsResponse.success && shipmentDetailsResponse.data != null)
+            {
+                clubShipmentDetail = shipmentDetailsResponse.data;
+                if (clubShipmentDetail.CustomBusinessMetaDatas != null && clubShipmentDetail.CustomBusinessMetaDatas.Count > 0)
+                {
+                    foreach (var item in clubShipmentDetail.CustomBusinessMetaDatas)
+                    {
+                        if (!string.IsNullOrEmpty(item.ContentChoices))
+                        {
+                            item.MetaDropdownItemData = System.Text.Json.JsonSerializer.Deserialize<List<MetaDropdownItem>>(item.ContentChoices);
+                        }
+                    }
+                }
+                else
+                {
+                    clubShipmentDetail.CustomBusinessMetaDatas = new List<CustomBusinessMetaDataModel>();
+                }
+
+                isBatchProcessedShipment = clubShipmentDetail.Status == ClubShipmentStatus.BatchProcessed;
+                updateShipmentRequest = _mapper.Map<UpdateShipmentRequestModel>(shipmentDetailsResponse.data);
+                updateShipmentRequest.IsCustomerShipment = true;
+                updateShipmentRequest.DateToCustomize = clubShipmentDetail.DateToCustomize == DateTime.MinValue ? null : clubShipmentDetail.DateToCustomize;
+                updateShipmentRequest.ShipmentTag = clubShipmentDetail.ClubShipmentTag;
+                if (clubShipmentDetail.ClubShipmentItem != null && clubShipmentDetail.ClubShipmentItem.Count > 0)
+                {
+                    shipmentProducts = new ObservableCollection<ProductItemsDetail>(_mapper.Map<List<ProductItemsDetail>>(clubShipmentDetail.ClubShipmentItem));
+                    ProductSortType = clubShipmentDetail.ClubShipmentItem.FirstOrDefault().SortOrder;
+                    OnSortProducts();
+                }
+                if (clubShipmentDetail.Documents?.Count > 0)
+                {
+                    documentsDetailList = _mapper.Map<List<DocumentsDetail>>(clubShipmentDetail.Documents);
+                }
+                var clubDetailResponse = await _clubViewModel.GetClubDetailsAsync(clubShipmentDetail.BusinessClubId, string.Empty);
+                if (clubDetailResponse.success && clubDetailResponse.data != null)
+                {
+                    clubData = clubDetailResponse.data;
+                    BindPreferredShippingOptions();
+                }
+            }
+        }
+        products = allProducts.Where(x => !shipmentProducts.Select(p => p.ProductId).ToList().Contains(x.Id)).ToList();
+        isLoading = false;
+        StateHasChanged();
+    }
+    #endregion
+
+    #region Tabs
+    private bool isOverviewTabActive = false;
+    private bool isFulfillmentTabActive = false;
+    private bool isInventoryTabActive = false;
+    private bool isCouponsPromosTabActive = false;
+    private bool isMetaDataTabActive = false;
+    private bool isDocumentsTabActive = false;
+    private async Task SetActiveTab(string tabName)
+    {
+        switch (tabName)
+        {
+            case "overview-tab":
+                isOverviewTabActive = true;
+                isFulfillmentTabActive = isInventoryTabActive = isCouponsPromosTabActive = isMetaDataTabActive = isDocumentsTabActive = false;
+                break;
+            case "fulfillment-tab":
+                isFulfillmentTabActive = true;
+                isOverviewTabActive = isInventoryTabActive = isCouponsPromosTabActive = isMetaDataTabActive = isDocumentsTabActive = false;
+                break;
+            case "inventory-tab":
+                await GetInventoryProduct();
+                isInventoryTabActive = true;
+                isOverviewTabActive = isFulfillmentTabActive = isCouponsPromosTabActive = isMetaDataTabActive = isDocumentsTabActive = false;
+                break;
+            case "couponsPromos-tab":
+                isCouponsPromosTabActive = true;
+                isOverviewTabActive = isFulfillmentTabActive = isInventoryTabActive = isMetaDataTabActive = isDocumentsTabActive = false;
+                break;
+            case "metadata-tab":
+                isMetaDataTabActive = true;
+                isOverviewTabActive = isFulfillmentTabActive = isInventoryTabActive = isCouponsPromosTabActive = isDocumentsTabActive = false;
+                break;
+            case "documents-tab":
+                isDocumentsTabActive = true;
+                isOverviewTabActive = isFulfillmentTabActive = isInventoryTabActive = isCouponsPromosTabActive = isMetaDataTabActive = false;
+                break;
+        }
+    }
+    #endregion
+
+    #region Upload Image
+    private async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        var maxAllowedFiles = 1;
+        var format = "image/png";
+        foreach (var imageFile in e.GetMultipleFiles(maxAllowedFiles))
+        {
+            var buffer = new byte[imageFile.Size];
+            await imageFile.OpenReadStream(buffer.LongLength).ReadAsync(buffer);
+            var imageDataUrl = $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+            await CropperModal.OnFileChange(imageDataUrl);
+            imageCroperActive = true;
+        }
+        StateHasChanged();
+    }
+
+    private async Task OnCropped(string value)
+    {
+        imageCroperActive = false;
+        imgUrl = value;
+        if (Id.HasValue)
+        {
+            var response = await _clubViewModel.UploadShipmentImage(new UploadShipmentImageRequestModel { Bytes = value, BusinessId = currentMember.Id, ShipmentGuid = Id.Value });
+            if (response.success)
+                updateShipmentRequest.ShipmentImage = response.data.ShipmentImageName;
+        }
+        StateHasChanged();
+    }
+
+    private async Task UploadImage()
+    {
+        imageCroperActive = false;
+        await CropperModal.TriggerFileSelect("inputDrop");
+    }
+    #endregion Upload Image
+
+    #region Documents
+    ClubShipmentDocument ClubShipmentDocumentComponent;
+    private bool docModalVisibility = false;
+    DocumentsDetail documentsDetail = new DocumentsDetail();
+    List<DocumentsDetail> documentsDetailList = new List<DocumentsDetail>();
+    private void OpenDocumentModal()
+    {
+        docModalVisibility = true;
+    }
+    private void CloseDocumentModal()
+    {
+        documentsDetail = new DocumentsDetail();
+        docModalVisibility = false;
+    }
+    private void AddDocument(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            documentsDetailList.Add(documentsDetail);
+            ClubShipmentDocumentComponent.RefreshGrid();
+            CloseDocumentModal();
+        }
+    }
+    private void RemoveDocument(DocumentsDetail document)
+    {
+        if (document != null)
+        {
+            documentsDetailList.Remove(document);
+            ClubShipmentDocumentComponent.RefreshGrid();
+        }
+    }
+    #endregion Documents
+
+    #region Other
+
+    private void OpenActivateModal()
+    {
+        this.ActivateModalVisibility = true;
+    }
+    private void CloseActivateModal()
+    {
+        this.ActivateModalVisibility = false;
+    }
+    private async Task UpdateShipmentStatus()
+    {
+        if (Id.HasValue && clubShipmentDetail != null)
+        {
+            isLoading = true;
+            var updateShipmentStatusRequest = new UpdateShipmentStatusRequestModel
+                {
+                    ShipmentGUID = Id.Value.ToString(),
+                    ShipmentId = clubShipmentDetail.Id,
+                    Status = ClubShipmentStatus.ShipmentReady
+                };
+            var updateShipmentStatusResponse = await _clubViewModel.UpdateShipmentStatus(updateShipmentStatusRequest);
+            isLoading = false;
+            if (updateShipmentStatusResponse.success)
+            {
+                updateShipmentRequest.Status = (int)ClubShipmentStatus.ShipmentReady;
+                toastService.ShowToast("Shipment Activated Successfully.", ToastLevel.Success);
+                CloseActivateModal();
+            }
+            else
+            {
+                toastService.ShowToast(updateShipmentStatusResponse.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    private void OpenCustomAttributeModal()
+    {
+        customAttribute = new CustomAttribute();
+        this.CustomAttributeModalVisibility = true;
+    }
+    private void CloseCustomAttributeModal()
+    {
+        customAttribute = new CustomAttribute();
+        this.CustomAttributeModalVisibility = false;
+    }
+
+    public class CustomAttribute
+    {
+        public string AttributeName { get; set; }
+        public string AttributeType { get; set; }
+        public string Value { get; set; }
+        public bool IsActive { get; set; }
+        public List<SelectionDataModel> selectionDataModel { get; set; }
+    }
+    private CustomAttribute customAttribute = new CustomAttribute();
+    private List<CustomAttribute> customAttributeValues = new List<CustomAttribute>();
+
+    private void AddCustomAttribute()
+    {
+        customAttribute.selectionDataModel = SelectionDataSource;
+        customAttributeValues.Add(customAttribute);
+        customAttribute = new CustomAttribute();
+        this.CustomAttributeModalVisibility = false;
+    }
+
+    List<SelectionDataModel> SelectionDataSource = new List<SelectionDataModel>()
+{
+        new SelectionDataModel{ Id = "1", Text = "Artwork"},
+        new SelectionDataModel{ Id = "2", Text = "Abstract"},
+    };
+
+    void OnDelete(SelectionDataModel selectionDataModel)
+    {
+        SelectionDataSource.RemoveAt(SelectionDataSource.ToList<SelectionDataModel>().FindIndex(e => e.Id == selectionDataModel.Id));
+    }
+
+    void AddItem()
+    {
+        SelectionDataSource.Add(new SelectionDataModel
+            {
+                Id = selectionValue,
+                Text = selectionValue,
+            });
+        selectionValue = string.Empty;
+    }
+
+    public class SelectionDataModel
+    {
+        public string Id { get; set; }
+        public string Text { get; set; }
+    }
+    #endregion
+
+    #region Shipment Items(Products)
+    List<DropdownBindingModel> collectionSortTypes = Enum.GetValues(typeof(CollectionSortType))
+                                            .Cast<CollectionSortType>()
+                                            .Select(t => new DropdownBindingModel
+                                                {
+                                                    Key = (int)t,
+                                                    Value = Helper.GetDisplayName(t)
+                                                }).ToList();
+    List<ProductListModel> allProducts = new List<ProductListModel>();
+    List<ProductListModel> products = new List<ProductListModel>();
+    ObservableCollection<ProductItemsDetail> shipmentProducts = new ObservableCollection<ProductItemsDetail>();
+    SfComboBox<string, ProductListModel> filterProductsObj { get; set; }
+    public int ProductSortType { get; set; } = 0;
+    private string selectedProduct = string.Empty;
+    private string currencySymbol = string.Empty;
+    SfGrid<ProductItemsDetail> shipmentItemGrid;
+    private bool allowRowDragAndDrop = false;
+    private void OnSortProducts()
+    {
+        if (shipmentProducts.Count > 0)
+        {
+            if (ProductSortType == (int)CollectionSortType.ProductNameA_Z)
+            {
+                allowRowDragAndDrop = false;
+                shipmentProducts = new ObservableCollection<ProductItemsDetail>(shipmentProducts.OrderBy(x => x.ItemName));
+            }
+            else if (ProductSortType == (int)CollectionSortType.ProductNameZ_A)
+            {
+                allowRowDragAndDrop = false;
+                shipmentProducts = new ObservableCollection<ProductItemsDetail>(shipmentProducts.OrderByDescending(x => x.ItemName));
+            }
+            else if (ProductSortType == (int)CollectionSortType.Manual)
+            {
+                allowRowDragAndDrop = true;
+            }
+            StateHasChanged();
+        }
+    }
+    private async Task OnFilterProducts(FilteringEventArgs args)
+    {
+        args.PreventDefaultAction = true;
+        var query = new Query().Where(new WhereFilter() { Field = "ItemName", Operator = "contains", value = args.Text, IgnoreCase = true });
+        query = !string.IsNullOrEmpty(args.Text) ? query : new Query();
+        await filterProductsObj.Filter(products, query);
+    }
+    private async Task SelectProduct(ChangeEventArgs<string, ProductListModel> args)
+    {
+        if (args.ItemData != null)
+        {
+            var product = products.Where(x => x.Id == args.ItemData.Id).FirstOrDefault();
+            if (product != null)
+            {
+                var shipmentItem = new ProductItemsDetail()
+                    {
+                        Id = 0,
+                        ProductId = product.Id,
+                        BusinessClubShipmentId = clubShipmentDetail.Id,
+                        ItemSku = product.ProductSku,
+                        DefaultQty = 0,
+                        ItemDetails = product.ProductTitle,
+                        ItemName = product.ProductTitle,
+                        ItemImage = product.ProductImage,
+                        ItemPrice = product.ClubPrice,
+                        MaxQty = 0,
+                        MinQty = 0,
+                        SortOrder = ProductSortType,
+                        ItemRetailPrice = product.RetailPrice
+                    };
+                if (shipmentProducts != null && shipmentProducts.Count > 0)
+                {
+                    shipmentProducts.Add(shipmentItem);
+                    selectedProduct = string.Empty;
+                }
+                else
+                {
+                    shipmentProducts = new ObservableCollection<ProductItemsDetail>();
+                    shipmentProducts.Add(shipmentItem);
+                    selectedProduct = string.Empty;
+                }
+                products = allProducts.Where(x => !shipmentProducts.Select(p => p.ProductId).ToList().Contains(x.Id)).ToList();
+                //Update Shipment
+                await UpdateCustomerPreferenceShipment(new EditContext(updateShipmentRequest));
+                if (isInventoryTabActive)
+                    await GetInventoryProduct();//Refresh inventory tab
+                StateHasChanged();
+            }
+        }
+    }
+    private async Task RemoveProduct(ProductItemsDetail product)
+    {
+        shipmentProducts.Remove(product);
+        products = allProducts.Where(x => !shipmentProducts.Select(p => p.ProductId).ToList().Contains(x.Id)).ToList();
+        //Update Shipment
+        await UpdateCustomerPreferenceShipment(new EditContext(updateShipmentRequest));
+        if (isInventoryTabActive)
+            await GetInventoryProduct();//Refresh inventory tab
+        StateHasChanged();
+    }
+
+    private bool EditProductModalVisibility { get; set; } = false;
+    ProductItemsDetail productItem = new ProductItemsDetail();
+    private void ShowProductModal(ProductItemsDetail itemsDetail)
+    {
+        productItem = itemsDetail;
+        EditProductModalVisibility = true;
+    }
+    private void HideProductModal()
+    {
+        EditProductModalVisibility = false;
+    }
+    private async Task UpdateProductDetail(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            isLoading = true;
+            foreach (var product in shipmentProducts)
+            {
+                if (product.ProductId == productItem.ProductId)
+                {
+                    product.ItemRetailPrice = productItem.ItemRetailPrice;
+                    product.ItemPrice = productItem.ItemPrice;
+                    product.DefaultQty = productItem.DefaultQty;
+                    product.MinQty = productItem.MinQty;
+                    product.MaxQty = productItem.MaxQty;
+                }
+            }
+            shipmentProducts = new ObservableCollection<ProductItemsDetail>(shipmentProducts);
+            //Update Shipment
+            await UpdateCustomerPreferenceShipment(new EditContext(updateShipmentRequest));
+            if (isInventoryTabActive)
+                await GetInventoryProduct();//Refresh inventory tab
+
+            StateHasChanged();
+            HideProductModal();
+            isLoading = false;
+        }
+    }
+    #endregion
+
+    #region Shipping Options
+    ClubShippingOptions ClubShippingOptionsComponent;
+    private bool displayAddShippingMethodModal = false;
+    ClubShippingOption clubShippingOption = new ClubShippingOption();
+    List<ClubShippingOption> clubShippingOptions = new List<ClubShippingOption>();
+    List<ShippingRateModel> shippingRateOption = new List<ShippingRateModel>();
+
+    private void ShowAddShippingOptionModal()
+    {
+        shippingRateOption = shippingRates.Where(s => !clubShippingOptions.Select(x => x.ShipMethodId).ToList().Contains(s.Id)).OrderBy(x => x.ShippingRateName).ToList();
+        clubShippingOption = new ClubShippingOption();
+        displayAddShippingMethodModal = true;
+    }
+    private void HideAddShippingOptionModal()
+    {
+        displayAddShippingMethodModal = false;
+        clubShippingOption = new ClubShippingOption();
+    }
+    private async Task AddShippingOption(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            var selectedServiceCode = serviceCodes?.FirstOrDefault(x => x.Id == clubShippingOption.ShipMethodId);
+            clubShippingOption.ShipMethodName = selectedServiceCode?.ServiceCodeName ?? string.Empty;
+            clubShippingOption.ServiceCode = selectedServiceCode?.ServiceCode ?? string.Empty;
+            clubShippingOption.ServiceName = selectedServiceCode?.ServiceName ?? string.Empty;
+            clubShippingOptions.Add(clubShippingOption);
+            clubShippingOption = new ClubShippingOption();
+            ClubShippingOptionsComponent.RefreshGrid();
+            StateHasChanged();
+            displayAddShippingMethodModal = false;
+            await UpdateBusinessClub();
+        }
+    }
+    private async Task RemoveShippingOption(ClubShippingOption option)
+    {
+        if (option != null)
+        {
+            clubShippingOptions.Remove(option);
+            ClubShippingOptionsComponent.RefreshGrid();
+            await UpdateBusinessClub();
+        }
+    }
+    private async Task SetDefaultShippingOption(ClubShippingOption model)
+    {
+        clubShippingOptions = clubShippingOptions.Select(x => { x.IsDefault = false; return x; }).ToList();
+        model.IsDefault = true;
+        await UpdateBusinessClub();
+    }
+    private void BindPreferredShippingOptions()
+    {
+        clubShippingOptions = clubData?.ClubDeliveryOption?.Select(d => new ClubShippingOption
+            {
+                ShipMethodId = d.ShipMethodId,
+                ShipMethodName = serviceCodes?.FirstOrDefault(r => r.Id == d.ShipMethodId)?.ServiceCodeName ?? string.Empty,
+                ServiceCode = serviceCodes?.FirstOrDefault(r => r.Id == d.ShipMethodId)?.ServiceCode ?? string.Empty,
+                ServiceName = serviceCodes?.FirstOrDefault(r => r.Id == d.ShipMethodId)?.ServiceName ?? string.Empty,
+                IsDefault = d.IsDefault
+            })?.ToList() ?? new List<ClubShippingOption>();
+    }
+    #endregion Shipping Options
+
+    #region Club
+    private async Task UpdateBusinessClub()
+    {
+        var businessClubUpdateModel = _mapper.Map<UpdateClubRequestModel>(clubData);
+        businessClubUpdateModel.Id = clubData.Id;
+        businessClubUpdateModel.ClubCancelReasons = clubData.ClubCancelReason;
+        businessClubUpdateModel.ClubFrequencies = clubData.ClubFrequency;
+        businessClubUpdateModel.ClubShippingOptions = clubShippingOptions.Select(x => new ClubShippingOptionsModel
+            {
+                BusinessClubId = clubData.Id,
+                ShipMethodId = x.ShipMethodId,
+                IsDefault = x.IsDefault,
+                Id = clubData.ClubDeliveryOption?.FirstOrDefault(c => c.ShipMethodId == x.ShipMethodId)?.Id ?? 0
+            }).ToList();
+        businessClubUpdateModel.ClubGiftShipments = clubData.ClubGiftShipmentCount;
+        businessClubUpdateModel.ClubPickupInventoryLocation = clubData.ClubPickupLocation;
+        businessClubUpdateModel.ClubShipInventoryLocation = clubData.ClubShipLocation;
+        businessClubUpdateModel.UserId = loggedInUser.Id;
+        if (businessClubUpdateModel.ClubImageFileName.Contains("/"))
+        {
+            int index = businessClubUpdateModel.ClubImageFileName.LastIndexOf("/");
+            if (index >= 0)
+                businessClubUpdateModel.ClubImageFileName = businessClubUpdateModel.ClubImageFileName.Substring(index + 1);
+        }
+        var result = await _clubViewModel.UpdateClubAsync(businessClubUpdateModel);
+        if (result.success)
+        {
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(result.error_info.description, ToastLevel.Error);
+        }
+    }
+    #endregion Club
+
+    #region Update Shipment
+    public void DateToProcessChangeHandler(ChangedEventArgs<DateTime?> args, EditContext editContext)
+    {
+        if (args != null && args.Value != null)
+        {
+            updateShipmentRequest.DateReminder1 = args.Value.Value.AddDays(-14);
+            updateShipmentRequest.DateReminder2 = args.Value.Value.AddDays(-2);
+            editContext.Validate();
+        }
+    }
+
+    private async Task UpdateCustomerPreferenceShipment(EditContext editContext)
+    {
+        updateShipmentRequest.EmailInstructions = mailInstruction.MessageText;
+        if (editContext.Validate())
+        {
+            isLoading = true;
+            updateShipmentRequest.IdGUID = Convert.ToString(Id.Value);
+            updateShipmentRequest.ProductItems = shipmentProducts?.Select(x => { x.SortOrder = ProductSortType; return x; })?.ToList() ?? new List<ProductItemsDetail>();
+            updateShipmentRequest.Documents = documentsDetailList ?? new List<DocumentsDetail>();
+
+            updateShipmentRequest.CustomMetaData = new List<CustomBusinessMetaDataRequestModel>();
+            foreach (var item in updateShipmentRequest.CustomBusinessMetaDatas)
+            {
+                CustomBusinessMetaDataRequestModel metaDataModel = new CustomBusinessMetaDataRequestModel()
+                    {
+                        Id = item.Id,
+                        BusinessClubShipmentId = clubShipmentDetail.Id,
+                        MetaNamespace = "CustomClubShipmentMeta",
+                        MetaKey = item.BusinessMetaDataId.ToString(),
+                        MetaValue = item.DefaultValue,
+                        ValueType = (int)ValueTypeEnum.String
+                    };
+                if (item.ContentType == (int)MetaDataContentType.Date)
+                {
+                    if (item.DateDefaultValue.HasValue)
+                    {
+                        metaDataModel.MetaValue = ((DateTime)item.DateDefaultValue).ToLongDateString();
+                    }
+                    //Console.WriteLine(item.DateDefaultValue);
+                    //DateTime parsedDate;
+                    //var dtResult = DateTime.TryParseExact(item.DateDefaultValue.ToString(), "MMddyyyy", new CultureInfo("en-US"), DateTimeStyles.None, out parsedDate);
+                    //Console.WriteLine(dtResult);
+                    //if (dtResult)
+                    //{
+                    //    Console.WriteLine(parsedDate);
+                    //    metaDataModel.MetaValue = parsedDate.ToString();
+                    //}
+                }
+                if (item.ContentType == (int)MetaDataContentType.Price)
+                {
+                    metaDataModel.MetaValue = item.PriceDefaultValue.ToString();
+                    metaDataModel.ValueType = (int)ValueTypeEnum.Integer;
+                }
+                if (item.ContentType == (int)MetaDataContentType.Boolean)
+                {
+                    metaDataModel.MetaValue = item.SwitchDefaultValue ? "true" : "false";
+                    metaDataModel.ValueType = (int)ValueTypeEnum.Boolean;
+                }
+                updateShipmentRequest.CustomMetaData.Add(metaDataModel);
+            }
+
+            var updateShipmentResponse = await _clubViewModel.UpdateShipmentAsync(updateShipmentRequest);
+            isLoading = false;
+            if (updateShipmentResponse.success)
+            {
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(updateShipmentResponse.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+    #endregion Update Shipment
+
+    #region Inventory
+    List<ClubShipmentInventoryData> shipToInventoryProducts = new List<ClubShipmentInventoryData>();
+    List<ClubShipmentInventoryData> pickupInventoryProducts = new List<ClubShipmentInventoryData>();
+    ShipmentInventoryPivotView ShipToPivotViewComponent;
+    ShipmentInventoryPivotView PickupPivotViewComponent;
+    private async Task GetInventoryProduct()
+    {
+        isLoading = true;
+        var inventoryResponse = await _clubViewModel.GetShipmentInventoryData(Id.Value);
+        if (inventoryResponse.success)
+        {
+            shipToInventoryProducts = inventoryResponse?.data?.ShipToInventory ?? new List<ClubShipmentInventoryData>();
+            pickupInventoryProducts = inventoryResponse?.data?.PickupInventory ?? new List<ClubShipmentInventoryData>();
+        }
+        isLoading = false;
+    }
+    #endregion Inventory
+
+    #region Coupons and Promo
+    List<BusinessDiscountForShipmentModel> discountToBind = new List<BusinessDiscountForShipmentModel>();
+    private async Task GetBusinessDiscountList()
+    {
+        var searchBusinessDiscountResponse = await _clubViewModel.GetBusinessDiscountsForShipment(Id.Value);
+        discountToBind = searchBusinessDiscountResponse?.data ?? new List<BusinessDiscountForShipmentModel>();
+    }
+    #endregion
+}

@@ -1,0 +1,299 @@
+﻿@page "/settings/custom-tax-rates"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Entities.v4;
+@using Syncfusion.Blazor.DropDowns;
+@using CellarPassAppAdmin.Shared.Models.RequestModel;
+@using CellarPassAppAdmin.Shared.Enums;
+@inject ISettingsViewModel _settingsViewModel
+@inject ICountryViewModel _countryViewModel
+@inject IStateViewModel _stateViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<div class="card mb-4">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings/taxes" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-calculator me-2"></span>Custom Tax Rates</h5>
+            </div>
+            <div class="col-auto"><button class="btn btn-sm btn-primary" @onclick="@(() => OpenAddEditTaxRateModal(null))">Add Tax Rate</button></div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="theme-wizard border-bottom p-3">
+            <ul class="nav justify-content-between nav-wizard">
+                <li class="nav-item">
+                    <a class="nav-link active fw-semi-bold" href="#bootstrap-wizard-tab1" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-1"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Create Tax Rate</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab2" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-2"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Assign Tax Class(es)</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab3" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-3"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Assign Region(s)</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab4" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-4"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Set Tax Rate</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab5" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-5"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Create Test Orders</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="sf-grid min-vh-75">
+            <SfGrid DataSource="@TaxRatesList" AllowPaging="false" Width="100%">
+                <GridColumns>
+                    <GridColumn HeaderText="Country" TextAlign="TextAlign.Left" Width="20">
+                        <Template>
+                            @{
+                                var model = (context as BusinessCustomTaxRateModel);
+                                <a href="javascript:void();" @onclick="@(() => OpenAddEditTaxRateModal(model))">@model.CountryName</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(BusinessCustomTaxRateModel.RegionName) HeaderText="Region" TextAlign="TextAlign.Left" Width="20"></GridColumn>
+                    <GridColumn HeaderText="Zip Codes" TextAlign="TextAlign.Left" Width="20">
+                        <Template>
+                            @{
+                                var zipCodesModel = (context as BusinessCustomTaxRateModel).ZipCodes;
+                        var ZipCodesString = zipCodesModel != null && zipCodesModel.Count > 0 ? String.Join(",", zipCodesModel.Select(y => y.ZipCode).ToList()) : string.Empty;
+                                @($"{ZipCodesString}")
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="Tax Class" TextAlign="TextAlign.Left" Width="40">
+                        <Template>
+                            @{
+                                var TaxClassesModel = (context as BusinessCustomTaxRateModel).TaxClasses;
+                        var TaxClassesString = String.Join(",", TaxClassesModel.Select(y => y.TaxClassName).ToList());
+                                @($"{TaxClassesString}")
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="Rate" TextAlign="TextAlign.Left" Width="20">
+                        <Template>
+                            @{
+                                @((context as BusinessCustomTaxRateModel).TaxRate.ToString("n2"))
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+</div>
+
+<SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="EditTaxModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">@(requestModel.Id == 0 ? "Add Custom Tax Rate" : "Edit Custom Tax Rate")</h5></Header>
+        <Content>
+            <EditForm Model="@requestModel" Context="customTaxRateFromContext">
+                <DataAnnotationsValidator />
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" @bind-value="@requestModel.Active" type="checkbox" id="chkActive" checked="@requestModel.Active">
+                        <label class="form-check-label" for="chkActive">Active</label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Tax Class</label>
+                    <SfMultiSelect TValue="List<int>" @bind-Value="@requestModel.TaxClasses" TItem="TaxClassModel" Mode="@VisualMode.Default" DataSource="@TaxClassList">
+                        <MultiSelectFieldSettings Text="TaxClassName" Value="Id"></MultiSelectFieldSettings>
+                    </SfMultiSelect>
+                    <ValidationMessage For="@(() => requestModel.TaxClasses)" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="selectCountry">Country</label>
+                    <select class="form-select" id="selectCountry" @bind="@requestModel.CountryId">
+                        <option value="">Select</option>
+                        @foreach (var item in countries)
+                        {
+                        <option value="@item.Id">@item.Name</option>
+                        }
+                    </select>
+                    <ValidationMessage For="@(() => requestModel.CountryId)" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="selectRegion">Region</label>
+                    <select class="form-select" id="selectRegion" @bind="@requestModel.RegionId">
+                        <option value="">Select</option>
+                        @foreach (var item in states)
+                        {
+                        <option value="@item.Id">@item.State</option>
+                        }
+                    </select>
+                    <ValidationMessage For="@(() => requestModel.RegionId)" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Zip Code</label>
+                    <SfMultiSelect TValue="List<string>" TItem="ZipCodeModel" @bind-Value="@requestModel.ZipCodes" Mode="@VisualMode.Default" AllowCustomValue=true DataSource="@zipCodes">
+                        <MultiSelectFieldSettings Text="ZipCode" Value="ZipCode"></MultiSelectFieldSettings>
+                    </SfMultiSelect>
+                    <ValidationMessage For="@(() => requestModel.ZipCodes)" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="inputTaxRate">Tax Rate</label>
+                    <SfNumericTextBox TValue="decimal" ValidateDecimalOnType="true" Decimals=2 ShowSpinButton="false" @bind-Value=@requestModel.TaxRate></SfNumericTextBox>
+                    <ValidationMessage For="@(() => requestModel.TaxRate)" />
+                </div>
+                <hr />
+                <div class="float-end pb-3">
+                    <button type="button" class="btn btn-secondary" @onclick="@CloseAddEditTaxRateModal">Close</button>
+                    <button type="button" class="btn btn-primary" @onclick="@(() => SaveBusinessCustomTaxRate(customTaxRateFromContext))">Save</button>
+                </div>
+            </EditForm>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+    private bool SpinnerVisibility { get; set; } = false;
+    private string title = "Sales Tax Rates | Synergy Commerce Admin Panel";
+    private bool EditTaxModalVisibility { get; set; } = false;
+    private Member currentMember = new Member();
+    private List<BusinessCustomTaxRateModel> TaxRatesList = new List<BusinessCustomTaxRateModel>();
+    private BusinessCustomTaxRateRequestModel requestModel = new BusinessCustomTaxRateRequestModel();
+    private List<TaxClassModel> TaxClassList = new List<TaxClassModel>();
+    private List<CpCountry> countries = new List<CpCountry>();
+    private List<CpState> states = new List<CpState>();
+    private List<ZipCodeModel> zipCodes = new List<ZipCodeModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        await GetCountries();
+        await GetStates();
+        await GetTaxClassList();
+        await GetBusinessCustomTaxRates();
+        SpinnerVisibility = false;
+        StateHasChanged();
+    }
+
+    private async Task GetBusinessCustomTaxRates()
+    {
+        var response = await _settingsViewModel.GetBusinessCustomTaxRates(currentMember.Id);
+        if (response.success)
+        {
+            TaxRatesList = response.data;
+        }
+    }
+
+    private async Task GetStates()
+    {
+        var response = await _stateViewModel.GetStates();
+        if (response.success)
+        {
+            states = response.data;
+        }
+    }
+
+    private async Task GetCountries()
+    {
+        var response = await _countryViewModel.GetCountries();
+        if (response.success)
+        {
+            countries = response.data;
+        }
+    }
+
+    private async Task GetTaxClassList()
+    {
+        var response = await _settingsViewModel.GetBusinessTaxClassList(currentMember.Id);
+        if (response.success)
+        {
+            TaxClassList = response.data;
+        }
+    }
+
+    private void OpenAddEditTaxRateModal(BusinessCustomTaxRateModel model)
+    {
+        SpinnerVisibility = true;
+        if (model != null)
+        {
+            var taxClassIds = new List<int>();
+            foreach (var item in model.TaxClasses)
+            {
+                taxClassIds.Add(item.Id);
+            }
+            var ZipCodeList = new List<string>();
+            if (model.ZipCodes != null && model.ZipCodes.Count > 0)
+            {
+                foreach (var item in model.ZipCodes)
+                {
+                    ZipCodeList.Add(item.ZipCode);
+                }
+            }
+
+            requestModel = new BusinessCustomTaxRateRequestModel()
+            {
+                Id = model.Id,
+                Active = model.Active,
+                CountryId = model.CountryId,
+                RegionId = model.RegionId,
+                TaxClasses = taxClassIds,
+                TaxRate = model.TaxRate,
+                ZipCodes = ZipCodeList
+            };
+        }
+        requestModel.BusinessId = currentMember.Id;
+        EditTaxModalVisibility = true;
+        SpinnerVisibility = false;
+        StateHasChanged();
+    }
+    private void CloseAddEditTaxRateModal()
+    {
+        EditTaxModalVisibility = false;
+    }
+
+    private async Task SaveBusinessCustomTaxRate(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var response = await _settingsViewModel.AddUpdateBusinessCustomTaxRate(requestModel);
+            if (response.success)
+            {
+                await GetBusinessCustomTaxRates();
+                if (requestModel.Id == 0)
+                {
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                }
+                else
+                {
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                }
+                EditTaxModalVisibility = false;
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+            SpinnerVisibility = false;
+            StateHasChanged();
+        }
+    }
+}

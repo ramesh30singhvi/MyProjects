@@ -1,0 +1,38 @@
+﻿<SfDialog IsModal="true" Width="600px" ShowCloseIcon="true" @bind-Visible="OpenDisabledDialog">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Feature Disabled</h5> </Header>
+        <Content>
+            <div class="row g-4">
+    <div class="col-4">
+        <img src="https://cdn.synergycommerce.io/admin/images/feature-disabled.png" class="img-fluid">
+    </div>
+    <div class="col-8">
+        <h5>@DisabledHeading</h5>
+        <p>This feature is currently disabled</p>
+        <p>Contact your Synergy Account Manager at (855) 423-4448 for a demo.</p>
+        <a href="%!" class="btn btn-sm btn-outline-primary">Contact Support</a>
+    </div>
+</div>
+        </Content>
+    </DialogTemplates>
+    <DialogEvents Closed="@DialogClose"></DialogEvents>
+    <DialogAnimationSettings Effect="@DialogEffect.Zoom"></DialogAnimationSettings>
+</SfDialog>
+
+
+@code {
+    [Parameter]
+    public bool OpenDisabledDialog { get; set; }
+
+    [Parameter]
+    public string DisabledHeading { get; set; }
+
+    [Parameter]
+    public EventCallback OnDialogClose { get; set; }
+
+    protected async Task DialogClose()
+    {
+        await OnDialogClose.InvokeAsync();
+    }
+
+}

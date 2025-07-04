@@ -1,0 +1,100 @@
+﻿@page "/sa/content/legal-articles"
+@layout SaLayout
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Models.ViewModel.SA
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums;
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA;
+@using Syncfusion.Blazor.RichTextEditor
+@inject ISaContentViewModel _saContentViewModel
+@inject ToastService toastService
+@inject ILegalArticleViewModel _legalArticleViewModel
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<div class="py-3">
+    <div class="row justify-content-between">
+        <div class="col-md-auto">
+            <h5 class="mb-3 mb-md-0"><a href="sa/content" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-file-signature me-2"></span>Legal Articles</h5>
+        </div>
+        <div class="col-md-auto">
+            <a class="btn btn-sm btn-primary" href="/sa/content/legal-articles-create">Create Article</a>
+        </div>
+    </div>
+    <hr />
+</div>
+<div class="row">
+    <div class="col-12">
+        <div class="mb-4">
+            @if (legalArticles.Count > 0)
+            {
+                <ul class="list-group list-group-border">
+                    @foreach (var legalArticle in legalArticles)
+                    {
+                        <li class="list-group-item py-3 mb-2">
+                            <h5>@legalArticle.ArticleTitle</h5>
+                            <div class="row">
+                                <div class="col-md-7">
+                                    <p>@legalArticle.ArticleSubTitle</p>
+                                </div>
+                                <div class="col-md-3">
+                                    <p>@legalArticle.ArticlePublishDate</p>
+                                </div>
+                                <div class="col-md-1 text-end">
+                                    <a class="btn btn-link" href="/sa/content/legal-articles-edit/@legalArticle.IdGUID"><span class="fa-regular fa-pencil"></span></a>
+                                </div>
+                                <div class="col-md-1 text-start">
+                                    <a class="btn btn-link" href="javascript:void(0)" @onclick="()=> DeleteLegalArticleTrigger(legalArticle.Id)"><span class="fa-regular fa-trash-alt text-danger"></span></a>
+                                </div>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+</div>
+<DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="()=>DeleteLegalArticle(idForDelete)"></DeleteConfirmation>
+
+@code
+{
+    private string title = "Legal Articles | Synergy Commerce Admin Panel";
+    List<LegalArticleModel> legalArticles = new List<LegalArticleModel>();
+    bool openDeleteDialog = false;
+    DeleteConfirmation DeleteConfirmation;
+    private int idForDelete = 0;
+    bool SpinnerVisibility = true;
+    private void DialogClose() => openDeleteDialog = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var response = await _legalArticleViewModel.GetLegalArticles();
+        if (response.success)
+        {
+            legalArticles = response.data;
+        }
+        SpinnerVisibility = false;
+    }
+
+    private async Task DeleteLegalArticle(int Id)
+    {
+        openDeleteDialog = false;
+        SpinnerVisibility = true;
+        var response = await _legalArticleViewModel.DeleteLegalArticle(Id);
+        if (response.success)
+        {
+            legalArticles = response.data;
+        }
+        SpinnerVisibility = false;
+        toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+    }
+
+    private void DeleteLegalArticleTrigger(int Id)
+    {
+        openDeleteDialog = true;
+        idForDelete = Id;
+    }
+}
+

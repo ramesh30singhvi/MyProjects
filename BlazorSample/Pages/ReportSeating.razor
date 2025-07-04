@@ -1,0 +1,2584 @@
+﻿@page "/reports/seating"
+@layout AuthorizedLayout
+@using Syncfusion.Blazor.Schedule
+@using Syncfusion.Blazor.Popups
+@using CellarPassAppAdmin.Shared.Enums
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.Spinner
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using System.Text.RegularExpressions;
+@using System;
+@inject HttpClient Http
+@inject IFloorPlanViewModel _FloorPlanViewModel
+@inject ICoversReportViewModel _CoversReportViewModel
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject IMessageLogViewModel _MessageLogViewModel
+@inject IReservationViewModel _ReservationViewModel
+
+<Title Value="@title"></Title>
+
+@if (loading == true)
+{
+   <SfSpinner @bind-Visible="loading"></SfSpinner>
+}
+else
+{
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h6 class="mb-3 mb-md-0">Seating Report</h6>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0 bg-light">
+            <div class="row">
+                @if (VisibilitySpinner == true)
+                {
+                    <div class="col-md-12" style="height:300px;">
+                        <SfSpinner @bind-Visible="VisibilitySpinner"></SfSpinner>
+                    </div>
+                }
+                else
+                {
+                    <div class="col-md-12">
+                        <div class="control-section">
+                            <div class="content-wrapper">
+                                <SfSchedule TValue="ScheduleData.RoomData" Readonly="true" AllowDragAndDrop="false" AllowResizing="false" ShowQuickInfo="false" Width="100%" @bind-SelectedDate="@CurrentDate" @bind-CurrentView="@CurrentView">
+                                    <ScheduleWorkHours Start="12:00" End="12:00"></ScheduleWorkHours>
+                                    <ScheduleViews>
+                                        <ScheduleView MaxEventsPerRow="1" Option="View.TimelineDay">
+                                            <ScheduleViewTimeScale SlotCount="1" Interval="60"></ScheduleViewTimeScale>
+                                        </ScheduleView>
+                                    </ScheduleViews>
+
+                                    <ScheduleGroup EnableCompactView="false" Resources="@GroupData"></ScheduleGroup>
+                                    <ScheduleResources>
+                                        <ScheduleResource TItem="ScheduleData.RoomsData" TValue="int[]" DataSource="@ResourceData" Field="RoomId" Title="Room Type" Name="MeetingRoom" TextField="Name" IdField="Id" ColorField="Color" AllowMultiple="false"></ScheduleResource>
+                                    </ScheduleResources>
+                                    <ScheduleTemplates>
+                                        <ResourceHeaderTemplate>
+                                            <div class='template-wrap'>
+                                                <div class="room-type">
+                                                    @if (!string.IsNullOrEmpty((((context as TemplateContext).ResourceData as ScheduleData.RoomsData).Type)))
+                                                    {
+                                                        <img src="@(((context as TemplateContext).ResourceData as ScheduleData.RoomsData).Type)" width="16" />
+                                                    }
+                                                </div>
+                                                <div class="room-name">@(((context as TemplateContext).ResourceData as ScheduleData.RoomsData).Name)</div>
+                                                <div class="room-capacity">@(((context as TemplateContext).ResourceData as ScheduleData.RoomsData).Capacity)</div>
+                                            </div>
+                                        </ResourceHeaderTemplate>
+                                    </ScheduleTemplates>
+                                    <ScheduleEvents TValue="ScheduleData.RoomData" Navigating="@OnCurrentDateChange" OnEventClick="@OnBtnClick"></ScheduleEvents>
+                                    <ScheduleEventSettings DataSource="@DataSource" AllowAdding="false" AllowDeleting="false" AllowEditing="false" AllowEditFollowingEvents="false">
+                                        <Template>
+                                            @if (!string.IsNullOrEmpty((context as ScheduleData.RoomData).Subject))
+                                            {
+                                                <div style='width:100%; opacity:@((context as ScheduleData.RoomData).Opacity); background:@((context as ScheduleData.RoomData).Color)'>
+                                                    <div class="e-subject">
+                                                        @{
+                                                            var min = (context as ScheduleData.RoomData).EndTime.Subtract((context as ScheduleData.RoomData).StartTime).Minutes;
+                                                            var hour = (context as ScheduleData.RoomData).EndTime.Subtract((context as ScheduleData.RoomData).StartTime).Hours;
+                                                        }
+                                                        @if (hour > 0)
+                                                        {
+                                                            <span style="float:left; margin-left:3px">@((context as ScheduleData.RoomData).Subject)</span>
+                                                            <span style="float:right; margin-right:3px">@((context as ScheduleData.RoomData).Location)</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            @if (min > 20)
+                                                            {
+                                                                <span style="float:left; margin-left:3px">@((context as ScheduleData.RoomData).Subject)</span>
+                                                                <span style="float:right; margin-right:3px">@((context as ScheduleData.RoomData).Location)</span>
+                                                            }
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+                                        </Template>
+                                    </ScheduleEventSettings>
+                                </SfSchedule>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-12 location-div links">
+                        <ul>
+                            @foreach (var item in result)
+                            {
+                                if (item != null)
+                                {
+                                    <li class="@(ActiveId == item.floor_plan_id ? "active" : null)">
+                                        <a href="" @onclick="()=> GetReservationByFloor(item.floor_plan_id,item.location_id,item.seating_reset_time)" @onclick:preventDefault>@item.technical_name</a>
+                                    </li>
+                                }
+
+                            }
+                        </ul>
+                    </div>
+                }
+
+            </div>
+
+        </div>
+    </div>
+    <div class="reservation-details">
+        <SfDialog Target="#target" Width="75%" ShowCloseIcon="true" @bind-Visible="Visibility">
+            <DialogTemplates>
+                <Header> Details </Header>
+                <Content>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <p style=" font-size: 16px;">
+                                @if (@currentreservationsdetails.GuestClubMember)
+                                {
+                                    <img src="Image/gem.svg" alt="" height="18" width="25" style="margin-top:-3px" />
+                                }
+                                @currentreservationsdetails.first_name  @currentreservationsdetails.last_name
+                                <span style=" font-size: 14px;">
+                                    @currentreservationsdetails.GuestCity@currentreservationsdetails.GuestState@currentreservationsdetails.GuestCountry
+                                </span>
+                            </p>
+                            @if (currentreservationsdetails.ReservationDataType == "rsvps" || currentreservationsdetails.ReservationDataType == "pre_assign_rsvps")
+                            {
+                                <div style="margin-top:-44px; margin-right: 31px;float:right;cursor:pointer" @onclick="()=> OnlogClick(currentreservationsdetails.ReservationDataType)">
+                                    <img src="Image/exclamation-circle.svg" alt="" height="18" width="25" />
+                                </div>
+                            }
+                        </div>
+                        <div class="col-md-12">
+                            <p style=" font-size: 15px;">
+                                @currentreservationsdetails.EventName
+                                Party of -
+                                @currentreservationsdetails.PartySize
+                            </p>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="col-md-12">
+                                        <p>
+                                            <img src="Image/clock.svg" alt="" height="18" width="20" style="margin-top:-3px" />
+                                            <span>@currentreservationsdetails.ETAlabel</span>
+                                        </p>
+                                    </div>
+                                    @if (string.IsNullOrEmpty(@currentreservationsdetails.BookingCode))
+                                    {
+                                        <div class="col-md-12">
+                                            <p>
+                                                <img src="Image/bell.svg" alt="" height="18" width="20" style="margin-top:-3px" />
+                                                <span style="color:@currentreservationsdetails.WaitTimeColor">
+                                                    @currentreservationsdetails.WaitTime
+                                                </span>
+                                            </p>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="col-md-12">
+                                            <p>
+                                                <img src="Image/check-circle.svg" alt="" height="18" width="20" style="margin-top:-3px" />
+                                                <span> @currentreservationsdetails.BookingCode</span>
+                                            </p>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="col-md-12">
+                                        <p>
+                                            <img src="Image/phone-alt.svg" alt="" height="18" width="20" style="margin-top:-3px" />
+                                            <span>@currentreservationsdetails.PhoneNumber</span>
+                                        </p>
+
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(@currentreservationsdetails.FloorPlan))
+                                    {
+                                        <div class="col-md-12">
+                                            <p>
+                                                <img src="Image/map-marker-alt.svg" alt="" height="18" width="20" style="margin-top:-3px" />
+                                                <i> @currentreservationsdetails.FloorPlan</i>
+                                            </p>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="col-md-4">
+                                    @if (!string.IsNullOrEmpty(@currentreservationsdetails.PaymentStatus))
+                                    {
+                                        @if (@currentreservationsdetails.PaymentStatus == "Unpaid")
+                                        {
+                                            <div class="col-md-12">
+                                                <p>
+                                                    <img src="Image/moneyicon.svg" alt="" height="20" width="25" style="margin-top:-3px" />
+                                                    <span style="color:red"> @currentreservationsdetails.PaymentStatus</span>
+                                                </p>
+                                            </div>
+                                        }
+                                        else if (string.IsNullOrEmpty(@currentreservationsdetails.PaymentCardLastFourDigits) && string.IsNullOrEmpty(@currentreservationsdetails.PaymentCardType))
+                                        {
+                                            <div class="col-md-12">
+                                                <p>
+                                                    <img src="Image/moneyicon.svg" alt="" height="20" width="25" style="margin-top:-3px" />
+                                                    <span> @currentreservationsdetails.PaymentStatus</span>
+                                                </p>
+
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="col-md-12">
+                                                <p>
+                                                    <img src="Image/moneyicon.svg" alt="" height="20" width="25" style="margin-top:-3px" />
+                                                    <span style="cursor:pointer;" @onclick="()=> OnPaylogClick(currentreservationsdetails.ReservationDataType)">
+                                                        @currentreservationsdetails.PaymentStatus
+                                                        @currentreservationsdetails.PaymentCardType
+                                                        @currentreservationsdetails.PaymentCardLastFourDigits
+                                                    </span>
+                                                </p>
+                                            </div>
+                                        }
+                                    }
+
+                                </div>
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(@currentreservationsdetails.MessageLogDetail.message))
+                        {
+                            <div class="col-md-12">
+                                <p>
+                                    <img src="Image/ic_sms_dark.svg" alt="" height="18" width="20" style="margin-top:-3px" />
+                                    <span> @currentreservationsdetails.MessageLogDetail.message</span>
+                                </p>
+                            </div>
+                        }
+                        <div class="col-md-12">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    @if (!string.IsNullOrEmpty(@currentreservationsdetails.MessageLogDetail.message))
+                                    {
+                                        <SfButton CssClass="e-outline smsbtn" @onclick="()=> OnSmsBtnClick(currentreservationsdetails.ReservationDataType)">Send Alert SMS</SfButton>
+
+                                    }
+                                    else
+                                    {
+                                        <SfButton CssClass="e-outline smsbtndisabled disabled" Disabled="true">Send Alert SMS</SfButton>
+                                    }
+                                </div>
+                                <div class="col-md-4">
+                                    <SfButton CssClass="e-outline buttondesign">More Actions</SfButton>
+                                </div>
+                                <div class="col-md-4">
+                                    <SfButton CssClass="e-success buttondesign">Modify</SfButton>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <SfButton CssClass="e-outline buttondesignstatus" @onclick="OnStatusBtnClick">@currentreservationsdetails.StatusActionDetail.Name</SfButton>
+                                    <style>
+                                        .buttondesignstatus {
+                                            background-color: @currentreservationsdetails.StatusActionDetail.Color !important;
+                                            color: #fff !important;
+                                        }
+                                    </style>
+                                </div>
+                                <div class="col-md-4">
+                                    <SfButton CssClass="e-outline serverbtn" @onclick="OnAssignServerBtnClick">@currentreservationsdetails.AssignServerButtonText</SfButton>
+                                </div>
+                                <div class="col-md-4">
+                                    <SfButton IsPrimary="true" CssClass="buttondesign">Modify pre-Assigned Table(s)</SfButton>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <hr />
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 style="margin-bottom:0px">Tags</h6>
+                                </div>
+                                <div class="col-md-6" style="text-align:right">
+                                    @if (@currentreservationsdetails.Tags.Count > 0)
+                                    {
+                                        <h6 style="margin-bottom:0px;cursor:pointer;" @onclick="()=> OnTagClick()">Edit Tags</h6>
+                                    }
+                                    else
+                                    {
+                                        <h6 style="margin-bottom:0px;cursor:pointer;" @onclick="()=> OnTagClick()">Add Tags</h6>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div style="color: #d2cfcf !important; margin-left: 0px !important; margin-top:10px;">
+                                @if (@currentreservationsdetails.Tags.Count > 0)
+                                {
+                                    @foreach (var tag in @currentreservationsdetails.Tags)
+                                    {
+                                        <span style="border-radius:5px;padding:5px;color: #fff !important;background-color:#1069B0; margin-left: 10px !important;margin-top:2px;">@tag</span>
+                                    }
+                                }
+                                else
+                                {
+                                    <span style="padding:5px;color: #d2cfcf !important; margin-left: 10px !important;">None</span>
+                                }
+                            </div>
+                            <hr />
+                        </div>
+                        <div class="col-md-12">
+                            <h6 style="margin-bottom:0px">Waitlist Notes</h6>
+                            <span style="color: #d2cfcf !important; margin-left: 10px !important;">None</span>
+                        </div>
+                        <div class="col-md-12">
+                            <h6 style="margin-bottom:0px">Guest Notes</h6>
+                            <span style="color: #d2cfcf !important; margin-left: 10px !important;">None</span>
+                        </div>
+                        <div class="col-md-12">
+                            <h6 style="margin-bottom:0px">Account Notes</h6>
+                            <span style="color: #d2cfcf !important; margin-left: 10px !important;">None</span>
+                        </div>
+                    </div>
+                </Content>
+            </DialogTemplates>
+            <DialogButtons>
+                @*<DialogButton IsPrimary="true" Content="<a id='newTab' href='https://www.syncfusion.com/company/about-us' target='_blank'>Learn More</a>" OnClick="@OnBtnClick" />*@
+            </DialogButtons>
+        </SfDialog>
+    </div>
+    <div class="sms-popup">
+        <SfDialog Target="#target" Width="22%" CssClass="SmsPopup" ShowCloseIcon="true" @bind-Visible="SMSPopupVisibility">
+            <DialogTemplates>
+                <Content>
+                    <div class="row" style="text-align:center;">
+                        <div class="col-md-12">
+                            <h6>Choose Alert Message</h6>
+                            <p style="font-size:12px;margin: 0;">SMS Alert will be sent to</p>
+                            <p style="font-size:12px">@currentreservationsdetails.PhoneNumber</p>
+                        </div>
+                        <hr />
+                        @foreach (var smsQuery in templatesmessage)
+                        {
+                            <div class="col-md-12">
+                                <p style="color: #3580bc;">@smsQuery.message_title</p>
+                            </div>
+                            <hr />
+                        }
+                        <div class="col-md-12">
+                            <a href="#">Custom Message</a>
+                        </div>
+                    </div>
+                </Content>
+            </DialogTemplates>
+        </SfDialog>
+    </div>
+    <div class="log-popup">
+        <SfDialog Target="#target" Width="35%" CssClass="LogPopup" ShowCloseIcon="true" @bind-Visible="LogPopupVisibility">
+            <DialogTemplates>
+                <Header>
+                    <h5 style="text-align:center;margin-left:35px;">Change Log</h5>
+                </Header>
+                <Content>
+                    <div class="row">
+                        @foreach (var changelog in currentreservationsdetails.ReservationStatusLog)
+                        {
+                            <div class="col-md-12">
+                                <div class="col-md-2">
+                                    <p>@changelog.reservation_status_date.ToString("MMM")</p>
+                                    <p style="margin-top:-16px;">@changelog.reservation_status_date.ToString("dd")</p>
+                                </div>
+                                <div class="col-md-10" style="float: right; margin-top: -58px;">
+                                    <p>@((MarkupString)changelog.log_note)</p>
+                                    <p style="margin-left: 20px; margin-top: -15px;">@changelog.reservation_status_date.AddMinutes(TimeZoneInterval).ToString("hh:mm tt")</p>
+                                </div>
+                            </div>
+                            <hr />
+                        }
+
+                    </div>
+                </Content>
+            </DialogTemplates>
+        </SfDialog>
+    </div>
+    <div class="status-button-popup">
+        <SfDialog Target="#target" Width="22%" CssClass="statusbuttonPopup" ShowCloseIcon="true" @bind-Visible="StatusbuttonVisibility">
+            <DialogTemplates>
+                <Header>
+                    <h6 style="text-align: center;">Choose New Status</h6>
+                </Header>
+                <Content>
+                    <div class="row" style="padding:0; text-align:center;">
+                        @if (@currentreservationsdetails.ReservationDataType == "rsvps" || @currentreservationsdetails.ReservationDataType == "pre_assign_rsvps")
+                        {
+                            if (@currentreservationsdetails.StatusActionDetail.Name == "Seated" || @currentreservationsdetails.StatusActionDetail.Name == "Partially Seated")
+                            {
+                                <div class="col-md-12">
+                                    @foreach (var item in @tablestatusgroupresponse)
+                                    {
+                                        var temp_color = "background-color:" + item.color + " !important;";
+                                        if (item.id == 0 || item.id == 9)
+                                        {
+                                            <SfButton @onclick="() => SetTableStatusNoneOrFinished(item.id)" CssClass="e-outline statusbtn" style="@temp_color">Finished</SfButton>
+                                        }
+                                        else
+                                        {
+                                            <SfButton @onclick="() => SetTableStatusOtherThanNoneOrFinished(item.id)" CssClass="e-outline statusbtn" style="@temp_color">@item.name</SfButton>
+                                        }
+                                    }
+
+                                </div>
+                            }
+                            else
+                            {
+                                if (@currentreservationsdetails.event_start_date.Date == DateTime.UtcNow.Date)//present
+                                {
+                                    <div class="col-md-12">
+                                        <SfButton CssClass="e-outline statusbtn rsvp-confirmed" @onclick="SetReservationStatusRsvpConfirmed">Confirmed</SfButton>
+                                        <SfButton CssClass="e-outline statusbtn rsvp-guestDelayed" @onclick="OnGuestDeayedBtnClick">Guest Delayed</SfButton>
+                                        <SfButton CssClass="e-outline statusbtn rsvp-arrived" @onclick="SetReservationStatusRsvpArrived">Arrived</SfButton>
+                                        <SfButton CssClass="e-outline statusbtn rsvp-cancelled" @onclick="OnCancelBtnClick">Cancelled</SfButton>
+                                        <SfButton CssClass="e-outline statusbtn rsvp-noShow" @onclick="SetReservationStatusNoShow">No Show</SfButton>
+                                    </div>
+
+                                }
+                                else if (@currentreservationsdetails.event_start_date.Date > DateTime.UtcNow.Date)//future
+                                {
+                                    <div class="col-md-12">
+                                        <SfButton CssClass="e-outline statusbtn rsvp-cancelled" @onclick="OnCancelBtnClick">Cancelled</SfButton>
+                                    </div>
+                                }
+                                else//past
+                                {
+
+                                    <div class="col-md-12">
+                                        <SfButton CssClass="e-outline statusbtn rsvp-cancelled" @onclick="OnCancelBtnClick">Cancelled</SfButton>
+                                        <SfButton CssClass="e-outline statusbtn rsvp-noShow" @onclick="SetReservationStatusNoShow">No Show</SfButton>
+                                    </div>
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (@currentreservationsdetails.StatusActionDetail.Name == "Seated" || @currentreservationsdetails.StatusActionDetail.Name == "Partially Seated")
+                            {
+                                <div class="col-md-12">
+                                    <SfButton @onclick="() => SetTableStatusOtherThanNoneOrFinished(3)" CssClass="e-outline statusbtn wl-default-partiallyseated">Partially Seated</SfButton>
+                                    <SfButton @onclick="() => SetTableStatusOtherThanNoneOrFinished(2)" CssClass="e-outline statusbtn wl-default-seated">Seated</SfButton>
+                                    <SfButton @onclick="() => SetTableStatusOtherThanNoneOrFinished(4)" CssClass="e-outline statusbtn wl-default-firstcourse">First Course</SfButton>
+                                    <SfButton @onclick="() => SetTableStatusOtherThanNoneOrFinished(5)" CssClass="e-outline statusbtn wl-default-check">Check</SfButton>
+                                    <SfButton @onclick="() => SetTableStatusOtherThanNoneOrFinished(6)" CssClass="e-outline statusbtn wl-default-bus">Bus</SfButton>
+                                    <SfButton @onclick="() => SetTableStatusNoneOrFinished(0)" CssClass="e-outline statusbtn wl-default-finished">Finished</SfButton>
+                                </div>
+                            }
+                            else
+                            {
+                                if (@currentreservationsdetails.wait_start_time.Date == DateTime.UtcNow.Date)//present
+                                {
+
+                                    <div class="col-md-12">
+                                        <SfButton CssClass="e-outline statusbtn wl-waiting" @onclick="() => UpdateWaitlistStatus(0)">Waiting</SfButton>
+                                        <SfButton CssClass="e-outline statusbtn wl-ready" @onclick="() => UpdateWaitlistStatus(1)">Ready</SfButton>
+                                        <SfButton CssClass="e-outline statusbtn wl-arrived" @onclick="() => UpdateWaitlistStatus(8)">Arrived</SfButton>
+                                        <SfButton CssClass="e-outline statusbtn wl-cencelled" @onclick="() => UpdateWaitlistStatus(3)">Cencelled</SfButton>
+                                        <SfButton CssClass="e-outline statusbtn wl-noShow" @onclick="() => UpdateWaitlistStatus(4)">No Show</SfButton>
+                                    </div>
+
+                                }
+                                else if (@currentreservationsdetails.wait_start_time.Date > DateTime.UtcNow.Date)//future
+                                {
+                                    <div class="col-md-12">
+                                        <SfButton CssClass="e-outline statusbtn wl-cencelled" @onclick="() => UpdateWaitlistStatus(3)">Cencelled</SfButton>
+                                    </div>
+                                }
+                                else//past
+                                {
+                                    <div class="col-md-12">
+                                        <SfButton CssClass="e-outline statusbtn wl-cencelled" @onclick="() => UpdateWaitlistStatus(3)">Cencelled</SfButton>
+                                        <SfButton CssClass="e-outline statusbtn wl-noShow" @onclick="() => UpdateWaitlistStatus(4)">No Show</SfButton>
+                                    </div>
+                                }
+                            }
+                        }
+                    </div>
+                </Content>
+            </DialogTemplates>
+        </SfDialog>
+    </div>
+    <div class="delayed-popup">
+        <SfDialog Target="#target" Width="22%" CssClass="delayedPopup" ShowCloseIcon="true" @bind-Visible="DelayedPopupVisibility">
+            <DialogTemplates>
+                <Header>
+                    <h6 style="text-align: center;">Choose New Status</h6>
+                </Header>
+                <Content>
+                    <div class="row" style="padding:0">
+                        <div class="col-md-12">
+                            <SfButton CssClass="e-outline cancelsbtn" @onclick="()=>SetReservationStatusRsvpGuestDelayed(0)">Don't Know</SfButton>
+                        </div>
+                        <div class="col-md-12">
+                            <SfButton CssClass="e-outline cancelsbtn" @onclick="()=>SetReservationStatusRsvpGuestDelayed(5)">5 Minutes</SfButton>
+                        </div>
+                        <div class="col-md-12">
+                            <SfButton CssClass="e-outline cancelsbtn" @onclick="()=>SetReservationStatusRsvpGuestDelayed(10)">10 Minutes</SfButton>
+                        </div>
+                        <div class="col-md-12">
+                            <SfButton CssClass="e-outline cancelsbtn" @onclick="()=>SetReservationStatusRsvpGuestDelayed(15)">15 Minutes</SfButton>
+                        </div>
+                        <div class="col-md-12">
+                            <SfButton CssClass="e-outline cancelsbtn" @onclick="()=>SetReservationStatusRsvpGuestDelayed(30)">30 Minutes</SfButton>
+                        </div>
+                        <div class="col-md-12">
+                            <SfButton CssClass="e-outline cancelsbtn" @onclick="()=>SetReservationStatusRsvpGuestDelayed(45)">45 Minutes</SfButton>
+                        </div>
+                        <div class="col-md-12">
+                            <SfButton CssClass="e-outline cancelsbtn" @onclick="()=>SetReservationStatusRsvpGuestDelayed(60)">60 Minutes</SfButton>
+                        </div>
+                        <div class="col-md-12">
+                            <SfButton CssClass="e-outline cancelsbtn" @onclick="()=>SetReservationStatusRsvpGuestDelayed(90)">90 Minutes</SfButton>
+                        </div>
+                        <div class="col-md-12">
+                            <SfButton CssClass="e-outline cancelsbtn" @onclick="@(()=> this.DelayedPopupVisibility=false)">Cancel</SfButton>
+                        </div>
+                    </div>
+                </Content>
+            </DialogTemplates>
+        </SfDialog>
+    </div>
+    <div class="cancel-popup">
+        <SfDialog Target="#target" Width="30%" CssClass="cancelPopup" ShowCloseIcon="true" @bind-Visible="CancelPopupVisibility">
+            <DialogTemplates>
+                <Header>
+                    <h6 style="text-align: center;">Cancel Reservation</h6>
+                </Header>
+                <Content>
+                    <div class="col-md-12">
+                        <p> @currentreservationsdetails.last_name - @currentreservationsdetails.BookingCode</p>
+                        <p>@currentreservationsdetails.email</p>
+                        <br />
+                    </div>
+                    <hr />
+                    <div class="col-md-12">
+                        <p>You have selected thish reservation to be canceled.</p>
+                        <p>Send confirmation to Guest <SfSwitch CssClass="sendconfirmation" @bind-Checked="@isSendconfirmation"></SfSwitch></p>
+                        <p>Cancellation Policy: 96 Hours </p>
+                        <p>Refound deposit $2.21 to Guest <SfSwitch CssClass="refounddeposit" @bind-Checked="@isRefounddeposit"></SfSwitch></p>
+                    </div>
+                    <div class="col-md-12">
+                        <SfButton CssClass="e-outline cancelreservation" @onclick="SetReservationStatusRsvpCancel">Cancel Reservation</SfButton>
+                    </div>
+                </Content>
+            </DialogTemplates>
+        </SfDialog>
+    </div>
+    <div class="pay-popup">
+        <SfDialog Target="#target" Width="35%" CssClass="PayPopup" ShowCloseIcon="true" @bind-Visible="PayPopupVisibility">
+            <DialogTemplates>
+                <Header>
+                    <h5 style="text-align:center;margin-left:35px;">Payment Log</h5>
+                </Header>
+                <Content>
+                    <div class="row">
+                        @if (currentreservationsdetails.ReservationPaymentsLog.Count > 0)
+                        {
+                            <div class="col-md-12" style="border-bottom: 1px solid gray;">
+                                <p><strong>@currentreservationsdetails.GuestName</strong></p>
+                                <p>@currentreservationsdetails.PaymentDetails</p>
+                            </div>
+                            @foreach (var paylog in currentreservationsdetails.ReservationPaymentsLog)
+                            {
+                                <div class="col-md-12" style="border-bottom: 1px solid gray;">
+                                    <div class="row">
+                                        <div class="col-md-3" style="border-right: 1px solid gray;">
+                                            <p style="color: #4f4f50;font-size: 13px;">@paylog.payment_date.ToString("MMM")</p>
+                                            <p style="margin-top: -16px;color: #4f4f50;font-size: 13px;">@paylog.payment_date.ToString("dd")</p>
+                                            <p style="color: #828283; font-size: 11px;">@paylog.payment_date.AddMinutes(TimeZoneInterval).ToString("hh:mm tt")</p>
+                                        </div>
+                                        @{
+                                            var transactionType = "";
+                                            var transactionColor = "";
+                                            var dash = "-";
+                                            var paymentStatusName = "";
+                                            @if (paylog.transaction_type == (int)PaymentTransactionType.none)
+                                            {
+                                                transactionType = "None";
+                                                transactionColor = "#4f4f50";
+                                            }
+                                            else if (paylog.transaction_type == (int)PaymentTransactionType.authOnly)
+                                            {
+                                                transactionType = "Auth Only";
+                                                transactionColor = "#4f4f50";
+                                            }
+                                            else if (paylog.transaction_type == (int)PaymentTransactionType.sale)
+                                            {
+                                                transactionType = "Sale";
+                                                transactionColor = "#4EB33E";
+                                            }
+                                            else if (paylog.transaction_type == (int)PaymentTransactionType.credit)
+                                            {
+                                                transactionType = "Credit";
+                                                transactionColor = "#4f4f50";
+                                            }
+                                            else if (paylog.transaction_type == (int)PaymentTransactionType.Void)
+                                            {
+                                                transactionType = "Void";
+                                                transactionColor = "#4f4f50";
+                                            }
+                                            else
+                                            {
+                                                transactionType = "Capture";
+                                                transactionColor = "#4f4f50";
+                                            }
+                                            @if (paylog.status == (int)PaymentStatus.noPayment)
+                                            {
+                                                paymentStatusName = "No Payment-" + paylog.detail;
+                                            }
+                                            else if (paylog.status == (int)PaymentStatus.paidFull)
+                                            {
+                                                paymentStatusName = "Paid in Full";
+                                            }
+                                            else if (paylog.status == (int)PaymentStatus.overPaid)
+                                            {
+                                                paymentStatusName = "OverPaid";
+                                            }
+                                            else if (paylog.status == (int)PaymentStatus.paidPartial)
+                                            {
+                                                paymentStatusName = "Paid Partial";
+                                            }
+                                            else if (paylog.status == (int)PaymentStatus.unpaid)
+                                            {
+                                                paymentStatusName = "UnPaid";
+                                            }
+                                            else if (paylog.status == (int)PaymentStatus.scheduled)
+                                            {
+                                                paymentStatusName = "Scheduled";
+                                            }
+                                            else
+                                            {
+                                                paymentStatusName = "Refund";
+                                            }
+                                        }
+                                        <div class="col-md-9">
+                                            <p>
+                                                <strong><span style="color:@transactionColor;">@transactionType</span> $@paylog.amount</strong> by @if (!string.IsNullOrEmpty(paylog.processed_by) || !string.IsNullOrWhiteSpace(paylog.processed_by))
+                                                {
+                                                    @paylog.processed_by
+                                                }
+                                                else
+                                                {
+                                                    @dash
+                                                }
+                                            </p>
+                                            <p style="margin-top:-16px;font-size: 13px;">Status: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;@paymentStatusName</p>
+                                            <p style="margin-top:-16px;font-size: 13px;">
+                                                Approval: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;@if (!string.IsNullOrEmpty(paylog.appoval_code) || !string.IsNullOrWhiteSpace(paylog.appoval_code))
+                                                {
+                                                    @paylog.appoval_code
+                                                }
+                                                else
+                                                {
+                                                    @dash
+                                                }
+                                            </p>
+                                            <p style="margin-top:-16px;font-size: 13px;">
+                                                Transaction: &nbsp;&nbsp;@if (!string.IsNullOrEmpty(paylog.transaction_id) || !string.IsNullOrWhiteSpace(paylog.transaction_id))
+                                                {
+                                                    @paylog.transaction_id
+                                                }
+                                                else
+                                                {
+                                                    @dash
+                                                }
+                                            </p>
+                                            <p style="margin-top:-16px;font-size: 13px;">
+                                                Card: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                                @if (!string.IsNullOrWhiteSpace(paylog.payment_card_type) && !string.IsNullOrEmpty(paylog.payment_card_type) && (!string.IsNullOrWhiteSpace(paylog.card_last_four_digits) && !string.IsNullOrEmpty(paylog.card_last_four_digits)))
+                                                {
+                                                    @paylog.payment_card_type@dash@paylog.card_last_four_digits
+                                                }
+                                                else
+                                                {
+                                                    @dash
+                                                }
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            }
+                        }
+                        else
+                        {
+                            <div class="col-md-12">
+                                <p>No credit card on reservation</p>
+                            </div>
+                        }
+
+                    </div>
+                </Content>
+            </DialogTemplates>
+        </SfDialog>
+    </div>
+    <div class="tag-popup">
+        <SfDialog Target="#target" Width="25%" Height="500" CssClass="TagPopup" ShowCloseIcon="true" @bind-Visible="TagPopupVisibility">
+            <DialogTemplates>
+                <Header>
+                    <h5 style="text-align:center;margin-left:35px;">Tags</h5>
+                </Header>
+                <Content>
+                    <div class="row">
+                        @if (@tagslist.Where(x => x.tag_type == (int)TagType.SpecialEvent).Any())
+                        {
+                            <div class="col-md-12" style="background-color:#ffc87e;">
+                                <p style="color: #000;margin-top:12px;">Special Event</p>
+                                <p style="color: #000; float: right; margin-top: -43px;cursor:pointer;" @onclick="()=> SetTagToReservation()">Apply</p>
+                            </div>
+                            @foreach (var tagname in @tagslist.Where(x => x.tag_type == (int)TagType.SpecialEvent).ToList())
+                            {
+                                <div class="col-md-12" @onclick="()=> OnSelectTagClick(tagname.tag)">
+                                    <p style="color: #000;margin-top:8px;width:90%;float:left;">@tagname.tag</p>
+                                    @if (tagsvalue.Contains(tagname.tag))
+                                    {
+                                        <i class="fa fa-check" style="width: 10%; float: right; margin-top: 8px;" aria-hidden="true"></i>
+                                    }
+
+                                </div>
+                                <hr />
+
+                            }
+                        }
+                        @if (@tagslist.Where(x => x.tag_type == (int)TagType.SpecialGuests).Any())
+                        {
+                            <div class="col-md-12" style="background-color:#ffc87e;">
+                                <p style="color: #000;margin-top:8px">Special Guests</p>
+                            </div>
+                            @foreach (var tagname in @tagslist.Where(x => x.tag_type == (int)TagType.SpecialGuests).ToList())
+                            {
+                                <div class="col-md-12" @onclick="()=> OnSelectTagClick(tagname.tag)">
+                                    <p style="color: #000;margin-top:11px;width:90%;float:left;">@tagname.tag</p>
+                                    @if (tagsvalue.Contains(tagname.tag))
+                                    {
+                                        <i class="fa fa-check" style="width: 10%; float: right; margin-top: 8px;" aria-hidden="true"></i>
+                                    }
+                                </div>
+                                <hr />
+
+                            }
+                        }
+                    </div>
+                </Content>
+            </DialogTemplates>
+        </SfDialog>
+    </div>
+    @if (ConfirmationPopup)
+    {
+        <div class="modal" tabindex="-1" role="dialog" style="z-index:99999;display: @(ConfirmationPopup ? "block" : "none")">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Set Table Status to Available?</h5>
+                    </div>
+                    <div class="modal-body">
+                        <p style="color:red;">
+                            !!WARNING!!
+                        </p>
+                        <p>
+                            Selecting to proceed will end the
+                            table's current assignment and make it available to assign another
+                            party.
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" @onclick="()=>ProceedSetTableStatusNoneOrFinished(Temp_FinishedStatus) ">proceed</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal" @onclick="@(()=> this.ConfirmationPopup=false)">cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    <div class="Server-popup">
+        <SfDialog Target="#target" Width="30%" CssClass="serverpopup" ShowCloseIcon="true" @bind-Visible="ServerPopupVisibility">
+            <DialogTemplates>
+                <Header>
+                    <h6 style="text-align: center;">Select Server</h6>
+                </Header>
+                <Content>
+                    @if (ServerVisibilitySpinner == true)
+                    {
+                        <div class="col-md-12" style="height:300px;">
+                            <SfSpinner @bind-Visible="ServerVisibilitySpinner"></SfSpinner>
+                        </div>
+                    }
+                    else
+                    {
+                        <table class="table table-borderless fs--1 mb-0">
+                            @foreach (var item in SeverUserDetail)
+                            {
+                                <tr class="border-bottom">
+                                    <td style="background-color:@item.color; width:0.5%"></td>
+                                    <td style="padding: 8px 0px 7px 12px; width:99.5%" @onclick="()=>UpdatePreassignedServerTableAll(item)">
+                                        @item.first_name @item.last_name, <br /> M @item.phone_number
+                                    </td>
+                                </tr>
+                            }
+                        </table>
+                    }
+                </Content>
+            </DialogTemplates>
+        </SfDialog>
+    </div>
+}
+
+
+
+@code {
+
+    public int? Temp_FinishedStatus { get; set; }
+    public bool ConfirmationPopup { get; set; } = false;
+    public bool ServerPopupVisibility { get; set; } = false;
+    public bool isSendconfirmation = true;
+    public bool isRefounddeposit = true;
+    public bool VisibilitySpinner { get; set; } = false;
+    public bool ServerVisibilitySpinner { get; set; } = false;
+    public bool SMSPopupVisibility { get; set; } = false;
+    public bool StatusbuttonVisibility { get; set; } = false;
+    public bool DelayedPopupVisibility { get; set; } = false;
+    public bool CancelPopupVisibility { get; set; } = false;
+    public bool LogPopupVisibility { get; set; } = false;
+    public bool PayPopupVisibility { get; set; } = false;
+    public bool TagPopupVisibility { get; set; } = false;
+    string StartHours = "12:00";
+    string EndHours = "12:00";
+    public int FloorId;
+    public int LocationId;
+    public string SeatingResetTime;
+    private bool loading = false;
+    private string title = "Reports | CellarPass Seating Report";
+    private View CurrentView = View.TimelineDay;
+    public DateTime CurrentDate = DateTime.UtcNow;
+    SfSchedule<ScheduleData.RoomData> Schedule;
+    List<ScheduleData.RoomData> DataSource = new List<ScheduleData.RoomData>();
+    public string[] GroupData = new string[] { "MeetingRoom" };
+    List<ScheduleData.RoomsData> ResourceData { get; set; } = new List<ScheduleData.RoomsData>();
+    private int ActiveId { get; set; }
+    List<CoversReportLocations> coversReportResult = new List<CoversReportLocations>();
+    List<TablesViewModel> getTablesResult = new List<TablesViewModel>();
+    List<LocationDetailsModel> getTimeZoneOffsetResult = new List<LocationDetailsModel>();
+    private Member currentMember = new Member();
+    public double TimeZoneInterval { get; set; }
+    List<WaitingListMessage> templatesmessage = new List<WaitingListMessage>();
+    public async Task GetReservationByFloor(int floor_id, int location_id, string seating_reset_time)
+    {
+        //loading = true;
+        StatusbuttonVisibility = false;
+        SMSPopupVisibility = false;
+        DelayedPopupVisibility = false;
+        SeatingResetTime = "2021/05/07 12:00:00"; //seating_reset_time;
+        VisibilitySpinner = true;
+        ActiveId = floor_id;
+        LocationId = location_id;
+        FloorId = floor_id;
+        DataSource = new List<ScheduleData.RoomData>();
+        ResourceData = new List<ScheduleData.RoomsData>();
+        coversReportResult = new List<CoversReportLocations>();
+        getTablesResult = new List<TablesViewModel>();
+        getTimeZoneOffsetResult = new List<LocationDetailsModel>();
+        getTablesResult = await _CoversReportViewModel.GetTablesReport(floor_id);
+        if (getTablesResult.Any())
+        {
+            var resourceList = new List<ScheduleData.RoomsData>();
+            foreach (var tabel in getTablesResult)
+            {
+                resourceList.Add(new ScheduleData.RoomsData { Name = tabel.name, Id = tabel.id, Capacity = tabel.min_party + "/" + tabel.max_party, Color = "#fff", Type = tabel.status == (int)TableDesignStatus.offline ? "x.jpg" : tabel.status == (int)TableDesignStatus.walkin ? "waitlist1024_1.jpg" : "" });
+            }
+            resourceList = resourceList.OrderBy(x => x.Name).ToList();
+            var numaricList = new List<ScheduleData.RoomsData>();
+            var alphanumaricList = new List<ScheduleData.RoomsData>();
+            foreach (var item in resourceList)
+            {
+                if (Regex.IsMatch(item.Name, "^[0-9]*$"))
+                {
+                    numaricList.Add(new ScheduleData.RoomsData { Name = item.Name, Id = item.Id, Capacity = item.Capacity, Color = item.Color, Type = item.Type });
+                }
+                else
+                {
+                    alphanumaricList.Add(new ScheduleData.RoomsData { Name = item.Name, Id = item.Id, Capacity = item.Capacity, Color = item.Color, Type = item.Type });
+                }
+            }
+            ResourceData.AddRange(numaricList.OrderBy(x => Convert.ToInt32(x.Name)).ToList());
+            ResourceData.AddRange(alphanumaricList.OrderBy(x => x.Name).ToList());
+        }
+        getTimeZoneOffsetResult = await _CoversReportViewModel.GetTimeZoneOffSet(26, true);
+        coversReportResult = await _CoversReportViewModel.GetCoversReport(CurrentDate, 26, floor_id);
+        if (coversReportResult.Any())
+        {
+            var date = CurrentDate;
+            if (getTimeZoneOffsetResult.Any() && getTimeZoneOffsetResult.Where(x => x.location_id == LocationId).Any())
+            {
+                TimeZoneInterval = getTimeZoneOffsetResult.Where(x => x.location_id == LocationId).First().location_timezone_offset;
+                //date = date.AddMinutes(TimeZoneInterval);
+            }
+            if (coversReportResult.First().tables.Any())
+            {
+                foreach (var item in coversReportResult.First().tables)
+                {
+                    var temprsvpsdata = item.rsvps.Any() ? item.rsvps.Select(x => new ScheduleData.RoomData
+                    {
+                        Id = x.id,
+                        Subject = x.is_walk_in == false ? x.guest_last_name : "Walk-In " + x.index,
+                        StartTime = x.start_time.AddMinutes(TimeZoneInterval),
+                        EndTime = x.end_time.AddMinutes(TimeZoneInterval),
+                        Location = x.number_seated.ToString(),
+                        RoomId = item.table_id,
+                        Color = string.IsNullOrEmpty(x.server_color) ? "#606060" : x.server_color,
+                        Opacity = "1",
+                        DataType = "rsvps"
+                    }) : new List<ScheduleData.RoomData>();
+                    var temppreassignrsvpsdata = item.pre_assign_rsvps.Any() ? item.pre_assign_rsvps.Select(x => new ScheduleData.RoomData
+                    {
+                        Id = x.id,
+                        Subject = x.is_walk_in == false ? x.guest_last_name : "Walk-In " + x.index,
+                        StartTime = x.start_time.AddMinutes(TimeZoneInterval),
+                        EndTime = x.end_time.AddMinutes(TimeZoneInterval),
+                        Location = x.number_seated.ToString(),
+                        RoomId = item.table_id,
+                        Color = string.IsNullOrEmpty(x.server_color) ? "#606060" : x.server_color,
+                        Opacity = "0.6",
+                        DataType = "pre_assign_rsvps"
+                    }) : new List<ScheduleData.RoomData>();
+                    var temppreassignwaitlistsdata = item.pre_assign_waitlists.Any() ? item.pre_assign_waitlists.Select(x => new ScheduleData.RoomData
+                    {
+                        Id = x.id,
+                        Subject = x.is_walk_in == false ? x.guest_last_name : "Walk-In " + x.index,
+                        StartTime = x.start_time.AddMinutes(TimeZoneInterval),
+                        EndTime = x.end_time.AddMinutes(TimeZoneInterval),
+                        Location = x.number_seated.ToString(),
+                        RoomId = item.table_id,
+                        Color = string.IsNullOrEmpty(x.server_color) ? "#606060" : x.server_color,
+                        Opacity = "0.6",
+                        DataType = "pre_assign_waitlists"
+                    }) : new List<ScheduleData.RoomData>();
+                    var tempwaitlistsdata = item.waitlists.Any() ? item.waitlists.Select(x => new ScheduleData.RoomData
+                    {
+                        Id = x.id,
+                        Subject = x.is_walk_in == false ? x.guest_last_name : "Walk-In " + x.index,
+                        StartTime = x.start_time.AddMinutes(TimeZoneInterval),
+                        EndTime = x.end_time.AddMinutes(TimeZoneInterval),
+                        Location = x.number_seated.ToString(),
+                        RoomId = item.table_id,
+                        Color = string.IsNullOrEmpty(x.server_color) ? "#606060" : x.server_color,
+                        Opacity = "1",
+                        DataType = "waitlists"
+                    }) : new List<ScheduleData.RoomData>();
+
+                    if (temprsvpsdata.Any())
+                        DataSource.AddRange(temprsvpsdata);
+                    if (temppreassignrsvpsdata.Any())
+                        DataSource.AddRange(temppreassignrsvpsdata);
+                    if (temppreassignwaitlistsdata.Any())
+                        DataSource.AddRange(temppreassignwaitlistsdata);
+                    if (tempwaitlistsdata.Any())
+                        DataSource.AddRange(tempwaitlistsdata);
+
+                }
+            }
+
+        }
+        //loading = false;
+        VisibilitySpinner = false;
+
+    }
+    private List<FloorPlanModel> result;
+    List<TableGroupItemModel> tablestatusgroupresponse = new List<TableGroupItemModel>();
+    List<SeatStatusModel> SeatTableStatus = new List<SeatStatusModel>();
+    private ReservationsDetailsViewModel currentreservationsdetails = new ReservationsDetailsViewModel();
+    private List<SeatingReportTagModel> tagslist = new List<SeatingReportTagModel>();
+    private List<string> tagsvalue = new List<string>();
+    private ReservationDetailModel rsvpReservationDetails = new ReservationDetailModel();
+    List<User_DetailModel> SeverUserDetail = new List<User_DetailModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        loading = true;
+        //var test = await _MessageLogViewModel.GetTableStatus(FloorId, SeatingResetTime);
+        // var model = new SetReservationRequestModel {reservation_id=1610167,status= 0,send_mail= false,delay_in_minutes= 0,refund_deposit= false,modified_by_name= "Nippu",modified_by_id= 0 };
+        //var test1 = await _ReservationViewModel.SetReservationStatus(model);
+        //var test2= await _CoversReportViewModel.UpdateWaitlistStatus(14368, 2);
+        //var test3 = await _CoversReportViewModel.GetTableStatusGroup(26, false);
+        //var test4 = await _CoversReportViewModel.GetTableStatusGroupItem(1);
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        tagslist = await _FloorPlanViewModel.GetTags(26);
+        result = await _FloorPlanViewModel.GetFloorPlan(26, true);
+        if (result.Any() && result.Count == 1)
+        {
+            var floorId = result.FirstOrDefault().floor_plan_id;
+            var location_Id = result.FirstOrDefault().location_id;
+            ActiveId = floorId;
+            var getTablesResult = await _CoversReportViewModel.GetTablesReport(floorId);
+            if (getTablesResult.Any())
+            {
+                var resourceList = new List<ScheduleData.RoomsData>();
+                foreach (var tabel in getTablesResult)
+                {
+                    resourceList.Add(new ScheduleData.RoomsData { Name = tabel.name, Id = tabel.id, Capacity = tabel.min_party + "/" + tabel.max_party, Color = "#fff", Type = tabel.status == (int)TableDesignStatus.offline ? "x.jpg" : tabel.status == (int)TableDesignStatus.walkin ? "waitlist1024_1.jpg" : "" });
+                }
+                var numaricList = new List<ScheduleData.RoomsData>();
+                var alphanumaricList = new List<ScheduleData.RoomsData>();
+                foreach (var item in resourceList)
+                {
+                    if (Regex.IsMatch(item.Name, "^[0-9]*$"))
+                    {
+                        numaricList.Add(new ScheduleData.RoomsData { Name = item.Name, Id = item.Id, Capacity = item.Capacity, Color = item.Color, Type = item.Type });
+                    }
+                    else
+                    {
+                        alphanumaricList.Add(new ScheduleData.RoomsData { Name = item.Name, Id = item.Id, Capacity = item.Capacity, Color = item.Color, Type = item.Type });
+                    }
+                }
+                ResourceData.AddRange(numaricList.OrderBy(x => Convert.ToInt32(x.Name)).ToList());
+                ResourceData.AddRange(alphanumaricList.OrderBy(x => x.Name).ToList());
+            }
+            var getTimeZoneOffsetResult = await _CoversReportViewModel.GetTimeZoneOffSet(26, true);
+
+            coversReportResult = await _CoversReportViewModel.GetCoversReport(CurrentDate, 26, floorId);
+            if (coversReportResult.Any())
+            {
+                var date = CurrentDate.Date;
+                if (getTimeZoneOffsetResult.Any() && getTimeZoneOffsetResult.Where(x => x.location_id == location_Id).Any())
+                {
+                    TimeZoneInterval = getTimeZoneOffsetResult.Where(x => x.location_id == location_Id).First().location_timezone_offset;
+                }
+                if (coversReportResult.First().tables.Any())
+                {
+                    foreach (var item in coversReportResult.First().tables)
+                    {
+                        var temprsvpsdata = item.rsvps.Any() ? item.rsvps.Select(x => new ScheduleData.RoomData
+                        {
+                            Id = x.id,
+                            Subject = x.is_walk_in == false ? x.guest_last_name : "Walk-In " + x.index,
+                            StartTime = x.start_time.AddMinutes(TimeZoneInterval),
+                            EndTime = x.end_time.AddMinutes(TimeZoneInterval),
+                            Location = x.number_seated.ToString(),
+                            RoomId = item.table_id,
+                            Color = string.IsNullOrEmpty(x.server_color) ? "#606060" : x.server_color,
+                            Opacity = "1",
+                            DataType = "rsvps"
+                        }) : new List<ScheduleData.RoomData>();
+                        var temppreassignrsvpsdata = item.pre_assign_rsvps.Any() ? item.pre_assign_rsvps.Select(x => new ScheduleData.RoomData
+                        {
+                            Id = x.id,
+                            Subject = x.is_walk_in == false ? x.guest_last_name : "Walk-In " + x.index,
+                            StartTime = x.start_time.AddMinutes(TimeZoneInterval),
+                            EndTime = x.end_time.AddMinutes(TimeZoneInterval),
+                            Location = x.number_seated.ToString(),
+                            RoomId = item.table_id,
+                            Color = string.IsNullOrEmpty(x.server_color) ? "#606060" : x.server_color,
+                            Opacity = "0.6",
+                            DataType = "pre_assign_rsvps"
+                        }) : new List<ScheduleData.RoomData>();
+                        var temppreassignwaitlistsdata = item.pre_assign_waitlists.Any() ? item.pre_assign_waitlists.Select(x => new ScheduleData.RoomData
+                        {
+                            Id = x.id,
+                            Subject = x.is_walk_in == false ? x.guest_last_name : "Walk-In " + x.index,
+                            StartTime = x.start_time.AddMinutes(TimeZoneInterval),
+                            EndTime = x.end_time.AddMinutes(TimeZoneInterval),
+                            Location = x.number_seated.ToString(),
+                            RoomId = item.table_id,
+                            Color = string.IsNullOrEmpty(x.server_color) ? "#606060" : x.server_color,
+                            Opacity = "0.6",
+                            DataType = "pre_assign_waitlists"
+                        }) : new List<ScheduleData.RoomData>();
+                        var tempwaitlistsdata = item.waitlists.Any() ? item.waitlists.Select(x => new ScheduleData.RoomData
+                        {
+                            Id = x.id,
+                            Subject = x.is_walk_in == false ? x.guest_last_name : "Walk-In " + x.index,
+                            StartTime = x.start_time.AddMinutes(TimeZoneInterval),
+                            EndTime = x.end_time.AddMinutes(TimeZoneInterval),
+                            Location = x.number_seated.ToString(),
+                            RoomId = item.table_id,
+                            Color = string.IsNullOrEmpty(x.server_color) ? "#606060" : x.server_color,
+                            Opacity = "1",
+                            DataType = "waitlists"
+                        }) : new List<ScheduleData.RoomData>();
+
+                        if (temprsvpsdata.Any())
+                            DataSource.AddRange(temprsvpsdata);
+                        if (temppreassignrsvpsdata.Any())
+                            DataSource.AddRange(temppreassignrsvpsdata);
+                        if (temppreassignwaitlistsdata.Any())
+                            DataSource.AddRange(temppreassignwaitlistsdata);
+                        if (tempwaitlistsdata.Any())
+                            DataSource.AddRange(tempwaitlistsdata);
+
+                    }
+                }
+
+            }
+        }
+        loading = false;
+    }
+    private bool Visibility { get; set; } = false;
+    private async Task OnBtnClick(EventClickArgs<ScheduleData.RoomData> args)
+    {
+        VisibilitySpinner = true;
+        var temp_starttime_ETA = "";
+        var temp_endtime_ETA = "";
+        var temp_hour_waittime = string.Empty;
+        var temp_minute_waittime = string.Empty;
+        var tablename = string.Empty;
+        var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
+        var smsverified = 1;//Convert.ToInt16(authState.User.Claims.Where(x => x.Type == "Smsverified").Select(x => x.Value).FirstOrDefault());
+
+        var messagelog = await _CoversReportViewModel.GetMessageLog(26);
+
+        var start_date_time_seated_status = args.Event.StartTime > args.Event.StartTime.Date.AddHours(4) ? args.Event.StartTime.Date.AddHours(11).ToString("yyyy-MM-dd HH:mm:ss") : args.Event.StartTime.Date.AddDays(-1).AddHours(11).ToString("yyyy-MM-dd HH:mm:ss");
+
+        if (args.Event.DataType == "rsvps" || args.Event.DataType == "pre_assign_rsvps")
+        {
+            templatesmessage = await _CoversReportViewModel.GetWaitlistMessage(26, 2);
+
+            var temp_newestlog = messagelog.Where(x => x.transaction_id == args.Event.Id && x.message_type == 2).OrderByDescending(x => x.message_date).FirstOrDefault();
+
+            var details = await _CoversReportViewModel.GetReservationDetails(args.Event.Id);
+            rsvpReservationDetails = details.data != null ? details.data : new ReservationDetailModel();
+            try
+            {
+                currentreservationsdetails = new ReservationsDetailsViewModel()
+                {
+                    reservation_id = details.data.reservation_id,
+                    GuestName = details.data.user_detail.first_name + " " + details.data.user_detail.last_name,
+                    first_name = details.data.user_detail.first_name,
+                    last_name = details.data.user_detail.last_name,
+                    GuestClubMember = details.data.user_detail.customer_type == (int)CustomerType.clubMember ? true : false,
+                    GuestCity = string.IsNullOrEmpty(details.data.user_detail.address.city) ?
+                            details.data.user_detail.address.city :
+                            " - " + details.data.user_detail.address.city.Trim(),
+                    GuestState = string.IsNullOrEmpty(details.data.user_detail.address.state) ? ""
+                            : string.IsNullOrEmpty(details.data.user_detail.address.city) ?
+                             " - " + details.data.user_detail.address.state.Trim()
+                            : ", " + details.data.user_detail.address.state.Trim(),
+                    GuestCountry = string.IsNullOrEmpty(details.data.user_detail.address.country) ? ""
+                            : string.IsNullOrEmpty(details.data.user_detail.address.city) && string.IsNullOrEmpty(details.data.user_detail.address.state)
+                            ? " - " + details.data.user_detail.address.country.Trim() : ", " + details.data.user_detail.address.country.Trim(),
+                    EventName = details.data.event_name,
+                    PartySize = details.data.total_guests,
+                    PaymentStatus = details.data.payment_status == (int)PaymentStatus.noPayment ? "No Payment" :
+                    details.data.payment_status == (int)PaymentStatus.paidFull ? "Paid in Full" :
+                    details.data.payment_status == (int)PaymentStatus.paidPartial ? "Paid Partial" :
+                    details.data.payment_status == (int)PaymentStatus.unpaid ? "Unpaid" :
+                    details.data.payment_status == (int)PaymentStatus.overPaid ? "Overpaid" :
+                    details.data.payment_status == (int)PaymentStatus.refund ? "Refund" :
+                    details.data.payment_status == (int)PaymentStatus.scheduled ? "Scheduled" : string.Empty,
+                    PaymentCardLastFourDigits = " - " + details.data.pay_card.card_last_four_digits,
+                    PaymentCardType = " " + details.data.pay_card.card_type,
+                    BookingCode = details.data.booking_code,
+                    WaitTime = string.Empty,
+                    PhoneNumber = details.data.user_detail.phone_number,
+                    mobile_phone_status = details.data.user_detail.mobile_phone_status,
+                    ReservationDataType = args.Event.DataType,
+                    Rsvp_status = details.data.status,
+                    Rsvp_seated_status = details.data.seated_status,
+                    ReservationStatusLog = details.data.reservation_status_log.Count > 0 ? details.data.reservation_status_log : new List<ReservationChangeLog>(),
+                    event_start_date = details.data.event_start_date,
+                    event_end_date = details.data.event_end_date,
+                    email = details.data.user_detail.email,
+                    ReservationPaymentsLog = details.data.reservation_payments_log.Where(x => x.id > 0 && x.reservation_id != 1610164).ToList().Count > 0 ? details.data.reservation_payments_log : new List<PaymentModel>(),
+                    PaymentDetails = details.data.payment_details,
+                    assigned_server_id = details.data.assigned_server_id,
+                    AssignServerButtonText = details.data.assigned_server_id == 0 ? "Assign Server" : details.data.user_detail.first_name.Substring(0, 1) + ". " + details.data.user_detail.last_name,
+                    Tags = !string.IsNullOrEmpty(details.data.tags) ? details.data.tags.Split(',').ToList() : new List<string>()
+                };
+                tagsvalue.AddRange(currentreservationsdetails.Tags);
+            }
+            catch (Exception ex)
+            {
+
+            }
+            switch (details.data.seated_status)
+            {
+                case (int)ReservationSeatedStatus.closed:
+                    temp_starttime_ETA = details.data.seating_start_time != null ?
+                        details.data.seating_start_time.Value.AddMinutes(TimeZoneInterval).ToString("hh:mm tt") : "N/A";
+
+                    temp_endtime_ETA = details.data.seating_end_time != null ?
+                        details.data.seating_end_time.Value.AddMinutes(TimeZoneInterval).ToString("hh:mm tt") : "N/A";
+
+                    currentreservationsdetails.ETAlabel = temp_starttime_ETA + " - " + temp_endtime_ETA;
+
+                    if (details.data.assign_table_ids != null)
+                    {
+                        tablename = string.Join(",", ResourceData.Where(x => details.data.assign_table_ids.Contains(x.Id)).Select(x => x.Name));
+                        SeatTableStatus = await _MessageLogViewModel.GetTableStatus(FloorId, start_date_time_seated_status);
+                        var statusData = SeatTableStatus.Where(x => x.transaction_id == details.data.reservation_id && details.data.assign_table_ids.Contains(x.table_id)).FirstOrDefault();
+
+                        tablestatusgroupresponse = await _CoversReportViewModel.GetTableStatusGroupItem(details.data.table_status_group_id);
+
+                        currentreservationsdetails.StatusActionDetail = tablestatusgroupresponse.Where(x => x.id ==
+                        statusData.table_status).Select(x => new StatusActionDetail
+                        {
+                            Name = x.name,
+                            Color = x.color
+                        }).FirstOrDefault();
+
+                    }
+                    tablename = string.IsNullOrEmpty(tablename) ? "" : " - " + tablename;
+                    currentreservationsdetails.FloorPlan = details.data.floor_plan_technical_name + " " + tablename;
+
+                    break;
+                case (int)ReservationSeatedStatus.seated:
+                    temp_starttime_ETA = details.data.seating_start_time != null ?
+                        details.data.seating_start_time.Value.AddMinutes(TimeZoneInterval).ToString("hh:mm tt") : "N/A";
+                    temp_endtime_ETA = details.data.event_end_date.ToString("hh:mm tt");
+                    currentreservationsdetails.ETAlabel = temp_starttime_ETA + " - " + temp_endtime_ETA;
+
+                    if (details.data.assign_table_ids != null)
+                    {
+                        tablename = string.Join(",", ResourceData.Where(x => details.data.assign_table_ids.Contains(x.Id)).Select(x => x.Name));
+                        SeatTableStatus = await _MessageLogViewModel.GetTableStatus(FloorId, start_date_time_seated_status);
+                        var statusData = SeatTableStatus.Where(x => x.transaction_id == details.data.reservation_id && details.data.assign_table_ids.Contains(x.table_id)).FirstOrDefault();
+
+                        tablestatusgroupresponse = await _CoversReportViewModel.GetTableStatusGroupItem(details.data.table_status_group_id);
+
+                        currentreservationsdetails.StatusActionDetail = tablestatusgroupresponse.Where(x => x.id ==
+                        statusData.table_status).Select(x => new StatusActionDetail
+                        {
+                            Name = x.name,
+                            Color = x.color
+                        }).FirstOrDefault();
+
+
+                    }
+                    tablename = string.IsNullOrEmpty(tablename) ? "" : " - " + tablename;
+                    currentreservationsdetails.FloorPlan = details.data.floor_plan_technical_name + " " + tablename;
+
+                    break;
+                default://arrived and unseated
+                    temp_starttime_ETA = details.data.event_start_date.ToString("hh:mm tt");
+                    temp_endtime_ETA = details.data.event_end_date.ToString("hh:mm tt");
+                    currentreservationsdetails.ETAlabel = temp_starttime_ETA + " - " + temp_endtime_ETA;
+
+                    if (details.data.pre_assign_table_ids != null)
+                    {
+                        tablename = string.Join(",", ResourceData.Where(x => details.data.pre_assign_table_ids.Contains(x.Id)).Select(x => x.Name));
+                    }
+                    tablename = string.IsNullOrEmpty(tablename) ? "" : " - " + tablename;
+                    currentreservationsdetails.FloorPlan = details.data.floor_plan_technical_name + tablename;
+
+                    if (currentreservationsdetails.Rsvp_seated_status == (int)ReservationSeatedStatus.arrived)
+                    {
+                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                        {
+                            Name = "Arrived",
+                            Color = "#2EB24F"
+                        };
+                    }
+                    else
+                    {
+                        switch (currentreservationsdetails.Rsvp_status)
+                        {
+                            case (int)ReservationStatus_SeatingReport.confirmed:
+                                currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                {
+                                    Name = "Confirmed",
+                                    Color = "#F9C21E"
+                                };
+                                break;
+                            case (int)ReservationStatus_SeatingReport.completed:
+                                currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                {
+                                    Name = "Completed",
+                                    Color = "#2EB24F"
+                                };
+                                break;
+                            case (int)ReservationStatus_SeatingReport.cancelled:
+                                currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                {
+                                    Name = "Cancelled",
+                                    Color = "#F6001D"
+                                };
+                                break;
+                            case (int)ReservationStatus_SeatingReport.noShow:
+                                currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                {
+                                    Name = "No Show",
+                                    Color = "#404040"
+                                };
+                                break;
+                            case (int)ReservationStatus_SeatingReport.rescheduled:
+                                currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                {
+                                    Name = "Modified",
+                                    Color = "#F7661D"
+                                };
+                                break;
+                            case (int)ReservationStatus_SeatingReport.guestDelayed:
+                                currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                {
+                                    Name = "Guest Delayed",
+                                    Color = "#2A6DBF"
+                                };
+                                break;
+                            case (int)ReservationStatus_SeatingReport.updated:
+                                currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                {
+                                    Name = "Updated",
+                                    Color = "#F9C21E"
+                                };
+                                break;
+                            case (int)ReservationStatus_SeatingReport.yelpInitiated:
+                                currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                {
+                                    Name = "Yelp Initiated",
+                                    Color = "#F9C21E"
+                                };
+                                break;
+                            case (int)ReservationStatus_SeatingReport.initiated:
+                                currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                {
+                                    Name = "Initiated",
+                                    Color = "#F9C21E"
+                                };
+                                break;
+                            case (int)ReservationStatus_SeatingReport.unknown:
+                                currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                {
+                                    Name = "Unknown",
+                                    Color = "#ffffff"
+                                };
+                                break;
+                        }
+                    }
+                    break;
+            }
+            if (smsverified == 1)
+            {
+                switch (currentreservationsdetails.mobile_phone_status)
+                {
+                    case (int)MobileNumberStatus.verified:
+                        var temp_message = string.Empty;
+                        if (temp_newestlog == null)
+                        {
+                            temp_message = "Welcome’ SMS Not Sent";
+                            currentreservationsdetails.MessageLogDetail = new Messagelog()
+                            {
+                                message = temp_message
+                            };
+                        }
+                        else if (string.IsNullOrEmpty(temp_newestlog.message))
+                        {
+                            temp_message = "SMS N/A";
+                            currentreservationsdetails.MessageLogDetail = new Messagelog()
+                            {
+                                message = temp_message
+                            };
+                        }
+                        else
+                        {
+                            var massgetime = DateTime.UtcNow.Subtract(temp_newestlog.message_date);
+
+                            int days = (int)massgetime.TotalDays;
+                            int hrs = (int)massgetime.Hours;
+                            int mins = (int)massgetime.Minutes;
+                            int secs = (int)massgetime.Seconds;
+                            var printtime = string.Empty;
+                            if (days > 0)
+                            {
+                                printtime = days.ToString() + (days == 1 ? "day" : " days");//1 day / 2 days
+                            }
+                            else if (hrs > 0)
+                            {
+                                printtime = hrs.ToString() + (hrs == 1 ? "hour" : " hours");//1 hour / 2 hours
+                            }
+                            else if (mins < 1)
+                            {
+                                printtime = secs.ToString() + (secs == 1 ? "second" : " seconds");//1 second / 2 seconds
+                            }
+                            else
+                            {
+                                printtime = mins.ToString() + (mins == 1 ? "min" : " mins");//1 min / 2 mins
+                            }
+                            switch (temp_newestlog.message_type)
+                            {
+                                case (int)MessageType.custom:
+                                    temp_message = /*temp_newestlog.message +*/ "Custom message sent " + printtime + " ago";
+                                    break;
+                                case (int)MessageType.customerReply:
+                                    temp_message = /*temp_newestlog.message +*/ "Customer reply received sent " + printtime + " ago";
+                                    break;
+                                default:
+                                    temp_message = templatesmessage.Where(x => x.message_type == temp_newestlog.message_type)
+                                        .Select(x => x.message_title).FirstOrDefault() + " sent " + printtime + " ago";
+                                    break;
+                            }
+
+                            currentreservationsdetails.MessageLogDetail = new Messagelog()
+                            {
+                                message = temp_message,
+                                id = temp_newestlog.id,
+                                message_category = temp_newestlog.message_category,
+                                message_type = temp_newestlog.message_type
+                            };
+                        }
+
+                        break;
+                    default:
+                        currentreservationsdetails.MessageLogDetail = new Messagelog();
+                        break;
+                }
+            }
+            else
+            {
+                currentreservationsdetails.MessageLogDetail = new Messagelog();
+            }
+        }
+        else if (args.Event.DataType == "waitlists" || args.Event.DataType == "pre_assign_waitlists")
+        {
+            templatesmessage = await _CoversReportViewModel.GetWaitlistMessage(26, 1);
+            var temp_newestlog = messagelog.Where(x => x.transaction_id == args.Event.Id && x.message_type == 1).OrderByDescending(x => x.message_date).FirstOrDefault();
+            var details = await _CoversReportViewModel.GetWaitLists(args.Event.Id);
+            try
+            {
+                currentreservationsdetails = new ReservationsDetailsViewModel()
+                {
+                    reservation_id = details.id,
+                    GuestName = details.first_name + " " + details.last_name,
+                    first_name = details.first_name,
+                    last_name = details.last_name,
+                    GuestClubMember = false,
+                    GuestCity = string.Empty,
+                    GuestState = string.Empty,
+                    GuestCountry = string.Empty,
+                    EventName = string.Empty,
+                    PartySize = details.party_size,
+                    PaymentStatus = string.Empty,
+                    PaymentCardType = string.Empty,
+                    PaymentCardLastFourDigits = string.Empty,
+                    BookingCode = string.Empty,
+                    PhoneNumber = details.mobile_phone,
+                    mobile_phone_status = details.mobile_phone_status,
+                    ReservationDataType = args.Event.DataType,
+                    Wl_status = details.status,
+                    wait_start_time = details.wait_start_time,
+                    wait_time_minutes = details.wait_time_minutes,
+                    email = details.email,
+                    assigned_server_id = details.assigned_server_id,
+                    AssignServerButtonText = details.assigned_server_id == 0 ? "Assign Server" : details.first_name.Substring(0, 1) + ". " + details.last_name,
+                    Tags = !string.IsNullOrEmpty(details.tags) ? details.tags.Split(',').ToList() : new List<string>()
+                };
+                tagsvalue.AddRange(currentreservationsdetails.Tags);
+                switch (details.status)
+                {
+                    case (int)WaitListStatus.closed:
+                        temp_starttime_ETA = details.seating_start_time != null ?
+                            details.seating_start_time.Value.AddMinutes(TimeZoneInterval).ToString("hh:mm tt") : "N/A";
+                        temp_endtime_ETA = details.seating_end_time != null ?
+                                        details.seating_end_time.Value.AddMinutes(TimeZoneInterval).ToString("hh:mm tt") : "N/A";
+                        currentreservationsdetails.ETAlabel = temp_starttime_ETA + " - " + temp_endtime_ETA;
+
+                        var subtracttime = details.seating_end_time != null && details.seating_start_time != null ?
+                            details.seating_end_time.Value.AddMinutes(TimeZoneInterval)
+                            .Subtract(details.seating_start_time.Value.AddMinutes(TimeZoneInterval)) : new TimeSpan();
+
+                        if (subtracttime.Hours > 0)
+                        {
+                            temp_hour_waittime = subtracttime.Hours == 1 ? subtracttime.Hours + " Hour" : subtracttime.Hours + " Hour(s)";
+                        }
+                        temp_minute_waittime = subtracttime.Minutes + " Minute(s)";
+                        currentreservationsdetails.WaitTime = temp_hour_waittime + temp_minute_waittime;
+
+                        if (details.assign_table_ids != null)
+                        {
+                            tablename = string.Join(",", ResourceData.Where(x => details.assign_table_ids.Contains(x.Id)).Select(x => x.Name));
+                            SeatTableStatus = await _MessageLogViewModel.GetTableStatus(FloorId, start_date_time_seated_status);
+                            var statusData = SeatTableStatus.Where(x => x.transaction_id == details.id && details.assign_table_ids.Contains(x.table_id)).FirstOrDefault();
+
+                            if (statusData != null)
+                            {
+                                switch (statusData.table_status)
+                                {
+                                    case (int)WaitListTableStatusGroup.none:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "Finished",
+                                            Color = "#000000"
+                                        };
+                                        break;
+                                    case (int)WaitListTableStatusGroup.unavailable:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "Unavailable",
+                                            Color = "#807f80"
+                                        };
+                                        break;
+                                    case (int)WaitListTableStatusGroup.seated:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "Seated",
+                                            Color = "#964599"
+                                        };
+                                        break;
+                                    case (int)WaitListTableStatusGroup.partiallySeated:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "Partially Seated",
+                                            Color = "#63996b"
+                                        };
+                                        break;
+                                    case (int)WaitListTableStatusGroup.configurableStatus1:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "“First Course",
+                                            Color = "#367099"
+                                        };
+                                        break;
+                                    case (int)WaitListTableStatusGroup.configurableStatus2:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "Check",
+                                            Color = "#cc6d00"
+                                        };
+                                        break;
+                                    case (int)WaitListTableStatusGroup.configurableStatus3:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "Bus",
+                                            Color = "#a60013"
+                                        };
+                                        break;
+                                    case (int)WaitListTableStatusGroup.reserved:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "Reserved",
+                                            Color = "#000000"
+                                        };
+                                        break;
+                                    case (int)WaitListTableStatusGroup.blocked:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "Blocked",
+                                            Color = "#000000"
+                                        };
+                                        break;
+                                    case (int)WaitListTableStatusGroup.terminated:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "Finished",
+                                            Color = "#000000"
+                                        };
+                                        break;
+
+                                }
+                            }
+                        }
+                        tablename = string.IsNullOrEmpty(tablename) ? "" : " - " + tablename;
+                        currentreservationsdetails.FloorPlan = details.floor_plan_technical_name + " " + tablename;
+
+
+                        break;
+                    case (int)WaitListStatus.seated:
+                        temp_starttime_ETA = details.seating_start_time != null ?
+                            details.seating_start_time.Value.AddMinutes(TimeZoneInterval).ToString("hh:mm tt") : "N/A";
+
+                        temp_endtime_ETA = details.wait_start_time.AddMinutes(TimeZoneInterval)
+                            .AddMinutes(details.wait_time_minutes)
+                            .AddMinutes(details.duration_in_minutes).ToString("hh:mm tt");
+
+                        currentreservationsdetails.ETAlabel = temp_starttime_ETA + " - " + temp_endtime_ETA;
+
+                        var seatingstarttime = details.seating_start_time.Value.AddMinutes(TimeZoneInterval).ToString("hh:mm tt");
+                        currentreservationsdetails.WaitTime = "Seated at " + seatingstarttime;
+
+                        if (details.assign_table_ids != null)
+                        {
+                            tablename = string.Join(",", ResourceData.Where(x => details.assign_table_ids.Contains(x.Id)).Select(x => x.Name));
+                            SeatTableStatus = await _MessageLogViewModel.GetTableStatus(FloorId, start_date_time_seated_status);
+                            var statusData = SeatTableStatus.Where(x => x.transaction_id == details.id && details.assign_table_ids.Contains(x.table_id)).FirstOrDefault();
+                            if (statusData != null)
+                            {
+                                switch (statusData.table_status)
+                                {
+                                    case (int)WaitListTableStatusGroup.none:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "Finished",
+                                            Color = "#000000"
+                                        };
+                                        break;
+                                    case (int)WaitListTableStatusGroup.unavailable:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "Unavailable",
+                                            Color = "#807f80"
+                                        };
+                                        break;
+                                    case (int)WaitListTableStatusGroup.seated:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "Seated",
+                                            Color = "#964599"
+                                        };
+                                        break;
+                                    case (int)WaitListTableStatusGroup.partiallySeated:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "Partially Seated",
+                                            Color = "#63996b"
+                                        };
+                                        break;
+                                    case (int)WaitListTableStatusGroup.configurableStatus1:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "“First Course",
+                                            Color = "#367099"
+                                        };
+                                        break;
+                                    case (int)WaitListTableStatusGroup.configurableStatus2:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "Check",
+                                            Color = "#cc6d00"
+                                        };
+                                        break;
+                                    case (int)WaitListTableStatusGroup.configurableStatus3:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "Bus",
+                                            Color = "#a60013"
+                                        };
+                                        break;
+                                    case (int)WaitListTableStatusGroup.reserved:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "Reserved",
+                                            Color = "#000000"
+                                        };
+                                        break;
+                                    case (int)WaitListTableStatusGroup.blocked:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "Blocked",
+                                            Color = "#000000"
+                                        };
+                                        break;
+                                    case (int)WaitListTableStatusGroup.terminated:
+                                        currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                        {
+                                            Name = "Finished",
+                                            Color = "#000000"
+                                        };
+                                        break;
+
+                                }
+                            }
+                        }
+                        tablename = string.IsNullOrEmpty(tablename) ? "" : " - " + tablename;
+                        currentreservationsdetails.FloorPlan = details.floor_plan_technical_name + " " + tablename;
+
+                        break;
+                    default://(waiting, ready, canceled, noShow and unknown == Unseated) and Arrived
+                        currentreservationsdetails.ETAlabel = details.wait_start_time.AddMinutes(TimeZoneInterval)
+                            .AddMinutes(details.wait_time_minutes).ToString("MM/dd/yyyy hh:mm tt");
+                        var remintime = details.wait_start_time.AddMinutes(details.wait_time_minutes).AddMinutes(TimeZoneInterval)
+                            .Subtract(DateTime.UtcNow.AddMinutes(TimeZoneInterval));
+                        int days = (int)remintime.TotalDays;
+                        int hrs = (int)remintime.Hours;
+                        int mins = (int)remintime.Minutes;
+                        var printtime = string.Empty;
+                        if (days > 0)
+                        {
+                            printtime = days.ToString() + (days == 1 ? "day" : " day(s)");
+                            currentreservationsdetails.WaitTimeColor = "#7eb145";
+                        }
+                        else if (days < 0)
+                        {
+                            printtime = days.ToString() + (days == -1 ? "day" : " day(s)");
+                            currentreservationsdetails.WaitTimeColor = " #8D000D";
+                        }
+                        else if (hrs < 0)
+                        {
+                            printtime = hrs.ToString() + ":" + mins + (hrs == -1 ? "hour" : " hour(s)");
+                            currentreservationsdetails.WaitTimeColor = " #8D000D";
+                        }
+                        else if (hrs > 0)
+                        {
+                            printtime = hrs.ToString() + ":" + mins + (hrs == 1 ? "hour" : " hour(s)");
+                            currentreservationsdetails.WaitTimeColor = "#7eb145";
+                        }
+                        else if (mins < 10)
+                        {
+                            printtime = mins.ToString() + (mins == 1 ? "min" : " min(s)");
+                            currentreservationsdetails.WaitTimeColor = "#ff9966";
+                        }
+                        else
+                        {
+                            printtime = printtime = mins.ToString() + (mins == 1 ? "min" : " min(s)");
+                            currentreservationsdetails.WaitTimeColor = "#7eb145";
+                        }
+                        currentreservationsdetails.WaitTime = printtime;
+                        if (details.pre_assign_table_ids.Any())
+                        {
+                            tablename = string.Join(",", ResourceData.Where(x => details.pre_assign_table_ids.Contains(x.Id)).Select(x => x.Name));
+                        }
+                        tablename = string.IsNullOrEmpty(tablename) ? "" : " - " + tablename;
+                        currentreservationsdetails.FloorPlan = details.floor_plan_technical_name + " " + tablename;
+
+                        switch (currentreservationsdetails.Wl_status)
+                        {
+                            case (int)WaitListStatus.waiting:
+                                currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                {
+                                    Name = "Waiting",
+                                    Color = "#ff9966"
+                                };
+                                break;
+                            case (int)WaitListStatus.ready:
+                                currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                {
+                                    Name = "Ready",
+                                    Color = "#80caff"
+                                };
+                                break;
+                            case (int)WaitListStatus.canceled:
+                                currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                {
+                                    Name = "Cancelled",
+                                    Color = "#F5001D"
+                                };
+                                break;
+                            case (int)WaitListStatus.noShow:
+                                currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                {
+                                    Name = "No Show",
+                                    Color = "#bfbfbf"
+                                };
+                                break;
+                            case (int)WaitListStatus.unknown:
+                                currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                {
+                                    Name = "Unknown",
+                                    Color = "#ffffff"
+                                };
+                                break;
+                            case (int)WaitListStatus.arrived:
+                                currentreservationsdetails.StatusActionDetail = new StatusActionDetail
+                                {
+                                    Name = "Arrived",
+                                    Color = "#a8d477"
+                                };
+                                break;
+                        }
+
+                        break;
+                }
+                if (smsverified == 1)
+                {
+                    switch (currentreservationsdetails.mobile_phone_status)
+                    {
+                        case (int)MobileNumberStatus.verified:
+                            var temp_message = string.Empty;
+                            if (temp_newestlog == null)
+                            {
+                                temp_message = "Welcome’ SMS Not Sent";
+                                currentreservationsdetails.MessageLogDetail = new Messagelog()
+                                {
+                                    message = temp_message
+                                };
+                            }
+                            else if (string.IsNullOrEmpty(temp_newestlog.message))
+                            {
+                                temp_message = "SMS N/A";
+                                currentreservationsdetails.MessageLogDetail = new Messagelog()
+                                {
+                                    message = temp_message
+                                };
+                            }
+                            else
+                            {
+                                var massgetime = DateTime.UtcNow.Subtract(temp_newestlog.message_date);
+
+                                int days = (int)massgetime.TotalDays;
+                                int hrs = (int)massgetime.Hours;
+                                int mins = (int)massgetime.Minutes;
+                                int secs = (int)massgetime.Seconds;
+
+                                var printtime = string.Empty;
+                                if (days > 0)
+                                {
+                                    printtime = days.ToString() + (days == 1 ? "day" : " days");//1 day / 2 days
+                                }
+                                else if (hrs > 0)
+                                {
+                                    printtime = hrs.ToString() + (hrs == 1 ? "hour" : " hours");//1 hour / 2 hours
+                                }
+                                else if (mins < 1)
+                                {
+                                    printtime = secs.ToString() + (secs == 1 ? "second" : " seconds");//1 second / 2 seconds
+                                }
+                                else
+                                {
+                                    printtime = mins.ToString() + (mins == 1 ? "min" : " mins");//1 min / 2 mins
+                                }
+                                switch (temp_newestlog.message_type)
+                                {
+                                    case (int)MessageType.custom:
+                                        temp_message = /*temp_newestlog.message +*/ "Custom message sent " + printtime + " ago";
+                                        break;
+                                    case (int)MessageType.customerReply:
+                                        temp_message = /*temp_newestlog.message +*/ "Customer reply received sent " + printtime + " ago";
+                                        break;
+                                    default:
+                                        temp_message = templatesmessage.Where(x => x.message_type == temp_newestlog.message_type)
+                                            .Select(x => x.message_title).FirstOrDefault() + " sent " + printtime + " ago";
+                                        break;
+                                }
+                                currentreservationsdetails.MessageLogDetail = new Messagelog()
+                                {
+                                    message = temp_message,
+                                    id = temp_newestlog.id,
+                                    message_category = temp_newestlog.message_category,
+                                    message_type = temp_newestlog.message_type
+                                };
+                            }
+
+                            break;
+                        default:
+                            currentreservationsdetails.MessageLogDetail = new Messagelog();
+                            break;
+                    }
+                }
+                else
+                {
+                    currentreservationsdetails.MessageLogDetail = new Messagelog();
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        Visibility = true;
+        //loading = false;
+        VisibilitySpinner = false;
+    }
+    private void DialogClose(Object args)
+    {
+        StatusbuttonVisibility = false;
+        SMSPopupVisibility = false;
+        DelayedPopupVisibility = false;
+    }
+
+    public async Task OnCurrentDateChange(NavigatingEventArgs args)
+    {
+        if (FloorId != 0 && LocationId != 0)
+        {
+            CurrentDate = args.CurrentDate;
+            await GetReservationByFloor(FloorId, LocationId, SeatingResetTime);
+        }
+    }
+    private async Task OnSmsBtnClick(string reservationType)
+    {
+        StatusbuttonVisibility = false;
+        DelayedPopupVisibility = false;
+        CancelPopupVisibility = false;
+        SMSPopupVisibility = true;
+    }
+    private async Task OnStatusBtnClick()
+    {
+        SMSPopupVisibility = false;
+        DelayedPopupVisibility = false;
+        CancelPopupVisibility = false;
+        StatusbuttonVisibility = true;
+    }
+    private async Task OnGuestDeayedBtnClick()
+    {
+        SMSPopupVisibility = false;
+        StatusbuttonVisibility = false;
+        CancelPopupVisibility = false;
+        DelayedPopupVisibility = true;
+    }
+    private async Task OnCancelBtnClick()
+    {
+        SMSPopupVisibility = false;
+        StatusbuttonVisibility = false;
+        DelayedPopupVisibility = false;
+        CancelPopupVisibility = true;
+    }
+    private async Task OnlogClick(string reservationType)
+    {
+        LogPopupVisibility = true;
+    }
+
+    private async Task SetReservationStatusRsvpConfirmed()
+    {
+        var model = new SetReservationRequestModel()
+        {
+            reservation_id = currentreservationsdetails.reservation_id,
+            status = 0,
+            send_mail = false,
+            delay_in_minutes = 0,
+            refund_deposit = false
+        };
+        var status = await _ReservationViewModel.SetReservationStatus(model);
+        StatusbuttonVisibility = false;
+    }
+    private async Task SetReservationStatusRsvpGuestDelayed(int Minutes)
+    {
+        var model = new SetReservationRequestModel()
+        {
+            reservation_id = currentreservationsdetails.reservation_id,
+            status = 5,
+            send_mail = false,
+            delay_in_minutes = Minutes,
+            refund_deposit = false
+        };
+        var status = await _ReservationViewModel.SetReservationStatus(model);
+        DelayedPopupVisibility = false;
+    }
+    private async Task SetReservationStatusRsvpCancel()
+    {
+        var model = new SetReservationRequestModel()
+        {
+            reservation_id = currentreservationsdetails.reservation_id,
+            status = 2,
+            send_mail = isSendconfirmation,
+            delay_in_minutes = 0,
+            refund_deposit = isRefounddeposit
+        };
+        var status = await _ReservationViewModel.SetReservationStatus(model);
+        CancelPopupVisibility = false;
+    }
+    private async Task SetReservationStatusNoShow()
+    {
+        var model = new SetReservationRequestModel()
+        {
+            reservation_id = currentreservationsdetails.reservation_id,
+            status = 3,
+            send_mail = false,
+            delay_in_minutes = 0,
+            refund_deposit = false
+        };
+        var status = await _ReservationViewModel.SetReservationStatus(model);
+        StatusbuttonVisibility = false;
+    }
+
+    private async Task SetReservationStatusRsvpArrived()
+    {
+        var status = await _ReservationViewModel.SetReservationStatusArrived(currentreservationsdetails.reservation_id);
+        StatusbuttonVisibility = false;
+    }
+    private async Task UpdateWaitlistStatus(int status)
+    {
+        var response = await _CoversReportViewModel.UpdateWaitlistStatus(currentreservationsdetails.reservation_id, status);
+        StatusbuttonVisibility = false;
+    }
+
+    private async Task SetTableStatusOtherThanNoneOrFinished(int status)
+    {
+        foreach (var item in SeatTableStatus.Where(x => x.transaction_id == currentreservationsdetails.reservation_id))
+        {
+            var setingstaus = new SeatLogModel()
+            {
+                id = 0,
+                session_id = item.session_id,
+                table_status = status
+            };
+            var response = await _ReservationViewModel.SetSeatingStatusUpdatev2(setingstaus);
+        }
+
+        StatusbuttonVisibility = false;
+    }
+
+    private async Task SetTableStatusNoneOrFinished(int status)
+    {
+        StatusbuttonVisibility = false;
+        Temp_FinishedStatus = status;
+        ConfirmationPopup = true;
+    }
+    private async Task ProceedSetTableStatusNoneOrFinished(int? status)
+    {
+        if (status != null)
+        {
+            var model = new CloseReservationRequest()
+            {
+                transaction_id = currentreservationsdetails.reservation_id,
+                transaction_category = status.Value
+            };
+            var responce = await _ReservationViewModel.SetCloseReservationv2(model);
+        }
+        Temp_FinishedStatus = null;
+        ConfirmationPopup = false;
+    }
+
+    private async Task OnPaylogClick(string reservationType)
+    {
+        PayPopupVisibility = true;
+    }
+    private async Task OnTagClick()
+    {
+        TagPopupVisibility = true;
+
+    }
+    private async Task OnSelectTagClick(string tagName)
+    {
+        if (!tagsvalue.Contains(tagName))
+        {
+            tagsvalue.Add(tagName);
+            var tagstring = String.Join(",", tagsvalue);
+            rsvpReservationDetails.tags = tagstring;
+        }
+        else
+        {
+            tagsvalue.Remove(tagName);
+        }
+
+
+    }
+    private async Task SetTagToReservation()
+    {
+        if (currentreservationsdetails.ReservationDataType == "rsvps" || currentreservationsdetails.ReservationDataType == "pre_assign_rsvps")
+        {
+            var savereservationResponse = await _CoversReportViewModel.SaveReservation(rsvpReservationDetails);
+            if (savereservationResponse.data != null)
+            {
+                currentreservationsdetails.Tags = rsvpReservationDetails.tags.Split(',').ToList();
+            }
+        }
+        TagPopupVisibility = false;
+    }
+
+    private async Task OnAssignServerBtnClick()
+    {
+        StatusbuttonVisibility = false;
+        DelayedPopupVisibility = false;
+        CancelPopupVisibility = false;
+        SMSPopupVisibility = false;
+        ServerPopupVisibility = true;
+        ServerVisibilitySpinner = true;
+        var responce = await _ReservationViewModel.GetUsersByRole(26, 11);
+        SeverUserDetail = responce.data;
+
+        ServerVisibilitySpinner = false;
+    }
+
+    private async Task UpdatePreassignedServerTableAll(User_DetailModel server)
+    {
+        var transaction_type = 0;
+        var preid = currentreservationsdetails.assigned_server_id;
+        @if (@currentreservationsdetails.ReservationDataType == "rsvps" || @currentreservationsdetails.ReservationDataType == "pre_assign_rsvps")
+        {
+            transaction_type = 2;
+        }
+        else
+        {
+            transaction_type = 1;
+        }
+        var data = new PreAssignedServerTableRequestAll()
+        {
+            transaction_id = currentreservationsdetails.reservation_id,
+            transaction_type = transaction_type,
+            duration_in_minutes = 0,
+            pre_assign_server_id = server.user_id,
+            pre_assign_table_ids = null
+        };
+        var responce = await _ReservationViewModel.UpdatePreassignedServerTableAll(data);
+        ServerPopupVisibility = false;
+    }
+}
+
+<style>
+    .wl-default-partiallyseated {
+        background-color: #63996b !important;
+    }
+
+    .displayblockclass {
+        display: block;
+    }
+
+    .displaynoneclass {
+        display: none;
+    }
+
+    .wl-default-seated {
+        background-color: #964599 !important;
+    }
+
+    .wl-default-firstcourse {
+        background-color: #367099 !important;
+    }
+
+    .wl-default-check {
+        background-color: #cc6d00 !important;
+    }
+
+    .wl-default-bus {
+        background-color: #a60013 !important;
+    }
+
+    .wl-default-finished {
+        background-color: #000000 !important;
+    }
+
+    .rsvp-custom-partiallyseated {
+        background-color: #63996b !important;
+    }
+
+    .rsvp-custom-seated {
+        background-color: #964599 !important;
+    }
+
+    .rsvp-custom-blushtasting {
+        background-color: #367099 !important;
+    }
+
+    .rsvp-custom-whitetasting {
+        background-color: #cc6d00 !important;
+    }
+
+    .rsvp-custom-bustable {
+        background-color: #a60013 !important;
+    }
+
+    .rsvp-custom-finished {
+        background-color: #000000 !important;
+    }
+
+
+    .cancelreservation {
+        width: 100% !important;
+        background-color: #2A6DBF !important;
+        color: #fff !important;
+        border: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .sendconfirmation {
+        float: right !important;
+        height: 20px !important;
+        width: 34px !important;
+    }
+
+        .sendconfirmation .e-switch-on {
+            background-color: #3e4246 !important;
+        }
+
+        .sendconfirmation .e-switch-inner {
+            border: 1px solid #3e4246 !important;
+        }
+
+    .refounddeposit {
+        float: right !important;
+        height: 20px !important;
+        width: 34px !important;
+    }
+
+        .refounddeposit .e-switch-on {
+            background-color: #3e4246 !important;
+        }
+
+        .refounddeposit .e-switch-inner {
+            border: 1px solid #3e4246 !important;
+        }
+
+    .reservation-details hr {
+        margin-top: 15px;
+    }
+
+
+    .e-dialog.e-lib.e-popup.e-control.e-popup-open {
+        top: 10% !important;
+        left: 22% !important;
+        z-index: 9999 !important;
+        max-height: 150% !important;
+    }
+
+    .e-dialog.e-lib.SmsPopup.e-popup.e-control.e-popup-open {
+        z-index: 999999 !important;
+        top: 11% !important;
+        left: 46% !important;
+    }
+
+    .e-dialog.e-lib.LogPopup.e-popup.e-control.e-popup-open {
+        z-index: 999999 !important;
+        top: 12% !important;
+        left: 39% !important;
+    }
+
+    .e-dialog.e-lib.PayPopup.e-popup.e-control.e-popup-open {
+        z-index: 999999 !important;
+        top: 12% !important;
+        left: 39% !important;
+    }
+
+    .e-dialog.e-lib.TagPopup.e-popup.e-control.e-popup-open {
+        z-index: 999999 !important;
+        top: 12% !important;
+        left: 66% !important;
+    }
+
+    .LogPopup .e-dlg-header-content {
+        background-color: gray;
+    }
+
+    .PayPopup .e-dlg-header-content {
+        background-color: gray;
+    }
+
+    .buttondesign {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+
+    .smsbtn {
+        width: 100%;
+        margin-bottom: 5px;
+        border-color: #4f4f50 !important;
+        background-color: transparent !important;
+        color: #6c757d !important;
+        box-shadow: none !important;
+    }
+
+    .smsbtndisabled {
+        width: 100%;
+        margin-bottom: 5px;
+        border-color: #4f4f50 !important;
+        opacity: 0.33 !important;
+        background-color: transparent !important;
+        color: #6c757d !important;
+        box-shadow: none !important;
+    }
+
+    .buttondesignstatus {
+        width: 100%;
+        margin-bottom: 5px;
+        box-shadow: none !important;
+    }
+
+    .serverbtn {
+        width: 100%;
+        margin-bottom: 5px;
+        border-color: #4f4f50 !important;
+        background-color: transparent !important;
+        color: #6c757d !important;
+        box-shadow: none !important;
+    }
+
+    .e-dialog.e-lib.statusbuttonPopup.e-popup.e-control.e-popup-open {
+        z-index: 999999 !important;
+        top: 25% !important;
+        left: 46% !important;
+    }
+
+        .e-dialog.e-lib.statusbuttonPopup.e-popup.e-control.e-popup-open .e-dlg-content {
+            padding: 0 !important;
+        }
+
+        .e-dialog.e-lib.statusbuttonPopup.e-popup.e-control.e-popup-open .e-dlg-header-content {
+            padding: 5px 5px 0px 0px !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+        }
+
+        .e-dialog.e-lib.statusbuttonPopup.e-popup.e-control.e-popup-open .e-dlg-closeicon-btn {
+            float: left !important;
+        }
+
+
+    .e-dialog.e-lib.serverpopup.e-popup.e-control.e-popup-open {
+        z-index: 999999 !important;
+        top: 11% !important;
+        left: 46% !important;
+    }
+
+        .e-dialog.e-lib.serverpopup.e-popup.e-control.e-popup-open .e-dlg-content {
+            padding: 0 !important;
+            max-height: 492px !important;
+        }
+
+        .e-dialog.e-lib.serverpopup.e-popup.e-control.e-popup-open .e-dlg-header-content {
+            padding: 5px 5px 0px 0px !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+        }
+
+        .e-dialog.e-lib.serverpopup.e-popup.e-control.e-popup-open .e-dlg-closeicon-btn {
+            float: left !important;
+        }
+
+
+
+    .statusbtn {
+        width: 100%;
+        border: none;
+        box-shadow: none !important;
+        color: #fff !important;
+        border-radius: 0 !important;
+    }
+
+    .cancelsbtn {
+        width: 100%;
+        border: none;
+        box-shadow: none !important;
+        color: #000 !important;
+        border-radius: 0 !important;
+        background-color: #fff !important;
+    }
+
+    .rsvp-confirmed {
+        background-color: #F9C21E !important;
+    }
+
+    .rsvp-guestDelayed {
+        background-color: #2A6DBF !important;
+        color: #fff !important;
+    }
+
+    .rsvp-arrived {
+        background-color: #2EB24F !important;
+    }
+
+    .rsvp-cancelled {
+        background-color: #F6001D !important;
+    }
+
+    .rsvp-noShow {
+        background-color: #404040 !important;
+    }
+
+    .wl-waiting {
+        background-color: #ff9966 !important;
+    }
+
+    .wl-ready {
+        background-color: #80caff !important;
+    }
+
+    .wl-arrived {
+        background-color: #a8d477 !important;
+    }
+
+    .wl-cencelled {
+        background-color: #F5001D !important;
+    }
+
+    .wl-noShow {
+        background-color: #bfbfbf !important;
+    }
+
+    .e-dialog.e-lib.delayedPopup.e-popup.e-control.e-popup-open {
+        z-index: 999999 !important;
+        top: 20% !important;
+        left: 46% !important;
+    }
+
+        .e-dialog.e-lib.delayedPopup.e-popup.e-control.e-popup-open .e-dlg-content {
+            padding: 0 !important;
+        }
+
+        .e-dialog.e-lib.delayedPopup.e-popup.e-control.e-popup-open .e-dlg-header-content {
+            padding: 5px 5px 0px 0px !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+        }
+
+        .e-dialog.e-lib.delayedPopup.e-popup.e-control.e-popup-open .e-dlg-closeicon-btn {
+            float: left !important;
+        }
+
+    .e-dialog.e-lib.cancelPopup.e-popup.e-control.e-popup-open {
+        z-index: 999999 !important;
+        top: 15% !important;
+        left: 46% !important;
+    }
+
+        .e-dialog.e-lib.cancelPopup.e-popup.e-control.e-popup-open .e-dlg-header-content {
+            border: 0 !important;
+            border-radius: 0 !important;
+        }
+
+        .e-dialog.e-lib.cancelPopup.e-popup.e-control.e-popup-open .e-dlg-closeicon-btn {
+            float: left !important;
+        }
+
+
+    /*.links {
+        width: 100%;
+    }*/
+    .links ul {
+        padding: 0px;
+        margin: 0px;
+        white-space: nowrap;
+        overflow-x: auto;
+    }
+
+        .links ul li {
+            display: inline-block;
+            padding: 8px 20px;
+            line-height: 1;
+            border-right: 1px solid #000;
+        }
+
+            .links ul li.active {
+                background-color: #c1c1c1 !important;
+            }
+
+            .links ul li:last-child {
+                border-right: 0px;
+            }
+
+    /*  .links ul li a {
+                    text-decoration: none;
+                }*/
+
+
+    .e-schedule {
+        font-family: "Poppins",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol" !important;
+    }
+
+    .e-toolbar .e-tbar-btn .e-tbar-btn-text {
+        font-family: "Poppins",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol" !important;
+    }
+
+    .e-btn, .e-css.e-btn {
+        font-family: "Poppins",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol" !important;
+    }
+
+    .e-schedule .e-tbar-btn-text .e-today .e-day .e-title {
+        font-family: "Poppins",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol" !important;
+    }
+
+    .e-schedule .e-schedule-table tbody .e-header-row .e-time-slots span {
+        font-family: "Poppins",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol" !important;
+    }
+
+    .e-schedule .room-type {
+        text-align: center;
+    }
+
+
+    .e-schedule .room-name {
+        text-align: center;
+    }
+
+    .e-schedule .template-wrap > div {
+        border-right: none !important
+    }
+
+    .e-schedule .e-timeline-view .e-current-timeline {
+        border-left: 1px solid red !important;
+    }
+
+    .e-schedule .e-header-cells.e-date-header {
+        display: none;
+    }
+
+    .e-schedule .e-timeline-view .e-current-time {
+        color: red !important;
+    }
+
+    .e-schedule .e-timeline-view .e-resource-left-td {
+        vertical-align: bottom;
+    }
+
+    .e-schedule.e-device .e-timeline-view .e-resource-left-td {
+        width: 75px;
+    }
+
+    .e-header-popup.e-lib.e-popup.e-control.e-popup-open {
+        z-index: 99999 !important;
+    }
+
+        .e-header-popup.e-lib.e-popup.e-control.e-popup-open .e-control.e-calendar.e-lib.e-keyboard {
+            position: fixed;
+        }
+
+    .e-schedule .e-timeline-view .e-resource-left-td .e-resource-text {
+        display: flex;
+        font-weight: 500;
+        padding: 0;
+    }
+
+    .e-schedule .e-appointment .e-appointment-details {
+        padding: 0 !important;
+    }
+
+    .e-schedule .e-timeline-view .e-resource-left-td .e-resource-text > div {
+        border-right: 1px solid rgba(0, 0, 0, 0.12);
+        border-top: 1px solid rgba(0, 0, 0, 0.12);
+        flex: 0 0 33.3%;
+        font-weight: 500;
+        height: 36px;
+        line-height: 34px;
+        padding-left: 5px;
+    }
+
+        .e-schedule .e-timeline-view .e-resource-left-td .e-resource-text > div:last-child {
+            border-right: 0;
+        }
+
+    .e-schedule .template-wrap {
+        display: flex;
+        text-align: left;
+    }
+
+    .e-schedule .e-timeline-view .e-resource-cells, .e-schedule .e-timeline-month-view .e-resource-cells {
+        height: 30px !important;
+    }
+
+    .e-schedule .e-timeline-view .e-work-cells, .e-schedule .e-timeline-month-view .e-work-cells {
+        height: 30.5px !important;
+    }
+
+    .e-schedule .template-wrap > div {
+        border-right: 1px solid rgba(0, 0, 0, 0.12);
+        flex: 0 0 33%;
+        font-weight: 500;
+        line-height: 28px;
+        overflow: hidden;
+        padding-left: 5px;
+        text-overflow: ellipsis;
+    }
+
+        .e-schedule .template-wrap > div:last-child {
+            border-right: 0;
+        }
+
+    .e-schedule .e-timeline-view .e-resource-cells,
+    .e-schedule .e-timeline-month-view .e-resource-cells {
+        padding-left: 0;
+    }
+
+    .e-schedule .e-timeline-view .e-date-header-wrap table col,
+    .e-schedule .e-timeline-view .e-content-wrap table col {
+        width: 100px;
+    }
+
+    .e-schedule .e-read-only {
+        opacity: .8;
+    }
+
+    .e-schedule .e-time {
+        display: none !important;
+    }
+
+    .e-schedule .e-location {
+        float: right !important;
+        margin-top: -16px !important;
+    }
+
+
+
+    .e-schedule .e-timeline-view .e-resource-left-td, .e-schedule .e-timeline-month-view .e-resource-left-td {
+        width: 120px !important
+    }
+
+    .e-schedule .e-timeline-view .e-appointment, .e-schedule .e-timeline-month-view .e-appointment {
+        height: 26px !important;
+    }
+
+    .e-toolbar-item.e-overflow-show.e-add {
+        display: none;
+    }
+</style>

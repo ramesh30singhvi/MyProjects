@@ -1,0 +1,287 @@
+﻿@page "/settings/return-refund-settings"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject ISettingsViewModel _settingsViewModel
+@inject ICPSettingViewModel _cPSettingViewModel
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="settings/orders" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-recycle me-2"></span>Return & Refunds Settings</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-primary" href="javascript:void();" @onclick="SaveRequiredReturnReasonSetting">Save</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="row justify-content-between align-items-center">
+                            <div class="col-md">
+                                <div class="form-check">
+                                    <div class="d-flex">
+                                        <input class="form-check-input me-2" @bind="@RequireReturnReason" type="checkbox" id="chkReturnReason" />
+                                        <label class="form-check-label" for="card-checkbox">Require Reason for Return</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <a class="btn btn-sm btn-primary" href="javascript:void(0)" @onclick="@OpenModal">Add New</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body pt-0">
+                        <div class="min-vh-75 sf-grid">
+                            <SfGrid DataSource="@reasons.OrderBy(x =>x.ReasonName)" Width="100%">
+                                <GridColumns>
+                                    <GridColumn HeaderText="Option" TextAlign="TextAlign.Left" Width="50">
+                                        <Template Context="reasonContext">
+                                            @{
+                                                var model = (reasonContext as BusinessReturnReasonModel);
+                                                <a href="javascript:void();">@model.ReasonName</a>
+                                            }
+                                        </Template>
+                                    </GridColumn>
+                                    <GridColumn HeaderText="RETURN TO INVENTORY?" TextAlign="TextAlign.Left" Width="40">
+                                        <Template Context="reasonContext">
+                                            @{
+                                                var model = (reasonContext as BusinessReturnReasonModel);
+                                                @(model.ReturnToInventory ? "Yes" : "No")
+                                            }
+                                        </Template>
+                                    </GridColumn>
+                                    <GridColumn HeaderText="" TextAlign="TextAlign.Center" Width="10">
+                                        <Template Context="reasonContext">
+                                            @{
+                                                var model = (reasonContext as BusinessReturnReasonModel);
+                                                <button class="delete_icon" @onclick="()=>DeleteBusinessReturnReason(model.Id)">
+                                                    <span class="far fa-trash-alt"></span>
+                                                </button>
+                                            }
+                                        </Template>
+                                    </GridColumn>
+                                </GridColumns>
+                            </SfGrid>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+@*Delete confimation dialog*@
+<DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="()=>DeleteBusinessReturnReasonConfirm(reasonId)"></DeleteConfirmation>
+
+<SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="ModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Returned Item Reason</h5></Header>
+        <Content>
+            <EditForm Model="@requestModel" Context="reasonFormContext">
+                <DataAnnotationsValidator />
+                @if (defaultReasons.Count > 0)
+                        {
+                <div class="mb-3">
+                    <label class="form-label" for="inputReason">Reason</label>
+                    <SfComboBox id="inputReason" @bind-Value="@requestModel.ReasonName" AllowFiltering=true DataSource="@defaultReasons">
+                        <ComboBoxFieldSettings Value="string"></ComboBoxFieldSettings>
+                    </SfComboBox>
+                    <ValidationMessage For="@(() => requestModel.ReasonName)" />
+                </div>
+                }
+
+                <div class="mb-3">
+                    <div class="form-check">
+                        <div class="d-flex">
+                            <input class="form-check-input me-2" @bind="requestModel.ReturnToInventory" type="checkbox" id="chkReturnToInventory" />
+                            <label class="form-check-label" for="card-checkbox">Returned to Inventory?</label>
+                        </div>
+                    </div>
+                </div>
+                <hr />
+                <div class="float-end pb-3">
+                    <button type="button" class="btn btn-secondary" @onclick="@CloseModal">Close</button>
+                    <button type="button" class="btn btn-primary" @onclick="@(() => SaveBusinessReturnReason(reasonFormContext))">Save</button>
+                </div>
+            </EditForm>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+    private string title = "Return & Refunds Settings | Synergy Admin Panel";
+    private bool isLoading = false;
+    bool openDeleteDialog = false;
+    private Member currentMember;
+    private bool RequireReturnReason;
+    private string returnReason;
+    private BusinessReturnReasonRequestModel requestModel = new BusinessReturnReasonRequestModel();
+    private List<BusinessReturnReasonModel> reasons = new List<BusinessReturnReasonModel>();
+    private List<string> defaultReasons = new List<string>();
+    private BusinessSettings requireReturnReasonSetting = new BusinessSettings();
+    private BusinessSettingsRequestModel requireReturnReasonRequestModel = new BusinessSettingsRequestModel();
+    private int reasonId;
+    private bool ModalVisibility { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        await GetRequiredReturnReasonSetting();
+        await GetBusinessReturnReasons();
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task GetDefaultReasons()
+    {
+        var response = await _cPSettingViewModel.GetCPSettingListAsync(CPSettingMetaNamespace.ReturnRefundReason);
+        if (response.success && response.data != null)
+        {
+            var returnRefundReasons = response?.data?.Where(x => x.MetaKey == CPSettingMetaKey.ReturnRefundReason)?.ToList();
+            if (returnRefundReasons != null && returnRefundReasons.Count > 0)
+            {
+                foreach (var item in returnRefundReasons)
+                {
+                    defaultReasons.Add(item.MetaValue);
+                }
+            }
+        }
+    }
+
+    private async Task GetBusinessReturnReasons()
+    {
+        var response = await _settingsViewModel.GetBusinessReturnReasonList();
+        if (response.success)
+        {
+            reasons = response.data;
+        }
+        StateHasChanged();
+    }
+
+    private async Task GetRequiredReturnReasonSetting()
+    {
+        var response = await _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessSettings, BusinessSettingsMetaKey.RequireReasonForReturn);
+        if (response.success)
+        {
+            requireReturnReasonSetting = response.data;
+            if (requireReturnReasonSetting != null)
+            {
+                RequireReturnReason = Convert.ToBoolean(requireReturnReasonSetting.MetaValue);
+            }
+        }
+    }
+
+    private async Task SaveRequiredReturnReasonSetting()
+    {
+        isLoading = true;
+        requireReturnReasonRequestModel = new BusinessSettingsRequestModel()
+        {
+            Id = requireReturnReasonSetting.Id,
+            BusinessId = currentMember.Id,
+            Description = string.Empty,
+            Title = string.Empty,
+            MetaKey = BusinessSettingsMetaKey.RequireReasonForReturn,
+            MetaNamespace = BusinessSettingsMetaNamespace.BusinessSettings,
+            ValueType = (int)ValueTypeEnum.Boolean,
+            MetaValue = RequireReturnReason.ToString()
+        };
+
+        var response = await _settingsViewModel.CreateBusinessSettingAsync(requireReturnReasonRequestModel);
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task SaveBusinessReturnReason(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            isLoading = true;
+            var response = await _settingsViewModel.AddBusinessReturnReason(requestModel);
+            if (response.success)
+            {
+                this.ModalVisibility = false;
+                await GetBusinessReturnReasons();
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void DialogClose() => openDeleteDialog = false;
+
+    private void DeleteBusinessReturnReason(int id)
+    {
+        openDeleteDialog = true;
+        reasonId = id;
+        StateHasChanged();
+    }
+
+    private async Task DeleteBusinessReturnReasonConfirm(int Id)
+    {
+        openDeleteDialog = false;
+        isLoading = true;
+        var response = await _settingsViewModel.RemoveBusinessReturnReason(Id);
+        if (response.success)
+        {
+            await GetBusinessReturnReasons();
+            toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+
+    }
+
+    private async Task OpenModal()
+    {
+        this.isLoading = true;
+        requestModel.ReasonName = string.Empty;
+        if (defaultReasons.Count <= 0)
+        {
+            await GetDefaultReasons();
+        }
+
+        this.ModalVisibility = true;
+        this.isLoading = false;
+        StateHasChanged();
+    }
+    private void CloseModal()
+    {
+        this.ModalVisibility = false;
+    }
+}

@@ -1,0 +1,58 @@
+﻿@page "/system-updates"
+@layout AuthorizedLayout
+@using Syncfusion.Blazor.Spinner
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@inject ISystemUpdatesViewModel _systemUpdatesViewModel
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<div class="card">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md-auto">
+                <h5 class="mb-3 mb-md-0"><a href="/" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-bullhorn me-2"></span>System Updates</h5>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        @if (systemUpdates.Count > 0)
+        {
+            var articlesByYears = systemUpdates.GroupBy(x => x.ArticlePublishDate.Year).Select(x => new { year = x.Key.ToString(), data = x.ToList() }).ToList();
+
+            @foreach (var yearArticles in articlesByYears)
+            {
+                <h2 class="mb-2">System Updates - @yearArticles.year</h2>
+                var yearlyArticlesData = yearArticles.data.GroupBy(x => x.ArticlePublishDate.Date).Select(x => new { date = x.Key.ToString("MMM d, yyyy"), data = x.OrderBy(x => x.Article).ToList() }).ToList();
+                foreach (var articlesOnDate in yearlyArticlesData)
+                {
+                    <h5 class="mb-2">@articlesOnDate.date</h5>
+                    <ul>
+                        @foreach (var dataItem in articlesOnDate.data)
+                        {
+                            <li class="mb-2">@dataItem.Article - @dataItem.ArticleTitle <a target="_blank" href="@dataItem.ArticleURL">Learn more</a></li>
+                        }
+                    </ul>
+                }
+            }
+        }
+    </div>
+</div>
+
+@code {
+
+    private string title = "System Updates";
+    List<SystemUpdatesListModel> systemUpdates = new List<SystemUpdatesListModel>();
+    bool SpinnerVisibility = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var response = await _systemUpdatesViewModel.GetSystemUpdates();
+        if (response.success)
+        {
+            systemUpdates = response.data.OrderByDescending(x => x.ArticlePublishDate).ToList();
+        }
+        SpinnerVisibility = false;
+    }
+
+}

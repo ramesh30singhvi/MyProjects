@@ -1,0 +1,214 @@
+﻿@page "/settings/inventory-locations"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.Blazor.Popups
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.DropDowns
+@using System
+@using System.Collections.Generic
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ISettingsViewModel _settingsViewModel
+@inject ILocalStorageService localStorage
+@inject ToastService toastService
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+<div class="card">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-warehouse-full me-2"></span>Inventory Locations</h5>
+            </div>
+
+            <div class="col-auto">
+                <button type="button" class="btn btn-sm btn-primary">Add Location</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body min-vh-50 p-0 sf-grid">
+        <SfGrid DataSource="@InvLocationPlaceholderList" AllowPaging="false" Width="100%">
+            <GridColumns>
+                <GridColumn HeaderText="Location Name" TextAlign="TextAlign.Left" Width="200">
+                    <Template Context="InvLocationContext">
+                        @{
+                            var invLocation = (InvLocationContext as InventoryLocationPlaceholder);
+                            <a class="btn btn-link text-800 fs--1" href="settings/inventory-locations/edit/@invLocation.LocationGuid">@invLocation.LocationName</a>
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="Address" Type="ColumnType.String" TextAlign="TextAlign.Left" Width="300">
+                    <Template Context="InvLocationContext">
+                        @{
+                            var invLocation = (InvLocationContext as InventoryLocationPlaceholder);
+                            @(invLocation.Address)
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="POS" TextAlign="TextAlign.Center" Width="80">
+                    <Template Context="InvLocationContext">
+                        @{
+                            var invLocation = (InvLocationContext as InventoryLocationPlaceholder);
+                        }
+                        @if (invLocation.PosEnabled)
+                        {
+                            <span class="checked_box">
+                                <span class="far fa-check-square"></span>
+                                ✓
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="unchecked_box">
+                                <span class="empty-check"></span>
+                            </span>
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="ECOM" TextAlign="TextAlign.Center" Width="80">
+                    <Template Context="InvLocationContext">
+                        @{
+                            var invLocation = (InvLocationContext as InventoryLocationPlaceholder);
+                        }
+                        @if (invLocation.EcomEnabled)
+                        {
+                            <span class="checked_box">
+                                <span class="far fa-check-square"></span>
+                                ✓
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="unchecked_box">
+                                <span class="empty-check"></span>
+                            </span>
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="CLUB" TextAlign="TextAlign.Center" Width="80">
+                    <Template Context="InvLocationContext">
+                        @{
+                            var invLocation = (InvLocationContext as InventoryLocationPlaceholder);
+                        }
+                        @if (invLocation.ClubEnabled)
+                        {
+                            <span class="checked_box">
+                                <span class="far fa-check-square"></span>
+                                ✓
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="unchecked_box">
+                                <span class="empty-check"></span>
+                            </span>
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="PICKUP" TextAlign="TextAlign.Center" Width="80">
+                    <Template Context="InvLocationContext">
+                        @{
+                            var invLocation = (InvLocationContext as InventoryLocationPlaceholder);
+                        }
+                        @if (invLocation.PickupEnabled)
+                        {
+                            <span class="checked_box">
+                                <span class="far fa-check-square"></span>
+                                ✓
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="unchecked_box">
+                                <span class="empty-check"></span>
+                            </span>
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="" TextAlign="TextAlign.Right" Width="50">
+                    <Template Context="InvLocationContext">
+                        @{
+                            var invLocation = (InvLocationContext as InventoryLocationPlaceholder);
+                            <button class="delete_icon" @onclick="()=>DeleteDialogOpen(invLocation.Id)">
+                                <span class="far fa-trash-alt"></span>
+                            </button>
+                        }
+                    </Template>
+                </GridColumn>
+            </GridColumns>
+        </SfGrid>
+
+    </div>
+</div>
+
+@*Delete confimation dialog*@
+<DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="DeleteLocation"></DeleteConfirmation>
+
+@code
+{
+
+    bool openDeleteDialog = false;
+    private string title = "Inventory Locations | Synergy Commerce Admin Panel";
+    Member currentMember = null;
+
+    List<InventoryLocationPlaceholder> InvLocationPlaceholderList = new List<InventoryLocationPlaceholder>();
+
+    int idForDelete = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        InvLocationPlaceholderList = InvLocationList;
+
+    }
+
+
+
+    private void DialogClose() => openDeleteDialog = false;
+
+    private void DeleteDialogOpen(int id)
+    {
+        openDeleteDialog = true;
+        idForDelete = id;
+    }
+
+    private void EditLocation(InventoryLocationPlaceholder invLocation)
+    {
+
+    }
+
+    private async Task DeleteLocation()
+    {
+    }
+
+    public class InventoryLocationPlaceholder
+    {
+        public int Id { get; set; }
+        public string LocationGuid { get; set; }
+        public string LocationName { get; set; }
+        public string Address { get; set; }
+        public bool PosEnabled { get; set; }
+        public bool EcomEnabled { get; set; }
+        public bool ClubEnabled { get; set; }
+        public bool PickupEnabled { get; set; }
+    }
+
+    public List<InventoryLocationPlaceholder> InvLocationList = new List<InventoryLocationPlaceholder>()
+{
+    new InventoryLocationPlaceholder(){ Id=1, LocationGuid="fc183e28-5ddd-47ca-a90f-ef32529772d1", LocationName= "Seattle Tasting Room", Address = "50 California Street Suite 1500, Seattle, WA 94111 USA", PosEnabled=false, EcomEnabled=true, ClubEnabled=true, PickupEnabled=false  },
+    new InventoryLocationPlaceholder(){ Id=2, LocationGuid="50ebfa06-670b-4849-990f-a6738e149e0e", LocationName= "Napa Tasting Room", Address = "849 Zinfandel Ln, St. Helena, CA 94574 USA" , PosEnabled=true, EcomEnabled=true, ClubEnabled=false, PickupEnabled=true  },
+
+     };
+
+}

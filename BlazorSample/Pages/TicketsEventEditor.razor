@@ -1,0 +1,435 @@
+﻿@page "/tickets/event-editor"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using Blazored.LocalStorage
+@using Syncfusion.Blazor.Spinner
+@using Syncfusion.Blazor
+@using Microsoft.Extensions.Configuration;
+@inject ILocalStorageService localStorage
+@inject HttpClient _httpClient
+@inject IBusinessService _businessService
+@inject IPOSLicenceService _posLicenceService
+@inject IConfiguration _configuration
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ToastService toastService
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        <div class="card mb-3">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0">
+                            <a href="tickets/event-manager-tickets" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back">
+                                <span class="far fa-arrow-left me-1"></span>
+                            </a><span class="far fa-calendars me-2"></span>
+                            Create Event
+                        </h5>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-outline-primary" href="javascript:void();">Make your event live</a>
+                        <a class="btn btn-sm btn-primary" href="javascript:void();">Save</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <img src="https://cdn.cellarpass.com/static/images/admin/add-devices-banner.png" class="img-fluid w-100" alt="Pos Devices">
+                    </div>
+                </div>
+                <div class="d-flex btn-reveal-trigger">
+                    <div class="calendar"><span class="calendar-month">Dec</span><span class="calendar-day">31</span></div>
+                    <div class="flex-1 position-relative ps-3">
+                        <h5 class="mb-0"><span>Free New Year's Eve Midnight Harbor Fireworks</span><br></h5>
+                        <p class="mb-0 fs--1">by <a class="hover-text-decoration-none">Boston Harbor Now</a></p>
+                        <p class="mb-0"><span>$49.99 - $89.99</span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row g-0">
+            <div class="col-lg-8 pe-lg-2 mb-3">
+                <div class="card h-lg-100">
+                    <div class="card-header d-flex flex-between-center bg-light py-2">
+                        <h5 class="mb-0">Event Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="inputEventTitle" class="form-label">Event Title</label>
+                                <input type="text" class="form-control" id="inputEventTitle" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="dpDateStart">Start Date</label>
+                                <SfDatePicker id="dpDateStart" TValue="DateTime?" Placeholder="Choose Start Date"></SfDatePicker>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="tpStartTime">Start Time</label>
+                                <SfTimePicker id="tpStartTime" TValue="DateTime?" Placeholder="Select Start Time"></SfTimePicker>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="dpEndDate">End Date</label>
+                                <SfDatePicker id="dpEndDate" TValue="DateTime?" Placeholder="Choose End Date"></SfDatePicker>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="tpEndTime">End Time</label>
+                                <SfTimePicker id="tpEndTime" TValue="DateTime?" Placeholder="Select End Time"></SfTimePicker>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="dpRegistrationDeadline">Registration Deadline</label>
+                                <SfDatePicker id="dpRegistrationDeadline" TValue="DateTime?" Placeholder="Choose Registration Deadline"></SfDatePicker>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="selectTimezone" class="form-label">Timezone</label>
+                                <select id="selectTimezone" class="form-select">
+                                    <option>GMT-12:00 Etc/GMT-12</option>
+                                </select>
+                            </div>
+                            <hr class="mb-3" />
+                            <div class="col-md-6 mb-3">
+                                <label for="inputVenueName" class="form-label">Venue Name</label>
+                                <input type="text" class="form-control" id="inputVenueName" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="inputAddress" class="form-label">Address</label>
+                                <input type="text" class="form-control" id="inputAddress" />
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="inputCity" class="form-label">City</label>
+                                <input type="text" class="form-control" id="inputCity" />
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="inputState" class="form-label">State</label>
+                                <input type="text" class="form-control" id="inputState" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="inputCountry" class="form-label">Country</label>
+                                <input type="text" class="form-control" id="inputCountry" />
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label" for="inputDescription">Description</label>
+                                <textarea id="inputDescription" class="form-control" rows="4"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 mb-3">
+                <div class="row g-0">
+                    <div class="col-lg-6 col-xl-12 pe-lg-2 pe-xl-0 mb-3 mb-lg-0">
+                        <div class="card h-100">
+                            <div class="card-header d-flex flex-between-center bg-light py-2">
+                                <h5 class="mb-0">Other Details</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-12 mb-3">
+                                        <div class="row g-3">
+                                            <div class="col">
+                                                <label for="inputOrganizer" class="form-label">Organizer</label>
+                                            </div>
+                                            <div class="col text-end">
+                                                <a href="javascript:void();">Add New</a>
+                                            </div>
+                                        </div>
+                                        <input type="text" class="form-control" id="inputOrganizer" />
+                                    </div>
+                                    <div class="col-md-12 mb-3">
+                                        <div class="row g-3">
+                                            <div class="col">
+                                                <label for="inputSponsors" class="form-label">Sponsors</label>
+                                            </div>
+                                            <div class="col text-end">
+                                                <a href="javascript:void();">Add New</a>
+                                            </div>
+                                        </div>
+                                        <input type="text" class="form-control" id="inputSponsors" />
+                                    </div>
+                                    <div class="col-md-12 mb-3">
+                                        <label for="selectEventType1" class="form-label">Event Type 1</label>
+                                        <select id="selectEventType1" class="form-select">
+                                            <option>Select Event Type</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-12 mb-3">
+                                        <label for="selectEventType2" class="form-label">Event Type 2</label>
+                                        <select id="selectEventType2" class="form-select">
+                                            <option>Select Event Type</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-12 mb-3">
+                                        <div class="row g-3">
+                                            <div class="col">
+                                                <label for="inputTags" class="form-label">Tags</label>
+                                            </div>
+                                            <div class="col text-end">
+                                                <a href="javascript:void();">Add New</a>
+                                            </div>
+                                        </div>
+                                        <input type="text" class="form-control" id="inputTags" />
+                                    </div>
+                                    <hr class="mb-3" />
+                                    <div class="col-md-12 mb-3">
+                                        <label class="form-label">Listing Privacy</label>
+                                        <div class="p-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="rdListingPrivacy" id="rdListingPrivacy1" value="0" checked />
+                                                <label class="form-check-label" for="rdListingPrivacy1">Public Page<br /><span class="fs--2">Discoverable by anyone on Falcon, our distribution partners, and search engines.</span></label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="rdListingPrivacy" id="rdListingPrivacy2" value="1" />
+                                                <label class="form-check-label" for="rdListingPrivacy2">Private Page<br /><span class="fs--2">Accessible only by  people you specify.</span></label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row g-0">
+            <div class="col-lg-8 pe-lg-2 mb-3">
+                <div class="card h-lg-100">
+                    <div class="card-header d-flex flex-between-center bg-light py-2">
+                        <h5 class="mb-0">Ticket Price</h5>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-primary">Free Ticket</button>
+                            <button type="button" class="btn btn-sm btn-primary">Paid Ticket</button>
+                            <button type="button" class="btn btn-sm btn-primary">Donation</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">Pricing Options</label>
+                            <div class="p-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkEnablevaariablepricing" checked>
+                                    <label class="form-check-label" for="chkEnablevaariablepricing">Enable vaariable pricing</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkEnablemultioption">
+                                    <label class="form-check-label" for="chkEnablemultioption">Enable multi-option purchase mode.</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sf-grid">
+                            <SfGrid DataSource="@priceList" AllowPaging="false" Width="100%">
+                                <GridColumns>
+                                    <GridColumn HeaderText="Option Name" TextAlign="TextAlign.Left" Width="50">
+                                        <Template Context="icontext">
+                                            @{
+                                                var optionName = (icontext as PriceModel).OptionName;
+                                                <input type="text" class="form-control" value="@optionName" />
+                                            }
+                                        </Template>
+                                    </GridColumn>
+                                    <GridColumn HeaderText="Price" TextAlign="TextAlign.Left" Width="20">
+                                        <Template Context="icontext">
+                                            @{
+                                                var price = (icontext as PriceModel).Price;
+                                                <input type="text" class="form-control" value="@price" />
+                                            }
+                                        </Template>
+                                    </GridColumn>
+                                    <GridColumn HeaderText="Details" TextAlign="TextAlign.Left" Width="20">
+                                        <Template Context="icontext">
+                                            @{
+                                                <a href="javascript:void();">Advanced</a>
+                                            }
+                                        </Template>
+                                    </GridColumn>
+                                    <GridColumn HeaderText="" TextAlign="TextAlign.Left" Width="5">
+                                        <Template Context="icontext">
+                                            @{
+                                                <button class="delete_icon">
+                                                    <span class="far fa-times"></span>
+                                                </button>
+                                            }
+                                        </Template>
+                                    </GridColumn>
+                                </GridColumns>
+                            </SfGrid>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 pe-lg-2 mb-3">
+            </div>
+        </div>
+        <div class="row g-0">
+            <div class="col-lg-8 pe-lg-2 mb-3">
+                <div class="card h-lg-100">
+                    <div class="card-header d-flex flex-between-center bg-light py-2">
+                        <h5 class="mb-0">Schedule</h5>
+                        <button type="button" class="btn btn-sm btn-primary">Add Item</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label for="inputTitle" class="form-label">Title</label>
+                                <input type="text" class="form-control" id="inputTitle" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="dpDateStart">Start Date</label>
+                                <SfDatePicker id="dpDateStart" TValue="DateTime?" Placeholder="Choose Start Date"></SfDatePicker>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="tpStartTime">Start Time</label>
+                                <SfTimePicker id="tpStartTime" TValue="DateTime?" Placeholder="Select Start Time"></SfTimePicker>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="dpDateEnd">End Date</label>
+                                <SfDatePicker id="dpDateEnd" TValue="DateTime?" Placeholder="Choose End Date"></SfDatePicker>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label" for="tpEndTime">End Time</label>
+                                <SfTimePicker id="tpEndTime" TValue="DateTime?" Placeholder="Select End Time"></SfTimePicker>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 pe-lg-2 mb-3">
+            </div>
+        </div>
+        <div class="row g-0">
+            <div class="col-lg-8 pe-lg-2 mb-3">
+                <div class="card h-lg-100">
+                    <div class="card-header d-flex flex-between-center bg-light py-2">
+                        <h5 class="mb-0">Upload Photos</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="col-12">
+                            <InputFile id="inputDrop" OnChange="OnInputFileChange" class="opacity-0 w-100 h-100 position-absolute" />
+                            <div id="galleryImageUpload" class="my-4" @onclick="() => uploadImage()">
+                                <div class="dz-message dropzone-area px-2 py-3">
+                                    <div class="text-center">
+                                        <div class="far fa-cloud-upload-alt fa-4x d-block mx-auto mb-4"></div>
+                                        <p class="fs--1">Drop your files here</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 pe-lg-2 mb-3">
+            </div>
+        </div>
+        <div class="row g-0">
+            <div class="col-lg-8 pe-lg-2 mb-3">
+                <div class="card h-lg-100">
+                    <div class="card-header d-flex flex-between-center bg-light py-2">
+                        <h5 class="mb-0">Custom Fields</h5>
+                        <button type="button" class="btn btn-sm btn-primary">Add Item</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="inputName" class="form-label">Name</label>
+                                <input type="text" class="form-control" id="inputName" placeholder="Name (e.g. T-shirt)" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="selectType" class="form-label">Type</label>
+                               <select id="selectType" class="form-select">
+                                   <option>Select a type</option>
+                               </select>
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label" for="inputFieldOptions">Field Options <span class="fs--2">(Seprate your options with comma)</span></label>
+                                <textarea id="inputFieldOptions" class="form-control" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+            </div>
+            <div class="col-lg-4 pe-lg-2 mb-3">
+            </div>
+        </div>
+        <div class="row g-0">
+            <div class="col-lg-12">
+                <div class="card h-lg-100">
+                    <div class="card-body">
+                        <div class="row justify-content-between align-items-center">
+                            <div class="col-md">
+                                <h5 class="mb-0">Nice Job! You're almost done</h5>
+                            </div>
+                            <div class="col-auto">
+                                <a class="btn btn-primary" href="javascript:void();">Save</a>
+                                <a class="btn btn-outline-primary" href="javascript:void();">Make your event live</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+
+@code
+{
+    private string title = "Create Event | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility = false;
+    private Member currentMember = new Member();
+    private ImageCropperConfiguration cropperConfiguration = new ImageCropperConfiguration();
+    private ImageCropper CropperModal { get; set; }
+    BusinessGalleryRequestViewModel currentImage;
+    private bool imageCroperActive = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        StateHasChanged();
+    }
+
+    private class PriceModel
+    {
+        public string OptionName { get; set; }
+        public string Price { get; set; }
+    }
+    private List<PriceModel> priceList = new List<PriceModel>() {
+        new PriceModel(){ OptionName= "Front desks", Price= "$0.00" },
+        new PriceModel(){ OptionName= "Green galllery", Price= "$5.00" },
+        new PriceModel(){ OptionName= "VIP", Price= "$20.00" },
+   };
+
+    private async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        var maxAllowedFiles = 1;
+        var format = "image/png";
+
+        currentImage = new BusinessGalleryRequestViewModel { BusinessId = currentMember.Id };
+        foreach (var imageFile in e.GetMultipleFiles(maxAllowedFiles))
+        {
+            currentImage.Title = imageFile.Name;
+            currentImage.ImageType = imageFile.ContentType;
+
+            var buffer = new byte[imageFile.Size];
+            await imageFile.OpenReadStream(buffer.LongLength).ReadAsync(buffer);
+            var imageDataUrl =
+                $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+
+            await CropperModal.OnFileChange(imageDataUrl);
+            imageCroperActive = true;
+        }
+        StateHasChanged();
+    }
+    private async Task uploadImage()
+    {
+        imageCroperActive = false;
+        await CropperModal.TriggerFileSelect("inputDrop");
+    }
+
+}

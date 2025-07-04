@@ -1,0 +1,360 @@
+﻿@page "/calendar/notes"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.Blazor.Popups
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.DropDowns
+@using System
+@using System.Globalization;
+@using System.Collections.Generic
+@using Syncfusion.Blazor.Calendars
+@using CellarPassAppAdmin.Shared.Entities.v4;
+@using CellarPassAppAdmin.Shared.Enums
+@inject IMemberViewModel _memberViewModel
+@inject IBusinessPropertyViewModel _propertyViewModel
+@inject IBusinessPropertyViewModel _businessPropertyViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject ICalendarNoteViewModel _calendarNoteViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ISettingsViewModel _settingsViewModel
+@inject ILocalStorageService localStorage
+@inject ToastService toastService
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<div class="card">
+    <div class="card-header border-bottom">
+        <div class="row g-0 g-sm-4 justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><span class="fa-regular fa-calendar-lines me-2"></span>Calendar Notes</h5>
+            </div>
+            <div class="col-auto d-flex">
+                <SfDateRangePicker id="drpDateRange" TValue="DateTime?" ShowClearButton="true" Placeholder="Choose Date Range">
+                    <DateRangePickerEvents TValue="DateTime?" ValueChange="ValueChangeHandler"></DateRangePickerEvents>
+                </SfDateRangePicker>
+            </div>
+            <div class="col-auto d-flex mb-2 mb-md-0 sf-ddl">
+                <SfDropDownList TValue="int" TItem="BusinessPropertyModel" @bind-Value="CurrentBusinessProperty" PopupHeight="350px" PopupWidth="203px" DataSource="businessProperties">
+                    <DropDownListEvents ValueChange="OnBusinessPropertyDropdownChange" TItem="BusinessPropertyModel" TValue="int"></DropDownListEvents>
+                    <DropDownListFieldSettings Value="Id" Text="PropertyName"></DropDownListFieldSettings>
+                </SfDropDownList>
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-sm btn-primary" @onclick="()=>AddNewCalendarNote()">Add New</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body min-vh-50 p-0 sf-grid">
+        <SfGrid ID="Grid" @ref="Grid" TValue="CalendarNoteModel" DataSource="@calendarNotes" AllowPaging="true" Width="100%">
+            <GridPageSettings PageSize="10"></GridPageSettings>
+            <GridEvents RowSelected="RowSelectHandler" TValue="CalendarNoteModel"></GridEvents>
+            <GridColumns>
+                <GridColumn HeaderText="Subject" TextAlign="TextAlign.Left" Width="200">
+                    <Template Context="CalendarNoteContext">
+                        @{
+                            var calNote = (CalendarNoteContext as CalendarNoteModel);
+                            <button class="btn btn-link ps-0 text-800 fs--1" @onclick="()=>EditCalendarNote()">@calNote.Subject</button>
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="Start Date" Type="ColumnType.String" TextAlign="TextAlign.Left" Width="100">
+                    <Template Context="CalendarNoteContext">
+                        @{
+                            var calNote = (CalendarNoteContext as CalendarNoteModel);
+                            @(calNote.StartDate?.ToString("M/d/yy"))
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="Start Time" Type="ColumnType.String" TextAlign="TextAlign.Left" Width="100">
+                    <Template Context="CalendarNoteContext">
+                        @{
+                            var calNote = (CalendarNoteContext as CalendarNoteModel);
+                            @(calNote.StartTime.ToString("h:mm tt", CultureInfo.InvariantCulture))
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="End Date" Type="ColumnType.String" TextAlign="TextAlign.Left" Width="100">
+                    <Template Context="CalendarNoteContext">
+                        @{
+                            var calNote = (CalendarNoteContext as CalendarNoteModel);
+                            @(calNote.EndDate?.ToString("M/d/yy"))
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="End Time" Type="ColumnType.String" TextAlign="TextAlign.Left" Width="100">
+                    <Template Context="CalendarNoteContext">
+                        @{
+                            var calNote = (CalendarNoteContext as CalendarNoteModel);
+                            @(calNote.EndTime.ToString("h:mm tt", CultureInfo.InvariantCulture))
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="Internal Notes" Type="ColumnType.String" TextAlign="TextAlign.Left" Width="200">
+                    <Template Context="CalendarNoteContext">
+                        @{
+                            var calNote = (CalendarNoteContext as CalendarNoteModel);
+                            @(calNote.InternalNotes)
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="" TextAlign="TextAlign.Right" Width="50">
+                    <Template Context="CalendarNoteContext">
+                        @{
+                            var calNote = (CalendarNoteContext as CalendarNoteModel);
+                            <button class="delete_icon" @onclick="()=>DeleteDialogOpen(calNote.Id)">
+                                <span class="far fa-trash-alt"></span>
+                            </button>
+                        }
+                    </Template>
+                </GridColumn>
+            </GridColumns>
+        </SfGrid>
+    </div>
+</div>
+
+<CalendarNoteModal BusinessProperties="businessProperties" StartTimeMinVal="startTimeMinVal" EndTimeMinVal="endTimeMinVal" OnDialogClose="CloseAddEditDialog" OnValidSubmit="AddUpdateCalendarNote" NoteModalVisibility="noteModalVisibility" CalendarNote="calendarNote"></CalendarNoteModal>
+
+@*Delete confimation dialog*@
+<DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="() => DeleteCalendarNote(idForDelete)"></DeleteConfirmation>
+
+@code
+{
+    string toastTitle = string.Empty;
+    string content = string.Empty;
+    bool openDeleteDialog = false;
+    private string title = "Calendar Notes | Synergy Commerce Admin Panel";
+    Member currentMember = null;
+    private bool SpinnerVisibility = true;
+    List<CalendarNoteModel> totalCalendarNotes = new List<CalendarNoteModel>();
+    List<CalendarNoteModel> calendarNotes = new List<CalendarNoteModel>();
+
+    public int CurrentBusinessProperty { get; set; }
+    public int CalendarNoteBusinessProperty { get; set; }
+    List<BusinessPropertyModel> businessProperties = new List<BusinessPropertyModel>();
+    CalendarNoteModel calendarNote = new CalendarNoteModel();
+    SfGrid<CalendarNoteModel> Grid;
+
+    int idForDelete = 0;
+    bool isAddCalendar = true;
+    bool editRow = false;
+
+    private bool noteModalVisibility { get; set; }
+
+    const int _minuteInterval = 30;
+    const int _hourInterval = 60;
+    DateTime _minStartTime = DateTime.Today;
+    DateTime _startTime = DateTime.Today.AddHours(9);
+    DateTime _endTime = DateTime.Today.AddHours(17);
+    DateTime endTimeMinVal = DateTime.Today;
+    DateTime startTimeMinVal = DateTime.Today;
+
+    DateTime? startRangeDate { get; set; }
+    DateTime? endRangeDate { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get business property data
+        var businessPropertyResponse = await _propertyViewModel.GetBusinessProperties(currentMember.Id);
+        CurrentBusinessProperty = businessPropertyResponse?.FirstOrDefault()?.Id ?? 0;
+        CalendarNoteBusinessProperty = CurrentBusinessProperty;
+        businessProperties = businessPropertyResponse ?? new List<BusinessPropertyModel>();
+
+        var response = await _calendarNoteViewModel.GetCalendarNotes();
+        if (response.success)
+        {
+            totalCalendarNotes = response.data;
+        }
+        calendarNotes = totalCalendarNotes.Where(x => x.PropertyId == CurrentBusinessProperty).ToList();
+        SpinnerVisibility = false;
+    }
+
+    private async Task AddUpdateCalendarNote()
+    {
+        SpinnerVisibility = true;
+        var closeDialog = CloseAddEditDialog();
+        var response = await _calendarNoteViewModel.AddUpdateCalendarNote(calendarNote);
+        if (response.success)
+        {
+            if (calendarNote.Id > 0)
+            {
+                foreach (var editableNote in totalCalendarNotes.Where(x => x.Id == calendarNote.Id).ToList())
+                {
+                    editableNote.StartDate = calendarNote.StartDate;
+                    editableNote.EndDate = calendarNote.EndDate;
+                    editableNote.StartTime = calendarNote.StartTime;
+                    editableNote.EndTime = calendarNote.EndTime;
+                    editableNote.Subject = calendarNote.Subject;
+                    editableNote.InternalNotes = calendarNote.InternalNotes;
+                    editableNote.PropertyId = calendarNote.PropertyId;
+                }
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                totalCalendarNotes.Add(response.data);
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+            }
+            RefreshOnDateRange();
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.extra_info, ToastLevel.Error);
+        }
+        await closeDialog;
+        SpinnerVisibility = false;
+    }
+
+    private async Task RowSelectHandler(RowSelectEventArgs<CalendarNoteModel> args)
+    {
+        if (editRow)
+        {
+            var calendarNoteData = args.Data;
+            calendarNote = new CalendarNoteModel
+            {
+                Id = calendarNoteData.Id,
+                Subject = calendarNoteData.Subject,
+                InternalNotes = calendarNoteData.InternalNotes,
+                StartDate = calendarNoteData.StartDate,
+                EndDate = calendarNoteData.EndDate,
+                PropertyId = calendarNoteData.PropertyId,
+                StartTime = calendarNoteData.StartTime,
+                EndTime = calendarNoteData.EndTime
+            };
+            startTimeMinVal = calendarNote.StartTime.Date;
+            endTimeMinVal = startTimeMinVal.Date;
+            OpenAddEditDialog();
+            editRow = false;
+        }
+        else if (openDeleteDialog)
+        {
+        }
+        else
+        {
+            await Grid.ClearRowSelectionAsync();
+        }
+    }
+
+    private void EditCalendarNote()
+    {
+        editRow = true;
+    }
+
+    private void AddNewCalendarNote()
+    {
+        editRow = false;
+        OpenAddEditDialog();
+    }
+
+    private void OpenAddEditDialog()
+    {
+
+        if (!editRow)
+        {
+            calendarNote = new CalendarNoteModel { PropertyId = CurrentBusinessProperty };
+            RefreshTimeValues();
+        }
+        noteModalVisibility = true;
+    }
+
+    private async Task CloseAddEditDialog()
+    {
+        noteModalVisibility = false;
+        await Grid.ClearRowSelectionAsync();
+    }
+
+    private void AddDialogOpen()
+    {
+        OpenAddEditDialog();
+    }
+    private void EditDialogOpen()
+    {
+        OpenAddEditDialog();
+    }
+
+    private async Task DialogClose()
+    {
+        openDeleteDialog = false;
+        await Grid.ClearRowSelectionAsync();
+    }
+
+    private void DeleteDialogOpen(int id)
+    {
+        openDeleteDialog = true;
+        idForDelete = id;
+    }
+
+    private async Task DeleteCalendarNote(int Id)
+    {
+        openDeleteDialog = false;
+        SpinnerVisibility = true;
+        var response = await _calendarNoteViewModel.DeleteCalendarNote(Id);
+        if (response.success)
+        {
+            await Grid.ClearRowSelectionAsync();
+            totalCalendarNotes = response.data;
+            RefreshOnDateRange();
+            toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(Constants.InternalServerError, ToastLevel.Error);
+        }
+        SpinnerVisibility = false;
+    }
+
+    private void OnBusinessPropertyDropdownChange(ChangeEventArgs<int, BusinessPropertyModel> eventArgs)
+    {
+        SpinnerVisibility = true;
+        CalendarNoteBusinessProperty = eventArgs.Value;
+        RefreshOnDateRange();
+        SpinnerVisibility = false;
+    }
+
+    private void RefreshTimeValues()
+    {
+        startTimeMinVal = _minStartTime;
+        calendarNote.StartTime = _startTime;
+        endTimeMinVal = _minStartTime;
+        calendarNote.EndTime = _endTime;
+    }
+
+    private void RefreshOnDateRange()
+    {
+        if(startRangeDate !=null && endRangeDate != null)
+        {
+            calendarNotes = totalCalendarNotes.Where(x => x.PropertyId == CurrentBusinessProperty && ((x.StartDate >= startRangeDate) && (x.EndDate <= endRangeDate))).ToList();
+        }
+        else
+        {
+            calendarNotes = totalCalendarNotes.Where(x => x.PropertyId == CurrentBusinessProperty).ToList();
+        }
+    }
+
+    private void ValueChangeHandler(RangePickerEventArgs<DateTime?> args)
+    {
+        SpinnerVisibility = true;
+        if(args.IsInteracted == true)
+        {
+            startRangeDate = args.StartDate.Value;
+            endRangeDate = args.EndDate.Value;
+        }
+        else
+        {
+            startRangeDate = null;
+            endRangeDate = null;
+        }
+        RefreshOnDateRange();
+        SpinnerVisibility = false;
+    }
+}

@@ -1,0 +1,450 @@
+﻿@page  "/payments/gift-card-manager"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.Blazor.Grids
+@using System.Text.RegularExpressions
+@using Syncfusion.Blazor.QueryBuilder
+@using Syncfusion.Blazor.DropDowns
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@inject IProductViewModel _productViewModel
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col">
+                <h5 class="mb-0"><a href="/payments/gift-cards" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="fa-regular fa-envelope-open-dollar me-2"></span>Gift Card Manager</h5>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+
+        <ul class="nav nav-tabs mt-4 text-uppercase">
+            <li class="nav-item">
+                <a class="nav-link @isAllActive" href="javascript:void(0)" @onclick="()=> UpdateGrid(GiftCardType.all)" aria-current="page">ALL</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @isOpenActive" href="javascript:void(0)" @onclick="()=> UpdateGrid(GiftCardType.open)">OPEN</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @isDepletedActive" href="javascript:void(0)" @onclick="()=> UpdateGrid(GiftCardType.depleted)">DEPLETED</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @isExpiredActive" href="javascript:void(0)" @onclick="()=> UpdateGrid(GiftCardType.expired)">EXPIRED</a>
+            </li>
+        </ul>
+        <div class="tab-content border-x border-bottom p-3 mb-2" id="productTabContent">
+            <div class="tab-pane fade show active" id="tab-All" role="tabpanel" aria-labelledby="All-tab">
+                <form>
+                    <div class="px-2">
+                        <div class="row my-3">
+                            <div class="col-12 col-md-10">
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                                    <input type="text" class="form-control" @onchange="(EventArgs) => {SearchOrders(EventArgs.Value.ToString());}" placeholder="Search Gift Card ID" aria-label="Search Gift Card IDs" aria-describedby="inputGroupSearch">
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-2">
+                                <div class="input-group d-grid">
+                                    <button type="button" class="btn btn-outline-secondary"><span class="fa-solid fa-bars-filter me-1"></span>Filter</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12 col-md-4">
+                                <div class="input-group mb-3">
+                                    @if (selectedOrders == 1)
+                                    {
+                                        <label class="input-group-text mb-0 fs--1" for="selBulkActions">1 order selected</label>
+                                    }
+                                    else
+                                    {
+                                        <label class="input-group-text mb-0 fs--1" for="selBulkActions">@selectedOrders orders selected</label>
+                                    }
+                                    <select class="form-select fs--1" id="selBulkActions">
+                                        <option selected>Bulk Actions</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                <div class="sf-grid min-vh-75">
+                    <SfGrid @ref="Grid" DataSource="@PlaceholderDataList" AllowPaging="true" Width="100%">
+                        <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                        <GridEvents RowSelected="RowSelectHandler" RowDeselected="RowDeselectHandler" TValue="PlaceholderData"></GridEvents>
+                        <GridPageSettings PageSize="50"></GridPageSettings>
+                        <GridTemplates>
+                            <EmptyRecordTemplate>
+                                @if (!isLoading && PlaceholderDataList.Count <= 0)
+                                {
+                                    <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                        <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Orders</h6>
+                                    </div>
+                                }
+                            </EmptyRecordTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            <GridColumn Type="Syncfusion.Blazor.Grids.ColumnType.CheckBox" TextAlign="TextAlign.Center" Width="30"></GridColumn>
+                            <GridColumn HeaderText="Order" TextAlign="TextAlign.Left" Width="70">
+                                <Template>
+                                    @{
+                                        var pholder = (context as PlaceholderData);
+                                        <a href="store/orders/order/@pholder.OrderGuid">@pholder.OrderNumber</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Left" Width="20px">
+                                <Template>
+                                    @{
+                                        var pholder = (context as PlaceholderData);
+                                        <div class="d-flex justify-content-start">
+                                            @if (pholder.HasCustomerNotes == true)
+                                            {
+                                                <SfTooltip>
+                                                    <TooltipTemplates><Content>This order has notes</Content></TooltipTemplates>
+                                                    <span class="far fa-comment-alt-lines mx-1"></span>
+                                                </SfTooltip>
+
+                                            }
+                                            @if (pholder.HasMerchantNotes == true)
+                                            {
+                                                <SfTooltip>
+                                                    <TooltipTemplates><Content>This order has merchant notes</Content></TooltipTemplates>
+                                                    <span class="far fa-comment-dots mx-1"></span>
+                                                </SfTooltip>
+                                            }
+                                        </div>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(PlaceholderData.OrderDate) HeaderText="Date" TextAlign="TextAlign.Center" Width="120" />
+                            <GridColumn HeaderText="Customer" TextAlign="TextAlign.Left" Width="140">
+                                <Template>
+                                    @{
+                                        var pholder = (context as PlaceholderData);
+                                        @(pholder.CustomerName)
+                                        <br>
+                                        @(pholder.CustomerAddress)
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="Ship To" TextAlign="TextAlign.Left" Width="140">
+                                <Template>
+                                    @{
+                                        var pholder = (context as PlaceholderData);
+                                        @(pholder.ShipToName)
+                                        <br>
+                                        @(pholder.ShipToAddress)
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="Gift Card Number" TextAlign="TextAlign.Left" Width="110">
+                                <Template>
+                                    @{
+                                        var pholder = (context as PlaceholderData);
+                                        <a href="/payments/gift-cards/gift-card-transaction-history/@pholder.GiftCardID">@pholder.AccountNumber</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(PlaceholderData.Balance) HeaderText="Balance" TextAlign="TextAlign.Center" Width="60" />
+                        </GridColumns>
+                    </SfGrid>
+                    <SfDialog ID="prompt_dialog" @bind-Visible="@FilterModalVisible" ShowCloseIcon="true" Width="1000px">
+                        <DialogTemplates>
+                            <Header>
+                                Filter Orders
+                            </Header>
+                            <Content>
+                                <SfQueryBuilder @ref="querybuilder" TValue="PlaceholderData" DataSource="@dataSource" MaxGroupCount="0">
+                                    <QueryBuilderRule Condition="and" Rules="@importRules"></QueryBuilderRule>
+                                    <QueryBuilderEvents Created="Created" TValue="PlaceholderData" RuleChanged="UpdateRule"></QueryBuilderEvents>
+                                    <QueryBuilderColumns>
+                                        <QueryBuilderColumn Field="GrandTotal" Label="Price" Type=Syncfusion.Blazor.QueryBuilder.ColumnType.Number></QueryBuilderColumn>
+                                        <QueryBuilderColumn Field="OrderTag" Label="Order Tags" Type=Syncfusion.Blazor.QueryBuilder.ColumnType.String Operators="@stringOperator">
+                                            <QueryBuilderTemplates>
+                                                <ValueTemplate>
+                                                    <SfMultiSelect @ref="TagsFilterDropdown" TValue="string[]" TItem="OrderTag" AllowFiltering="true" Mode="@VisualMode.CheckBox" DataSource="@orderTags" PopupHeight="350px">
+                                                        <MultiSelectFieldSettings Text="Id" Value="Text"></MultiSelectFieldSettings>
+                                                        <MultiSelectEvents TItem="OrderTag" TValue="string[]" ValueChange="@ValueChangeHandler"></MultiSelectEvents>
+                                                    </SfMultiSelect>
+                                                </ValueTemplate>
+                                            </QueryBuilderTemplates>
+                                        </QueryBuilderColumn>
+
+                                    </QueryBuilderColumns>
+                                </SfQueryBuilder>
+                            </Content>
+                        </DialogTemplates>
+                        <DialogPositionData Y="200"></DialogPositionData>
+
+                    </SfDialog>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="tab-Open" role="tabpanel" aria-labelledby="Open-tab"></div>
+            <div class="tab-pane fade" id="tab-Depleted" role="tabpanel" aria-labelledby="Depleted-tab"></div>
+            <div class="tab-pane fade" id="tab-Expired" role="tabpanel" aria-labelledby="Expired-tab"></div>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    public class PlaceholderData
+    {
+        public int Id { get; set; }
+        public string OrderNumber { get; set; }
+        public string OrderGuid { get; set; }
+        public string OrderDate { get; set; }
+        public string CustomerName { get; set; }
+        public string CustomerAddress { get; set; }
+        public string ShipToName { get; set; }
+        public string ShipToAddress { get; set; }
+        public string GiftCardID { get; set; }
+        public string Balance { get; set; }
+        public int ExpirationDate { get; set; }
+        public bool HasCustomerNotes { get; set; }
+        public bool HasMerchantNotes { get; set; }
+        public string Status { get; set; }
+        public string AccountNumber { get; set; }
+    }
+
+    private string title = "Gift Card Manager | Synergy Commerce Admin Panel";
+
+    private Boolean isLoading = true;
+    private int selectedOrders = 0;
+    SfGrid<PlaceholderData> Grid;
+    List<PlaceholderData> dataSource = new List<PlaceholderData>();
+    public List<PlaceholderData> PlaceholderDataList = new List<PlaceholderData>();
+    private string searchVal { get; set; }
+    private bool FilterModalVisible = false;
+    private SfQueryBuilder<PlaceholderData> querybuilder;
+    List<RuleModel> importRules = new List<RuleModel>();
+    private List<OrderTag> orderTags = new List<OrderTag>();
+    private bool isAndFilterCondition = true;
+    private string displayPriceTool = "d-none";
+    private double filterPrice { get; set; }
+    SfMultiSelect<string[], OrderTag> TagsFilterDropdown = new SfMultiSelect<string[], OrderTag>();
+    private string isAllActive = "active";
+    private string isOpenActive = "";
+    private string isDepletedActive = "";
+    private string isExpiredActive = "";
+    GiftCardType giftCardType = GiftCardType.all;
+    private Member currentMember = new Member();
+
+    private class OrderTag
+    {
+        public string Id { get; set; }
+        public string Text { get; set; }
+    }
+
+    private List<OperatorsModel> stringOperator = new List<OperatorsModel>()
+{
+        new OperatorsModel { Text = "In", Value="equal" }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        if (currentMember.Id > 0)
+        {
+            var result = await _productViewModel.GetGiftCardManager(currentMember.Id);
+            if (result.success)
+            {
+                PlaceholderDataList = new List<PlaceholderData>();
+                foreach (var item in result.data)
+                {
+                    PlaceholderData placeholderData = new PlaceholderData()
+                    {
+                        Id = item.CustomOrderId,
+                        OrderNumber = item.OrderPrefix + "-" + item.CustomOrderId.ToString(),
+                        OrderGuid = item.OrderGuid,
+                        OrderDate = item.TransactionDate.ToString("MM/dd/yyyy, hh:ss tt"),
+                        CustomerName = item.CustomerFirstName + " " + item.CustomerLastName,
+                        CustomerAddress = item.CustomerState + " " + item.CustomerCity + " " + (item.CustomerCountry.ToLower() == "united states" ? "" : item.CustomerCountry) + " " + item.CustomerZipCode,
+                        ShipToName = item.ShipToFirstName + " " + item.ShipToLastName,
+                        ShipToAddress = item.ShipToState + " " + item.ShipToCity + " " + (item.ShipToCountry.ToLower() == "united states" ? "" : item.ShipToCountry) + " " + item.ShipToZipCode,
+                        GiftCardID = item.GiftCardId,
+                        Balance = item.BalanceAmount.ToString("0.00"),
+                        Status = item.Status,
+                        AccountNumber = MaskCardNumber(item.AccountNumber),
+
+                    };
+                    PlaceholderDataList.Add(placeholderData);
+                }
+                dataSource = PlaceholderDataList;
+            }
+            isLoading = false;
+        }
+
+    }
+
+    private void TriggerFiltering()
+    {
+        FilterModalVisible = true;
+    }
+
+    private void SearchOrders(string searchValue)
+    {
+        if (!string.IsNullOrEmpty(searchValue))
+        {
+            PlaceholderDataList = dataSource.Where(x => (x.OrderNumber?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                            (x.CustomerName?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                            (x.CustomerAddress?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                            (x.ShipToName?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                            (x.ShipToAddress?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                            (x.GiftCardID?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                            (x.Balance.ToString()?.ToLower().Contains(searchValue.ToLower()) ?? false)).ToList();
+        }
+        else
+        {
+            PlaceholderDataList = dataSource;
+        }
+        searchVal = searchValue;
+        StateHasChanged();
+    }
+
+    public void RowSelectHandler(RowSelectEventArgs<PlaceholderData> args)
+    {
+        selectedOrders = Grid.SelectedRecords.Count();
+    }
+
+    public void RowDeselectHandler(RowDeselectEventArgs<PlaceholderData> args)
+    {
+        selectedOrders = Grid.SelectedRecords.Count();
+    }
+
+    private void ValueChangeHandler(MultiSelectChangeEventArgs<string[]> args)
+    {
+
+        var rules = querybuilder.GetRules().Rules;
+        UpdateDatasource(rules);
+    }
+
+    private void Created()
+    {
+        PlaceholderDataList = querybuilder.GetFilteredRecords().ToList().AsEnumerable<PlaceholderData>().ToList();
+    }
+
+    private void UpdateRule(Syncfusion.Blazor.QueryBuilder.RuleChangeEventArgs args)
+    {
+        if (args.Rule.Condition == "and")
+        {
+            isAndFilterCondition = true;
+        }
+        var res = querybuilder.GetValidRules().Rules.Count();
+        if (res > 0)
+        {
+            foreach (var rule in args.Rule.Rules)
+            {
+                if (rule.Label == "Price")
+                {
+                    filterPrice = rule.Value;
+                    displayPriceTool = "";
+                }
+            }
+            var rules = querybuilder.GetRules().Rules;
+            UpdateDatasource(rules);
+        }
+        else
+        {
+            displayPriceTool = "d-none";
+            PlaceholderDataList = dataSource;
+        }
+        StateHasChanged();
+    }
+
+    private void UpdateDatasource(List<RuleModel> rules)
+    {
+        var tagsRule = rules.Where(x => x.Label == "Order Tags").FirstOrDefault();
+        bool isTagRuleAdded = false;
+        if (tagsRule != null && TagsFilterDropdown.Value != null)
+        {
+            //querybuilder.DataSource = UpdateTagData(TagsFilterDropdown.Value);
+            rules.Remove(tagsRule);
+            querybuilder.SetRules(rules);
+            isTagRuleAdded = true;
+        }
+
+        if (querybuilder.GetValidRules().Rules.Any())
+            PlaceholderDataList = querybuilder.GetFilteredRecords().ToList().AsEnumerable<PlaceholderData>().ToList();
+        else
+            PlaceholderDataList = querybuilder.DataSource.ToList();
+
+        if (isTagRuleAdded)
+        {
+            rules.Add(tagsRule);
+            querybuilder.SetRules(rules);
+        }
+        StateHasChanged();
+    }
+
+    private void ResetGiftCardTypeFilter()
+    {
+        isAllActive = "";
+        isOpenActive = "";
+        isDepletedActive = "";
+        isExpiredActive = "";
+    }
+
+    private void UpdateGrid(GiftCardType giftCardOfType)
+    {
+        giftCardType = giftCardOfType;
+        ResetGiftCardTypeFilter();
+        selectedOrders = 0;
+        switch (giftCardOfType)
+        {
+            case GiftCardType.all:
+                isAllActive = "active";
+                PlaceholderDataList = dataSource;
+                break;
+            case GiftCardType.open:
+                isOpenActive = "active";
+                PlaceholderDataList = dataSource.Where(x => x.Status == "OPEN").ToList();
+                break;
+            case GiftCardType.depleted:
+                isDepletedActive = "active";
+                PlaceholderDataList = dataSource.Where(x => x.Status == "DEPLETED").ToList();
+                break;
+            case GiftCardType.expired:
+                isExpiredActive = "active";
+                PlaceholderDataList = dataSource.Where(x => x.Status == "EXPIRED").ToList();
+                break;
+        }
+    }
+
+    private string MaskCardNumber(string cardNumber)
+    {
+        if (cardNumber.Length >= 16)
+        {
+            cardNumber = cardNumber.Replace(@"-", string.Empty);
+            if (cardNumber.Length > 16)
+            {
+                cardNumber = cardNumber.Substring(0, 16);
+            }
+            var firstDigits = cardNumber.Substring(0, 4);
+            var lastDigits = cardNumber.Substring(cardNumber.Length - 4, 4);
+
+            var requiredMask = new String('X', cardNumber.Length - firstDigits.Length - lastDigits.Length);
+            var maskedString = string.Concat(firstDigits, requiredMask, lastDigits);
+            var maskedCardNumberWithSpaces = Regex.Replace(maskedString, ".{4}", "$0-");
+            return maskedCardNumberWithSpaces.TrimEnd('-');
+        }
+        else
+        {
+            return cardNumber;
+        }
+    }
+}

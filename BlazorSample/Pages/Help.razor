@@ -1,0 +1,255 @@
+﻿@page "/help"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card">
+            <div class="card-header bg-light">
+                <div class="row align-items-center">
+                    <div class="col-6 col-md-9">
+                        <h6 class="mb-0" id="followers">Help Center</h6>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row row flex-center">
+                    <div class="col-sm-10 col-md-8 col-lg-8 col-xxl-6 text-center">
+                        <h1 class="text-primary">Hello, we are here to help!</h1>
+                        <div class="search-box w-100 py-5">
+                            <form>
+                                <input class="form-control form-control-lg search-input rounded-0" type="search" placeholder="Search articles..." aria-label="Search" />
+                                <span class="fas fa-search search-box-icon mr-4"></span>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="product-articles" class="my-2">
+                    <h5 class="mb-3">Products</h5>
+                    <div class="row row-cols-2 row-cols-md-5 g-2">
+                        <div class="col">
+                            <div class="card h-100 border border-400 shadow-none">
+                                <div class="card-body text-center py-5 px-1">
+                                    <i class="fal fa-calendar-star fa-3x text-800 mb-2"></i>
+                                    <h6 class="mb-1">
+                                        <a href="#!" class="link-dark stretched-link">Reservations</a>
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card h-100 border border-400 shadow-none">
+                                <div class="card-body text-center py-5 px-1">
+                                    <i class="fal fa-ticket-alt fa-3x text-800 mb-2"></i>
+                                    <h6 class="mb-1">
+                                        <a href="#!" class="link-dark stretched-link">Ticketing</a>
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card h-100 border border-400 shadow-none">
+                                <div class="card-body text-center py-5 px-1">
+                                    <i class="fal fa-chair fa-3x text-800 mb-2"></i>
+                                    <h6 class="mb-1">
+                                        <a href="#!" class="link-dark stretched-link">Table Management</a>
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card h-100 border border-400 shadow-none">
+                                <div class="card-body text-center py-5 px-1">
+                                    <i class="fal fa-mobile-android fa-3x text-800 mb-2"></i>
+                                    <h6 class="mb-1">
+                                        <a href="#!" class="link-dark stretched-link">Guest Link Pro</a>
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card h-100 border border-400 shadow-none">
+                                <div class="card-body text-center py-5 px-1">
+                                    <i class="fal fa-cash-register fa-3x text-800 mb-2"></i>
+                                    <h6 class="mb-1">
+                                        <a href="#!" class="link-dark stretched-link">Point of Sale</a>
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="popular-topics" class="my-5">
+                    <h5 class="mb-3">Popular Topics</h5>
+                    <div class="row row-cols-2 row-cols-md-5 g-2">
+                        <div class="col">
+                            <div class="card h-100 border border-400 shadow-none">
+                                <div class="card-body text-center py-5 px-1">
+                                    <i class="fal fa-clipboard-list-check fa-3x text-800 mb-2"></i>
+                                    <h6 class="mb-1">
+                                        <a href="#!" class="link-dark stretched-link">Get Started Guides</a>
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card h-100 border border-400 shadow-none">
+                                <div class="card-body text-center py-5 px-1">
+                                    <i class="fal fa-user-headset fa-3x text-800 mb-2"></i>
+                                    <h6 class="mb-1">
+                                        <a href="#!" class="link-dark stretched-link">Schedule Training</a>
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card h-100 border border-400 shadow-none">
+                                <div class="card-body text-center py-5 px-1">
+                                    <i class="fal fa-credit-card fa-3x text-800 mb-2"></i>
+                                    <h6 class="mb-1">
+                                        <a href="#!" class="link-dark stretched-link">Pre-Paid Reservations</a>
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card h-100 border border-400 shadow-none">
+                                <div class="card-body text-center py-5 px-1">
+                                    <i class="fal fa-tag fa-3x text-800 mb-2"></i>
+                                    <h6 class="mb-1">
+                                        <a href="#!" class="link-dark stretched-link">Discounts &amp; Promotions</a>
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card h-100 border border-400 shadow-none">
+                                <div class="card-body text-center py-5 px-1">
+                                    <i class="fal fa-file-invoice-dollar fa-3x text-800 mb-2"></i>
+                                    <h6 class="mb-1">
+                                        <a href="#!" class="link-dark stretched-link">Fees &amp; Billing</a>
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col">
+                            <div class="card h-100 border border-400 shadow-none">
+                                <div class="card-body text-center py-5 px-1">
+                                    <i class="fal fa-users fa-3x text-800 mb-2"></i>
+                                    <h6 class="mb-1">
+                                        <a href="#!" class="link-dark stretched-link">Guest Check-In</a>
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card h-100 border border-400 shadow-none">
+                                <div class="card-body text-center py-5 px-1">
+                                    <i class="fal fa-users-crown fa-3x text-800 mb-2"></i>
+                                    <h6 class="mb-1">
+                                        <a href="#!" class="link-dark stretched-link">Attracting the Right Guests</a>
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card h-100 border border-400 shadow-none">
+                                <div class="card-body text-center py-5 px-1">
+                                    <i class="fal fa-sack-dollar fa-3x text-800 mb-2"></i>
+                                    <h6 class="mb-1">
+                                        <a href="#!" class="link-dark stretched-link">Collecting Payment</a>
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card h-100 border border-400 shadow-none">
+                                <div class="card-body text-center py-5 px-1">
+                                    <i class="fal fa-cogs fa-3x text-800 mb-2"></i>
+                                    <h6 class="mb-1">
+                                        <a href="#!" class="link-dark stretched-link">Integrations</a>
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card h-100 border border-400 shadow-none">
+                                <div class="card-body text-center py-5 px-1">
+                                    <i class="fal fa-life-ring fa-3x text-800 mb-2"></i>
+                                    <h6 class="mb-1">
+                                        <a href="#!" class="link-dark stretched-link">Troubleshooting</a>
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="personal-kpis" class="my-5">
+                    <h5 class="mb-3">Achieving Your Personal KPIs</h5>
+                    <div class="row row-cols-2 row-cols-md-5 g-2">
+                        <div class="col">
+                            <div class="card h-100 border border-400 shadow-none">
+                                <div class="card-body text-center py-5 px-1">
+                                    <i class="fal fa-user-graduate fa-3x text-800 mb-2"></i>
+                                    <h6 class="mb-1">
+                                        <a href="#!" class="link-dark stretched-link">Certification Programs</a>
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card h-100 border border-400 shadow-none">
+                                <div class="card-body text-center py-5 px-1">
+                                    <i class="fal fa-user-crown fa-3x text-800 mb-2"></i>
+                                    <h6 class="mb-1">
+                                        <a href="#!" class="link-dark stretched-link">Power User Tips &amp; Tricks</a>
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card h-100 border border-400 shadow-none">
+                                <div class="card-body text-center py-5 px-1">
+                                    <i class="fal fa-users-class fa-3x text-800 mb-2"></i>
+                                    <h6 class="mb-1">
+                                        <a href="#!" class="link-dark stretched-link">Power User Webinars</a>
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    
+
+    private string title = "Help | Synergy Commerce Admin Panel";
+
+
+
+}

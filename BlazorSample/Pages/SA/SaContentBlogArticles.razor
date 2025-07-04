@@ -1,0 +1,143 @@
+﻿@page "/sa/content/blog-articles"
+@layout SaLayout
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Enums
+@inject ISaContentViewModel _saContentViewModel
+@inject ToastService toastService
+@inject ISaBlogArticleViewModel _saBlogArticleViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<div class="pt-3">
+    <div class="row justify-content-between">
+        <div class="col-md-auto">
+            <h5 class="mb-3 mb-md-0"><a href="sa/content" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-blog me-2"></span>Blog Articles</h5>
+        </div>
+        <div class="col-md-auto">
+            <a class="btn btn-sm btn-primary" href="/sa/content/blog-articles-create">Create Article</a>
+        </div>
+    </div>
+    <hr />
+</div>
+<form>
+    <div class="row">
+        <div class="col-12 col-md-12">
+            <label class="form-label" for="inputAddressSearch">Search</label>
+            <div class="input-group mb-3">
+                <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                <input type="text" class="form-control" @oninput="(EventArgs) => {searchArticles(EventArgs.Value.ToString());}" placeholder="Search Products" aria-label="Search Products" aria-describedby="inputGroupSearch" />
+            </div>
+        </div>
+    </div>
+</form>
+<div class="row">
+    <div class="col-12">
+        <div class="mb-4">
+            <ul class="list-group list-group-border">
+                @foreach (var acticle in filteredBlogArticles)
+                {
+                    <li class="list-group-item py-3 mb-2">
+                        <div class="row">
+                            <div class="col-sm-9">
+                                <h5 class="mb-0"><a href="javascript:void();">@acticle.Title</a></h5>
+                                <p class="mb-1">@acticle.Excerpt</p>
+                                <p class="mb-2 mt-n1">
+                                    <small class="text-muted">Published Date: @(acticle.ArticleDate.ToString("MM/dd/yyyy"))</small>
+                                </p>
+                                @foreach (var category in acticle.BlogArticleCategories ?? new List<CPBlogArticlesCategoryModel>())
+                                {
+                                    <span class="badge bg-secondary me-1">@category.CategoryName</span>
+                                }
+                            </div>
+                            <div class="col-sm-1 text-end">
+                                <a class="btn btn-link" href="/sa/content/blog-articles-edit/@acticle.IdGuid"><span class="fa-regular fa-pencil"></span></a>
+                            </div>
+                            <div class="col-sm-1">
+                                <a class="btn btn-link" href="/sa/content/blog-articles-clone/@acticle.IdGuid"><span class="fa-regular fa-copy"></span></a>
+                            </div>
+                            <div class="col-sm-1">
+                                <a class="btn btn-link" @onclick="()=>OpenDeleteDialog(acticle.IdGuid)" href="javascript:void();"><span class="fa-regular fa-trash-alt text-danger"></span></a>
+                            </div>
+                        </div>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+@*Delete confimation dialog*@
+<DeleteConfirmation OpenDeleteDialog="DeleteDialogVisibility" OnDialogClose="CloseDeleteDialog" OnDeleteConfirmed="DeleteConfirmation"></DeleteConfirmation>
+
+
+@code
+{
+    private string title = "Blog Articles | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    private bool DeleteDialogVisibility { get; set; } = false;
+    Guid? idForDelete = null;
+    List<CPBlogArticlesCategoryTreeModel> cPBlogArticles = new List<CPBlogArticlesCategoryTreeModel>();
+    List<CPBlogArticlesCategoryTreeModel> filteredBlogArticles = new List<CPBlogArticlesCategoryTreeModel>();
+    private void searchArticles(string searchValue)
+    {
+        if (!string.IsNullOrEmpty(searchValue))
+        {
+            filteredBlogArticles = cPBlogArticles.Where(x => x.Title.ToLower().Contains(searchValue.ToLower())).ToList();
+        }
+        else
+        {
+            filteredBlogArticles = cPBlogArticles;
+        }
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        var cPBlogArticlesResponse = await _saBlogArticleViewModel.GetCPBlogArticlesAsync();
+        cPBlogArticles = cPBlogArticlesResponse?.data ?? new List<CPBlogArticlesCategoryTreeModel>();
+        filteredBlogArticles = cPBlogArticles;
+        SpinnerVisibility = false;
+    }
+
+    /// <summary>
+    /// Close dialog
+    /// </summary>
+    private void CloseDeleteDialog() => DeleteDialogVisibility = false;
+
+    /// <summary>
+    /// Open dialog for delete a tag
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    private async Task OpenDeleteDialog(Guid id)
+    {
+        DeleteDialogVisibility = true;
+        idForDelete = id;
+    }
+    /// <summary>
+    /// Delete Tag after confirmation
+    /// </summary>
+    /// <returns></returns>
+    private async Task DeleteConfirmation()
+    {
+        SpinnerVisibility = true;
+        var response = await _saBlogArticleViewModel.DeleteCPBlogArticleAsync(idForDelete.Value);
+        DeleteDialogVisibility = false;
+        if (response.success)
+        {
+            cPBlogArticles = response.data;
+            filteredBlogArticles = cPBlogArticles;
+            toastService.ShowToast(Constants.DeleteMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        SpinnerVisibility = false;
+        StateHasChanged();
+    }
+}
+

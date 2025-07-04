@@ -1,0 +1,352 @@
+﻿@page "/settings/sales-tax-service/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IBusinessViewModel _businessViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ISettingsViewModel _settingsViewModel
+@inject ISaIntegrationPartnerViewModel _saIntegrationPartnerViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+@if (!string.IsNullOrEmpty(activeTaxService) && activeTaxService.ToLower() == IntegratedPartners.Avalara.ToLower())
+{
+    <EditForm Model="@avalara" Context="formContext">
+        <DataAnnotationsValidator />
+        <div class="card mb-4">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="@(Id == null ? "settings": "marketplace/partner/"+Id)" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-calculator me-2"></span>Sales Tax </h5>
+                    </div>
+                    <div class="col-auto"><a href="/settings/taxes/tax-classes" class="btn btn-sm btn-primary">Tax Classes</a></div>
+                    <div class="col-auto"><button class="btn btn-sm btn-primary" @onclick="@(() => SaveAvalara(formContext))">Save</button></div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="card rounded-0 shadow-none" id="sectionAvalara">
+                    <div class="card-header border-bottom">
+                        <div class="row flex-between-center">
+                            <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                                <img src="https://cdn.cellarpass.com/photos/partners/partner-avalara-icon.png" class="rounded me-2" alt="Avalara Logo" width="25" />
+                                <h5 class="mb-0 text-nowrap py-2 py-xl-0">Avalara</h5>
+                            </div>
+                            <div class="col-md-auto">
+                                <a target="_blank" href="@userGuideUrl" class="btn-link">User Guide</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="row">
+                            <div class="col-12 col-xl-6">
+                                <div class="px-card py-4">
+                                    <form>
+                                        <div class="mb-3">
+                                            <label for="inputAvalaraAccountNumber" class="form-label">
+                                                Avalara Account Number
+                                            </label>
+                                            <InputNumber @bind-Value="avalara.AccountNumber" class="form-control" id="inputAvalaraAccountNumber" placeholder="" />
+                                            <ValidationMessage For="@(() => avalara.AccountNumber)" />
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="inputAvalaraLicenseKey" class="form-label">
+                                                Avalara License Key
+                                            </label>
+                                            <InputText @bind-Value="avalara.LicenseKey" class="form-control" id="inputAvalaraLicenseKey" type="text" placeholder="" />
+                                            <ValidationMessage For="@(() => avalara.LicenseKey)" />
+                                        </div>
+                                        <div class="mb-3 text-end">
+                                            <input type="button" value="Test Connection" @onclick="@(() => AvalaraTestLogin())" class="btn btn-sm btn-outline-primary" disabled="@(DisableAvalaraTestLoginBtn())" />
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="inputAvalaraCompanyCode" class="form-label">Company Code</label>
+                                            <InputText @bind-Value="avalara.CompanyCode" class="form-control" id="inputAvalaraCompanyCode" type="text" placeholder="" />
+                                            <ValidationMessage For="@(() => avalara.CompanyCode)" />
+                                        </div>
+                                        <div class="mb-3 d-flex justify-content-between">
+                                            <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchAvalaraDocumentRecording">Document Recording</label></div>
+                                            <div class="d-flex align-items-center">
+                                                <div class="form-check form-switch"><input @bind-value="avalara.DocumentRecording" checked="@avalara.DocumentRecording" class="form-check-input" id="switchAvalaraDocumentRecording" type="checkbox"></div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3 d-flex justify-content-between">
+                                            <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchAvalaraEnableLogging">Enable Logging</label></div>
+                                            <div class="d-flex align-items-center">
+                                                <div class="form-check form-switch"><input @bind-value="avalara.EnableLogging" checked="@avalara.EnableLogging" class="form-check-input" id="switchAvalaraEnableLogging" type="checkbox"></div>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3 d-flex justify-content-between">
+                                            <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchIsSandboxMode">Sandbox Mode</label></div>
+                                            <div class="d-flex align-items-center">
+                                                <div class="form-check form-switch"><input @bind-value="avalara.SandboxMode" checked="@avalara.SandboxMode" class="form-check-input" id="switchIsSandboxMode" type="checkbox"></div>
+                                            </div>
+                                        </div>
+                                        <div class="mt-5">
+                                            <div class="alert bg-soft-info border-2 p-2 d-flex align-items-center" role="alert">
+                                                <span class="far fa-info-circle text-info fs-2 me-3"></span>
+                                                <p class="mb-0 flex-1 fs--1">
+                                                    If you requested a new Avalara license key through their admin panel, you must update here.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+}
+else if (!string.IsNullOrEmpty(activeTaxService) && activeTaxService.ToLower() == IntegratedPartners.ShipCompliant.ToLower())
+{
+    <EditForm Model="@shipCompliant" Context="formContext">
+        <DataAnnotationsValidator />
+        <div class="card mb-4">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-3 mb-md-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-calculator me-2"></span>Sales Tax </h5>
+                    </div>
+                    <div class="col-md-auto"><button class="btn btn-sm btn-primary" @onclick="@(() => SaveShipCompliant(formContext))">Save</button></div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="card rounded-0 shadow-none" id="sectionShipCompliant">
+                    <div class="card-header border-bottom">
+                        <div class="row flex-between-center">
+                            <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                                <img src="https://cdn.cellarpass.com/photos/partners/partner-shipcompliant-icon.png" class="rounded me-2" alt="ShipCompliant Logo" width="30" />
+                                <h5 class="mb-0 text-nowrap py-2 py-xl-0">ShipCompliant</h5>
+                            </div>
+                            <div class="col-md-auto">
+                                <a target="_blank" href="@userGuideUrl" class="btn-link">User Guide</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="row">
+                            <div class="col-12 col-xl-6">
+                                <div class="px-card py-4">
+                                    <form>
+                                        <div class="mb-3">
+                                            <label for="inputShipCompliantUsername" class="form-label">
+                                                ShipCompliant Username
+                                            </label>
+                                            <InputText @bind-Value="shipCompliant.Username" class="form-control" id="inputShipCompliantUsername" type="text" placeholder="" />
+                                            <ValidationMessage For="@(() => shipCompliant.Username)" />
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="inputShipCompliantPassword" class="form-label">
+                                                ShipCompliant Password
+                                            </label>
+                                            <InputText @bind-Value="shipCompliant.Password" class="form-control" id="inputShipCompliantPassword" type="password" placeholder="" />
+                                            <ValidationMessage For="@(() => shipCompliant.Password)" />
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="inputShipCompiantDefaultBrandKey" class="form-label">Default Brand Key</label>
+                                            <InputText @bind-Value="shipCompliant.DefaultBrandKey" class="form-control" id="inputShipCompiantDefaultBrandKey" type="text" placeholder="" />
+                                            <ValidationMessage For="@(() => shipCompliant.DefaultBrandKey)" />
+                                        </div>
+                                        <div class="mb-3 text-end">
+                                            <input type="button" value="Test Connection" @onclick="@(() => ShipCompliantTestLogin())" class="btn btn-sm btn-outline-primary" disabled="@(DisableShipCompliantTestLoginBtn())" />
+                                        </div>
+                                        <div class="mt-5">
+                                            <div class="alert bg-soft-info border-2 p-2 d-flex align-items-center" role="alert">
+                                                <span class="far fa-info-circle text-info fs-2 me-3"></span>
+                                                <p class="mb-0 flex-1 fs--1">
+                                                    If you requested a new ShipCompliant username or password through their admin panel, you must update here.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+}
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "Sales Tax | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    private SalesTaxCalculationServices salesTaxEnableService = SalesTaxCalculationServices.CellarPass;
+    Member currentMember = new Member();
+    AvalaraRequestModel avalara = new AvalaraRequestModel();
+    ShipCompliantRequestModel shipCompliant = new ShipCompliantRequestModel();
+    private string activeTaxService;
+    private string userGuideUrl;
+    List<string> avalaraMetaKeys = new List<string>(){
+    BusinessSettingsMetaKey.AvalaraAccountNumber,
+    BusinessSettingsMetaKey.AvalaraLicenseKey,
+    BusinessSettingsMetaKey.AvalaraCompanyCode,
+    BusinessSettingsMetaKey.AvalaraDocumentRecording,
+    BusinessSettingsMetaKey.AvalaraEnableLogging,
+    BusinessSettingsMetaKey.AvalaraSandboxMode
+    };
+    List<string> shipCompliantMetaKeys = new List<string>(){
+    BusinessSettingsMetaKey.ShipCompliantDefaultBrandKey,
+    BusinessSettingsMetaKey.ShipCompliantPassword,
+    BusinessSettingsMetaKey.ShipCompliantUsername
+    };
+
+    protected bool DisableAvalaraTestLoginBtn()
+    {
+        if (avalara.AccountNumber != null &&
+            !string.IsNullOrEmpty(avalara.LicenseKey))
+        {
+            return false;
+        }
+        else
+            return true;
+    }
+
+    protected bool DisableShipCompliantTestLoginBtn()
+    {
+        if (!string.IsNullOrEmpty(shipCompliant.Username) &&
+            !string.IsNullOrEmpty(shipCompliant.Password) &&
+             !string.IsNullOrEmpty(shipCompliant.DefaultBrandKey))
+        {
+            return false;
+        }
+        else
+            return true;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        await GetActiveTaxService();
+        await GetPartnerDetail();
+        if (activeTaxService.ToLower() == IntegratedPartners.Avalara.ToLower())
+        {
+            //Get business settings for Avalara
+            var avalaraSettingResponse = await _settingsViewModel.GetBusinessIntegrationSettingListAsync(BusinessSettingsMetaNamespace.Avalara, null, currentMember.Id, null);
+            foreach (var metaKey in avalaraMetaKeys)
+            {
+                var metaValue = avalaraSettingResponse?.data?.Where(x => x.MetaKey == metaKey)?.FirstOrDefault()?.MetaValue1 ?? string.Empty;
+                Helper.SetPropertyValue(avalara, metaKey, metaValue);//Note: meta key and request model property name should be same
+            }
+
+            DisableAvalaraTestLoginBtn();
+        }
+        else if (activeTaxService.ToLower() == IntegratedPartners.ShipCompliant.ToLower())
+        {
+            //Get business settings for Ship Compliant
+            var shipCompliantResponse = await _settingsViewModel.GetBusinessIntegrationSettingListAsync(BusinessSettingsMetaNamespace.ShipCompliant, null, currentMember.Id, null);
+            foreach (var metaKey in shipCompliantMetaKeys)
+            {
+                var metaValue = shipCompliantResponse?.data?.Where(x => x.MetaKey == metaKey)?.FirstOrDefault()?.MetaValue1 ?? string.Empty;
+                Helper.SetPropertyValue(shipCompliant, metaKey, metaValue);//Note: meta key and request model property name should be same
+            }
+            DisableShipCompliantTestLoginBtn();
+        }
+
+        SpinnerVisibility = false;
+    }
+
+    private async Task GetActiveTaxService()
+    {
+        var response = await _businessViewModel.GetBusinessConfigurationOptionDetail(BusinessConfigurationNamespace.TaxService, Id.Value.ToString());
+        if (response.success && response.data != null)
+        {
+            activeTaxService = response.data.SettingName;
+        }
+    }
+
+    private async Task GetPartnerDetail()
+    {
+        var response = await _saIntegrationPartnerViewModel.GetIntegrationPartnerDetail(Id.Value);
+        if (response.success && response.data != null)
+        {
+            userGuideUrl = response.data.UserGuideURL;
+        }
+    }
+
+    private async Task AvalaraTestLogin()
+    {
+        SpinnerVisibility = true;
+        var response = await _settingsViewModel.AvalaraTestLogin(avalara.AccountNumber.Value, avalara.LicenseKey, avalara.SandboxMode);
+        SpinnerVisibility = false;
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.LoginSuccessful, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(string.IsNullOrEmpty(response.error_info.description) ? Constants.LoginFailed : response.error_info.description, ToastLevel.Error);
+        }
+    }
+
+    private async Task ShipCompliantTestLogin()
+    {
+        SpinnerVisibility = true;
+        var response = await _settingsViewModel.ShipCompliantTestLogin(shipCompliant.Username, shipCompliant.Password, shipCompliant.DefaultBrandKey);
+        SpinnerVisibility = false;
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.LoginSuccessful, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(string.IsNullOrEmpty(response.error_info.description) ? Constants.LoginFailed : response.error_info.description, ToastLevel.Error);
+        }
+    }
+
+
+    public async Task SaveAvalara(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var avalaraBusinessSettings = await Helper.BusinessIntegrationSettingsMapping(avalara, currentMember.Id, BusinessSettingsMetaNamespace.Avalara, avalaraMetaKeys, 1);
+            var response = await _settingsViewModel.AddUpdateBusinessIntegrationSettingListAsync(avalaraBusinessSettings);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    public async Task SaveShipCompliant(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var shipCompliantBusinessSettings = await Helper.BusinessIntegrationSettingsMapping(shipCompliant, currentMember.Id, BusinessSettingsMetaNamespace.ShipCompliant, shipCompliantMetaKeys, 2);
+            var response = await _settingsViewModel.AddUpdateBusinessIntegrationSettingListAsync(shipCompliantBusinessSettings);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+}

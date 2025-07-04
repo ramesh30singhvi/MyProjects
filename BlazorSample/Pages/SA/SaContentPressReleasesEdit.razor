@@ -1,0 +1,184 @@
+﻿@page "/sa/content/press-release-edit/{Id:guid}"
+@page "/sa/content/press-release-create"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA
+@using CellarPassAppAdmin.Client.ViewModels.SA;
+@using Syncfusion.Blazor.RichTextEditor
+@using CellarPassAppAdmin.Shared.Enums
+@using AutoMapper
+@inject IMapper _mapper
+@inject ToastService toastService
+@inject ISaPressReleaseViewModel _saPressReleaseViewModel
+@attribute [Authorize]
+
+<style>
+    .e-richtexteditor .e-rte-srctextarea {
+        height: calc(100vh - 370px);
+    }
+
+    main#main-authorized .vh-100 {
+        height: calc(100vh - 70px) !important;
+    }
+</style>
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm Model="@cPPressRelease" Context="formContext">
+    <DataAnnotationsValidator />
+    <div class="py-3">
+        <div class="row justify-content-between">
+            <div class="col-md-auto mb-4 mb-md-0"><h5><a href="sa/content/press-releases" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><i class="fa-regular fa-file-signature me-2"></i>@(Id != null ? "Edit" : "Add") Press Release</h5></div>
+            <div class="col-md-auto">
+                <button type="button" class="btn btn-sm btn-outline-primary me-2">Preview</button>
+                @if (isSaving)
+                {
+                    <Loader />
+                }
+                <button type="button" @onclick="@(() => SavePressRelease(formContext))" hidden="@(isSaving)" class="btn btn-sm btn-primary">Save</button>
+            </div>
+        </div>
+        <hr />
+    </div>
+    <div class="row mb-3">
+        <div class="col-md-6 mb-3">
+            <label for="inputTitle" class="form-label">Title</label>
+            <InputText type="text" @oninput="GetTitleCount" @bind-Value="cPPressRelease.PRTitle" class="form-control" id="inputTitle" maxlength="256" placeholder="Title"></InputText>
+            <ValidationMessage For="@(() => cPPressRelease.PRTitle)" />
+            <label>(@titleCount Remaining)</label>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="chkStatus" class="form-label">Status</label>
+            <div class="form-check">
+                <div class="d-flex">
+                    <input class="form-check-input me-2" checked="@Enabled" @bind-value="@Enabled" type="checkbox" id="chkStatus" />
+                    <label class="form-check-label" for="card-checkbox">Enabled</label>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="inputSubTitle" class="form-label">SubTitle</label>
+            <InputText type="text" @oninput="GetSubTitleCount" @bind-Value="cPPressRelease.PRSubTitle" maxlength="256" class="form-control" id="inputSubTitle" placeholder="SubTitle"></InputText>
+            <ValidationMessage For="@(() => cPPressRelease.PRSubTitle)" />
+            <label>(@subTitleCount Remaining)</label>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="inputPressReleaseURL" class="form-label">Press Release URL <a href="javascript:void(0)" @onclick="@CopyTitle"><span class="form-text">(Create from title)</span></a></label>
+            <InputText type="text" @oninput="GetPressReleaseURLCount" @bind-Value="cPPressRelease.PRURL" maxlength="128" class="form-control" id="inputPressReleaseURL" placeholder="Press Release URL"></InputText>
+            <ValidationMessage For="@(() => cPPressRelease.PRURL)" />
+            <label>(@pressReleaseURLCount Remaining)</label>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="inputLocation" class="form-label">Location <span class="form-text">(Such as Seattle, WA)</span></label>
+            <InputText type="text" @oninput="GetLocationCount" @bind-Value="cPPressRelease.PRLocation" maxlength="64" class="form-control" id="inputLocation" placeholder="Location"></InputText>
+            <ValidationMessage For="@(() => cPPressRelease.PRLocation)" />
+            <label>(@locationCount Remaining)</label>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label" for="dpPublishedDate">Published Date</label>
+            <SfDateTimePicker @bind-Value="cPPressRelease.PRPublishDate" id="dpPublishedDate" TValue="DateTime?" Placeholder="Published Date"></SfDateTimePicker>
+            <ValidationMessage For="@(() => cPPressRelease.PRPublishDate)" />
+        </div>
+    </div>
+    <SfRichTextEditor @bind-Value="Content">
+        <RichTextEditorToolbarSettings Items="@SfRichTextEditorHelper.Tools" Type="ToolbarType.MultiRow" />
+        <RichTextEditorFormat Items="@SfRichTextEditorHelper.FormatItems" />
+    </SfRichTextEditor>
+</EditForm>
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "Edit Press Release | Synergy Commerce Super Admin  Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    private Boolean isSaving;
+    private string Content { get; set; }
+    CPPressReleaseRequestModel cPPressRelease = new CPPressReleaseRequestModel();
+    private bool Enabled { get; set; }
+    private int titleCount = 256;
+    private int subTitleCount = 256;
+    private int locationCount = 64;
+    private int pressReleaseURLCount = 128;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        if (Id == null)
+        {
+            title = "Add Press Release | Synergy Commerce Admin Panel";
+        }
+        else
+        {
+            var pressReleaseDetail = await _saPressReleaseViewModel.GetPressReleaseByIdAsync(Id.Value);
+            if (pressReleaseDetail.success && pressReleaseDetail.data != null)
+            {
+                cPPressRelease = _mapper.Map<CPPressReleaseRequestModel>(pressReleaseDetail.data);
+                Content = pressReleaseDetail.data?.PRArticle ?? string.Empty;
+                Enabled = cPPressRelease.PRStatus == 1;
+            }
+        }
+        SpinnerVisibility = false;
+    }
+    private async Task SavePressRelease(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            isSaving = true;
+            SpinnerVisibility = true;
+            cPPressRelease.PRArticle = Content ?? string.Empty;
+            cPPressRelease.PRStatus = Enabled ? 1 : 0;
+            var response = await _saPressReleaseViewModel.AddUpdatePressReleaseAsync(cPPressRelease);
+            if (response != null && response.success)
+            {
+                isSaving = false;
+                if (Id == null)
+                {
+                    Id = response.data.IdGUID;
+                    cPPressRelease.Id = response.data.Id;
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                }
+                else
+                {
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                }
+            }
+            else
+            {
+                isSaving = false;
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+            SpinnerVisibility = false;
+            StateHasChanged();
+        }
+    }
+
+    private void GetTitleCount(Microsoft.AspNetCore.Components.ChangeEventArgs eventArgs)
+    {
+        var value = eventArgs.Value.ToString().Count();
+        titleCount = 256 - value;
+        StateHasChanged();
+    }
+    private void GetSubTitleCount(Microsoft.AspNetCore.Components.ChangeEventArgs eventArgs)
+    {
+        var value = eventArgs.Value.ToString().Count();
+        subTitleCount = 256 - value;
+        StateHasChanged();
+    }
+    private void GetPressReleaseURLCount(Microsoft.AspNetCore.Components.ChangeEventArgs eventArgs)
+    {
+        var value = eventArgs.Value.ToString().Count();
+        pressReleaseURLCount = 128 - value;
+        StateHasChanged();
+    }
+    private void GetLocationCount(Microsoft.AspNetCore.Components.ChangeEventArgs eventArgs)
+    {
+        var value = eventArgs.Value.ToString().Count();
+        locationCount = 64 - value;
+        StateHasChanged();
+    }
+    private void CopyTitle()
+    {
+        cPPressRelease.PRURL = cPPressRelease.PRTitle;
+        StateHasChanged();
+    }
+}

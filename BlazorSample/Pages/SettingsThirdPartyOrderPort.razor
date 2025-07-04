@@ -1,0 +1,106 @@
+﻿@page "/settings/integrated-partners/orderport/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm Model="@orderPort" Context="formContext" Class="row g-3">
+    <DataAnnotationsValidator />
+
+
+    <div class="card">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h5 class="mb-0"><a href="marketplace/partner/@Id" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-plug me-2"></span>OrderPort</h5>
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-primary" @onclick="@(() => SaveOrderPort(formContext))">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="inputOrderPortClientId" class="form-label">OrderPort Client ID</label>
+                <InputText class="form-control" @bind-Value="orderPort.ClientId" id="inputOrderPortClientId" type="text" placeholder="Client ID"></InputText>
+                <ValidationMessage For="@(() => orderPort.ClientId)" />
+            </div>
+            <div class="mb-3">
+                <label for="inputOrderPortApiKey" class="form-label">OrderPort API Key</label>
+                <InputText class="form-control" @bind-Value="orderPort.APIKey" id="inputOrderPortApiKey" type="text" placeholder="API Key"></InputText>
+                <ValidationMessage For="@(() => orderPort.APIKey)" />
+            </div>
+            <div class="mb-3">
+                <label for="inputOrderPortToken" class="form-label">OrderPort API Token</label>
+                <InputText class="form-control" @bind-Value="orderPort.APIToken" id="inputOrderPortToken" type="text" placeholder="API Token"></InputText>
+                <ValidationMessage For="@(() => orderPort.APIToken)" />
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "OrderPort | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    Member currentMember = new Member();
+    OrderPortRequestModel orderPort = new OrderPortRequestModel();
+    List<string> orderPortMetaKeys = new List<string>(){
+      BusinessSettingsMetaKey.OrderPortClientId,
+        BusinessSettingsMetaKey.OrderPortAPIToken,
+        BusinessSettingsMetaKey.OrderPortAPIKey
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get business settings for OrderPort
+        var response = await _settingsViewModel.GetBusinessSettingsListAsync(currentMember.Id, BusinessSettingsMetaNamespace.OrderPort);
+        foreach (var metaKey in orderPortMetaKeys)
+        {
+            var metaValue = response?.data?.Where(x => x.MetaKey == metaKey)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+            Helper.SetPropertyValue(orderPort, metaKey, metaValue);//Note: meta key and request model property name should be same
+        }
+        SpinnerVisibility = false;
+    }
+
+    public async Task SaveOrderPort(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var businessSettings = await Helper.BusinessSettingsMapping(orderPort, currentMember.Id, BusinessSettingsMetaNamespace.OrderPort, orderPortMetaKeys);
+            var response = await _settingsViewModel.CreateBusinessSettingListAsync(businessSettings);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+
+        }
+    }
+}

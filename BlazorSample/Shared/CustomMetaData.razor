@@ -1,0 +1,63 @@
+﻿@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Enums
+
+
+<div class="row">
+    @foreach (var item in customBusinessMetaData)
+    {
+    <div class="col-12 col-md-6 mb-3" hidden="@(item.ContentType != (int)MetaDataContentType.Choice)">
+        <label class="@(item.Category != (int)MetaDataCategory.Product ? "h6": "form-label")" for="metaDropdownItem">@item.Name</label>
+        @if (item.MetaDropdownItemData.Count > 0)
+        {
+            <select class="form-select" @bind="@item.DefaultValue" disabled="@isReadOnly">
+                @foreach (var subItem in item.MetaDropdownItemData)
+                {
+                    <option value="@subItem.Choice">@subItem.Choice</option>
+                }
+            </select>
+        }
+    </div>
+        <div class="col-12 col-md-6 mb-3" hidden="@(item.ContentType != (int)MetaDataContentType.Date)">
+            <label class="@(item.Category != (int)MetaDataCategory.Product ? "h6": "form-label")" for="dpDefaultDate">@item.Name</label>
+            <SfDatePicker id="dpDefaultDate" TValue="DateTime?" @bind-Value="@item.DateDefaultValue" Placeholder="Choose a Date" ShowClearButton="true" Enabled="@(!isReadOnly)"></SfDatePicker>
+        </div>
+        <div class="col-12 col-md-6 mb-3" hidden="@(item.ContentType != (int)MetaDataContentType.Url)">
+            <label class="@(item.Category != (int)MetaDataCategory.Product ? "h6": "form-label")" for="inputURL">@item.Name</label>
+            <SfTextBox class="form-control" @bind-value="item.DefaultValue" Enabled="@(!isReadOnly)"></SfTextBox>
+        </div>
+        <div class="col-12 col-md-6 mb-3" hidden="@(item.ContentType != (int)MetaDataContentType.Text)">
+            <label class="@(item.Category != (int)MetaDataCategory.Product ? "h6": "form-label")" for="inputTextBox">@item.Name</label>
+            <SfTextBox class="form-control" @bind-value="item.DefaultValue" Enabled="@(!isReadOnly)"></SfTextBox>
+        </div>
+        <div class="col-12 col-md-6 mb-3" hidden="@(item.ContentType != (int)MetaDataContentType.Boolean)">
+            <label class="@(item.Category != (int)MetaDataCategory.Product ? "h6": "form-label")" for="inputSwitch">@item.Name</label>
+            <div class="d-flex">
+                <div class="d-flex align-items-top pe-2"><label class="form-label">@item.OffLabel</label></div>
+                <div class="d-flex align-items-center">
+                    <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="inputSwitch" @bind-value="@item.SwitchDefaultValue" checked="@item.SwitchDefaultValue" disabled="@isReadOnly"></div>
+                </div>
+                <div class="d-flex align-items-top"><label class="form-label">@item.OnLabel</label></div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 mb-3" hidden="@(item.ContentType != (int)MetaDataContentType.Price)">
+            <label class="@(item.Category != (int)MetaDataCategory.Product ? "h6": "form-label")" for="numPrice">@item.Name</label>
+            <SfNumericTextBox id="numPrice" TValue="decimal?" Format="c2" @bind-Value="@item.PriceDefaultValue" ShowSpinButton="@(!isReadOnly)" disabled="@isReadOnly"></SfNumericTextBox>
+        </div>
+    }
+</div>
+
+@code
+{
+    [Parameter]
+    public List<CustomBusinessMetaDataModel> customBusinessMetaData { get; set; }
+
+    [Parameter]
+    public bool isReadOnly { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        StateHasChanged();
+    }
+
+
+}

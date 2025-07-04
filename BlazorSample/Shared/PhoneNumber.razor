@@ -1,0 +1,112 @@
+﻿@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@inject ICountryViewModel _countryViewModel
+@inject HttpClient http
+@if (isLoaded)
+{
+    <label class="form-label" for="phone">@label</label>
+    <div class="row g-2 mb-3">
+        <div class="col-3">
+            <SfDropDownList TValue="string" ID="@selCountryId" TItem="CpCountry" DataSource="@countries" @bind-Value="@phoneCountry" CssClass="form-control form-control-sm" PopupWidth="350px">
+                <DropDownListFieldSettings Text="Name" Value="CountryCode"></DropDownListFieldSettings>
+                <DropDownListEvents TItem="CpCountry" TValue="string" ValueChange="@selectPhoneMask"></DropDownListEvents>
+                <DropDownListTemplates TItem="CpCountry">
+                    <ItemTemplate Context="contextCountryFlag">
+                        <div>
+                            <div class="flag-icon flag-icon-@((contextCountryFlag as CpCountry).CountryCode.ToLower()) mx-0 px-0">@((contextCountryFlag as CpCountry).Name)</div>
+                        </div>
+                    </ItemTemplate>
+                    <ValueTemplate Context="contextCountryFlag">
+                        <div>
+                            <div class="flag-icon flag-icon-@((contextCountryFlag as CpCountry).CountryCode.ToLower()) m-2"></div>
+                        </div>
+                    </ValueTemplate>
+                </DropDownListTemplates>
+            </SfDropDownList>
+        </div>
+        <div class="col">
+            <SfMaskedTextBox ID="@id" Mask="@selectedPhoneMask.Mask" ValueChanged="@OnPhoneChanged" Value="@phone" CssClass="@(phoneCss == "invalid" ? @phoneCss + " e-error form-control form-control-sm" : "form-control form-control-sm")" Placeholder="@(label + " Number")"></SfMaskedTextBox>
+            @foreach (var message in editContext?.GetValidationMessages(phoneFieldId))
+            {
+                <div class="validation-message">@message</div>
+            }
+        </div>
+    </div>
+}
+@code
+{
+    [Parameter]
+    public string phoneCountry { get; set; }
+    [Parameter]
+    public string phone { get; set; }
+    [Parameter]
+    public List<CpCountry> countries { get; set; } = new List<CpCountry>();
+    [Parameter]
+    public List<PhoneMask> phoneMasks { get; set; } = new List<PhoneMask>();
+    private PhoneMask selectedPhoneMask { get; set; } = new PhoneMask();
+    [Parameter]
+    public string label { get; set; } = "Contact Phone";
+    [Parameter]
+    public string id { get; set; } = "inputPhone";
+    [Parameter]
+    public string selCountryId { get; set; } = "selPhoneCountry";
+
+    [CascadingParameter]
+    private EditContext editContext { get; set; }
+    private FieldIdentifier phoneFieldId;
+    private string phoneCss => editContext?.FieldCssClass(phoneFieldId) ?? "";
+    [Parameter]
+    public System.Linq.Expressions.Expression<Func<string>> phoneExpression { get; set; }
+    [Parameter]
+    public EventCallback<string> PhoneChanged { get; set; }
+    [Parameter]
+    public EventCallback<string> OnPhoneCountryChanged { get; set; }
+    private bool isLoaded = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        phoneFieldId = FieldIdentifier.Create(phoneExpression);
+
+        if (countries.Count <= 0)
+        {
+            CountryResponse res = await _countryViewModel.GetCountries();
+            if (res.success)
+            {
+                countries = res.data;
+            }
+        }
+
+        if (phoneMasks.Count <= 0)
+        {
+            phoneMasks = await http.GetFromJsonAsync<List<PhoneMask>>("PhoneMasks.json");
+        }
+
+        if (!string.IsNullOrWhiteSpace(phoneCountry))
+        {
+            selectedPhoneMask = phoneMasks.FirstOrDefault(x => x.Country.ToUpper() == phoneCountry.ToUpper());
+        }
+
+        isLoaded = true;
+
+        StateHasChanged();
+    }
+
+    private async Task selectPhoneMask()
+    {
+        await OnPhoneCountryChanged.InvokeAsync(phoneCountry);
+        if (!string.IsNullOrEmpty(phoneCountry))
+        {
+            selectedPhoneMask = phoneMasks.FirstOrDefault(x => x.Country == phoneCountry);
+            phone = "";
+        }
+        StateHasChanged();
+    }
+
+    private async Task OnPhoneChanged(string args)
+    {
+        await PhoneChanged.InvokeAsync(args);
+        editContext?.NotifyFieldChanged(phoneFieldId);
+    }
+}

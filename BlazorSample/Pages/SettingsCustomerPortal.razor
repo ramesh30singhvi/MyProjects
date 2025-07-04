@@ -1,0 +1,71 @@
+﻿@page "/settings/customer-portal"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card shadow-none border">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="settings/sales-channels/web" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-users-cog me-2"></span>Customer Portal</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-primary" href="javascript:void();">Save</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3 p-2">
+                    <div class="col-6 px-3">
+                        <div class="mb-3">
+                            <label class="form-label" for="inputDOBError">Require Date of Birth</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkBillTo" checked>
+                                <label class="form-check-label" for="chkBillTo">Bill To</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkShipTo" checked>
+                                <label class="form-check-label" for="chkShipTo">Require Date of Birth</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputDOBError">Date of Birth Validation Error</label>
+                            <textarea id="inputDOBError" class="form-control" rows="3" draggable="false">We’re sorry, but you must be at least 21 years of age or older to purchase items in your shopping cart.</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkShipToState" checked>
+                                <label class="form-check-label" for="chkShipToState">Show Available ShipTo States</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputRedirectionURL">New Account Redirection URL</label>
+                            <input type="text" id="inputRedirectionURL" class="form-control" value="https://www.synergycommerce.io/login" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private string title = "Customer Portal | Synergy Commerce Admin Panel";
+}

@@ -1,0 +1,179 @@
+﻿@page "/settings/configure-shipping-ups/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using Syncfusion.Blazor.Spinner
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA
+@using CellarPassAppAdmin.Client.ViewModels.SA;
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ISaIntegrationPartnerViewModel _saIntegrationPartnerViewModel
+@inject ISettingsViewModel _settingsViewModel
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized Context="UPSConfigure">
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="isLoading"></SfSpinner>
+        <EditForm Model="@ups" OnValidSubmit="@ConfigureUPS">
+            <DataAnnotationsValidator />
+            <div class="card">
+                <div class="card-header bg-light">
+                    <div class="row justify-content-between align-items-center">
+                        <div class="col-auto">
+                            <div class="d-flex">
+                                <div class="p-2 flex-fill">
+                                    <a href="marketplace" class="btn btn-falcon-default btn-sm px-2" title="Back"><span class="far fa-arrow-left"></span></a>
+                                </div>
+                                <div class="flex-fill">
+                                    <div class="d-flex align-items-center">
+                                        <img src="@(string.IsNullOrEmpty(integrationPartner.ImageURL)? "https://via.placeholder.com/50x50.png?text=%20": integrationPartner.ImageURL)" class="rounded me-2" alt="@integrationPartner.AppName" width="50" />
+                                        <div class="flex-1 position-relative">
+                                            <h5 class="">Configure UPS</h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="theme-wizard border-bottom p-3">
+                        <ul class="nav justify-content-between nav-wizard">
+                            <li class="nav-item">
+                                <a class="nav-link active fw-semi-bold" href="#bootstrap-wizard-tab1" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                                    <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-1"></span></span></span>
+                                    <span class="d-none d-md-block mt-1 fs--1">Configure Account</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab2" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                                    <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-2"></span></span></span>
+                                    <span class="d-none d-md-block mt-1 fs--1">Define Shipping Classes</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab3" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                                    <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-3"></span></span></span>
+                                    <span class="d-none d-md-block mt-1 fs--1">Configure Products</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab4" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                                    <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-4"></span></span></span>
+                                    <span class="d-none d-md-block mt-1 fs--1">Create Shipment</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab5" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                                    <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-5"></span></span></span>
+                                    <span class="d-none d-md-block mt-1 fs--1">Print Shipping Label</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="row p-3">
+                        <div class="col-sm-6">
+                            <div class="mb-3">
+                                <label for="inputUPSAccountNumber" class="form-label">UPS Account Number</label>
+                                <InputText @bind-Value=@ups.UPSAccountNumber class="form-control" id="inputUPSAccountNumber" />
+                                <ValidationMessage For="() => ups.UPSAccountNumber" />
+                            </div>
+                            <div class="mb-3">
+                                <label for="inputUPSUserID" class="form-label">UPS UserID</label>
+                                <InputText @bind-Value=@ups.UPSUserID class="form-control" id="inputUPSUserID" />
+                                <ValidationMessage For="() => ups.UPSUserID" />
+                            </div>
+                            <div class="mb-3">
+                                <label for="inputUPSPassword" class="form-label">UPS Password</label>
+                                <InputText type="Password" @bind-Value=@ups.UPSPassword class="form-control" id="inputUPSPassword" />
+                                <ValidationMessage For="() => ups.UPSPassword" />
+                            </div>
+                            <div class="mb-3">
+                                <label for="inputUPSAccessKey" class="form-label">UPS Access Key</label>
+                                <InputText @bind-Value=@ups.UPSAccessKey class="form-control" id="inputUPSAccessKey" />
+                                <ValidationMessage For="() => ups.UPSAccessKey" />
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="card shadow-none mb-3 e-box-color">
+                                <div class="card-header">
+                                    <h5 class="e-box-header-color">Integration Guide</h5>
+                                </div>
+                                <div class="card-body">
+                                    <ul class="list-decimal">
+                                        <li><p>In order to use UPS you need to obtain details from your ups.com account. <strong>UPS Account Number, UPS User ID, UPS Password</strong> and <strong>UPS Access Key</strong>.</p></li>
+                                        <li><p>UPS Account Number - it's typical 6-character code of uppercase letters and numbers.</p></li>
+                                        <li><p>UPS User ID - Your UPS ID which you use to Log in.</p></li>
+                                        <li><p>UPS password - Your password which you use to Log in.</p></li>
+                                        <li><p>UPS Access Key - visit : <br /><a href="https://www.uds.com/upsdeveloperkit" target="_blank">https://www.uds.com/upsdeveloperkit</a> Section: How to get started >Step 4. Request an access key. you will be redirected to your Request <strong>Access Key</strong> form. Check your details and when you are ready press green button '<strong>Request Access Key</strong>'.</p></li>
+                                    </ul>
+                                    <br />
+                                    <p class="text-end"><a href="https://www.ups.com/us/en/services/e-commerce.page" target="_blank">Detailed instructions</a></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </EditForm>
+    </Authorized>
+</AuthorizeView>
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "Configure UPS | Synergy Commerce Admin Panel";
+    private bool isLoading = false;
+    private IntegrationPartnerRequestModel integrationPartner = new IntegrationPartnerRequestModel();
+    Member currentMember = new Member();
+    UPSRequestModel ups = new UPSRequestModel();
+    List<string> upsMetaKeys = new List<string>()
+{
+        BusinessSettingsMetaKey.UPSAccountNumber,
+        BusinessSettingsMetaKey.UPSUserID,
+        BusinessSettingsMetaKey.UPSPassword,
+        BusinessSettingsMetaKey.UPSAccessKey,
+        BusinessSettingsMetaKey.SurchargeRealTimeRates
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        if (Id != null)
+        {
+            var partnerDetail = await _saIntegrationPartnerViewModel.GetIntegrationPartnerDetail(Id.Value);
+            if (partnerDetail.success && partnerDetail?.data != null)
+            {
+                integrationPartner = partnerDetail.data;
+            }
+            var upsBusinessIntegrationSettings = await _settingsViewModel.GetBusinessIntegrationSettingListAsync(BusinessSettingsMetaNamespace.UPS, null, currentMember.Id, null);
+            foreach (var metaKey in upsMetaKeys)
+            {
+                var metaValue = upsBusinessIntegrationSettings?.data?.Where(x => x.MetaKey == metaKey)?.FirstOrDefault()?.MetaValue1 ?? string.Empty;
+                Helper.SetPropertyValue(ups, metaKey, metaValue);//Note: meta key and request model property name should be same
+            }
+        }
+        isLoading = false;
+    }
+
+    private async Task ConfigureUPS()
+    {
+        isLoading = true;
+        var upsBusinessIntegrationSettings = await Helper.BusinessIntegrationSettingsMapping(ups, currentMember.Id, BusinessSettingsMetaNamespace.UPS, upsMetaKeys, integrationPartner.Id);
+        var response = await _settingsViewModel.AddUpdateBusinessIntegrationSettingListAsync(upsBusinessIntegrationSettings);
+        isLoading = false;
+        toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+    }
+}

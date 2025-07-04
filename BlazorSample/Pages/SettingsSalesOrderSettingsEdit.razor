@@ -1,0 +1,400 @@
+﻿@*@page "/settings/sales-order-settings/{Id:guid}"*@
+@page "/settings/sales-order-settings"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Enums
+@using Syncfusion.Blazor.Spinner
+@using AutoMapper;
+@inject IBusinessViewModel _businessViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject IBusinessPageViewModel _businessPageViewModel
+@inject IBusinessLocationViewModel _businessLocationViewModel
+@inject IProductViewModel _productViewModel
+@inject IBusinessPropertyViewModel _businessPropertyViewModel
+@inject IPOSProfileViewModel _pOSProfileViewModel
+@inject ISalesOrderViewModel _salesOrderViewModel
+@inject IStoreCollectionViewModel _storeCollectionViewModel
+@inject IDiscountViewModel _discountViewModel
+@inject IMapper _mapper
+@inject ToastService toastService
+@inject NavigationManager _navigationManager
+@inject IProductViewModel _productViewModel
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm Model="@oMSSetting" Context="formContext">
+    <DataAnnotationsValidator />
+    <div class="card shadow-none border">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md-7">
+                    <h5 class="mb-3 mb-md-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-user-headset me-2"></span>Sales Order Settings</h5>
+                </div>
+                <div class="col-md-5 d-flex">
+                    <SfDropDownList CssClass="me-2" @bind-Value="@oMSSetting.BusinessProperty" TValue="int"
+                                    TItem="BusinessPropertyModel" Placeholder="Select Business Profile" AllowFiltering="true"
+                                    DataSource="@businessProfiles">
+                        <DropDownListEvents TItem="BusinessPropertyModel" TValue="int" ValueChange="() => OnProfileNameChange()"></DropDownListEvents>
+                        <DropDownListFieldSettings Text="PropertyName" Value="Id"></DropDownListFieldSettings>
+                    </SfDropDownList>
+                    <button class="btn btn-x-sm btn-primary" @onclick="@(() => SaveOMSSettings(formContext))">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="card rounded-0 shadow-none border-bottom">
+                <div class="card-header border-bottom">
+                    <div class="row flex-between-center">
+                        <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                            <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-store me-2"></span>Profile</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="inputOrderPrefix">OrderID Prefix</label>
+                        <InputText id="inputOrderPrefix" @bind-Value="oMSSetting.OMSOrderPreFix" class="form-control" type="text" maxlength="4" placeholder="A prefix to show before each order number" />
+                        <ValidationMessage For="@(() => oMSSetting.OMSOrderPreFix)" />
+                    </div>
+                    <div class="mb-3 sf-ddl">
+                        <label class="form-label" for="sfLocationAddress">Location Address</label>
+                        <SfDropDownList @bind-Value="oMSSetting.LocationId" id=sfLocationAddress TValue="int" TItem="BusinessLocationModel" Placeholder="Select Address" AllowFiltering="true" DataSource="@pOSLocations">
+                            <DropDownListFieldSettings Text="DestinationName" Value="Id"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => oMSSetting.LocationId)" />
+                    </div>
+                </div>
+            </div>
+            <div class="card rounded-0 shadow-none border-bottom">
+                <div class="card-header border-bottom">
+                    <div class="row flex-between-center">
+                        <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                            <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-heart me-2"></span>OMS Favorites</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3 sf-ddl">
+                        <label class="form-label" for="sfCarryOutInv">Collection</label>
+                        <SfDropDownList @bind-Value="oMSSetting.OMSFavoritesCollection" id=sfLocationAddress TValue="int" TItem="StoreCollectionModelAdmin" Placeholder="Select Collection" AllowFiltering="true" DataSource="@storeCollections">
+                            <DropDownListFieldSettings Text="CollectionName" Value="Id"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => oMSSetting.OMSFavoritesCollection)" />
+                    </div>
+                </div>
+            </div>
+            <div class="card rounded-0 shadow-none border-bottom">
+                <div class="card-header border-bottom">
+                    <div class="row flex-between-center">
+                        <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                            <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-layer-group me-2"></span>OMS Collections</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3 sf-ddl">
+                        <label class="form-label" for="sfmsCollections">Collections</label>
+                        <SfMultiSelect ID="sfmsCollections" @bind-Value="oMSCollections" TValue="int[]" TItem="StoreCollectionModelPOS" Mode="@VisualMode.Default" Placeholder="Select One or More Collections" CssClass="form-control form-control-sm" DataSource="@posCollectionList">
+                            <MultiSelectFieldSettings Text="PosTabName" Value="Id"></MultiSelectFieldSettings>
+                            <MultiSelectEvents TItem="StoreCollectionModelPOS" TValue="int[]" ValueChange="@(() => CollectionsChangeHandler(formContext))"></MultiSelectEvents>
+                        </SfMultiSelect>
+                        <ValidationMessage For="@(() => oMSSetting.OMSCollections)" />
+                    </div>
+                </div>
+            </div>
+            <div class="card rounded-0 shadow-none border-bottom">
+                <div class="card-header border-bottom">
+                    <div class="row flex-between-center">
+                        <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                            <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-warehouse-full me-2"></span>Inventory Depletion</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3 sf-ddl">
+                        <label class="form-label" for="sfCarryOutInv">Carry Out Inventory</label>
+                        <SfDropDownList @bind-Value="oMSSetting.InventoryCarryOutLocation" id="sfCarryOutInv" TValue="int" TItem="BusinessLocationModel" Placeholder="Select Address" AllowFiltering="true" DataSource="@inventoryLocations">
+                            <DropDownListFieldSettings Text="DisplayLocationAddress" Value="Id"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => oMSSetting.InventoryCarryOutLocation)" />
+                    </div>
+
+                    <div class="mb-3 sf-ddl">
+                        <label class="form-label" for="sfPickupInv">Pickup Inventory</label>
+                        <SfDropDownList @bind-Value="oMSSetting.InventoryPickupLocation" id="sfPickupInv" TValue="int" TItem="BusinessLocationModel" Placeholder="Select Address" AllowFiltering="true" DataSource="@inventoryLocations">
+                            <DropDownListFieldSettings Text="DisplayLocationAddress" Value="Id"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => oMSSetting.InventoryPickupLocation)" />
+                    </div>
+
+                    <div class="mb-3 sf-ddl">
+                        <label class="form-label" for="sfShipInv">Ship Inventory</label>
+                        <SfDropDownList @bind-Value="oMSSetting.InventoryShipLocation" id="sfShipInv" TValue="int" TItem="BusinessLocationModel" Placeholder="Select Address" AllowFiltering="true" DataSource="@inventoryLocations">
+                            <DropDownListFieldSettings Text="DisplayLocationAddress" Value="Id"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => oMSSetting.InventoryShipLocation)" />
+                    </div>
+
+                    <div class="mb-3 sf-ddl">
+                        <label class="form-label" for="sfShipInv">Delivery Inventory</label>
+                        <SfDropDownList @bind-Value="oMSSetting.InventoryDeliveryLocation" id="sfDeliveryInv" TValue="int" TItem="BusinessLocationModel" Placeholder="Select Address" AllowFiltering="true" DataSource="@inventoryLocations">
+                            <DropDownListFieldSettings Text="DisplayLocationAddress" Value="Id"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => oMSSetting.InventoryDeliveryLocation)" />
+                    </div>
+                </div>
+            </div>
+            <div class="card rounded-0 shadow-none border-bottom">
+                <div class="card-header border-bottom">
+                    <div class="d-flex flex-between-center">
+                        <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-square-bolt me-2"></span>Custom Quick Charge Amounts</h5>
+                        <div class="form-check form-switch ps-0">
+                            <SfSwitch id="switchQuickChargeEnabled" OffLabel="OFF" OnLabel="ON" TChecked="bool" @bind-Checked="oMSSetting.QuickChargeEnabled"></SfSwitch>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body" hidden="@(!oMSSetting.QuickChargeEnabled)">
+                    <div class="mb-3">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="inputEmail4" class="form-label">Button 1</label>
+                                <SfNumericTextBox TValue="decimal?" ValidateDecimalOnType="true" Placeholder="0.00" Decimals=2 Format="c2" ShowSpinButton="false" @bind-Value=@oMSSetting.QuickChargeAmount1></SfNumericTextBox>
+                                <ValidationMessage For="@(() => oMSSetting.QuickChargeAmount1)" />
+                            </div>
+                            <div class="col-md-4">
+                                <label for="inputPassword4" class="form-label">Button 2</label>
+                                <SfNumericTextBox TValue="decimal?" ValidateDecimalOnType="true" Placeholder="0.00" Decimals=2 Format="c2" ShowSpinButton="false" @bind-Value=@oMSSetting.QuickChargeAmount2></SfNumericTextBox>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="inputQuickBtn3" class="form-label">Button 3</label>
+                                <SfNumericTextBox TValue="decimal?" ValidateDecimalOnType="true" Placeholder="0.00" Decimals=2 Format="c2" ShowSpinButton="false" @bind-Value=@oMSSetting.QuickChargeAmount3></SfNumericTextBox>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card rounded-0 shadow-none border-bottom" hidden="@(!oMSSetting.QuickChargeEnabled)">
+                <div class="card-header">
+                    <div class="row flex-between-center">
+                        <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                            <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-box-open me-2"></span>Quick Charge Sku</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3 sf-ddl">
+                        <SfComboBox ID="inputProductSearch" @bind-Value="oMSSetting.QuickChargeProduct" TValue="int?" TItem="ProductListModel" AllowFiltering=true Placeholder="Search Products" DataSource="@products" FilterType="Syncfusion.Blazor.DropDowns.FilterType.Contains">
+                            <ComboBoxFieldSettings Text="ProductTitle" Value="Id"></ComboBoxFieldSettings>
+                        </SfComboBox>
+                        <ValidationMessage For="@(() => oMSSetting.QuickChargeProduct)" />
+                    </div>
+                </div>
+            </div>
+            <div class="card rounded-0 shadow-none border-bottom">
+                <div class="card-header border-bottom">
+                    <div class="row flex-between-center">
+                        <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                            <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-tag me-2"></span>Favorite Promo Codes</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3 sf-ddl">
+                        <SfMultiSelect ID="sfmsPromos" MaximumSelectionLength="9" @bind-Value="oMSSetting.FavPromoCodes" TValue="int[]" TItem="DropdownBindingModel" Mode="@VisualMode.Default" Placeholder="Select up to 9 Promos" DataSource="@businessDiscounts" CssClass="form-control form-control-sm" aria-label="Promo List">
+                            <MultiSelectFieldSettings Text="Value" Value="Key"></MultiSelectFieldSettings>
+                        </SfMultiSelect>
+                    </div>
+                </div>
+            </div>
+            <div class="card rounded-0 shadow-none border-bottom">
+                <div class="card-header border-bottom">
+                    <div class="row flex-between-center">
+                        <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                            <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-hand-holding-dollar me-2"></span>Payment Profile</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="selPaymentProfile">Profile</label>
+                        <SfDropDownList @bind-Value="oMSSetting.PaymentProfile" id=selPaymentProfile TValue="int" TItem="POSPaymentProfileModel" Placeholder="Select Payment Profile" AllowFiltering="true" DataSource="@paymentProfiles">
+                            <DropDownListFieldSettings Text="PaymentProfileName" Value="Id"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => oMSSetting.PaymentProfile)" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <ValidationSummary Model="@oMSSetting" />
+</EditForm>
+
+@code {
+    [Parameter]
+    //public Guid? Id { get; set; }
+    public bool SpinnerVisibility { get; set; } = false;
+    private Member currentMember = new Member();
+    private string title = "Sales Order Settings | Synergy Commerce Admin Panel";
+    private List<BusinessLocationModel> pOSLocations = new List<BusinessLocationModel>();
+    private List<BusinessLocationModel> inventoryLocations = new List<BusinessLocationModel>();
+    private List<StoreCollectionModelAdmin> storeCollections = new List<StoreCollectionModelAdmin>();
+    private List<ProductListModel> products = new List<ProductListModel>();
+    private List<POSPaymentProfileModel> paymentProfiles = new List<POSPaymentProfileModel>();
+    private List<StoreCollectionModelPOS> posCollectionList = new List<StoreCollectionModelPOS>();
+    List<BusinessPropertyModel> businessProfiles = new List<BusinessPropertyModel>();
+    OMSSettingsRequestModel oMSSetting = new OMSSettingsRequestModel();
+    int[] oMSCollections = new int[] { };
+    private bool QRDialogVisibility { get; set; } = false;
+    private string QRCodeText { get; set; } = string.Empty;
+    private string status { get; set; } = "Active";
+    List<DropdownBindingModel> businessDiscounts = new List<DropdownBindingModel>();
+    private bool GenerateDeviceCodeModalVisibility { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        //Get Current Member
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        //Get the Business Profiles for the Member
+        businessProfiles = await _businessPropertyViewModel.GetBusinessProperties(currentMember.Id);
+        if (businessProfiles.Any())
+        {
+            oMSSetting.BusinessProperty = businessProfiles[0].Id;
+        }
+        //Get All Locations By Member Id
+        var locationResponse = await _businessLocationViewModel.GetBusinessLocations(currentMember.Id);
+        if (locationResponse.success)
+        {
+            pOSLocations = locationResponse?.data?.Where(x => x.IsPOS)?.OrderBy(x => x.DestinationName).ToList() ?? new List<BusinessLocationModel>();
+            inventoryLocations = locationResponse?.data?.Where(x => x.IsInventoryLocation)?.OrderBy(x => x.DisplayLocationAddress).ToList() ?? new List<BusinessLocationModel>();
+        }
+        //Get Store Collections By Member Id
+        var storeCollectionResponse = await _storeCollectionViewModel.GetStoreCollectionsAdmin(currentMember.Id);
+        if (storeCollectionResponse.success)
+        {
+            storeCollections = storeCollectionResponse.data;
+            if (storeCollections != null && storeCollections.Count > 0)
+            {
+                storeCollections = storeCollections.OrderBy(x => x.CollectionName).ToList();
+            }
+        }
+
+        // Get OMS Collections By Member Id
+        var posCollectionsResponse = await _storeCollectionViewModel.GetStoreCollectionsOMS(currentMember.Id);
+        if (posCollectionsResponse.success)
+        {
+            posCollectionList = posCollectionsResponse.data;
+        }
+
+        var paymentProfilesResponse = await _pOSProfileViewModel.GetPOSPaymentProfileList(currentMember.Id);
+        if (paymentProfilesResponse.success)
+        {
+            paymentProfiles = paymentProfilesResponse.data;
+        }
+
+        //Get Sales Order Settings Details During Edit
+        if (oMSSetting.BusinessProperty > 0)
+        {
+            await LoadSalesOrderSettingsData();
+        }
+
+        //Get Products
+        var productResponse = await _productViewModel.SearchProducts(currentMember.Id, true, "");
+        if (productResponse.success)
+        {
+            products = productResponse?.data?.OrderBy(x => x.ProductTitle)?.ToList() ?? new List<ProductListModel>();
+        }
+
+        //Get the Business Discounts
+        var businessDiscountResponse = await _discountViewModel.GetDiscounts(currentMember.Id, null, null, status, string.Empty, Channels.OMS.ToString());
+        if (businessDiscountResponse.success)
+        {
+            businessDiscounts = businessDiscountResponse.data?.Select(x => new DropdownBindingModel { Key = x.Id, Value = x.DiscountName }).ToList()?? new List<DropdownBindingModel>();
+        }
+        oMSSetting.BusinessId = currentMember.Id;
+        SpinnerVisibility = false;
+    }
+
+    private async Task LoadSalesOrderSettingsData()
+    {
+        var property = oMSSetting.BusinessProperty;
+        var profileResponse = await _salesOrderViewModel.GetSalesOrderDetails(oMSSetting.BusinessProperty);
+        if (profileResponse?.data != null)
+        {
+            oMSSetting = JsonConvert.DeserializeObject<OMSSettingsRequestModel>(JsonConvert.SerializeObject(profileResponse.data));
+            oMSCollections = profileResponse?.data?.OMSCollections?.Select(x => x.CollectionId)?.ToArray() ?? new int[] { };
+        }
+        else
+        {
+            oMSSetting = new OMSSettingsRequestModel { BusinessProperty = property };
+            oMSCollections = new int[] { };
+        }
+    }
+
+    private void CollectionsChangeHandler(EditContext editContext)
+    {
+        int sortIndex = 1;
+        var selectedPOSProfileCollections = new List<OMSCollection>();
+        if (oMSCollections != null)
+        {
+            foreach (var collectionId in oMSCollections)
+            {
+                var collection = storeCollections.Where(x => x.Id == collectionId).FirstOrDefault();
+                if (collection != null)
+                    selectedPOSProfileCollections.Add(new OMSCollection
+                    {
+                        CollectionId = collection.Id,
+                        SortIndex = sortIndex++,
+                        BusinessProperty = oMSSetting.BusinessProperty
+                    });
+            }
+        }
+        oMSSetting.OMSCollections = selectedPOSProfileCollections.Count == 0 ? null : selectedPOSProfileCollections;
+        editContext.Validate();
+    }
+
+    protected async Task SaveOMSSettings(EditContext editContext)
+    {
+        if (!oMSSetting.QuickChargeEnabled)
+            oMSSetting.QuickChargeAmount1 = oMSSetting.QuickChargeAmount2 = oMSSetting.QuickChargeAmount3 = oMSSetting.QuickChargeProduct = null;
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var response = await _salesOrderViewModel.AddUpdateSalesOrder(oMSSetting);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                if (oMSSetting.Id == 0)
+                {
+                    oMSSetting.Id = response.data.Id;
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                }
+                else
+                {
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                }
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    private async Task OnProfileNameChange()
+    {
+        SpinnerVisibility = true;
+        await LoadSalesOrderSettingsData();
+        SpinnerVisibility = false;
+        StateHasChanged();
+    }
+}

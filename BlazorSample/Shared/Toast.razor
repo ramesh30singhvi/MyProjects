@@ -1,0 +1,38 @@
+﻿@using CellarPassAppAdmin.Shared.Enums
+@inject ToastService toastService
+
+<SfToast @ref="@ToastObj">
+    <ToastPosition X="Right" Y="Top"></ToastPosition>
+</SfToast>
+
+@code
+{
+    SfToast ToastObj;
+    protected override async Task OnInitializedAsync()
+    {
+        toastService.OnShow += ShowToast;
+    }
+    private void ShowToast(string message, ToastLevel level)
+    {
+        if (level == ToastLevel.Success)
+        {
+            ToastObj.ShowAsync(new ToastModel
+            {
+                Title = "Success!",
+                Content = message,
+                CssClass = "e-toast-success e-toast-success-custom",
+                Icon = "e-success toast-icons"
+            });
+        }
+        else
+        {
+            ToastObj.ShowAsync(new ToastModel
+            {
+                Title = "Error!",
+                Content = message,
+                CssClass = "e-toast-danger e-toast-danger-custom",
+                Icon = "e-error toast-icons"
+            });
+        }
+    }
+}

@@ -1,0 +1,139 @@
+﻿@page "/loyalty/create-award-campaign-bonus-points"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IProductViewModel _productViewModel
+@inject IStoreCollectionViewModel _storeCollectionViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+
+<div class="card">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="loyalty/create-award-campaign" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-trophy-alt me-2"></span>Create Campaign</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="#!">Save</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-12">
+                <h6 class="fw-bold text-500">STEP 2 OF 2</h6>
+                <h5>Bonus Points- Items Based</h5>
+                <p>For simple award campaigns where you want to reward customers points based on amount spent. For example, earn 1 point for every $1.00 spent.</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12 col-xl-6">
+                <div class="mb-3">
+                    <label class="form-label" for="inputAwarded">[[LoyaltyPluralName]] Awarded</label>
+                    <input id="inputAwarded" class="form-control" type="text" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="inputRewardFriendlyName">Reward Friendly Name</label>
+                    <input id="inputRewardFriendlyName" class="form-control" type="text" />
+                </div>
+            </div>
+            @*Product Search Function Component*@
+            <ProductSearchFunction products="products" collectionProducts="collectionProducts" storeCollection="storeCollection"></ProductSearchFunction>
+
+            <div class="col-12 col-xl-6">
+                <div class="mb-3" hidden="@(storeCollection.CollectionSelectionType == (int)CollectionSelectionType.Dynamic)">
+                    <label class="form-label" for="selExpireAfter">[[LoyaltyPluralName]] Expire After</label>
+                    <select id="selExpireAfter" class="form-select">
+                        <option value="DoNotExpire" selected>Do Not Expire</option>
+                        <option value="3Months">3 Months</option>
+                        <option value="6Months">6 Months</option>
+                        <option value="12Months">12 Months</option>
+                        <option value="18Months">18 Months</option>
+                        <option value="24Months">24 Months</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchIncludeSalesTax">Include Sales Tax</label></div>
+                        <div class="d-flex align-items-center">
+                            <div class="form-check form-switch"><input class="form-check-input" id="switchIncludeSalesTax" type="checkbox"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchAllowCombinedEarnedPoints">Allow Combined Earned Points</label></div>
+                        <div class="d-flex align-items-center">
+                            <div class="form-check form-switch"><input class="form-check-input" id="switchAllowCombinedEarnedPoints" type="checkbox"></div>
+                        </div>
+                    </div>
+                    <label class="form-label"><span class="form-text">When enabled, allow multiple qualified points to be awarded to customer</span></label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code
+{
+    private string title = "Create Campaign | Synergy Commerce Admin Panel";
+    ObservableCollection<StoreCollectionProduct> collectionProducts = new ObservableCollection<StoreCollectionProduct>();
+    private bool isLoading;
+    private StoreCollectionFullDetail storeCollection = new StoreCollectionFullDetail();
+    private Member currentMember;
+    private List<ProductListModel> products = new List<ProductListModel>();
+
+    [Parameter]
+    public Guid Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var response = await _storeCollectionViewModel.GetStoreCollectionDetails(Id.ToString(), 0);
+        if (response.success)
+        {
+            storeCollection = response.data;
+            if (storeCollection.Products != null && storeCollection.Products.Count > 0)
+            {
+                collectionProducts = new ObservableCollection<StoreCollectionProduct>(storeCollection.Products);
+                if (collectionProducts.Count > 0)
+                {
+                    if (storeCollection.CollectionSortType == (int)CollectionSortType.ProductNameA_Z)
+                    {
+                        collectionProducts = new ObservableCollection<StoreCollectionProduct>(collectionProducts.OrderBy(x => x.ProductTitle));
+                    }
+                    else if (storeCollection.CollectionSortType == (int)CollectionSortType.ProductNameZ_A)
+                    {
+                        collectionProducts = new ObservableCollection<StoreCollectionProduct>(collectionProducts.OrderByDescending(x => x.ProductTitle));
+                    }
+                    else if (storeCollection.CollectionSortType == (int)CollectionSortType.Manual)
+                    {
+                        collectionProducts = new ObservableCollection<StoreCollectionProduct>(collectionProducts.OrderBy(x => x.SortIndex));
+                    }
+                }
+            }
+        }
+
+        var productResponse = await _productViewModel.SearchProducts(currentMember.Id, true, "");
+        if (productResponse.success)
+        {
+            products = productResponse.data;
+            if (products.Count > 0)
+            {
+                products = products.OrderBy(x => x.ProductTitle).ToList();
+            }
+        }
+        isLoading = false;
+    }
+}

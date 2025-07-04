@@ -1,0 +1,313 @@
+﻿@page  "/reports/gift-card-transaction-history"
+@page  "/reports/gift-card-transaction-history/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using System.Text.RegularExpressions
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject IGiftCardTransactionViewModel _giftCardTransactionViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md-auto mb-2 mb-md-0">
+                <h5 class="mb-0">
+                    @if (Id == Guid.Empty)
+                    {
+                        <a href="/payments/gift-cards" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back">
+                            <span class="fa-regular fa-arrow-left me-1"></span>
+                        </a>
+                    }
+                    else
+                    {
+                        <a href="/reports/gift-card-transaction-history" @onclick="()=> HandleBackClick()" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back">
+                            <span class="fa-regular fa-arrow-left me-1"></span>
+                        </a>
+                    }
+                    <span class="fa-regular fa-envelope-open-dollar me-2"></span>Gift Card Transactions
+                </h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="/payments/gift-card-settings">Create Order</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <form>
+            <div class="p-3">
+                <div class="row">
+                    <div class="col-12 col-md-10 mb-2">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                            <input type="text" class="form-control" @onchange="(EventArgs) => {SearchTransactions(EventArgs.Value.ToString());}" placeholder="Search orders" aria-label="Search Orders" aria-describedby="inputGroupSearch">
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-2 mb-2">
+                        <div class="input-group d-grid">
+                            <button type="button" class="btn btn-outline-secondary" @onclick="TriggerFiltering"><span class="fa-solid fa-bars-filter me-1"></span>Filter</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div class="row g-2 px-3 mb-3">
+            <div class="col-6 mb-2">
+                <div class="card shadow-none border p-3">
+                    <div class="d-flex flex-between-center align-items-center">
+                        <div>
+                            <h6 class="mb-0">Total Value Sold</h6>
+                        </div>
+                        <h6 class="mb-0">@giftCardDepletionVM.TotalSold</h6>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 mb-2">
+                <div class="card shadow-none border p-3">
+                    <div class="d-flex flex-between-center align-items-center">
+                        <div>
+                            <h6 class="mb-0">Total Value Redeemed</h6>
+                        </div>
+                        <h6 class="mb-0">@giftCardDepletionVM.TotalRedeemed</h6>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 mb-2">
+                <div class="card shadow-none border p-3">
+                    <div class="d-flex flex-between-center align-items-center">
+                        <div>
+                            <h6 class="mb-0">Outstanding Balance</h6>
+                        </div>
+                        <h6 class="mb-0">@giftCardDepletionVM.Balance</h6>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 mb-2">
+                <div class="card shadow-none border p-3">
+                    <div class="d-flex flex-between-center align-items-center">
+                        <div>
+                            <h6 class="mb-0">Gift Card in Circulation</h6>
+                        </div>
+                        <h6 class="mb-0">@giftCardDepletionVM.GiftCardCirculation</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="sf-grid min-vh-75">
+            <div class="card-body p-0 mt-2">
+                <div class="sf-grid min-vh-75">
+                    <SfGrid DataSource="@GiftCardDataItem" @ref="GiftGrid">
+                        <GridTemplates>
+                            <DetailTemplate>
+                                @{
+                                    var giftCard = (context as GiftCardTransactionHistoryVM);
+                                    <SfGrid DataSource="@DataSourceLogs" Query="@(new Query().Where("GiftCardId", "equal", giftCard.GiftCardId))">
+                                        <GridColumns>
+                                            <GridColumn Field=@nameof(TransactionModelVM.TransactionDate) HeaderText="Date" Width="110"> </GridColumn>
+                                            <GridColumn Field=@nameof(TransactionModelVM.TransacrtionStatus) HeaderText="Status" Width="110"></GridColumn>
+                                            <GridColumn Field=@nameof(TransactionModelVM.TransactionAmount) HeaderText="Amount" Width="110"></GridColumn>
+                                        </GridColumns>
+                                    </SfGrid>
+                                }
+                            </DetailTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            <GridColumn Field=@nameof(GiftCardTransactionHistoryVM.AccountNumber) HeaderText="Gift Card Number" Width="110"> </GridColumn>
+                            <GridColumn Field=@nameof(GiftCardTransactionHistoryVM.TotalSold) HeaderText="Issued Value" Width="110"></GridColumn>
+                            <GridColumn Field=@nameof(GiftCardTransactionHistoryVM.TotalRedeemed) HeaderText="Total Redeemed" Width="110"></GridColumn>
+                            <GridColumn Field=@nameof(GiftCardTransactionHistoryVM.Balance) HeaderText="Remaining Balance" Width="110"></GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+        </div>
+        <SfDialog ID="prompt_dialog" @bind-Visible="@FilterModalVisible" ShowCloseIcon="true" Width="300px">
+            <DialogTemplates>
+                <Header>
+                    Filter Transactions
+                </Header>
+                <Content>
+                    <SfDateRangePicker id="drpDateRange" TValue="DateTime?" ShowClearButton="true" Placeholder="Choose Date Range">
+                        <DateRangePickerEvents TValue="DateTime?" ValueChange="ValueChangeHandler"></DateRangePickerEvents>
+                    </SfDateRangePicker>
+                </Content>
+            </DialogTemplates>
+            <DialogPositionData Y="100"></DialogPositionData>
+        </SfDialog>
+    </div>
+</div>
+
+@code
+{
+    @inject NavigationManager NavigationManager;
+
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private string title = "Gift Card Transactions | Synergy Commerce Admin Panel";
+
+    public class GiftCardDepletionVM
+    {
+        public string GiftCardNumber { get; set; }
+        public string TotalSold { get; set; }
+        public string TotalRedeemed { get; set; }
+        public string Balance { get; set; }
+        public int GiftCardCirculation { get; set; }
+    }
+    public class GiftCardDepletionRequestVM
+    {
+        public int BusinessId { get; set; }
+        public DateTime FromDate { get; set; }
+        public DateTime ToDate { get; set; }
+        public string GiftCardGuid { get; set; }
+    }
+
+    private Boolean isLoading = false;
+    private string searchVal { get; set; }
+    private bool FilterModalVisible = false;
+    SfGrid<GiftCardTransactionHistoryVM> GiftGrid;
+    GiftCardDepletionVM giftCardDepletionVM = new GiftCardDepletionVM();
+    List<GiftCardTransactionHistoryVM> GiftCardDataItemAll = new List<GiftCardTransactionHistoryVM>();
+    List<GiftCardTransactionHistoryVM> GiftCardDataItem = new List<GiftCardTransactionHistoryVM>();
+    List<TransactionModelVM> DataSourceLogs = new List<TransactionModelVM>();
+    private Member currentMember = new Member();
+
+    public class GiftCardTransactionHistoryVM
+    {
+        public string GiftCardId { get; set; }
+        public string TotalSold { get; set; }
+        public string TotalRedeemed { get; set; }
+        public string Balance { get; set; }
+        public string AccountNumber { get; set; }
+    }
+
+    public class TransactionModelVM
+    {
+        public string GiftCardId { get; set; }
+        public string TransactionDate { get; set; }
+        public int OrderId { get; set; }
+        public string TransacrtionStatus { get; set; }
+        public string TransactionAmount { get; set; }
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var result = await _giftCardTransactionViewModel.GetGiftCardTransactionHistory(currentMember.Id, 0);
+        if (result.success)
+        {
+            foreach (var item in result.data)
+            {
+                GiftCardDataItem.Add(new GiftCardTransactionHistoryVM()
+                {
+                    GiftCardId = item.GiftCardId,
+                    AccountNumber = MaskCardNumber(item.AccountNumber),
+                    Balance = "$" + item.Balance.ToString("0.00"),
+                    TotalRedeemed = "$" + item.TotalRedeemed.ToString("0.00"),
+                    TotalSold = "$" + item.TotalSold.ToString("0.00")
+                });
+                giftCardDepletionVM = new GiftCardDepletionVM()
+                {
+                    TotalSold = "$" + result.data.Select(x => x.TotalSold).Sum().ToString("0.00"),
+                    Balance = "$" + result.data.Select(x => x.Balance).Sum().ToString("0.00"),
+                    TotalRedeemed = "$" + result.data.Select(x => x.TotalRedeemed).Sum().ToString("0.00"),
+                    GiftCardCirculation = result.data.Where(x => x.Balance > Convert.ToDecimal(0.01)).Count()
+                };
+                foreach (var log in item.TransactionLogs)
+                {
+
+                    DataSourceLogs.Add(new TransactionModelVM
+                    {
+                        GiftCardId = item.GiftCardId,
+                        OrderId = log.OrderId,
+                        TransacrtionStatus = log.TransacrtionStatus,
+                        TransactionAmount = "$" + log.TransactionAmount.ToString("0.00"),
+                        TransactionDate = log.TransactionDate.ToString("MM/dd/yyyy, hh:ss tt")
+                    });
+
+                }
+            }
+            GiftCardDataItemAll = GiftCardDataItem;
+            isLoading = false;
+            StateHasChanged();
+            GiftGrid.Refresh();
+        }
+    }
+
+    private string MaskCardNumber(string cardNumber)
+    {
+        if (cardNumber.Length >= 16)
+        {
+            cardNumber = cardNumber.Replace(@"-", string.Empty);
+            if (cardNumber.Length > 16)
+            {
+                cardNumber = cardNumber.Substring(0, 16);
+            }
+            var firstDigits = cardNumber.Substring(0, 4);
+            var lastDigits = cardNumber.Substring(cardNumber.Length - 4, 4);
+
+            var requiredMask = new String('X', cardNumber.Length - firstDigits.Length - lastDigits.Length);
+            var maskedString = string.Concat(firstDigits, requiredMask, lastDigits);
+            var maskedCardNumberWithSpaces = Regex.Replace(maskedString, ".{4}", "$0-");
+            return maskedCardNumberWithSpaces.TrimEnd('-');
+        }
+        else
+        {
+            return cardNumber;
+        }
+    }
+
+    private void SearchTransactions(string searchValue)
+    {
+        if (!string.IsNullOrEmpty(searchValue))
+        {
+            GiftCardDataItem = GiftCardDataItemAll.Where(x => (x.AccountNumber?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                    (x.TotalSold?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                    (x.TotalRedeemed?.ToLower().Contains(searchValue.ToLower()) ?? false) ||
+                                    (x.Balance?.ToLower().Contains(searchValue.ToLower()) ?? false)).ToList();
+        }
+        else
+        {
+            GiftCardDataItem = GiftCardDataItemAll;
+        }
+        searchVal = searchValue;
+        StateHasChanged();
+    }
+
+    private void HandleClick(string GiftCardNumber)
+    {
+        NavigationManager.NavigateTo("/reports/gift-card-transaction-history/" + GiftCardNumber, true);
+    }
+
+    private void HandleBackClick()
+    {
+        NavigationManager.NavigateTo("/reports/gift-card-transaction-history", true);
+    }
+
+    private void TriggerFiltering()
+    {
+        FilterModalVisible = true;
+    }
+
+    private void ValueChangeHandler(RangePickerEventArgs<DateTime?> args)
+    {
+        FilterModalVisible = false;
+        var giftCardDepletionRequestVM = new GiftCardDepletionRequestVM()
+        {
+            BusinessId = currentMember.Id,
+            FromDate = args.StartDate.Value,
+            ToDate = args.EndDate.Value,
+            GiftCardGuid = Id == Guid.Empty ? "" : Id.ToString()
+
+        };
+    }
+}

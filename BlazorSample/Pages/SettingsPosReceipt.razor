@@ -1,0 +1,500 @@
+﻿@page "/settings/pos/receipt"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.Blazor.Spinner
+
+@inject IPOSViewModel _posViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ToastService toastService
+@attribute [Authorize]
+
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+
+        <div class="row">
+            <div class="col-12 col-lg-8 mb-4">
+                <div class="card">
+                    <div class="card-header border-bottom">
+                        <div class="row justify-content-between">
+                            <div class="col-md-auto">
+                                <h5 class="mb-3 mb-md-0"><a href="settings/pos" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-cash-register me-2"></span>Receipt Settings</h5>
+                            </div>
+
+                            <div class="col-md-auto">
+                                <a class="btn btn-sm btn-primary" href="javascript:void(0)" @onclick="() => SavePOSReceiptSetting()">Save</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+
+                        <form>
+                            <div class="mb-4">
+                                <label class="form-label" for="inputHeaderText">Receipt Profile Name</label>
+                                <input class="form-control" id="inputProfileName" />
+                            </div>
+                            <div class="mb-3">
+                                <div class="row d-flex align-items-center">
+                                    <div class="col-md-auto">
+                                        <div class="d-flex align-items-center justify-content-center mb-3 mb-md-0">
+                                            <span class="far fa-image-polaroid fa-4x"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md">
+                                        <div class="dz-message dropzone-area d-flex position-relative p-3">
+                                            <div class="text-center">
+                                                <span class="far fa-cloud-upload-alt me-2"></span>Upload your receipt logo<p class="mb-0 fs--1 text-400">Upload a 300x300 jpg image with <br>a maximum size of 400KB</p>
+                                                <span class="fs--1">Drag and drop your files here or click to open file loading dialogue...</span>
+                                            </div>
+                                            <InputFile id="inputDrop" OnChange="OnInputFileChange" class="opacity-0 w-100 h-100 position-absolute" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="inputHeaderText">Header Text</label>
+                                <textarea class="form-control" rows="2" id="inputHeaderText" @bind="receiptSetting.HeaderText" @bind:event="oninput"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="inputFooterText">Footer Text</label>
+                                <textarea class="form-control" rows="2" id="inputFooterText" @bind="receiptSetting.FooterText" @bind:event="oninput"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Display Options</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="chkShowLogo" @bind="receiptSetting.ShowLogo">
+                                    <label class="form-check-label" for="chkShowLogo">
+                                        Show receipt logo
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="chkShowLocationAddress" @bind="receiptSetting.ShowAddress">
+                                    <label class="form-check-label" for="chkShowLocationAddress">
+                                        Show location address
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="chkShowLocationPhone" @bind="receiptSetting.ShowLocationPhone">
+                                    <label class="form-check-label" for="chkShowLocationPhone">
+                                        Show location phone number
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="chkShowSoldBy" @bind="receiptSetting.ShowSoldBy">
+                                    <label class="form-check-label" for="chkShowSoldBy">
+                                        Show sold by
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="chkShowCustomerInfo" @bind="receiptSetting.ShowCustomerInfo">
+                                    <label class="form-check-label" for="chkShowCustomerInfo">
+                                        Show customer information
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="chkShowOrderNote" @bind="receiptSetting.ShowOrderNote">
+                                    <label class="form-check-label" for="chkShowOrderNote">
+                                        Show order note
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="chkShowAddTipLine" @bind="receiptSetting.ShowAddTipLine">
+                                    <label class="form-check-label" for="chkShowAddTipLine">
+                                        Show 'add tip' line
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="chkShowBardcode" @bind="receiptSetting.ShowBarcode">
+                                    <label class="form-check-label" for="chkShowBardcode">
+                                        Show order barcode
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="border-dashed mb-3"></div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Signature Options</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="chkCollectSignature" @bind="receiptSetting.CollectSignature">
+                                    <label class="form-check-label" for="chkCollectSignature">
+                                        Collect Signature
+                                    </label>
+                                </div>
+                                <div id="divSignatureOptions" class="border-dashed p-3" hidden="@(!receiptSetting.CollectSignature)">
+                                    <label class="form-label">Signature Collect</label>
+                                    <div class="mb-3">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="radioSignatureCollectOptions" @onchange="SelectSignatureCollectOptions" id="radioSignatureCollectAnyAmount" value="1" checked=@(receiptSetting.SignatureRule != Convert.ToInt32(SignatureRule.AnyPurchaseAmount))>
+                                            <label class="form-check-label" for="radioSignatureCollectAnyAmount">For any purchase amount</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="radioSignatureCollectOptions" @onchange="SelectSignatureCollectOptions" id="radioSignatureCollectSpecificAmount" value="2" checked=@(receiptSetting.SignatureRule == Convert.ToInt32(SignatureRule.AnyPurchaseAmount))>
+                                            <label class="form-check-label" for="radioSignatureCollectSpecificAmount">For purchases over $25 only</label>
+                                        </div>
+                                    </div>
+                                    <label class="form-label">Signature Capture</label>
+                                    <div class="mb-0">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="radioSignatureOptions" @onchange="SelectSignatureCaptureType" id="radioSignatureSignDevice" value="1" checked="@(receiptSetting.SignatureCapture == Convert.ToInt32(SignatureCaptureType.OnDevice))">
+                                            <label class="form-check-label" for="radioSignatureSignDevice">Sign on device</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="radioSignatureOptions" @onchange="SelectSignatureCaptureType" id="radioSignatureSignPrinted" value="2" checked="@(receiptSetting.SignatureCapture == Convert.ToInt32(SignatureCaptureType.OnPrintedReceipt))">
+                                            <label class="form-check-label" for="radioSignatureSignPrinted">Sign on printed receipt</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <label class="form-label">Receipt Options</label>
+                            <div class="border-dashed p-3">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="chkReceiptOptionSms" @bind="receiptSetting.AllowReceiptbySMS" value="SmsText">
+                                    <label class="form-check-label" for="chkReceiptOptionSms">SMS Text</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="chkReceiptOptionEmail" @bind="receiptSetting.AllowReceiptbyEmail" value="Email">
+                                    <label class="form-check-label" for="chkReceiptOptionEmail">Email</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="chkReceiptOptionPrint" @bind="receiptSetting.AllowReceiptPrint" value="Print">
+                                    <label class="form-check-label" for="chkReceiptOptionPrint">Print</label>
+                                </div>
+                            </div>
+
+                        </form>
+
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-4 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="row justify-content-between">
+                            <div class="col-md-auto">
+                                <h5 class="mb-3 mb-md-0"><span class="far fa-receipt me-2"></span>Preview</h5>
+                            </div>
+                            <div class="col-md-auto">
+                                <select class="form-select form-select-sm" aria-label="Bulk actions" @bind="@previewType">
+                                    <option value="0" selected>Thermal Sales Receipt</option>
+                                    <option value="1">Thermal Gift Receipt</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body bg-light d-flex justify-content-center">
+
+                        <div id="receiptPreview" class="bg-white p-4 border-dashed" style="width:3.125in" hidden="@(previewType == 1)">
+
+                            <div id="receiptLogo" class="text-center mb-2" hidden="@(!receiptSetting.ShowLogo)">
+                                <img class="img-fluid w-50" src="@receiptSetting.ImageName" />
+                               
+                            </div>
+                            <div class="text-center mb-4">
+                                <h4>Cellarpass Marketplace</h4>
+                                <div id="receiptAddress" hidden="@(!receiptSetting.ShowAddress)">
+                                    <p class="mb-0">50 California Street,  Suite 1500</p>
+                                    <p class="mb-0">San Francisco, CA 94111</p>
+                                </div>
+                                <div id="receiptPhone" hidden="@(!receiptSetting.ShowLocationPhone)">
+                                    <p>(855) 423-4448</p>
+                                </div>
+                                <div id="receiptHeader">
+                                    <p class="fs--1 my-2">@receiptSetting.HeaderText</p>
+                                </div>
+                            </div>
+                            <div class="text-center text-900 mb-4 border border-dark rounded-lg py-1">
+                                <p class="text-uppercase mb-0">Total</p>
+                                <h4 class="mb-0">$323.25</h4>
+                            </div>
+
+                            <table class="table table-borderless fs--1 mb-0 ">
+                                <tbody>
+                                    <tr class="border-bottom">
+                                        <th class="ps-0 pt-0">
+                                            Item<div class="text-900 fw-normal fs--2"></div>
+                                        </th>
+                                        <th class="pe-0 text-end pt-0">$100.00</th>
+                                    </tr>
+                                    <tr class="border-bottom">
+                                        <th class="ps-0">
+                                            Multiple Quantity Item<div class="text-900 fw-normal fs--2">(2 @@ $75.00)</div>
+                                        </th>
+                                        <th class="pe-0 text-end">$150.00</th>
+                                    </tr>
+                                    <tr class="border-bottom">
+                                        <th class="ps-0">
+                                            Discounted Item<div class="text-900 fw-normal fs--2">discount</div>
+                                        </th>
+                                        <th class="pe-0 text-end">$60.00<br /><span class="fs--2">-$10.00</span></th>
+                                    </tr>
+                                    <tr class="border-bottom">
+                                        <th class="ps-0">
+                                            Gift Card<div class="text-900 fw-normal fs--2">**** 1234</div>
+                                        </th>
+                                        <th class="pe-0 text-end">$5.00</th>
+                                    </tr>
+                                    <tr>
+                                        <th class="pb-1 pt-3 text-end text-uppercase">Discount</th>
+                                        <th class="pb-1 pt-3 pe-0 text-end">$10.00</th>
+                                    </tr>
+                                    <tr>
+                                        <th class="py-1 text-end text-uppercase">Subtotal</th>
+                                        <th class="py-1 pe-0 text-end">$300.00</th>
+                                    </tr>
+                                    <tr>
+                                        <th class="py-1 text-end text-uppercase">Gratuity</th>
+                                        <th class="py-1 pe-0 text-end">$75.00</th>
+                                    </tr>
+                                    <tr>
+                                        <th class="py-1 text-end">Tax ($7.75%)</th>
+                                        <th class="py-1 pe-0 text-end">$23.25</th>
+                                    </tr>
+                                    <tr>
+                                        <th class="py-1 text-end text-uppercase">Total</th>
+                                        <th class="py-1 pe-0 text-end">$323.25</th>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div id="sign-on-device" class="my-3" hidden="@(receiptSetting.SignatureCapture != Convert.ToInt32(SignatureCaptureType.OnPrintedReceipt))">
+                                <div id="tip-section" hidden="@(!receiptSetting.ShowAddTipLine)">
+                                    <div class="d-flex justify-content-end mb-3">
+                                        <span class="fs--1 fw-normal me-2">+ Tip</span>
+                                        <div class="w-50"><hr class="text-500" /></div>
+                                    </div>
+                                    <div class="d-flex justify-content-end">
+                                        <span class="fs--1 fw-normal me-2">= Total</span>
+                                        <div class="w-50"><hr class="text-500" /></div>
+                                    </div>
+                                </div>
+                                <div id="signature-section" class="mt-4">
+                                    <div class="d-flex justify-content-end">
+                                        <span class="fs--1 fw-normal me-2">X</span>
+                                        <div class="w-100"><hr class="text-500" /></div>
+                                    </div>
+                                    <div class="d-flex justify-content-center mb-3">
+                                        <span class="fs--1">John Smith</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr />
+                            <div id="receiptSoldTo" hidden="@(!receiptSetting.ShowSoldBy)">
+                                <p class="fs--1 mb-0">Sold by: Jane Smith</p>
+                            </div>
+                            <div id="receiptSoldTo" hidden="@(!receiptSetting.ShowCustomerInfo)">
+                                <p class="fs--1">Sold to John Smith</p>
+                            </div>
+                            <div id="receiptOrderNote" hidden="@(!receiptSetting.ShowOrderNote)">
+                                <p class="fs--1 mb-0">Order note</p>
+                                <p class="fs--1">This is an order note</p>
+                            </div>
+                            <hr />
+                            <div id="receiptDetails" class="text-center">
+                                <p class="fs--1 mb-0">Date: January 12, 2021 at 10:00 AM</p>
+                                <p class="fs--1 mb-0" hidden="@(!receiptSetting.ShowSoldBy)">Sold by: Jane Smith</p>
+                                <p class="fs--1">Order: #123456</p>
+                            </div>
+                            <div id="receiptFooter" class="text-center">
+                                <p class="fs--1">@receiptSetting.FooterText</p>
+                            </div>
+                            <div id="receiptBardcode" class="text-center my-4" hidden="@(!receiptSetting.ShowBarcode)">
+                                <span class="fas fa-qrcode fa-4x"></span>
+                            </div>
+                        </div>
+
+                        <div id="receiptGiftPreview" class="bg-white p-4 border-dashed" style="width:3.125in" hidden="@(previewType == 0)">
+
+                            <div class="text-center mb-2" hidden="@(!receiptSetting.ShowLogo)">
+   
+                                <img class="img-fluid" src="@($"https://cdncellarpass.blob.core.windows.net/photos/pos_receipts/{receiptSetting.ImageName}")" width="50" />
+                                
+                            </div>
+                            <div class="text-center mb-4">
+                                <h4>Cellarpass Marketplace</h4>
+                                <div hidden="@(!receiptSetting.ShowAddress)">
+                                    <p class="mb-0">50 California Street,  Suite 1500</p>
+                                    <p class="mb-0">San Francisco, CA 94111</p>
+                                </div>
+                                <div hidden="@(!receiptSetting.ShowLocationPhone)">
+                                    <p>(855) 423-4448</p>
+                                </div>
+                                <div>
+                                    <p class="fs--1 my-2">@receiptSetting.HeaderText</p>
+                                </div>
+                            </div>
+                            <div class="text-center text-900 mb-4 border border-dark rounded-lg">
+                                <h5 class="text-uppercase py-1 mb-0">Gift Receipt</h5>
+                            </div>
+
+                            <table class="table table-borderless fs--1 mb-0 ">
+                                <tbody>
+                                    <tr class="border-bottom">
+                                        <th class="ps-0 pt-0">
+                                            Item
+                                        </th>
+                                        <th class="pe-0 text-end pt-0">1</th>
+                                    </tr>
+                                    <tr class="border-bottom">
+                                        <th class="ps-0">
+                                            Multi Quantity Item
+                                        </th>
+                                        <th class="pe-0 text-end">2</th>
+                                    </tr>
+                                    <tr class="border-bottom">
+                                        <th class="ps-0">
+                                            Discounted Item
+                                        </th>
+                                        <th class="pe-0 text-end">1</th>
+                                    </tr>
+                                    <tr>
+                                        <th class="ps-0">
+                                            Gift Card<div class="text-900 fw-normal fs--2">**** 1234</div>
+                                        </th>
+                                        <th class="pe-0 text-end">1</th>
+                                    </tr>
+
+                                </tbody>
+                            </table>
+                            <hr />
+                            <div id="receiptDetails" class="text-center">
+                                <p class="fs--1 mb-0">Date: January 12, 2021 at 10:00 AM</p>
+                                <p class="fs--1">Order: #123456</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="fs--1">@receiptSetting.FooterText</p>
+                            </div>
+                            <div class="text-center my-4" hidden="@(!receiptSetting.ShowBarcode)">
+                                <span class="fas fa-qrcode fa-4x"></span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <ImageCropper @ref="CropperModal" IsVisible="imageCroperActive" CropperConfiguration="cropperConfiguration" Cropped="OnCropped"></ImageCropper>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private bool SpinnerVisibility = false;
+    private bool imageCroperActive = false;
+    private ImageCropperConfiguration cropperConfiguration = new ImageCropperConfiguration();
+
+    private POSReceiptModel receiptSetting = new POSReceiptModel();
+    private Member currentMember = new Member();
+    private int previewType = 0;
+
+    private ImageCropper CropperModal { get; set; }
+    private string title = "Receipt Settings | Synergy Commerce Admin Panel";
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        POSReceiptSettingResponse setting = await _posViewModel.GetPOSReceiptSetting(currentMember.Id);
+        if (setting.success)
+        {
+            receiptSetting = setting.data.POSReceiptSettings;
+        }
+        SpinnerVisibility = false;
+    }
+
+    private void SelectSignatureCollectOptions(ChangeEventArgs args)
+    {
+        receiptSetting.SignatureRule = Convert.ToInt32(args.Value);
+    }
+
+    private void SelectSignatureCaptureType(ChangeEventArgs args)
+    {
+        receiptSetting.SignatureCapture = Convert.ToInt32(args.Value);
+    }
+
+    private async void SavePOSReceiptSetting()
+    {
+        SpinnerVisibility = true;
+        POSReceiptViewModel pOSReceiptViewModel = new POSReceiptViewModel
+        {
+            BusinessId = currentMember.Id,
+            POSReceiptSettings = receiptSetting
+        };
+        POSReceiptSettingResponse result = await _posViewModel.UpdatePOSReceiptSetting(pOSReceiptViewModel);
+        SpinnerVisibility = false;
+
+        if (result != null)
+        {
+            StateHasChanged();
+            toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(Constants.InternalServerError, ToastLevel.Error);
+        }
+    }
+
+    private string selectedFileName = null;
+
+    private async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        var maxAllowedFiles = 1;
+        var format = "image/png";
+        foreach (var imageFile in e.GetMultipleFiles(maxAllowedFiles))
+        {
+            selectedFileName = imageFile.Name;
+
+            var buffer = new byte[imageFile.Size];
+            await imageFile.OpenReadStream().ReadAsync(buffer);
+            var imageDataUrl =
+                $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+
+            await CropperModal.OnFileChange(imageDataUrl);
+            imageCroperActive = true;
+        }
+        StateHasChanged();
+    }
+
+    async Task OnCropped(string value)
+    {
+        imageCroperActive = false;
+        var base64 = value.Substring(value.IndexOf(',') + 1);
+        //string fileName = string.Format("posReciept_{0}.{1}", currentMember.Id, selectedFileName.Substring(selectedFileName.LastIndexOf('.') + 1));
+        string filename = string.Format("{0}_{1}.{2}", DateTime.UtcNow.Ticks, currentMember.Id, selectedFileName.Substring(selectedFileName.LastIndexOf('.') + 1));
+
+        if (currentMember.Id > 0)
+        {
+            ImageUploadRequestModel requestModel = new ImageUploadRequestModel()
+            {
+                Image = base64,
+                Id = currentMember.Id,
+                BusinessId = currentMember.Id,                
+                Filename = filename
+            };
+            SpinnerVisibility = true;
+            UploadImageResponse response = await _posViewModel.UploadReceiptLogo(requestModel);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                receiptSetting.ImageName = response.data.item_image_url;
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(Constants.InternalServerError, ToastLevel.Error);
+            }
+        }
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,65 @@
+﻿@page "/settings/notifications/email/orders"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject IEmailNotificationViewModel _emailNotificationViewModel
+@attribute [Authorize]
+
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<Title Value="@title"></Title>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md-auto">
+                <h5 class="mb-0"><a href="settings/notifications/email" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-bag-shopping me-2"></span>Order Email Notifications</h5>
+            </div>
+            <div class="col-md-auto"></div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        @*Using common component EmailNotificationsGrid to display notifications*@
+        <EmailNotificationsGrid EmailNotifications="emailNotifications"></EmailNotificationsGrid>
+    </div>
+</div>
+
+@code
+{
+    private string title = "Order Email Notifications | Synergy Commerce Admin Panel";
+    private bool isLoading = false;
+    Member currentMember = new Member();
+    List<EmailNotificationsModel> emailNotifications = new List<EmailNotificationsModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        var emailNotificationResponse = await _emailNotificationViewModel.GetEmailNotificationByCategoryId((int)EmailNotificationCategory.Order, currentMember.Id);
+        emailNotifications = emailNotificationResponse?.data ?? new List<EmailNotificationsModel>();
+        //emailNotifications = PlaceholderList;
+        isLoading = false;
+    }
+
+    //    public List<EmailNotificationsModel> PlaceholderList = new List<EmailNotificationsModel>()
+    //{
+    //    new EmailNotificationsModel(){ Id=1, EmailName = "Order Receipt - Carry Out", EmailSubject = "Order Confirmation", FromEmail = "email@email.com" },
+    //    new EmailNotificationsModel(){ Id=2, EmailName = "Order Receipt - Pickup", EmailSubject = "Order Processed", FromEmail = "email@email.com" },
+    //    new EmailNotificationsModel(){ Id=3, EmailName = "Order Receipt - Ship", EmailSubject = "Order Shipped", FromEmail = "email@email.com" },
+    //    new EmailNotificationsModel(){ Id=3, EmailName = "Order Receipt - Refund", EmailSubject = "Order Shipped", FromEmail = "email@email.com" },
+    //    new EmailNotificationsModel(){ Id=3, EmailName = "Fulfillment Status - Ready for Pickup", EmailSubject = "Ready for Pickup", FromEmail = "" },
+    //    new EmailNotificationsModel(){ Id=3, EmailName = "Fulfillment Status - Picked Up", EmailSubject = "Order Picked Up", FromEmail = "" },
+    //    new EmailNotificationsModel(){ Id=3, EmailName = "Fulfillment Status - Shipped", EmailSubject = "Shipped", FromEmail = "" },
+    //     };
+}

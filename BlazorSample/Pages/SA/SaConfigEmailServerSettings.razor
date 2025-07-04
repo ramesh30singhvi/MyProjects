@@ -1,0 +1,243 @@
+﻿@page "/sa/configuration/email-server-settings"
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@inject ICPSettingViewModel _cPSettingViewModel
+@inject ToastService toastService
+@layout SaLayout
+
+<SfSpinner @bind-Visible="spinnerVisibility"></SfSpinner>
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="py-3">
+            <div class="row justify-content-between">
+                <div class="col-md-auto mb-4 mb-md-0"><h5><a href="sa/configuration" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><i class="fa-regular fa-inbox-out me-2"></i>Email Server Settings</h5></div>
+                <div class="col-md-auto">
+
+                </div>
+            </div>
+            <hr />
+        </div>
+
+        <div class="card shadow-none border">
+            <h5 class="card-header bg-light"><span class="fa-regular fa-at"></span>mailgun</h5>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table mb-4">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="text-uppercase fs--1">Category</th>
+                                <th scope="col" class="text-uppercase fs--1">Domain</th>
+                                <th scope="col" class="text-uppercase fs--1">API Key</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>System Messages</td>
+                                <td>
+                                    <SfInPlaceEditor @bind-Value="emailServerSettings.SystemMessagesDomain" TValue="string" Mode="RenderMode.Inline" Type="Syncfusion.Blazor.InPlaceEditor.InputType.Text" ShowButtons="true" SubmitOnEnter="true" EmptyText="None">
+                                        <EditorComponent>
+                                            <SfTextBox @bind-Value="emailServerSettings.SystemMessagesDomain" Placeholder="Enter Domain Name"></SfTextBox>
+                                        </EditorComponent>
+                                        <InPlaceEditorEvents TValue="string" OnActionSuccess="@((args)=> OnActionSuccessHandler(args,CPSettingMetaKey.MailgunSystemMessagesDomain))"></InPlaceEditorEvents>
+                                    </SfInPlaceEditor>
+                                </td>
+                                <td>
+                                    <SfInPlaceEditor @bind-Value="emailServerSettings.SystemMessagesKey" TValue="string" Mode="RenderMode.Inline" Type="Syncfusion.Blazor.InPlaceEditor.InputType.Text" ShowButtons="true" SubmitOnEnter="true" EmptyText="None">
+                                        <EditorComponent>
+                                            <SfTextBox @bind-Value="emailServerSettings.SystemMessagesKey" Placeholder="Enter API Key"></SfTextBox>
+                                        </EditorComponent>
+                                        <InPlaceEditorEvents TValue="string" OnActionSuccess="@((args)=> OnActionSuccessHandler(args,CPSettingMetaKey.MailgunSystemMessagesKey))"></InPlaceEditorEvents>
+                                    </SfInPlaceEditor>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Invitations</td>
+                                <td>
+                                    <SfInPlaceEditor @bind-Value="emailServerSettings.InvitationsDomain" TValue="string" Mode="RenderMode.Inline" Type="Syncfusion.Blazor.InPlaceEditor.InputType.Text" ShowButtons="true" SubmitOnEnter="true" EmptyText="None">
+                                        <EditorComponent>
+                                            <SfTextBox @bind-Value="emailServerSettings.InvitationsDomain" Placeholder="Enter Domain Name"></SfTextBox>
+                                        </EditorComponent>
+                                        <InPlaceEditorEvents TValue="string" OnActionSuccess="@((args)=> OnActionSuccessHandler(args,CPSettingMetaKey.MailgunInvitationsDomain))"></InPlaceEditorEvents>
+                                    </SfInPlaceEditor>
+                                </td>
+                                <td>
+                                    <SfInPlaceEditor @bind-Value="emailServerSettings.InvitationsKey" TValue="string" Mode="RenderMode.Inline" Type="Syncfusion.Blazor.InPlaceEditor.InputType.Text" ShowButtons="true" SubmitOnEnter="true" EmptyText="None">
+                                        <EditorComponent>
+                                            <SfTextBox @bind-Value="emailServerSettings.InvitationsKey" Placeholder="Enter API Key"></SfTextBox>
+                                        </EditorComponent>
+                                        <InPlaceEditorEvents TValue="string" OnActionSuccess="@((args)=> OnActionSuccessHandler(args,CPSettingMetaKey.MailgunInvitationsKey))"></InPlaceEditorEvents>
+                                    </SfInPlaceEditor>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Reservations</td>
+                                <td>
+                                    <SfInPlaceEditor @bind-Value="emailServerSettings.ReservationsDomain" TValue="string" Mode="RenderMode.Inline" Type="Syncfusion.Blazor.InPlaceEditor.InputType.Text" ShowButtons="true" SubmitOnEnter="true" EmptyText="None">
+                                        <EditorComponent>
+                                            <SfTextBox @bind-Value="emailServerSettings.ReservationsDomain" Placeholder="Enter Domain Name"></SfTextBox>
+                                        </EditorComponent>
+                                        <InPlaceEditorEvents TValue="string" OnActionSuccess="@((args)=> OnActionSuccessHandler(args,CPSettingMetaKey.MailgunReservationsDomain))"></InPlaceEditorEvents>
+                                    </SfInPlaceEditor>
+                                </td>
+                                <td>
+                                    <SfInPlaceEditor @bind-Value="emailServerSettings.ReservationsKey" TValue="string" Mode="RenderMode.Inline" Type="Syncfusion.Blazor.InPlaceEditor.InputType.Text" ShowButtons="true" SubmitOnEnter="true" EmptyText="None">
+                                        <EditorComponent>
+                                            <SfTextBox @bind-Value="emailServerSettings.ReservationsKey" Placeholder="Enter API Key"></SfTextBox>
+                                        </EditorComponent>
+                                        <InPlaceEditorEvents TValue="string" OnActionSuccess="@((args)=> OnActionSuccessHandler(args,CPSettingMetaKey.MailgunReservationsKey))"></InPlaceEditorEvents>
+                                    </SfInPlaceEditor>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Ticketing</td>
+                                <td>
+                                    <SfInPlaceEditor @bind-Value="emailServerSettings.TicketingDomain" TValue="string" Mode="RenderMode.Inline" Type="Syncfusion.Blazor.InPlaceEditor.InputType.Text" ShowButtons="true" SubmitOnEnter="true" EmptyText="None">
+                                        <EditorComponent>
+                                            <SfTextBox @bind-Value="emailServerSettings.TicketingDomain" Placeholder="Enter Domain Name"></SfTextBox>
+                                        </EditorComponent>
+                                        <InPlaceEditorEvents TValue="string" OnActionSuccess="@((args)=> OnActionSuccessHandler(args,CPSettingMetaKey.MailgunTicketingDomain))"></InPlaceEditorEvents>
+                                    </SfInPlaceEditor>
+                                </td>
+                                <td>
+                                    <SfInPlaceEditor @bind-Value="emailServerSettings.TicketingKey" TValue="string" Mode="RenderMode.Inline" Type="Syncfusion.Blazor.InPlaceEditor.InputType.Text" ShowButtons="true" SubmitOnEnter="true" EmptyText="None">
+                                        <EditorComponent>
+                                            <SfTextBox @bind-Value="emailServerSettings.TicketingKey" Placeholder="Enter API Key"></SfTextBox>
+                                        </EditorComponent>
+                                        <InPlaceEditorEvents TValue="string" OnActionSuccess="@((args)=> OnActionSuccessHandler(args,CPSettingMetaKey.MailgunTicketingKey))"></InPlaceEditorEvents>
+                                    </SfInPlaceEditor>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Reminders</td>
+                                <td>
+                                    <SfInPlaceEditor @bind-Value="emailServerSettings.RemindersDomain" TValue="string" Mode="RenderMode.Inline" Type="Syncfusion.Blazor.InPlaceEditor.InputType.Text" ShowButtons="true" SubmitOnEnter="true" EmptyText="None">
+                                        <EditorComponent>
+                                            <SfTextBox @bind-Value="emailServerSettings.RemindersDomain" Placeholder="Enter Domain Name"></SfTextBox>
+                                        </EditorComponent>
+                                        <InPlaceEditorEvents TValue="string" OnActionSuccess="@((args)=> OnActionSuccessHandler(args,CPSettingMetaKey.MailgunRemindersDomain))"></InPlaceEditorEvents>
+                                    </SfInPlaceEditor>
+                                </td>
+                                <td>
+                                    <SfInPlaceEditor @bind-Value="emailServerSettings.RemindersKey" TValue="string" Mode="RenderMode.Inline" Type="Syncfusion.Blazor.InPlaceEditor.InputType.Text" ShowButtons="true" SubmitOnEnter="true" EmptyText="None">
+                                        <EditorComponent>
+                                            <SfTextBox @bind-Value="emailServerSettings.RemindersKey" Placeholder="Enter API Key"></SfTextBox>
+                                        </EditorComponent>
+                                        <InPlaceEditorEvents TValue="string" OnActionSuccess="@((args)=> OnActionSuccessHandler(args,CPSettingMetaKey.MailgunRemindersKey))"></InPlaceEditorEvents>
+                                    </SfInPlaceEditor>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Notifications</td>
+                                <td>
+                                    <SfInPlaceEditor @bind-Value="emailServerSettings.NotificationsDomain" TValue="string" Mode="RenderMode.Inline" Type="Syncfusion.Blazor.InPlaceEditor.InputType.Text" ShowButtons="true" SubmitOnEnter="true" EmptyText="None">
+                                        <EditorComponent>
+                                            <SfTextBox @bind-Value="emailServerSettings.NotificationsDomain" Placeholder="Enter Domain Name"></SfTextBox>
+                                        </EditorComponent>
+                                        <InPlaceEditorEvents TValue="string" OnActionSuccess="@((args)=> OnActionSuccessHandler(args,CPSettingMetaKey.MailgunNotificationsDomain))"></InPlaceEditorEvents>
+                                    </SfInPlaceEditor>
+                                </td>
+                                <td>
+                                    <SfInPlaceEditor @bind-Value="emailServerSettings.NotificationsKey" TValue="string" Mode="RenderMode.Inline" Type="Syncfusion.Blazor.InPlaceEditor.InputType.Text" ShowButtons="true" SubmitOnEnter="true" EmptyText="None">
+                                        <EditorComponent>
+                                            <SfTextBox @bind-Value="emailServerSettings.NotificationsKey" Placeholder="Enter API Key"></SfTextBox>
+                                        </EditorComponent>
+                                        <InPlaceEditorEvents TValue="string" OnActionSuccess="@((args)=> OnActionSuccessHandler(args,CPSettingMetaKey.MailgunNotificationsKey))"></InPlaceEditorEvents>
+                                    </SfInPlaceEditor>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Reviews</td>
+                                <td>
+                                    <SfInPlaceEditor @bind-Value="emailServerSettings.ReviewsDomain" TValue="string" Mode="RenderMode.Inline" Type="Syncfusion.Blazor.InPlaceEditor.InputType.Text" ShowButtons="true" SubmitOnEnter="true" EmptyText="None">
+                                        <EditorComponent>
+                                            <SfTextBox @bind-Value="emailServerSettings.ReviewsDomain" Placeholder="Enter Domain Name"></SfTextBox>
+                                        </EditorComponent>
+                                        <InPlaceEditorEvents TValue="string" OnActionSuccess="@((args)=> OnActionSuccessHandler(args,CPSettingMetaKey.MailgunReviewsDomain))"></InPlaceEditorEvents>
+                                    </SfInPlaceEditor>
+                                </td>
+                                <td>
+                                    <SfInPlaceEditor @bind-Value="emailServerSettings.ReviewsKey" TValue="string" Mode="RenderMode.Inline" Type="Syncfusion.Blazor.InPlaceEditor.InputType.Text" ShowButtons="true" SubmitOnEnter="true" EmptyText="None">
+                                        <EditorComponent>
+                                            <SfTextBox @bind-Value="emailServerSettings.ReviewsKey" Placeholder="Enter API Key"></SfTextBox>
+                                        </EditorComponent>
+                                        <InPlaceEditorEvents TValue="string" OnActionSuccess="@((args)=> OnActionSuccessHandler(args,CPSettingMetaKey.MailgunReviewsKey))"></InPlaceEditorEvents>
+                                    </SfInPlaceEditor>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private bool spinnerVisibility { get; set; }
+    private string title = "Email Server Settings | Synergy Commerce Super Admin Panel";
+    EmailServerSettingsModel emailServerSettings = new EmailServerSettingsModel();
+    List<string> mailgunMetaKeys = new List<string>(){
+       CPSettingMetaKey.MailgunSystemMessagesDomain,
+       CPSettingMetaKey.MailgunSystemMessagesKey,
+       CPSettingMetaKey.MailgunInvitationsDomain,
+       CPSettingMetaKey.MailgunInvitationsKey,
+       CPSettingMetaKey.MailgunReservationsDomain,
+       CPSettingMetaKey.MailgunReservationsKey,
+       CPSettingMetaKey.MailgunTicketingDomain,
+       CPSettingMetaKey.MailgunTicketingKey,
+       CPSettingMetaKey.MailgunRemindersDomain,
+       CPSettingMetaKey.MailgunRemindersKey,
+       CPSettingMetaKey.MailgunNotificationsDomain,
+       CPSettingMetaKey.MailgunNotificationsKey,
+       CPSettingMetaKey.MailgunReviewsDomain,
+       CPSettingMetaKey.MailgunReviewsKey
+    };
+    protected override async Task OnInitializedAsync()
+    {
+        spinnerVisibility = true;
+        //Get CP settings for MailGun
+        var response = await _cPSettingViewModel.GetCPSettingListAsync(CPSettingMetaNamespace.MailgunServerSetting);
+        foreach (var metaKey in mailgunMetaKeys)
+        {
+            var metaValue = response?.data?.Where(x => x.MetaKey == metaKey)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+            Helper.SetPropertyValue(emailServerSettings, metaKey, metaValue);//Note: meta key and model property name should be same
+        }
+        spinnerVisibility = false;
+    }
+
+    /// <summary>
+    /// Add/Update Settings to DB
+    /// </summary>
+    /// <param name="args">current value</param>
+    /// <param name="metaKey">setting's metakey</param>
+    /// <returns></returns>
+    private async Task OnActionSuccessHandler(Syncfusion.Blazor.InPlaceEditor.ActionEventArgs<string> args, string metaKey)
+    {
+        spinnerVisibility = true;
+        var request = new CPSettingRequestModel
+        {
+            MetaNamespace = CPSettingMetaNamespace.MailgunServerSetting,
+            MetaKey = metaKey,
+            MetaValue = args?.Value ?? string.Empty,
+            ValueType = Convert.ToInt32(ValueTypeEnum.String),
+            Title = string.Empty,
+            Description = string.Empty
+        };
+        var response = await _cPSettingViewModel.AddUpdateCPSettingAsync(request);
+        spinnerVisibility = false;
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+}

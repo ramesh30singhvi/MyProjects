@@ -1,0 +1,571 @@
+﻿@page "/settings"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject IBusinessViewModel _businessViewModel
+@inject ISettingsViewModel _settingsViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject NavigationManager _navigationManager
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="isLoading"></SfSpinner>
+
+        <div class="card shadow-none border">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-0"><span class="far fa-cog me-2"></span>Settings</h5>
+                    </div>
+                    <div class="col-md-auto"></div>
+                </div>
+            </div>
+            <div class="card-body">
+
+
+                <h5>Sales Channels &amp; Inventory</h5>
+                <hr />
+                <div class="row my-4">
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-user-headset fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/sales-order-settings">Sales Orders</a></h6>
+                                <p class="fs--2">Ring up sales through the admin panel</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        @{
+                            var isWebServicesEnabled = !string.IsNullOrEmpty(webServiceSettingName) && webServiceSettingName == _synergyCommerce;
+                        }
+                        <div class="d-flex position-relative mb-2 @(isWebServicesEnabled ?"":"disabled-link")">
+                            <span class="fa-regular fa-shopping-cart fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link @(isWebServicesEnabled ?"":"link-secondary disabled-link")" href="javascript:void();" @onclick="() => CheckWebServicesEnabled(isWebServicesEnabled)">Web</a></h6>
+                                <p class="fs--2">Configure web and e-commerce</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        @{
+                            var isClubServiceEnabled = true;//!string.IsNullOrEmpty(clubServiceSettingName) && clubServiceSettingName == _synergyCommerce;
+                        }
+                        <div class="d-flex position-relative mb-2 @(isClubServiceEnabled ?"":"disabled-link")">
+                            <span class="far fa-gem fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link @(isClubServiceEnabled ?"":"link-secondary disabled-link")" href="javascript:void();" @onclick="() => CheckClubServicesEnabled(isClubServiceEnabled)">Club Management</a></h6>
+                                <p class="fs--2">Configure Club settings</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-cash-register fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/pos">Point of Sale</a></h6>
+                                <p class="fs--2">Sell products through the Guest Link Pro Point of Sale</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-burger-glass fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/menu">Menus &amp; Modifiers</a></h6>
+                                <p class="fs--2">Create custom food & beverage menus</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        @{
+                            var isReservationsSet = (isReservationsServiceSettingsSaved && !string.IsNullOrEmpty(reservationsServiceSettingName) && reservationsServiceSettingName == _synergyCommerce);
+                        }
+                        <div class="d-flex position-relative mb-2 @(isReservationsSet ?"":"disabled-link")">
+                            <span class="far fa-calendar-star fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link @(isReservationsSet ?"":"link-secondary disabled-link")" href="javascript:void();" @onclick="() => CheckReservationsEnabled(isReservationsSet)">Reservations</a></h6>
+                                <p class="fs--2">Create & manage your experiences</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-ticket fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/ticketing">Ticketing</a></h6>
+                                <p class="fs--2">Create & manage your ticketed events</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h5>Business Settings</h5>
+                <hr />
+                <div class="row my-4">
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-shop fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/business-profiles">Business Profiles</a></h6>
+                                <p class="fs--2">Manage your business profiles</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-clock fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/hours">Business Hours</a></h6>
+                                <p class="fs--2">Set your business hours displayed to guests</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-calendar-times fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/holidays">Holidays &amp; Closures</a></h6>
+                                <p class="fs--2">Set dates your business is closed to the public</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-briefcase fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="#!">Subscription</a></h6>
+                                <p class="fs--2">Manage your CellarPass plan and billing details</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-flag-alt fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/notifications">Notifications</a></h6>
+                                <p class="fs--2">Configure Notification settings</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-calculator fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/taxes">Taxes</a></h6>
+                                <p class="fs--2">Define applicable taxes and rates</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-siren-on fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/fraud-tools">Fraud Tools</a></h6>
+                                <p class="fs--2">Detect fraudulent orders & customers</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-file-signature fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/store-policies">Store Policies</a></h6>
+                                <p class="fs--2">Manage your store’s policies</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2 @(isReservationsSet?"":"disabled-link")">
+                            <span class="far fa-game-board fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link @(isReservationsSet?"":"link-secondary disabled-link")" href="javascript:void();" @onclick="() => CheckFloorPlansEnabled(isReservationsSet)">Floor Plans</a></h6>
+                                <p class="fs--2">Create &amp; manage floor plans used by TablePro</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-map-marker-alt fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/locations">Locations</a></h6>
+                                <p class="fs--2">Manage your location’s address information</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-globe-americas fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/countries">Countries &amp; Regions</a></h6>
+                                <p class="fs--2">Define countries &amp; regions your business will operate</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-chart-tree-map fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/departments">Departments</a></h6>
+                                <p class="fs--2">Used for accounting &amp; reports</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-truck fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/shipping">Shipping</a></h6>
+                                <p class="fs--2">Define shipping options &amp; rates</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-file-invoice-dollar fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/orders">Orders</a></h6>
+                                <p class="fs--2">Configure order preferences</p>
+                            </div>
+                        </div>
+                    </div>
+                 @*   <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-key fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/team-management">Roles & Permissions</a></h6>
+                                <p class="fs--2">Manage team permissions and shifts</p>
+                            </div>
+                        </div>
+                    </div>*@
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="fa-regular fa-key fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/team-management/access-positions">Access & Positions</a></h6>
+                                <p class="fs--2">Setup job titles & access.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-user-clock fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/team-management/shift-management">Shift Management</a></h6>
+                                <p class="fs--2">Set positions & time clock settings.</p>
+                            </div>
+                        </div>
+                    </div>
+                    @*<div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="far fa-print fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/manage-printers">Printers</a></h6>
+                        <p class="fs--2">Add & manage printers.</p>
+                    </div>
+                </div>
+            </div>*@
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-users fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/customer-types">Customer Types</a></h6>
+                                <p class="fs--2">Define how your customers are segmented into groups</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="fa-regular fa-tags fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/tags">Tags</a></h6>
+                                <p class="fs--2">Quickly identify records with tags</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-database fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/meta-data-types">Meta Data</a></h6>
+                                <p class="fs--2">Define special data fields for records</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h5>Team & Vendors</h5>
+                <hr />
+                <div class="row my-4">
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-user-tie fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="people/team">Team</a></h6>
+                                <p class="fs--2">Create & manage team members</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-industry-alt fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="people/vendors">Vendors</a></h6>
+                                <p class="fs--2">Create & manage vendors</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-clipboard-list fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="people/list-management">List Management</a></h6>
+                                <p class="fs--2">Create & manage lists</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-user-headset fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="/business/hospitality-network">Hospitality Network</a></h6>
+                                <p class="fs--2">
+                                    Manage Users that book on behalf of others
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+        
+                </div>
+
+                <h5>Apps &amp; Integrations</h5>
+                <hr />
+                <div class="row my-4">
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-plug fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="marketplace">Apps Marketplace</a></h6>
+                                <p class="fs--2">Explore essential integrations and tools</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-hand-holding-usd fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/payment-profiles">Payment Profiles</a></h6>
+                                <p class="fs--2">Configure payment gateway &amp; payment types accepted</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-trophy-alt fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/loyalty">Loyalty Program</a></h6>
+                                <p class="fs--2">Reward customers for purchases and visits</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="fa-regular fa-tablet fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/devices">Manage Devices</a></h6>
+                                <p class="fs--2">Configure preferences on individual devices</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-envelope-open-dollar fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="/payments/gift-cards">Gift Cards</a></h6>
+                                <p class="fs--2">Configure & manage Gift Cards</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h5>Business Content</h5>
+                <hr />
+                <div class="row my-4">
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-desktop fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/content/business-page">Business Listing</a></h6>
+                                <p class="fs--2">Manage the content for your business listings</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-palette fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/content/brand">Branding</a></h6>
+                                <p class="fs--2">Manage your brand assets</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-shield-virus fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/content/safety">CellarPass Safety Pledge</a></h6>
+                                <p class="fs--2">Display and configure the safety pledge</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </Authorized>
+</AuthorizeView>
+
+<DisabledModal DisabledHeading="@disabledModalHeader" OnDialogClose="() => displayDisabledModal = false" OpenDisabledDialog="@displayDisabledModal"></DisabledModal>
+
+@code
+{
+    private bool isLoading { get; set; }
+
+    private string title = "Settings | Synergy Commerce Admin Panel";
+    Member currentMember = null;
+    private bool isReservationsServiceSettingsSaved = false;
+    private string reservationsServiceSettingName = "";
+    private string webServiceSettingName = "";
+    private string clubServiceSettingName = "";
+    private const string _synergyCommerce = "Synergy Commerce";
+    private DisabledModal disabledModal;
+    private bool displayDisabledModal { get; set; }
+    private string disabledModalHeader = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        // Trying to fetch the Current Member if it is delayed in adding to local storage
+        if (currentMember == null || currentMember.Id <= 0)
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+                if (currentMember != null && currentMember.Id > 0)
+                    break;
+                await Task.Delay(500);
+            }
+        }
+        //Get ReservationsService Settings
+        var reservationSetting = await _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount, BusinessSettingsMetaKey.ReservationsService);
+        isReservationsServiceSettingsSaved = !string.IsNullOrEmpty(reservationSetting?.data?.MetaValue ?? string.Empty);
+        if (isReservationsServiceSettingsSaved)
+        {
+            //Get ReservationsService Configuration
+            var businessReservationsServiceConfigurationResponse = await _businessViewModel.GetBusinessConfigurationOptionDetail(BusinessConfigurationNamespace.ReservationsService, reservationSetting.data.MetaValue);
+            reservationsServiceSettingName = businessReservationsServiceConfigurationResponse?.data?.SettingName ?? string.Empty;
+        }
+
+        //Get Web Service Settings
+        var webServiceSetting = await _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount, BusinessSettingsMetaKey.WebSync);
+        var isWebServiceSettingsSaved = !string.IsNullOrEmpty(reservationSetting?.data?.MetaValue ?? string.Empty);
+        if (isWebServiceSettingsSaved)
+        {
+            //Get WebService Configuration
+            var businessWebServiceConfigurationResponse = await _businessViewModel.GetBusinessConfigurationOptionDetail(BusinessConfigurationNamespace.WebSync, webServiceSetting.data.MetaValue);
+            webServiceSettingName = businessWebServiceConfigurationResponse?.data?.SettingName ?? string.Empty;
+        }
+
+        //Get Club Service Settings
+        var clubServiceSetting = await _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount, BusinessSettingsMetaKey.ClubService);
+        var isClubServiceSettingsSaved = !string.IsNullOrEmpty(clubServiceSetting?.data?.MetaValue ?? string.Empty);
+        if (isClubServiceSettingsSaved)
+        {
+            //Get ClubService Configuration
+            var businessClubServiceConfigurationResponse = await _businessViewModel.GetBusinessConfigurationOptionDetail(BusinessConfigurationNamespace.ClubService, clubServiceSetting.data.MetaValue);
+            clubServiceSettingName = businessClubServiceConfigurationResponse?.data?.SettingName ?? string.Empty;
+        }
+    }
+
+    private void TryReservationsDemo()
+    {
+        _navigationManager.NavigateTo("/");
+    }
+
+    private void CheckReservationsEnabled(bool isReservationsEnabled)
+    {
+        isLoading = true;
+
+        if (isReservationsEnabled)
+        {
+            _navigationManager.NavigateTo("settings/reservations");
+        }
+        else
+        {
+            disabledModalHeader = "Reservations";
+            displayDisabledModal = true;
+        }
+        isLoading = false;
+    }
+
+    private void CheckFloorPlansEnabled(bool isFloorPlansEnabled)
+    {
+        isLoading = true;
+        if (isFloorPlansEnabled)
+        {
+            _navigationManager.NavigateTo("settings/floor-plans");
+        }
+        else
+        {
+            disabledModalHeader = "Floor Plans";
+            displayDisabledModal = true;
+        }
+        isLoading = false;
+    }
+
+    private void CheckClubServicesEnabled(bool isClubServicesEnabled)
+    {
+        isLoading = true;
+        if(isClubServicesEnabled)
+        {
+            _navigationManager.NavigateTo("settings/club-management");
+        }
+        else
+        {
+            disabledModalHeader = "Club Management";
+            displayDisabledModal = true;
+        }
+        isLoading = false;
+    }
+
+    private void CheckWebServicesEnabled(bool isWebServicesEnabled)
+    {
+        isLoading = true;
+        if (isWebServicesEnabled)
+        {
+            _navigationManager.NavigateTo("settings/sales-channels/web");
+        }
+        else
+        {
+            disabledModalHeader = "Web";
+            displayDisabledModal = true;
+        }
+        isLoading = false;
+    }
+}
+

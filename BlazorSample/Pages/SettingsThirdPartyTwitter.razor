@@ -1,0 +1,91 @@
+﻿@page "/settings/integrated-partners/twitter/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm Model="@twitter" Context="formContext" Class="row g-3">
+    <DataAnnotationsValidator />
+    <div class="card">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h5 class="mb-0"><a href="marketplace/partner/@Id" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fab fa-twitter me-2"></span>Twitter</h5>
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-primary" @onclick="@(() => SaveTwitter(formContext))">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label" for="inputTwitter">Twitter Page URL</label>
+                <InputText class="form-control" @bind-Value="twitter.TwitterPageURL" id="inputTwitter" type="text" placeholder="Your Twitter Page URL"></InputText>
+                <ValidationMessage For="@(() => twitter.TwitterPageURL)" />
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "Twitter | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    Member currentMember = new Member();
+    TwitterRequestModel twitter = new TwitterRequestModel();
+    List<string> twitterMetaKeys = new List<string>(){
+        BusinessSettingsMetaKey.TwitterPageURL
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get business settings for twitter
+        var response = await _settingsViewModel.GetBusinessSettingsListAsync(currentMember.Id, BusinessSettingsMetaNamespace.Twitter);
+        foreach (var metaKey in twitterMetaKeys)
+        {
+            var metaValue = response?.data?.Where(x => x.MetaKey == metaKey)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+            Helper.SetPropertyValue(twitter, metaKey, metaValue);//Note: meta key and request model property name should be same
+        }
+        SpinnerVisibility = false;
+    }
+
+    public async Task SaveTwitter(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var businessSettings = await Helper.BusinessSettingsMapping(twitter, currentMember.Id, BusinessSettingsMetaNamespace.Twitter, twitterMetaKeys);
+            var response = await _settingsViewModel.CreateBusinessSettingListAsync(businessSettings);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+}

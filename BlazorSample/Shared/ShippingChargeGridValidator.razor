@@ -1,0 +1,154 @@
+﻿@using Microsoft.AspNetCore.Components;
+@using Microsoft.AspNetCore.Components.Forms;
+@using Syncfusion.Blazor.Grids;
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Enums
+
+@code {
+    [Parameter]
+    public ValidatorTemplateContext context { get; set; }
+
+    private ValidationMessageStore messageStore;
+
+    [CascadingParameter]
+    private EditContext CurrentEditContext { get; set; }
+
+    [Parameter]
+    public List<ShippingChargeModel> shippingChargesDataList { get; set; }
+
+    [Parameter]
+    public EventCallback OnValidDataInput { get; set; }
+
+    [Parameter]
+    public int CalculationMode { get; set; }
+
+    private bool isValid { get; set; }
+
+    private ShippingChargeModel charge = new ShippingChargeModel();
+
+    protected override void OnInitialized()
+    {
+        messageStore = new ValidationMessageStore(CurrentEditContext);
+
+        CurrentEditContext.OnValidationRequested += ValidateRequested;
+        //CurrentEditContext.OnFieldChanged += ValidateField;
+    }
+
+    protected void HandleValidation(FieldIdentifier identifier)
+    {
+        var req = context.Data as ShippingChargeModel;
+        if (CalculationMode == (int)ShippingRateCalculationMode.ManualItemCount)
+        {
+            if (identifier.FieldName.Equals("ItemCount"))
+            {
+                messageStore.Clear(identifier);
+                if (req.ItemCount <= 0)
+                {
+                    messageStore.Add(identifier, "Item Count value should be greater than 0");
+                    context.ShowValidationMessage("ItemCount", false, "Item Count value should be greater than 0");
+                    isValid = false;
+                }
+                else if (shippingChargesDataList.Any(x => x.IdGUID != req.IdGUID && x.ItemCount == req.ItemCount))
+                {
+                    messageStore.Add(identifier, "Item Count value exists");
+                    context.ShowValidationMessage("ItemCount", false, "Item Count value exists");
+                    isValid = false;
+                }
+                else
+                {
+                    messageStore.Clear(identifier);
+                    charge.ItemCount = req.ItemCount;
+                    context.ShowValidationMessage("ItemCount", true, null);
+                }
+            }
+        }
+
+        else if (CalculationMode == (int)ShippingRateCalculationMode.ManualByWeight)
+        {
+            if (identifier.FieldName.Equals("ItemWeight"))
+            {
+                messageStore.Clear(identifier);
+                if (req.ItemWeight <= 0)
+                {
+                    messageStore.Add(identifier, "Item Weight value should be greater than 0");
+                    context.ShowValidationMessage("ItemWeight", false, "Item Weight value should be greater than 0");
+                    isValid = false;
+                }
+                else if (shippingChargesDataList.Any(x => x.IdGUID != req.IdGUID && x.ItemWeight == req.ItemWeight))
+                {
+                    messageStore.Add(identifier, "Item Weight value exists");
+                    context.ShowValidationMessage("ItemWeight", false, "Item Weight value exists");
+                    isValid = false;
+                }
+                else
+                {
+                    messageStore.Clear(identifier);
+                    charge.ItemWeight = req.ItemWeight;
+                    context.ShowValidationMessage("ItemWeight", true, null);
+                }
+            }
+        }
+
+        if (identifier.FieldName.Equals("Amount"))
+        {
+            messageStore.Clear(identifier);
+            if (req.Amount < 0)
+            {
+                messageStore.Add(identifier, "Shipping Charge Value must be greater than or equal to 0");
+                context.ShowValidationMessage("Amount", false, "Shipping Charge Value must be greater than or equal to 0");
+                isValid = false;
+            }
+            else
+            {
+                messageStore.Clear(identifier);
+                charge.Amount = Math.Round(req.Amount, 2);
+                context.ShowValidationMessage("Amount", true, null);
+            }
+        }
+
+    }
+
+    protected void ValidateField(object editContext, FieldChangedEventArgs fieldChangedEventArgs)
+    {
+        HandleValidation(fieldChangedEventArgs.FieldIdentifier);
+    }
+
+    private void ValidateRequested(object editContext, ValidationRequestedEventArgs validationEventArgs)
+    {
+        var req = context.Data as ShippingChargeModel;
+        charge = shippingChargesDataList.Where(x => x.IdGUID == req.IdGUID).FirstOrDefault();
+        var ItemWeight = charge.ItemWeight;
+        var ItemCount = charge.ItemCount;
+        var Amount = charge.Amount;
+        isValid = true;
+        if (isValid)
+        {
+            HandleValidation(CurrentEditContext.Field("ItemCount"));
+        }
+        if (isValid)
+        {
+            HandleValidation(CurrentEditContext.Field("ItemWeight"));
+        }
+        if (isValid)
+        {
+            HandleValidation(CurrentEditContext.Field("Amount"));
+        }
+
+        if (isValid)
+        {
+            Task.FromResult(OnValidDataInput.InvokeAsync());
+        }
+        else
+        {
+            foreach (var charges in shippingChargesDataList)
+            {
+                if (charges.IdGUID == charge.IdGUID)
+                {
+                    charges.Amount = Amount;
+                    charges.ItemCount = ItemCount;
+                    charges.ItemWeight = ItemWeight;
+                }
+            }
+        }
+    }
+}

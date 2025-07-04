@@ -1,0 +1,41 @@
+﻿@page "/shippo-oauth-redirect"
+@using CellarPassAppAdmin.Shared.Services.Marketplace;
+@using CellarPassAppAdmin.Shared.Models.Marketplace.ShippoProvider;
+@using Microsoft.Extensions.Configuration;
+@using Microsoft.AspNetCore.WebUtilities;
+@using Syncfusion.Blazor.Spinner
+@using CellarPassAppAdmin.Shared.Enums;
+@using Microsoft.Extensions.Primitives;
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@inject NavigationManager navManager
+@inject IConfiguration configuration
+@inject IShippoService shippoService
+@inject ToastService toastService
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<h3 class="text-center">Authenticating User...</h3>
+
+@code {
+    private Member currentMember = new Member();
+    public bool SpinnerVisibility = true;
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        var uri = navManager.ToAbsoluteUri(navManager.Uri);
+        var queryString = QueryHelpers.ParseQuery(uri.Query);
+
+        if (queryString.TryGetValue("state", out StringValues businessId)
+            && queryString.TryGetValue("code", out StringValues code))
+        {
+            if (businessId == currentMember.Id.ToString())
+            {
+                await shippoService.ShippoAuthorize(code, businessId);
+                SpinnerVisibility = false;
+                navManager.NavigateTo("/marketplace");
+            }
+        }
+
+    }
+}

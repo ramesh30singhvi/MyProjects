@@ -1,0 +1,887 @@
+﻿@page  "/store/create-manual-discount"
+@page "/store/edit-manual-discount/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using AutoMapper;
+@inject IProductViewModel _productViewModel
+@inject IStoreCollectionViewModel _storeCollectionViewModel
+@inject NavigationManager _navigationManager
+@inject IPOSProfileViewModel _pOSProfileViewModel
+@inject IClubViewModel _clubViewModel
+@inject ICustomerViewModel _customerViewModel
+@inject IDiscountViewModel _discountViewModel
+@inject IShippingRatesViewModel _shippingRatesViewModel
+@inject IBusinessCustomerTypesViewModel _businessCustomerTypesViewModel
+@inject IMapper _mapper
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject NavigationManager _navigationManager
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<EditForm Model="@businessDiscountRequest" Context="formContext">
+    <DataAnnotationsValidator />
+    <div class="card shadow-none border mb-4">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-3 mb-md-0"><a href="/store/discounts-promotions" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="far fa-tag me-2"></span>@(Id.HasValue ? "Edit" : "Create") Manual Discount</h5>
+                </div>
+                <div class="col-auto">
+                    @if (isSaving)
+                    {
+                        <Loader />
+                    }
+                    <a class="btn btn-primary" href="javascript:void();" @onclick="() => SaveDiscountsAndPromotions(formContext)" hidden="@(isSaving)">Save</a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="theme-wizard border-bottom p-3">
+                <ul class="nav justify-content-between nav-wizard">
+                    <li class="nav-item">
+                        <a class="nav-link active fw-semi-bold" href="#bootstrap-wizard-tab1" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                            <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-1"></span></span></span>
+                            <span class="d-none d-md-block mt-1 fs--1">Choose Discount Mode</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab2" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                            <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-2"></span></span></span>
+                            <span class="d-none d-md-block mt-1 fs--1">Select Type of Discount</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab3" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                            <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-3"></span></span></span>
+                            <span class="d-none d-md-block mt-1 fs--1">Set Discount Value</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab4" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                            <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-4"></span></span></span>
+                            <span class="d-none d-md-block mt-1 fs--1">Test Discount</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab5" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                            <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-5"></span></span></span>
+                            <span class="d-none d-md-block mt-1 fs--1">Market Promotion</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="row p-3">
+                <div class="col-12 col-md-8">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="inputDiscountName" class="form-label">Discount Name</label>
+                            <InputText class="form-control" id="inputDiscountName" @bind-Value="businessDiscountRequest.DiscountName" />
+                            <ValidationMessage For="@(() => businessDiscountRequest.DiscountName)" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="row g-3">
+                                <div class="col">
+                                    <label for="inputDiscountCode" class="form-label">Discount Code</label>
+                                </div>
+                                <div class="col text-end">
+                                    <a href="javascript:void();">Generate</a>
+                                </div>
+                            </div>
+                            <InputText class="form-control" id="inputDiscountCode" @bind-Value="businessDiscountRequest.DiscountCode" />
+                            <ValidationMessage For="@(() => businessDiscountRequest.DiscountCode)" />
+                        </div>
+                    </div>
+                    <hr />
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="dpDateStart">Start Date</label>
+                            <SfDatePicker id="dpDateStart" TValue="DateTime?" Placeholder="Choose Start Date" @bind-Value="businessDiscountRequest.DateTimeStart">
+                                <DatePickerEvents TValue="DateTime?" ValueChange="OnChangeStartDate"></DatePickerEvents>
+                            </SfDatePicker>
+                            <ValidationMessage For="@(() => businessDiscountRequest.DateTimeStart)" />
+                            @if (isStartDateInvalid)
+                            {
+                                <div class="validation-message">Start date should be less than end date</div>
+                            }
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="tpStartTime">Start Time</label>
+                            <SfTimePicker id="tpStartTime" TValue="DateTime?" @bind-Value="StartTime" Placeholder="Select Start Time"></SfTimePicker>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkNoEndDate" checked="@businessDiscountRequest.EnableEndDate" @onchange="OnChangeEnableEndDate">
+                                <label class="form-check-label" for="chkNoEndDate">Add End Date</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row" hidden="@(!businessDiscountRequest.EnableEndDate)">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="dpEndDate">End Date</label>
+                            <SfDatePicker id="dpEndDate" TValue="DateTime?" Placeholder="Choose End Date" @bind-Value="businessDiscountRequest.DateTimeEnd">
+                                <DatePickerEvents TValue="DateTime?" ValueChange="OnChangeEndDate"></DatePickerEvents>
+                            </SfDatePicker>
+                            <ValidationMessage For="@(() => businessDiscountRequest.DateTimeEnd)" />
+                            @if (isEndDateInvalid)
+                            {
+                                <div class="validation-message">End date should be greater than start date</div>
+                            }
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="tpEndTime">End Time</label>
+                            <SfTimePicker id="tpEndTime" TValue="DateTime?" @bind-Value="EndTime" Placeholder="Select End Time"></SfTimePicker>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">Discount Type</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="rdDiscountType" id="rdDiscountType1" value="0" @onchange="()=>OnChangeDiscountType(DiscountType.Amount)" checked="@(businessDiscountRequest.DiscountType == DiscountType.Amount)">
+                                <label class="form-check-label" for="rdDiscountType1">Amount</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="rdDiscountType" id="rdDiscountType2" value="1" @onchange="()=>OnChangeDiscountType(DiscountType.Percent)" checked="@(businessDiscountRequest.DiscountType == DiscountType.Percent)">
+                                <label class="form-check-label" for="rdDiscountType2">Percentage</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="rdDiscountType" id="rdDiscountType3" value="2" @onchange="()=>OnChangeDiscountType(DiscountType.Shipping)" checked="@(businessDiscountRequest.DiscountType == DiscountType.Shipping)">
+                                <label class="form-check-label" for="rdDiscountType3">Shipping</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="rdDiscountType" id="rdDiscountType4" value="3" @onchange="()=>OnChangeDiscountType(DiscountType.Bxgy)" checked="@(businessDiscountRequest.DiscountType == DiscountType.Bxgy)">
+                                <label class="form-check-label" for="rdDiscountType4">Buy X, Get Y</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <div class="card shadow-none border mb-2">
+                        <div class="card-body">
+                            <div class="mb-0">
+                                <label class="form-label">Applicable Channels</label>
+                                <div class="d-flex justify-content-between px-card py-2 border-200">
+                                    <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchWeb">Web</label></div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-switch"><input class="form-check-input" id="switchWeb" type="checkbox" @bind-value="@businessDiscountRequest.IsWebSalesChannel" checked="@businessDiscountRequest.IsWebSalesChannel"></div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between border-top px-card  py-2 border-200">
+                                    <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchPointofSale">Point of Sale</label></div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-switch"><input class="form-check-input" id="switchPointofSale" type="checkbox" @bind-value="@businessDiscountRequest.IsPOSSalesChannel" checked="@businessDiscountRequest.IsPOSSalesChannel"></div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between border-top px-card py-2 border-200">
+                                    <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchClub">Club</label></div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-switch"><input class="form-check-input" id="switchClub" type="checkbox" @bind-value="@businessDiscountRequest.IsClubSalesChannel" checked="@businessDiscountRequest.IsClubSalesChannel"></div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between border-top px-card py-2 border-200">
+                                    <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchOms">OMS</label></div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-switch"><input class="form-check-input" id="switchOms" type="checkbox" @bind-value="@businessDiscountRequest.IsOMSSalesChannel" checked="@businessDiscountRequest.IsOMSSalesChannel"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card shadow-none border mb-2">
+                        <div class="card-body">
+                            <label class="form-label mb-3">Number of Uses</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkLimitTotalUses" checked="@businessDiscountRequest.LimitUse" @onchange="OnChangeNumberOfUses">
+                                <label class="form-check-label" for="chkLimitTotalUses">
+                                    Limit the Number of Uses
+                                </label>
+                            </div>
+                            <div class="mb-3" hidden="@(!businessDiscountRequest.LimitUse)">
+                                <label for="inputOrderTotal" class="form-label">Total Number of Uses</label>
+                                <SfNumericTextBox id="inputTotalUses" CssClass="form-control" TValue="int" ShowSpinButton="false" @bind-Value=@businessDiscountRequest.NumberOfUses></SfNumericTextBox>
+                                <ValidationMessage For="@(() => businessDiscountRequest.NumberOfUses)" />
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkLimitPerCustomer" checked="@businessDiscountRequest.LimitUserPerCustomer" @onchange="OnChangeLimitUserPerCustomer">
+                                <label class="form-check-label" for="chkLimitPerCustomer">
+                                    Limit Per Customer
+                                </label>
+                            </div>
+                            <div class="mb-3" hidden="@(!businessDiscountRequest.LimitUserPerCustomer)">
+                                <label for="inputOrderTotal" class="form-label">Total per Customer</label>
+                                <SfNumericTextBox id="inputTotalPerCustomer" CssClass="form-control" TValue="int" ShowSpinButton="false" @bind-Value=@businessDiscountRequest.NumberOfUsesPerCustomer></SfNumericTextBox>
+                                <ValidationMessage For="@(() => businessDiscountRequest.NumberOfUsesPerCustomer)" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-none border mb-4" hidden="@(businessDiscountRequest.DiscountType == DiscountType.Shipping)">
+        <div class="card-header border-bottom">
+            <h5 class="mb-3 mb-md-0" hidden="@(businessDiscountRequest.DiscountType != DiscountType.Amount)">Amount</h5>
+            <h5 class="mb-3 mb-md-0" hidden="@(businessDiscountRequest.DiscountType !=  DiscountType.Percent)">Percentage</h5>
+        </div>
+        <div class="card-body">
+            <div class="col-12 col-md-3 mb-3">
+                <div class="input-group mb-3" hidden="@(businessDiscountRequest.DiscountType != DiscountType.Amount)">
+                    <span class="input-group-text" id="amount-addon">$</span>
+                    <SfNumericTextBox id="inputDiscountAmount" CssClass="form-control" TValue="decimal" ValidateDecimalOnType="true" Decimals=2 ShowSpinButton="false" @bind-Value=@businessDiscountRequest.DiscountAmount></SfNumericTextBox>
+                    <ValidationMessage For="@(() => businessDiscountRequest.DiscountAmount)" />
+                </div>
+
+                <div class="input-group mb-3" hidden="@(businessDiscountRequest.DiscountType != DiscountType.Percent)">
+                    <SfNumericTextBox TValue="decimal" CssClass="form-control" ValidateDecimalOnType="true" Decimals=0 ShowSpinButton="false" @bind-Value=@businessDiscountRequest.DiscountPercent></SfNumericTextBox>
+                    <span class="input-group-text" id="percentage-addon">%</span>
+                    <ValidationMessage For="@(() => businessDiscountRequest.DiscountPercent)" />
+                </div>
+            </div>
+            <hr />
+            <div class="my-3">
+                <label class="form-label">Applies To</label>
+                <div class="mt-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="rdAppliesTo" id="rdAppliesTo1" value="0" @onchange="()=>OnChangeDiscountAppliesTo(DiscountAppliesTo.PurchaseTotal)" checked="@(businessDiscountRequest.DiscountAppliesTo == DiscountAppliesTo.PurchaseTotal)">
+                        <label class="form-check-label" for="rdAppliesTo1">Order Total</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="rdAppliesTo" id="rdAppliesTo2" value="1" @onchange="()=>OnChangeDiscountAppliesTo(DiscountAppliesTo.SelectedProducts)" checked="@(businessDiscountRequest.DiscountAppliesTo == DiscountAppliesTo.SelectedProducts)">
+                        <label class="form-check-label" for="rdAppliesTo2">Selected Products</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="rdAppliesTo" id="rdAppliesTo3" value="2" @onchange="()=>OnChangeDiscountAppliesTo(DiscountAppliesTo.SelectedCollections)" checked="@(businessDiscountRequest.DiscountAppliesTo == DiscountAppliesTo.SelectedCollections)">
+                        <label class="form-check-label" for="rdAppliesTo3">Selected Collections</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="my-3" hidden="@(businessDiscountRequest.DiscountAppliesTo != DiscountAppliesTo.SelectedProducts)">
+                <div class="card shadow-none border mb-3">
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label" for="inputAddressSearch">Search</label>
+                                <SfComboBox ID="inputGroupSearch" @bind-Value="@selectedProduct" @ref="filterProductsObj" AllowFiltering=true Placeholder="Search products" DataSource="@products" CssClass="py-1">
+                                    <ComboBoxEvents TItem="ProductListModel" TValue="string" ValueChange="SelectProduct" Filtering="OnFilterProducts"></ComboBoxEvents>
+                                    <ComboBoxFieldSettings Value="ProductTitle"></ComboBoxFieldSettings>
+                                </SfComboBox>
+                            </div>
+                            <div class="col-12 col-md-6 sf-ddl" hidden="@(collectionProducts == null || collectionProducts.Count <= 0)">
+                                <label class="form-label" for="selSortProductsBy">Sort</label>
+                                <SfDropDownList id=sfItemType TValue="int" TItem="DropdownBindingModel" AllowFiltering="true" DataSource="@collectionSortTypes" @bind-Value="storeCollection.CollectionSortType">
+                                    <DropDownListEvents TItem="DropdownBindingModel" TValue="int" ValueChange="OnSortProducts"></DropDownListEvents>
+                                    <DropDownListFieldSettings Text="Value" Value="Key"></DropDownListFieldSettings>
+                                </SfDropDownList>
+                            </div>
+                        </div>
+                        @if (collectionProducts != null && collectionProducts.Count > 0)
+                        {
+                            @if (storeCollection.CollectionSortType != (int)CollectionSortType.Manual)
+                            {
+                                <ul class="list-group">
+                                    @foreach (var item in collectionProducts)
+                                    {
+                                        <li class="list-group-item d-flex justify-content-start align-items-center p-3">
+                                            <span class="img-thumbnail far fa-image-polaroid fa-4x me-2" hidden="@(!string.IsNullOrEmpty(item.ProductImage))"></span>
+                                            <img class="img-fluid img-thumbnail me-2" width="50" alt="@item.ProductTitle" src="@(item.ProductImageURL)" hidden="@(string.IsNullOrEmpty(item.ProductImage))" />
+                                            <span class="flex-fill">@item.ProductTitle</span>
+                                            <a href="javascript:void();" @onclick="@(() => RemoveProduct(item, false))" class="text-dark"><span class="far fa-trash-alt"></span></a>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <SfListBox TValue="string[]" DataSource="@collectionProducts" TItem="StoreCollectionProduct" AllowDragAndDrop="true" @ref="ListBoxObj" CssClass="rounded cp-list">
+                                    <ListBoxFieldSettings Text="ProductTitle" />
+                                    <ListBoxEvents TValue="string[]" TItem="StoreCollectionProduct"></ListBoxEvents>
+                                    <ListBoxTemplates TItem="StoreCollectionProduct">
+                                        <ItemTemplate>
+                                            <div class="d-flex justify-content-start align-items-center">
+                                                <span class="far fa-sort me-2"></span>
+                                                @if (!string.IsNullOrEmpty((context as StoreCollectionProduct).ProductImageURL))
+                                                {
+                                                    <div>
+                                                        <img class="img-fluid img-thumbnail me-2" width="50" alt="@((context as StoreCollectionProduct).ProductTitle)" src="@((context as StoreCollectionProduct).ProductImageURL)" />
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <div>
+                                                        <span class="img-thumbnail far fa-image-polaroid fa-4x me-2"></span>
+                                                    </div>
+                                                }
+                                                <span class="flex-fill">@((context as StoreCollectionProduct).ProductTitle)</span>
+                                                <a href="javascript:void(0);" @onclick="@(() => RemoveProduct((context as StoreCollectionProduct), true))" class="text-dark"><span class="far fa-trash-alt"></span></a>
+                                            </div>
+                                        </ItemTemplate>
+                                    </ListBoxTemplates>
+                                </SfListBox>
+                            }
+
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="my-3 sf-ddl" hidden="@(businessDiscountRequest.DiscountAppliesTo != DiscountAppliesTo.SelectedCollections)">
+                <label class="form-label" for="sfCarryOutInv">Collections</label>
+                <SfMultiSelect AllowFiltering="true" @bind-Value="businessDiscountRequest.Collections" TValue="List<int>" TItem="StoreCollectionModelPOS" Placeholder="Select One or More Collections" DataSource="@posCollectionList">
+                    <MultiSelectFieldSettings Text="CollectionName" Value="Id"></MultiSelectFieldSettings>
+                </SfMultiSelect>
+            </div>
+            <div class="my-3" hidden="@(businessDiscountRequest.DiscountAppliesTo == DiscountAppliesTo.PurchaseTotal)">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="chkOnlyApplyOncePerOrder" @bind-value="@businessDiscountRequest.ApplyOncePerOrder" checked="@businessDiscountRequest.ApplyOncePerOrder">
+                    <label class="form-check-label" for="chkOnlyApplyOncePerOrder">Apply discount once per order</label>
+                </div>
+                <p>If unchecked, this discount will apply to every eligible product in the order.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-none border mb-4" hidden="@(businessDiscountRequest.DiscountType != DiscountType.Shipping)">
+        <div class="card-header border-bottom">
+            <h5 class="mb-3 mb-md-0">Shipping</h5>
+        </div>
+        <div class="card-body">
+            <div class="col-12 col-md-7">
+                <label for="selDiscountSchema" class="form-label">Discount Schema</label>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <select id="selDiscountSchema" class="form-select" @onchange="SelectShipDiscountSchema">
+                            <option value="0">Amount Off</option>
+                            <option value="1">Percentage Off</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="input-group mb-3" hidden="@(businessDiscountRequest.ShippingSchema != (int)ShippingSchema.Amount)">
+                            <span class="input-group-text" id="ship-amount-addon">$</span>
+                            <SfNumericTextBox id="inputShipDiscountAmount" CssClass="form-control" TValue="decimal" ValidateDecimalOnType="true" Decimals=2 ShowSpinButton="false" @bind-Value=@businessDiscountRequest.DiscountAmount></SfNumericTextBox>
+                            <ValidationMessage For="@(() => businessDiscountRequest.DiscountAmount)" />
+                        </div>
+                        <div class="input-group mb-3" hidden="@(businessDiscountRequest.ShippingSchema != (int)ShippingSchema.Percentage)">
+                            <SfNumericTextBox id="inputShipPercentageAmount" CssClass="form-control" TValue="decimal" ValidateDecimalOnType="true" Decimals=0 ShowSpinButton="false" @bind-Value=@businessDiscountRequest.DiscountPercent></SfNumericTextBox>
+                            <span class="input-group-text" id="ship-percentage-addon">%</span>
+                            <ValidationMessage For="@(() => businessDiscountRequest.DiscountPercent)" />
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <label for="msShippingRates" class="form-label">Selected Shipping Rates</label>
+                        <SfMultiSelect AllowFiltering="true" @bind-Value="businessDiscountRequest.ShippingRates" TValue="List<int>" TItem="ShippingRateModel" Placeholder="Search Shipping Rates" DataSource="@shippingRates">
+                            <MultiSelectFieldSettings Text="ShippingRateName" Value="Id"></MultiSelectFieldSettings>
+                        </SfMultiSelect>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <div class="form-check mb-0">
+                                <input class="form-check-input" type="checkbox" id="chkExcludeShippingRates" checked="@businessDiscountRequest.EnableShippingRateLimit" @bind-value="@businessDiscountRequest.EnableShippingRateLimit">
+                                <label class="form-check-label" for="chkExcludeShippingRates">Exclude Shipping Rates That Exceed</label>
+                            </div>
+                            <div hidden="@(!businessDiscountRequest.EnableShippingRateLimit)">
+                                <SfNumericTextBox id="inputShippingRatesthatExceed" CssClass="form-control" TValue="decimal" ValidateDecimalOnType="true" Decimals=2 ShowSpinButton="false" @bind-Value=@businessDiscountRequest.ShippingRateAmountLimit></SfNumericTextBox>
+                                <ValidationMessage For="@(() => businessDiscountRequest.ShippingRateAmountLimit)" />
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="row">
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="card shadow-none border mb-4">
+        <div class="card-header border-bottom">
+            <h5 class="mb-3 mb-md-0">Minimum Requirements</h5>
+        </div>
+        <div class="card-body">
+            <div class="col-12 col-md-6">
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="rdMinimumRequirements" id="rdMinimumRequirements1" value="0" @onchange="()=>OnChangeMinimumRequirements(MinRequirements.None)" checked="@(businessDiscountRequest.MinRequirements == MinRequirements.None)">
+                    <label class="form-check-label" for="rdMinimumRequirements1">None</label>
+                </div>
+                <div class="d-flex flex-wrap align-items-center justify-content-between">
+                    <div class="form-check  mb-0">
+                        <input class="form-check-input" type="radio" name="rdMinimumRequirements" id="rdMinimumRequirements2" value="1" @onchange="()=> OnChangeMinimumRequirements(MinRequirements.QTY)" checked="@(businessDiscountRequest.MinRequirements == MinRequirements.QTY)">
+                        <label class="form-check-label me-3" for="rdMinimumRequirements2">Quantity of Items</label>
+                    </div>
+                    <div hidden="@(businessDiscountRequest.MinRequirements != MinRequirements.QTY)">
+                        <SfNumericTextBox id="inputQuantityofItems" CssClass="form-control" TValue="int" ShowSpinButton="false" @bind-Value=@businessDiscountRequest.MinItemQty></SfNumericTextBox>
+                        <ValidationMessage For="@(() => businessDiscountRequest.MinItemQty)" />
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center justify-content-between">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="rdMinimumRequirements" id="rdMinimumRequirements3" value="2" @onchange="() => OnChangeMinimumRequirements(MinRequirements.CaseQTY)" checked="@(businessDiscountRequest.MinRequirements == MinRequirements.CaseQTY)">
+                        <label class="form-check-label" for="rdMinimumRequirements3">Number of Cases</label>
+                    </div>
+                    <div hidden="@(businessDiscountRequest.MinRequirements != MinRequirements.CaseQTY)">
+                        <SfNumericTextBox id="inputNumberOfCases" CssClass="form-control" TValue="int" ShowSpinButton="false" @bind-Value=@businessDiscountRequest.MinCaseQty></SfNumericTextBox>
+                        <ValidationMessage For="@(() => businessDiscountRequest.MinCaseQty)" />
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap align-items-center justify-content-between">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="rdAprdMinimumRequirementspliesTo" id="rdMinimumRequirements4" value="3" @onchange="() => OnChangeMinimumRequirements(MinRequirements.PurchaseTotal)" checked="@(businessDiscountRequest.MinRequirements == MinRequirements.PurchaseTotal)">
+                        <label class="form-check-label" for="rdMinimumRequirements3">Order Total</label>
+                    </div>
+                    <div hidden="@(businessDiscountRequest.MinRequirements != MinRequirements.PurchaseTotal)">
+                        <SfNumericTextBox id="inputOrderTotal" CssClass="form-control" TValue="decimal" ValidateDecimalOnType="true" Decimals=2 ShowSpinButton="false" @bind-Value=@businessDiscountRequest.MinPurchaeTotal></SfNumericTextBox>
+                        <ValidationMessage For="@(() => businessDiscountRequest.MinPurchaeTotal)" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-none border mb-4">
+        <div class="card-header border-bottom">
+            <h5 class="mb-3 mb-md-0">Customer Type Restrictions</h5>
+        </div>
+        <div class="card-body">
+            <div class="col-12 col-md-6">
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="rdCustomerTypeRestrictions" id="rdCustomerTypeRestrictions1" value="0" @onchange="(()=>OnChangeCustomerRestrictions(CustomerRestrictions.None))" checked="@(businessDiscountRequest.CustomerRestrictions == CustomerRestrictions.None)">
+                        <label class="form-check-label" for="rdCustomerTypeRestrictions1">None (All Customers Eligible)</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="rdCustomerTypeRestrictions" id="rdCustomerTypeRestrictions2" value="1" @onchange="(()=>OnChangeCustomerRestrictions(CustomerRestrictions.SelectedCustomerTypes))" checked="@(businessDiscountRequest.CustomerRestrictions == CustomerRestrictions.SelectedCustomerTypes)">
+                        <label class="form-check-label" for="rdCustomerTypeRestrictions2">Selected Customer Types</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="rdCustomerTypeRestrictions" id="rdCustomerTypeRestrictions3" value="2" @onchange="(()=>OnChangeCustomerRestrictions(CustomerRestrictions.SelectedCustomers))" checked="@(businessDiscountRequest.CustomerRestrictions == CustomerRestrictions.SelectedCustomers)">
+                        <label class="form-check-label" for="rdCustomerTypeRestrictions3">Selected Customers</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="rdCustomerTypeRestrictions" id="rdCustomerTypeRestrictions4" value="3" @onchange="(()=>OnChangeCustomerRestrictions(CustomerRestrictions.SelectedClubs))" checked="@(businessDiscountRequest.CustomerRestrictions == CustomerRestrictions.SelectedClubs)">
+                        <label class="form-check-label" for="rdCustomerTypeRestrictions4">Selected Clubs</label>
+                    </div>
+                </div>
+                <div class="mb-3" hidden="@(businessDiscountRequest.CustomerRestrictions != CustomerRestrictions.SelectedCustomerTypes)">
+                    <label class="form-label" for="sfCarryOutInv">Customer Types</label>
+                    <SfMultiSelect @bind-Value="businessDiscountRequest.CustomerTypes" AllowFiltering="true" TValue="List<int>" TItem="BusinessCustomerTypeModel" Placeholder="Search groups of customers" DataSource="@customerTypes">
+                        <MultiSelectFieldSettings Text="Value" Value="Id"></MultiSelectFieldSettings>
+                    </SfMultiSelect>
+                </div>
+                <div class="mb-3" hidden="@(businessDiscountRequest.CustomerRestrictions != CustomerRestrictions.SelectedCustomers)">
+                    <label class="form-label" for="sfCarryOutInv">Customers</label>
+                    <SfMultiSelect AllowFiltering="true" @bind-Value="businessDiscountRequest.Customers" TValue="List<int>" TItem="CustomerModel" Placeholder="Search customers" DataSource="@customers">
+                        <MultiSelectTemplates TItem="CustomerModel">
+                            <ItemTemplate>
+                                <span>@((context as CustomerModel).FirstName) @((context as CustomerModel).LastName)</span>
+                            </ItemTemplate>
+                            <ValueTemplate>
+                                <span>@((context as CustomerModel).FirstName) @((context as CustomerModel).LastName)</span>
+                            </ValueTemplate>
+                        </MultiSelectTemplates>
+                        <MultiSelectFieldSettings Text="LastName" Value="CustomerId"></MultiSelectFieldSettings>
+                    </SfMultiSelect>
+                </div>
+                <div class="mb-3" hidden="@(businessDiscountRequest.CustomerRestrictions != CustomerRestrictions.SelectedClubs)">
+                    <label class="form-label" for="sfCarryOutInv">Selected Clubs</label>
+                    <SfMultiSelect AllowFiltering="true" @bind-Value="businessDiscountRequest.Clubs" TValue="List<int>" TItem="BusinessClubListModel" Placeholder="Search clubs" DataSource="@clubs">
+                        <MultiSelectFieldSettings Text="ClubName" Value="Id"></MultiSelectFieldSettings>
+                    </SfMultiSelect>
+                </div>
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "Create Manual Discount | Synergy Commerce Admin Panel";
+    private Boolean isLoading = true;
+    private bool isSaving = false;
+    private bool isEndDateInvalid { get; set; } = false;
+    private bool isStartDateInvalid { get; set; } = false;
+    BusinessDiscountRequestModel businessDiscountRequest = new BusinessDiscountRequestModel();
+    private StoreCollectionRequestModel storeCollection = new StoreCollectionRequestModel();
+    private Member currentMember;
+    private string selectedProduct;
+    private List<ProductListModel> products = new List<ProductListModel>();
+    ObservableCollection<StoreCollectionProduct> collectionProducts = new ObservableCollection<StoreCollectionProduct>();
+    SfComboBox<string, ProductListModel> filterProductsObj { get; set; }
+    SfListBox<string[], StoreCollectionProduct> ListBoxObj = new SfListBox<string[], StoreCollectionProduct>();
+    List<int> pOSCollections = new List<int>();
+    private List<StoreCollectionModelPOS> posCollectionList = new List<StoreCollectionModelPOS>();
+    private ProductGiftCardDetailFullModel product = new ProductGiftCardDetailFullModel();
+    private List<BusinessClubListModel> clubs = new List<BusinessClubListModel>();
+    private List<CustomerModel> customers = new List<CustomerModel>();
+    private List<ShippingRateModel> shippingRates = new List<ShippingRateModel>();
+    private List<BusinessCustomerTypeModel> customerTypes = new List<BusinessCustomerTypeModel>();
+    private DateTime? StartTime { get; set; }
+    private DateTime? EndTime { get; set; }
+    List<DropdownBindingModel> collectionSortTypes = Enum.GetValues(typeof(CollectionSortType))
+                                             .Cast<CollectionSortType>()
+                                             .Select(t => new DropdownBindingModel
+                                             {
+                                                 Key = (int)t,
+                                                 Value = Helper.GetDisplayName(t)
+                                             }).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        storeCollection.DynamicConditions = new List<DynamicCondition>();
+        DynamicCondition dynamicCondition = new DynamicCondition()
+        {
+            DynamicType = 0,
+            DynamicComparer = 0,
+            DynamicValue = "",
+            DynamicDesc = ""
+        };
+        storeCollection.DynamicConditions.Add(dynamicCondition);
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        SearchProductResponse productResponse = await _productViewModel.SearchProducts(currentMember.Id, true, string.Empty);
+        if (productResponse.success)
+        {
+            products = productResponse.data;
+            if (products.Count > 0)
+            {
+                products = products.OrderBy(x => x.ProductTitle).ToList();
+            }
+        }
+
+        //Get POS Profile Details During Edit
+        if (Id != null)
+        {
+            var profileResponse = await _pOSProfileViewModel.GetPOSProfileDetails(0, Id.ToString());
+            if (profileResponse?.data != null)
+            {
+                pOSCollections = profileResponse?.data?.POSCollections?.Select(x => x.CollectionId)?.ToList();
+            }
+        }
+        // Get POS Collections By Member Id
+        var posCollectionsResponse = await _storeCollectionViewModel.GetStoreCollectionsPOS(currentMember.Id);
+        if (posCollectionsResponse.success)
+        {
+            posCollectionList = posCollectionsResponse.data;
+        }
+
+        //Get Clubs List By Member Id
+        var clubsResponse = await _clubViewModel.GetClubListAsync(currentMember.Id);
+        if (clubsResponse.success)
+        {
+            clubs = clubsResponse.data;
+        }
+
+        //Get Customers List By Member Id
+        var customersResponse = await _customerViewModel.GetBusinessCustomerList(new BusinessCustomerRequestModel { BusinessId = currentMember.Id });
+        if (customersResponse.success)
+        {
+            customers = customersResponse.data.Customers;
+        }
+
+        //Get Shipping Rates By Member Id
+        var shippingRatesResponse = await _shippingRatesViewModel.GetShippingRates(currentMember.Id);
+        if (shippingRatesResponse.success)
+        {
+            shippingRates = shippingRatesResponse.data;
+        }
+
+        //Get Customer Types By Member Id
+        var customerTypesResponse = await _businessCustomerTypesViewModel.GetBusinessCustomerTypes(currentMember.Id);
+        if (customerTypesResponse.success)
+        {
+            customerTypes = customerTypesResponse.data;
+        }
+
+        //Id has value(for update)
+        if (Id.HasValue)
+        {
+            title = "Edit Manual Discount | Synergy Commerce Admin Panel";
+
+            var discountDetailResponse = await _discountViewModel.GetDiscountDetail(Id.Value.ToString());
+            if (discountDetailResponse.success && discountDetailResponse.data != null)
+            {
+                businessDiscountRequest = _mapper.Map<BusinessDiscountRequestModel>(discountDetailResponse.data);
+                StartTime = businessDiscountRequest.DateTimeStart.Value;
+                businessDiscountRequest.DateTimeStart = businessDiscountRequest.DateTimeStart.Value.Date;
+                if (businessDiscountRequest.DateTimeEnd != null)
+                {
+                    EndTime = businessDiscountRequest.DateTimeEnd.Value;
+                    businessDiscountRequest.DateTimeEnd = businessDiscountRequest.DateTimeEnd.Value.Date;
+                }
+
+                if (businessDiscountRequest.Products != null && businessDiscountRequest.Products.Count > 0)
+                {
+                    foreach (var productId in businessDiscountRequest.Products)
+                    {
+                        var product = products.Where(x => x.Id == productId).FirstOrDefault();
+                        if (product != null)
+                        {
+                            StoreCollectionProduct collectionProduct = new StoreCollectionProduct()
+                            {
+                                CollectionId = storeCollection.Id,
+                                ProductId = product.Id,
+                                ProductImage = product.ProductImage,
+                                ProductImageURL = product.ProductImageURL,
+                                ProductTitle = product.ProductTitle
+                            };
+                            collectionProducts.Add(collectionProduct);
+                            StateHasChanged();
+                        }
+                    }
+                }
+            }
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void SelectProduct()
+    {
+        var product = products.Where(x => x.ProductTitle == selectedProduct).FirstOrDefault();
+
+        if (product != null)
+        {
+            businessDiscountRequest.Products.Add(product.Id);
+            StoreCollectionProduct collectionProduct = new StoreCollectionProduct()
+            {
+                CollectionId = storeCollection.Id,
+                ProductId = product.Id,
+                ProductImage = product.ProductImage,
+                ProductImageURL = product.ProductImageURL,
+                ProductTitle = product.ProductTitle
+            };
+
+            if (collectionProducts != null && collectionProducts.Count > 0)
+            {
+                collectionProducts.Add(collectionProduct);
+            }
+            else
+            {
+                collectionProducts = new ObservableCollection<StoreCollectionProduct>();
+                collectionProducts.Add(collectionProduct);
+                StateHasChanged();
+            }
+
+            if (storeCollection.CollectionSortType == (int)CollectionSortType.Manual)
+            {
+                var Item = new List<StoreCollectionProduct>
+                ();
+                Item.Add(collectionProduct);
+                ListBoxObj.AddItems(Item);
+            }
+        }
+        StateHasChanged();
+    }
+
+    private void RemoveProduct(StoreCollectionProduct product, bool isManual)
+    {
+        businessDiscountRequest.Products.Remove(product.ProductId);
+        if (isManual)
+        {
+            var Item = new List<StoreCollectionProduct> {
+            new StoreCollectionProduct
+    {ProductId = product.Id, CollectionId = product.CollectionId, ProductImage = product.ProductImage,
+      ProductImageURL = product.ProductImageURL, ProductTitle = product.ProductTitle}};
+            ListBoxObj.RemoveItem(Item);
+            collectionProducts.Remove(product);
+        }
+        else
+        {
+            collectionProducts.Remove(product);
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task OnFilterProducts(FilteringEventArgs args)
+    {
+        args.PreventDefaultAction = true;
+        var query = new Query().Where(new WhereFilter() { Field = "ProductTitle", Operator = "contains", value = args.Text, IgnoreCase = true });
+
+        query = !string.IsNullOrEmpty(args.Text) ? query : new Query();
+
+        await filterProductsObj.Filter(products, query);
+    }
+
+    private void OnSortProducts()
+    {
+        if (collectionProducts.Count > 0)
+        {
+            if (storeCollection.CollectionSortType == (int)CollectionSortType.ProductNameA_Z)
+            {
+                collectionProducts = new ObservableCollection<StoreCollectionProduct>(collectionProducts.OrderBy(x => x.ProductTitle));
+            }
+            else if (storeCollection.CollectionSortType == (int)CollectionSortType.ProductNameZ_A)
+            {
+                collectionProducts = new ObservableCollection<StoreCollectionProduct>(collectionProducts.OrderByDescending(x => x.ProductTitle));
+            }
+            else if (storeCollection.CollectionSortType == (int)CollectionSortType.Manual)
+            {
+                collectionProducts = new ObservableCollection<StoreCollectionProduct>(collectionProducts.OrderBy(x => x.SortIndex));
+            }
+        }
+        StateHasChanged();
+    }
+
+    // Clear data on change
+    private void OnChangeEnableEndDate(ChangeEventArgs args)
+    {
+        businessDiscountRequest.EnableEndDate = Convert.ToBoolean(args.Value);
+        if (!businessDiscountRequest.EnableEndDate)
+        {
+            businessDiscountRequest.DateTimeEnd = null;
+            EndTime = null;
+        }
+    }
+
+    private void OnChangeDiscountType(DiscountType discountType)
+    {
+        businessDiscountRequest.DiscountType = discountType;
+        businessDiscountRequest.DiscountPercent = 0;
+        businessDiscountRequest.DiscountAmount = 0;
+        businessDiscountRequest.ShippingRates = new List<int>();
+        businessDiscountRequest.EnableShippingRateLimit = false;
+        businessDiscountRequest.ShippingRateAmountLimit = 0;
+        if (discountType == DiscountType.Shipping)
+            OnChangeDiscountAppliesTo(null);
+        else
+            OnChangeDiscountAppliesTo(DiscountAppliesTo.PurchaseTotal);
+    }
+
+    private void SelectShipDiscountSchema(ChangeEventArgs args)
+    {
+        if (Convert.ToInt32(args.Value) == 0)
+            businessDiscountRequest.DiscountPercent = 0;
+        else
+            businessDiscountRequest.DiscountAmount = 0;
+        businessDiscountRequest.ShippingSchema = Convert.ToInt32(args.Value);
+    }
+
+    private void OnChangeMinimumRequirements(MinRequirements minRequirements)
+    {
+        businessDiscountRequest.MinRequirements = minRequirements;
+        businessDiscountRequest.MinItemQty = 0;
+        businessDiscountRequest.MinCaseQty = 0;
+        businessDiscountRequest.MinPurchaeTotal = 0;
+    }
+
+    private void OnChangeNumberOfUses(ChangeEventArgs args)
+    {
+        businessDiscountRequest.LimitUse = Convert.ToBoolean(args.Value);
+        if (!businessDiscountRequest.LimitUse)
+        {
+            businessDiscountRequest.NumberOfUses = 0;
+        }
+    }
+
+    private void OnChangeLimitUserPerCustomer(ChangeEventArgs args)
+    {
+        businessDiscountRequest.LimitUserPerCustomer = Convert.ToBoolean(args.Value);
+        if (!businessDiscountRequest.LimitUserPerCustomer)
+        {
+            businessDiscountRequest.NumberOfUsesPerCustomer = 0;
+        }
+    }
+
+    private void OnChangeCustomerRestrictions(CustomerRestrictions customerRestrictions)
+    {
+        businessDiscountRequest.CustomerRestrictions = customerRestrictions;
+        businessDiscountRequest.CustomerTypes = new List<int>();
+        businessDiscountRequest.Customers = new List<int>();
+        businessDiscountRequest.Clubs = new List<int>();
+    }
+
+    private void OnChangeDiscountAppliesTo(DiscountAppliesTo? discountAppliesTo)
+    {
+        businessDiscountRequest.DiscountAppliesTo = discountAppliesTo;
+        collectionProducts = new ObservableCollection<StoreCollectionProduct>();
+        businessDiscountRequest.Products = new List<int>();
+        businessDiscountRequest.Collections = new List<int>();
+        businessDiscountRequest.ApplyOncePerOrder = false;
+    }
+
+    private void OnChangeEndDate(ChangedEventArgs<DateTime?> args)
+    {
+        if (args != null && args.Value != null && businessDiscountRequest.DateTimeStart != null)
+        {
+            if (args.Value <= businessDiscountRequest.DateTimeStart)
+            {
+                isEndDateInvalid = true;
+            }
+            else
+            {
+                isEndDateInvalid = false;
+            }
+        }
+    }
+
+    private void OnChangeStartDate(ChangedEventArgs<DateTime?> args)
+    {
+        if (args != null && args.Value != null && businessDiscountRequest.DateTimeEnd != null)
+        {
+            if (args.Value >= businessDiscountRequest.DateTimeEnd)
+            {
+                isStartDateInvalid = true;
+            }
+            else
+            {
+                isStartDateInvalid = false;
+            }
+        }
+    }
+
+    // Save Discounts And Promotions
+    private async Task SaveDiscountsAndPromotions(EditContext editContext)
+    {
+        if (businessDiscountRequest.EnableEndDate && isEndDateInvalid)
+            return;
+        if (isStartDateInvalid)
+            return;
+        if (editContext.Validate())
+        {
+            isSaving = true;
+            isLoading = true;
+            businessDiscountRequest.BusinessId = currentMember.Id;
+            if (StartTime != null)
+                businessDiscountRequest.DateTimeStart = businessDiscountRequest.DateTimeStart.Value.Date + StartTime.Value.TimeOfDay;
+            if (businessDiscountRequest.DateTimeEnd != null && EndTime != null)
+                businessDiscountRequest.DateTimeEnd = businessDiscountRequest.DateTimeEnd.Value.Date + EndTime.Value.TimeOfDay;
+            var response = await _discountViewModel.AddUpdateDiscount(businessDiscountRequest);
+            isSaving = false;
+            isLoading = false;
+            if (response.success)
+            {
+                if (Id == null)
+                {
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                }
+                else
+                {
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                }
+                _navigationManager.NavigateTo("/store/discounts-promotions");
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+}

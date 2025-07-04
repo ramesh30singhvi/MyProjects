@@ -1,0 +1,193 @@
+﻿@page "/settings/loyalty-settings"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IProductViewModel _productViewModel
+@inject NavigationManager _navigationManager
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-3 mb-md-0"><a href="settings/loyalty" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-plug me-2"></span>Integrated Partners</h5>
+                    </div>
+                    <div class="col-md-auto"></div>
+                </div>
+            </div>
+            <div class="card-body">
+
+                <div class="row">
+                    <div class="col-12 col-xl-6">
+
+
+                        <div class="mb-3">
+                            <label class="form-label" for="selPointsPrograms">Specify the term used for your points program; or choose to create a custom name.</label>
+                            <select id="selPointsPrograms" class="form-select" @bind="@pointsProgramsValue">
+                                <option value="Stars" selected>Stars</option>
+                                <option value="Points">Points</option>
+                                <option value="Karma">Karma</option>
+                                <option value="Hearts">Hearts</option>
+                                <option value="Bucks">Bucks</option>
+                                <option value="Tokens">Tokens</option>
+                                <option value="Diamonds">Diamonds</option>
+                                <option value="Carets">Carets</option>
+                                <option value="Custom">Custom</option>
+                            </select>
+                        </div>
+
+                        @if (pointsProgramsValue == "Custom")
+                        {
+                        <div class="mb-3">
+                            <label class="form-label" for="inputSingularPointsTerm">Singular Points Term</label>
+                            <input id="inputSingularPointsTerm" class="form-control" type="text" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputPluralPointsTerm">Plural Points Term</label>
+                            <input id="inputPluralPointsTerm" class="form-control" type="text" />
+                        </div>
+                        }
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchCollectEmailAddresses">Collect Email Addresses</label></div>
+                                <div class="d-flex align-items-center">
+                                    <div class="form-check form-switch"><input class="form-check-input" id="switchCollectEmailAddresses" type="checkbox" checked="@isCollectEmailAddresses" @bind-value="@isCollectEmailAddresses"></div>
+                                </div>
+                            </div>
+                            <label class="form-label"><span class="form-text">Offer customers [[PluralLoyaltyTerm]] for their email address.</span></label>
+                        </div>
+                        <div class="mb-3" hidden="@(!isCollectEmailAddresses)">
+                            <label class="form-label" for="inputEmailAddress">[[PluralLoyaltyTerm]] Awarded</label>
+                            <input id="inputEmailAddress" class="form-control" type="text" />
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-n1">
+                                <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchLoyaltyPluralTerm">Show [[LoyaltyPluralTerm]] Standing</label></div>
+                                <div class="d-flex align-items-center">
+                                    <div class="form-check form-switch"><input class="form-check-input" id="switchLoyaltyPluralTerm" type="checkbox" checked="@isLoyaltyPluralTerm" @bind-value="@isLoyaltyPluralTerm"></div>
+                                </div>
+                            </div>
+                            <label class="form-label"><span class="form-text">Show customer’s [[loyaltypluralterm]] after completing transaction (POS only).</span></label>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label mb-n1">Redemption Sales Channels</label>
+                            <label class="form-label"><span class="form-text">When enabled, the system will allow points to be redeemed through specified sales channel.</span></label>
+                            <div class="col-sm-12 col-md-12 mt-1 ps-5">
+                                <div class="d-flex justify-content-between">
+                                    <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchPointOfSale">Point of Sale (if enabled)</label></div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-switch"><input class="form-check-input" id="switchPointOfSale" type="checkbox" checked="@isPointOfSale" @bind-value="@isPointOfSale"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-12 mt-1 ps-5">
+                                <div class="d-flex justify-content-between">
+                                    <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchWeb">Web</label></div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-switch"><input class="form-check-input" id="switchWeb" type="checkbox" checked="@isWeb" @bind-value="@isWeb"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>                      
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchEnableDailyLimits">Enable Daily Limits</label></div>
+                                <div class="d-flex align-items-center">
+                                    <div class="form-check form-switch"><input class="form-check-input" id="switchEnableDailyLimits" type="checkbox" checked="@isEnableDailyLimits" @bind-value="@isEnableDailyLimits"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3 border-dashed p-2" hidden="@(!isEnableDailyLimits)">
+                            <label class="form-label mb-0" for="inputEmailAddress">Daily Transactions Limit</label>
+                            <p class="form-text">Limit the number of transactions that would qualify to earn points</p>
+                            <input id="inputDailyLimit" class="form-control" type="text" />
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchClaimAfterPurchase">Claim After Purchase</label></div>
+                                <div class="d-flex align-items-center">
+                                    <div class="form-check form-switch"><input class="form-check-input" id="switchClaimAfterPurchase" type="checkbox" checked="@isClaimAfterPurchase" @bind-value="@isClaimAfterPurchase"></div>
+                                </div>
+                            </div>
+                            <label class="form-label"><span class="form-text">Allow customers to redeem [[PluralLoyaltyTerm]] immediately after purchase.</span></label>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label mb-n1">Loyalty Tiers</label>
+                            <div class="list-group my-3">
+                                <a href="#" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between align-items-center">
+                                        <h6 class="mb-1">Base Tier</h6>
+                                        @*<div class="text-center">
+                                            <h5 class="mb-0">0</h5>
+                                            <small class="text-400 fw-bold text-uppercase">Min</small>
+                                        </div>*@
+                                    </div>
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between align-items-center">
+                                        <h6 class="mb-1">Silver Tier</h6>
+                                    </div>
+                                </a>
+                            </div>
+                            <div class="d-grid">
+                                <button class="btn btn-sm btn-outline-dark border-dashed text-start p-3"><span class="fa-regular fa-plus me-2"></span>Add New Tier</button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputLoyaltyProgramStatus">Loyalty Program Status Page</label>
+                            <input id="inputLoyaltyProgramStatus" class="form-control" type="text" />
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-primary">Copy Link</button>
+                                <button class="btn btn-sm btn-outline-secondary">View Page</button>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="row">
+                                <div class="col">
+                                    <a class="btn btn-link btn-reveal text-600" href="#!">Cancel Loyalty Program Subscription</a>
+                                </div>
+                                <div class="col">
+                                    <a class="btn btn-link btn-reveal text-600" href="settings/loyalty-cancel-subscription">Cancel Loyalty Program</a>
+                                </div>
+                            </div>
+
+                            <label class="form-label"><span class="form-text">Clicking “Cancel Subscription” will request to terminate the service. All points data will be deleted, reports will no longer be available.</span></label>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private string title = "Loyalty Program Settings | Synergy Commerce Admin Panel";
+    private bool isCollectEmailAddresses;
+    private bool isLoyaltyPluralTerm;
+    private bool isAllowCombinedEarnedPoints;
+    private bool isPointOfSale;
+    private bool isWeb;
+    private bool isClaimAfterPurchase;
+    private bool isEnableDailyLimits;
+    private string pointsProgramsValue;
+
+}

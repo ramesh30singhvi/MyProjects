@@ -1,0 +1,260 @@
+﻿@page "/settings/payment-profiles"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.Blazor.Popups
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Enums
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.DropDowns
+@using System
+@using System.Collections.Generic
+@inject IMemberViewModel _memberViewModel
+@inject IBusinessViewModel _businessViewModel 
+@inject ILoginViewModel _loginViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ISettingsViewModel _settingsViewModel
+@inject IPaymentProfileViewModel _paymentProfileViewModel
+@inject ISaIntegrationPartnerViewModel _saIntegrationPartnerViewModel
+@inject ILocalStorageService localStorage
+@inject ToastService toastService
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<div class="card">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left"></span></a><span class="far fa-hand-holding-usd me-2"></span>Payment Profiles</h5>
+            </div>
+
+            <div class="col-auto">
+                <a href="settings/payment-profiles/create" class="btn btn-sm btn-primary">Add Profile</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0 sf-grid">
+        <SfGrid DataSource="@paymentProfiles" AllowPaging="false" Width="100%">
+            <GridColumns>
+                <GridColumn HeaderText="Profile Name" TextAlign="TextAlign.Left" Width="200">
+                    <Template Context="payProfileContext">
+                        @{
+                            var payProfile = (payProfileContext as PaymentProfileViewModel);
+                            <a class="btn btn-link text-800 fs--1" href="settings/payment-profiles/@payProfile.IdGUID">@payProfile.PaymentProfileName</a>
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="Gateway" Type="ColumnType.String" TextAlign="TextAlign.Left" Width="300">
+                    <Template Context="payProfileContext">
+                        @{
+                            var payProfile = (payProfileContext as PaymentProfileViewModel);
+                            PaymentGateway reqGateway = (PaymentGateway)payProfile.GatewayProvider;
+                            @(EnumHelper.GetDescription(reqGateway))
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="Sales Channel" Type="ColumnType.String" TextAlign="TextAlign.Left" Width="300">
+                    <Template Context="payProfileContext">
+                        @{
+                            var payProfile = (payProfileContext as PaymentProfileViewModel);
+                            bool isWeb = payProfile.IsWeb;
+                            bool isPos = payProfile.IsPOS;
+                            bool isClub = payProfile.IsClub;
+                            bool isOMS = payProfile.IsOMS;
+
+                            string channel = "";
+                            if (isWeb)
+                            {
+                                channel = channel + "Web";
+                            }
+                            if (isPos)
+                            {
+                                if (!string.IsNullOrEmpty(channel))
+                                {
+                                    channel = channel + ", ";
+                                }
+                                channel = channel + "POS";
+                            }
+                            if (isClub)
+                            {
+                                if (!string.IsNullOrEmpty(channel))
+                                {
+                                    channel = channel + ", ";
+                                }
+                                channel = channel + "Club";
+                            }
+                            if (isOMS)
+                            {
+                                if (!string.IsNullOrEmpty(channel))
+                                {
+                                    channel = channel + ", ";
+                                }
+                                channel = channel + "OMS";
+                            }
+                            <p class="mt-3">@channel</p>
+                        }
+                    </Template>
+                </GridColumn>
+
+                <GridColumn HeaderText="" TextAlign="TextAlign.Right" Width="50">
+                    <Template Context="payProfileContext">
+                        @{
+                            var profile = (payProfileContext as PaymentProfileViewModel);
+                            if (!profile.IsClub && !profile.IsOMS && !profile.IsPOS && !profile.IsWeb)
+                            {
+                                <button class="delete_icon" @onclick="()=>DeleteDialogOpen(profile.Id)">
+                                    <span class="far fa-trash-alt"></span>
+                                </button>
+                            }
+                        }
+                    </Template>
+                </GridColumn>
+
+            </GridColumns>
+        </SfGrid>
+
+    </div>
+</div>
+
+<div class="card my-4">
+    <div class="card-header border-bottom">
+        <h5 class="mb-0"><span class="far fa-cloud-check me-2"></span>Enabled Gateways</h5>
+    </div>
+    @{
+        if (displayGateways)
+        {
+            <div class="card-body">
+                    <div class="row">
+                        <div class="col-4 mb-4">
+                            <h6 class="fs--2 text-600 text-uppercase mb-1">Web</h6>
+                            <h5 class="fs-0 text-900 mb-0">@(paymentGateways.Where(x => x.IntegrationPartnerId == Convert.ToInt32(integrationRequest.WebPaymentGateway)).FirstOrDefault()?.AppName??"")</h5>
+                        </div>
+                        <div class="col-4 mb-4">
+                            <h6 class="fs--2 text-600 text-uppercase mb-1">Point of Sale</h6>
+                            <h5 class="fs-0 text-900 mb-0">@(paymentGateways.Where(x => x.IntegrationPartnerId == Convert.ToInt32(integrationRequest.POSPaymentGateway)).FirstOrDefault()?.AppName??"")</h5>
+                        </div>
+                        <div class="col-4 mb-4">
+                            <h6 class="fs--2 text-600 text-uppercase mb-1">Club</h6>
+                            <h5 class="fs-0 text-900 mb-0">@(paymentGateways.Where(x => x.IntegrationPartnerId == Convert.ToInt32(integrationRequest.ClubPaymentGateway)).FirstOrDefault()?.AppName??"")</h5>
+                        </div>
+                        @{
+                            if (isReservationsServiceSettingsSaved && !string.IsNullOrEmpty(reservationsServiceSettingName) && reservationsServiceSettingName == "Synergy Commerce")
+                            {
+                                <div class="col-4 mb-4">
+                                    <h6 class="fs--2 text-600 text-uppercase mb-1">Reservations</h6>
+                                    <h5 class="fs-0 text-900 mb-0">@(paymentGateways.Where(x => x.IntegrationPartnerId == Convert.ToInt32(integrationRequest.ReservationsPaymentGateway)).FirstOrDefault()?.AppName??"")</h5>
+                                </div>
+                            }
+                        }
+                        <div class="col-4 mb-4">
+                            <h6 class="fs--2 text-600 text-uppercase mb-1">Ticketing</h6>
+                            <h5 class="fs-0 text-900 mb-0">@(paymentGateways.Where(x => x.IntegrationPartnerId == Convert.ToInt32(integrationRequest.TicketingPaymentGateway)).FirstOrDefault()?.AppName??"")</h5>
+                        </div>
+                    </div>
+            </div>
+        }
+    }
+
+</div>
+
+<DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="()=>DeletePaymentProfile(idForDelete)"></DeleteConfirmation>
+
+@code
+{
+
+    bool openDeleteDialog = false;
+    private string title = "Payment Profiles | Synergy Commerce Admin Panel";
+    Member currentMember = null;
+    List<PaymentProfileViewModel> paymentProfiles { get; set; }
+    public bool SpinnerVisibility = true;
+
+    DeleteConfirmation DeleteConfirmation;
+    private BusinessAccountIntegrationRequestModel integrationRequest = new BusinessAccountIntegrationRequestModel();
+
+    private List<IntegrationPartnerCategoryDetailModel> paymentGateways = new List<IntegrationPartnerCategoryDetailModel>();
+    List<string> integrationSettingsMetaKeys = new List<string>(){
+    BusinessSettingsMetaKey.ReservationsPaymentGateway,
+    BusinessSettingsMetaKey.TicketingPaymentGateway,
+    BusinessSettingsMetaKey.WebPaymentGateway,
+    BusinessSettingsMetaKey.POSPaymentGateway,
+    BusinessSettingsMetaKey.ClubPaymentGateway
+    };
+    private string reservationsServiceSettingName = "";
+    private bool isReservationsServiceSettingsSaved = false;
+
+    int idForDelete = 0;
+    bool displayGateways { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var paymentProfilesResponse = await _paymentProfileViewModel.GetPaymentProfilesAsync(currentMember.Id);
+        if (paymentProfilesResponse.success)
+        {
+            paymentProfiles = paymentProfilesResponse.data;
+        }
+
+        var getIntegrationPartnersResponse = await _saIntegrationPartnerViewModel.GetIntegrationPartnerCategoryListAsync(true);
+        if (getIntegrationPartnersResponse.success)
+        {
+            var integrationPartnersCateg = getIntegrationPartnersResponse.data.Where(x => x.IntegrationCategoryId == (int)IntegrationCategoryType.Payments).ToList();
+            if (integrationPartnersCateg != null && integrationPartnersCateg.Any())
+            {
+                paymentGateways = integrationPartnersCateg[0].IntegrationPartners;
+            }
+        }
+
+        var settingListResponse = await _settingsViewModel.GetBusinessSettingsListAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount);
+        foreach (var metaKey in integrationSettingsMetaKeys)
+        {
+            var metaValue = settingListResponse?.data?.Where(x => x.MetaKey == metaKey)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+            Helper.SetPropertyValue(integrationRequest, metaKey, metaValue);//Note: meta key and request model property name should be same
+        }
+
+        //Get ReservationsService Settings
+        var reservationSetting = await _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount, BusinessSettingsMetaKey.ReservationsService);
+        isReservationsServiceSettingsSaved = !string.IsNullOrEmpty(reservationSetting?.data?.MetaValue ?? string.Empty);
+        if (isReservationsServiceSettingsSaved)
+        {
+            //Get ReservationsService Configuration
+            var businessReservationsServiceConfigurationResponse = await _businessViewModel.GetBusinessConfigurationOptionDetail(BusinessConfigurationNamespace.ReservationsService, reservationSetting.data.MetaValue);
+            reservationsServiceSettingName = businessReservationsServiceConfigurationResponse?.data?.SettingName ?? string.Empty;
+        }
+        displayGateways = true;
+        SpinnerVisibility = false;
+    }
+
+
+    private void DialogClose() => openDeleteDialog = false;
+
+    private void DeleteDialogOpen(int id)
+    {
+        openDeleteDialog = true;
+        idForDelete = id;
+    }
+
+    private async Task DeletePaymentProfile(int id)
+    {
+        SpinnerVisibility = true;
+        openDeleteDialog = false;
+        var deleteResponse = await _paymentProfileViewModel.DeletePaymentProfile(paymentProfiles.Where(x => x.Id == id).FirstOrDefault().IdGUID, currentMember.Id);
+        if (deleteResponse.success)
+        {
+            toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+            paymentProfiles = deleteResponse.data;
+        }
+        else
+        {
+            toastService.ShowToast(Constants.InternalServerError, ToastLevel.Error);
+        }
+        SpinnerVisibility = false;
+    }
+}

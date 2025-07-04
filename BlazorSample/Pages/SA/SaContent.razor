@@ -1,0 +1,93 @@
+﻿@page "/sa/content"
+@layout SaLayout
+
+<Title Value="@title"></Title>
+
+<div class="row my-4">
+    <div class="col-sm-6 col-md-4 mb-3">
+        <div class="d-flex position-relative mb-2">
+            <span class="far fa-comment-alt-lines fa-2x fa-fw me-2"></span>
+            <div class="flex-1">
+                <h6 class="fs-0 mb-0"><a class="stretched-link" href="sa/content/admin-login-message">Admin Login Messages</a></h6>
+                <p class="fs--2">Post a message on the admin login screen</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-4 mb-3">
+        <div class="d-flex position-relative mb-2">
+            <span class="far fa-file-signature fa-2x fa-fw me-2"></span>
+            <div class="flex-1">
+                <h6 class="fs-0 mb-0"><a class="stretched-link" href="sa/content/legal-articles">Legal Articles</a></h6>
+                <p class="fs--2">Create & manage legal policies articles</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-4 mb-3">
+        <div class="d-flex position-relative mb-2">
+            <span class="far fa-bullseye-arrow fa-2x fa-fw me-2"></span>
+            <div class="flex-1">
+                <h6 class="fs-0 mb-0"><a class="stretched-link" href="sa/content/press-releases">Press Releases</a></h6>
+                <p class="fs--2">Create & manage press release articles</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-4 mb-3">
+        <div class="d-flex position-relative mb-2">
+            <span class="far fa-blog fa-2x fa-fw me-2"></span>
+            <div class="flex-1">
+                <h6 class="fs-0 mb-0"><a class="stretched-link" href="sa/content/blog-articles">Blog Articles</a></h6>
+                <p class="fs--2">Create & manage blog articles</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-4 mb-3">
+        <div class="d-flex position-relative mb-2">
+            <span class="far fa-bullhorn fa-2x fa-fw me-2"></span>
+            <div class="flex-1">
+                <h6 class="fs-0 mb-0"><a class="stretched-link" href="sa/content/system-updates">System Updates</a></h6>
+                <p class="fs--2">Post news and announcements to admin dashboard</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-4 mb-3">
+        <div class="d-flex position-relative mb-2">
+            <span class="far fa-envelope-open-text fa-2x fa-fw me-2"></span>
+            <div class="flex-1">
+                <h6 class="fs-0 mb-0"><a class="stretched-link" href="sa/content/system-notifications">System Notifications</a></h6>
+                <p class="fs--2">Configure Notification templates</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-4 mb-3">
+        <div class="d-flex position-relative mb-2">
+            <span class="far fa-lightbulb fa-2x fa-fw me-2"></span>
+            <div class="flex-1">
+                <h6 class="fs-0 mb-0"><a class="stretched-link" href="/sa/content/sitecontent">Site Content</a></h6>
+                <p class="fs--2">System-wide content</p>
+            </div>
+        </div>
+    </div>
+   <div class="col-sm-6 col-md-4 mb-3">
+        <div class="d-flex position-relative mb-2">
+            <span class="far fa-pen-swirl fa-2x fa-fw me-2"></span>
+            <div class="flex-1">
+                <h6 class="fs-0 mb-0"><a class="stretched-link" href="/sa/content/style-guide">Style Guide</a></h6>
+                <p class="fs--2">Style guide examples and tests</p>
+            </div>
+        </div>
+    </div>
+     <div class="col-sm-6 col-md-4 mb-3">
+        <div class="d-flex position-relative mb-2">
+            <span class="far fa-envelope-open-text fa-2x fa-fw me-2"></span>
+            <div class="flex-1">
+                <h6 class="fs-0 mb-0"><a class="stretched-link" href="sa/content/business-notifications">Business Notifications</a></h6>
+                <p class="fs--2">Configure business notification templates</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    private string title = "Content | Synergy Commerce Super Admin  Panel";
+}

@@ -1,0 +1,565 @@
+﻿@page "/store/collections/create"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IProductViewModel _productViewModel
+@inject IStoreCollectionViewModel _storeCollectionViewModel
+@inject NavigationManager _navigationManager
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+@inject IBusinessMetaDataViewModel _businessMetaDataViewModel
+@using AutoMapper
+@inject IMapper _mapper
+@inject ToastService toastService
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card shadow-none border">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="store/collections" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fad fa-layer-group me-2"></span>Create Collection</h5>
+                    </div>
+                    <div class="col-auto">
+                        @if (isLoading)
+                {
+                        <Loader />
+                        }
+                        <a class="btn btn-sm btn-primary" href="javascript:void();" @onclick="() => SaveStoreCollectionAsync()" hidden="@(isLoading)">Save</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+
+                <form>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="inputCollectionName">Collection Name</label>
+                        <input id="inputCollectionName" class="form-control" type="text" placeholder="Name of Collection" @bind-value="storeCollection.CollectionName" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="inputCollectionDescription">Description <span class="form-text">(optional)</span></label>
+                        <textarea class="form-control" rows="2" id="inputCollectionDescription" placeholder="Optional Description" @bind="storeCollection.CollectionDesc"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Product Selection</label>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 col-md-6">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="radioCollectionProductSelection" @onchange="SelectCollectionSelectionType" id="radioCollectionProductSelectionManual" value="0" checked="@(storeCollection.CollectionSelectionType == (int)CollectionSelectionType.Manual)">
+                                <label class="form-check-label" for="radioCollectionProductSelectionManual">Manual</label>
+                                <p>Select products to be manually added to this Collection. <a href="#!" target="_blank">Learn More</a></p>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="radioCollectionProductSelection" @onchange="SelectCollectionSelectionType" id="radioCollectionProductSelectionDynamic" value="1" checked="@(storeCollection.CollectionSelectionType == (int)CollectionSelectionType.Dynamic)">
+                                <label class="form-check-label" for="radioCollectionProductSelectionDynamic">Dynamic</label>
+                                <p>Any product added to the database that matches the conditions below will be automatically added to this Collection<a href="#!" target="_blank">Learn More</a></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="divDynamicProducts" class="border-dashed mb-3 p-3" hidden="@(storeCollection.CollectionSelectionType == (int)CollectionSelectionType.Manual)">
+                        <div class="mb-3">
+                            <label class="form-label">Conditions</label>
+                        </div>
+                        @if (storeCollection.DynamicConditions.Count > 0)
+                        {
+                        @foreach (var item in storeCollection.DynamicConditions)
+                        {
+                            <div class="mb-3">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-12 col-md-4">
+                                            <select id="selCollectionDynamicMatchType" class="form-select" aria-label="Match Type" value="@item.DynamicType" @onchange="@((ChangeEventArgs e) => {item.DynamicType = int.Parse(e.Value.ToString());IsSearchProductFieldHide = (item.DynamicType == (int)CollectionDynamicType.ProductMetaData);StateHasChanged();})">
+                                            <option value="0" selected>None</option>
+                                            <option value="@((int)CollectionDynamicType.ProductTag)">Product tag</option>
+                                            <option value="@((int)CollectionDynamicType.ProductPrice)">Product price</option>
+                                            <option value="@((int)CollectionDynamicType.ProductInventoryQty)">Inventory stock</option>
+                                            <option value="@((int)CollectionDynamicType.ProductMetaData)">Product Meta Data</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-md-4" hidden="@(item.DynamicType != (int)CollectionDynamicType.ProductMetaData)">
+                                            <SfDropDownList TValue="string" TItem="BusinessMetaDataModel" Width="300px" @bind-Value="@item.DynamicValue" DataSource="@businessMetaDataList">
+                                                <DropDownListEvents TItem="BusinessMetaDataModel" TValue="string" ValueChange="@(()=>AddCustomeProductBasedOnMetaData(item.DynamicValue))"></DropDownListEvents>
+                                                <DropDownListFieldSettings Value="Name"></DropDownListFieldSettings>
+                                            </SfDropDownList>
+                                    </div>
+                                        <div class="col-12 col-md-4" hidden="@(item.DynamicType == (int)CollectionDynamicType.ProductMetaData)">
+                                        <select id="selCollectionDynamicMatchBy" class="form-select" aria-label="Match By" @bind="item.DynamicComparer">
+                                            <option value="0" selected>None</option>
+                                            <option value="@((int)CollectionDynamicComparer.EqualTo)">is equal to</option>
+                                            <option value="@((int)CollectionDynamicComparer.NotEqualTo)" disabled="@(item.DynamicType == (int)CollectionDynamicType.ProductTag)">is not equal to</option>
+                                            <option value="@((int)CollectionDynamicComparer.GreaterThan)" disabled="@(item.DynamicType == (int)CollectionDynamicType.ProductTag)">is greater than</option>
+                                            <option value="@((int)CollectionDynamicComparer.LessThan)" disabled="@(item.DynamicType == (int)CollectionDynamicType.ProductTag)">is less than</option>
+                                        </select>
+                                    </div>
+                                        <div class="col-10 col-md-3" hidden="@(item.DynamicType == (int)CollectionDynamicType.ProductMetaData)">
+                                        <select id="selCollectionDynamicMatchValue" class="form-select" aria-label="Bulk actions" @bind="@item.DynamicValue" hidden="@(item.DynamicType != (int)CollectionDynamicType.ProductTag)">
+                                            <option value="" selected>None</option>
+                                            @if (tags.Count > 0)
+                                            {
+                                                @foreach (var tag in tags)
+                                                {
+                                                    <option value="@tag.Value">@tag.Value</option>
+                                                }
+                                            }
+                                        </select>
+                                        <input id="inputCollectionDynamicMatchValue" class="form-control" type="text" @bind-value="item.DynamicValue" hidden="@(item.DynamicType == (int)CollectionDynamicType.ProductTag)" />
+                                    </div>
+                                    <div class="col-2 col-md-1" hidden="@(storeCollection.DynamicConditions.Count == 1)">
+                                        <a href="javascript:void();" @onclick="() => removeCondition(item)" class="btn btn-falcon-default btn-sm"><span class="far fa-trash-alt"></span></a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        <a href="javascript:void();" @onclick="() => addCondition()" class="btn btn-falcon-default btn-sm" hidden="@(storeCollection.DynamicConditions.Count == 6)">Add Condition</a>
+                        }
+
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Collection Availability</label>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="chkScheduleAvailability" @bind="storeCollection.ScheduleCollection">
+                            <label class="form-check-label" for="chkScheduleAvailability">
+                                Schedule Availability
+                            </label>
+                        </div>
+                    </div>
+                    <div id="divCollectionAvailability" class="border-dashed p-3" hidden="@(!storeCollection.ScheduleCollection)">
+                        <div class="mb-3" hidden="@(isAddEndDate)">
+                            <label class="form-label" for="inputCollectionPosTabName">Collection will be available on</label>
+                            <SfDatePicker Id="inputCollectionAvailabilityStartDate" TValue="DateTime?" @bind-Value='@(storeCollection.ScheduleStartDate)' Min="@Min" Placeholder='Choose a Date'></SfDatePicker>
+                        </div>
+                        <div class="mb-3" hidden="@(isAddEndDate)">
+                            <a href="javascript:void();" @onclick="() => addorRemoveEndDate()" class="btn btn-falcon-default btn-sm my-2">Add End Date</a>
+                        </div>
+
+                        <div class="mb-3" hidden="@(!isAddEndDate)">
+                            <label class="form-label" for="inputCollectionPosTabName">Collection will be available on</label>
+                            <SfDatePicker Id="inputCollectionAvailabilityStartDate" TValue="DateTime?" @bind-Value='@(storeCollection.ScheduleStartDate)' Min="@Min" Placeholder='Choose a Date'></SfDatePicker>
+                        </div>
+                        <div class="row mb-3" hidden="@(!isAddEndDate)">
+                            <label class="form-label" for="inputCollectionAvailabilityEndDate">Collection will end on</label>
+                            <div class="col-12">
+                                <div class="d-flex align-items-center">
+                                    <SfDatePicker Id="inputCollectionAvailabilityEndDate" TValue="DateTime?" @bind-Value='@(storeCollection.ScheduleEndDate)' Min="@(storeCollection.ScheduleStartDate ?? Min)" Placeholder='Choose a Date'></SfDatePicker>
+                                    <a href="javascript:void();" @onclick="() => addorRemoveEndDate()" class="btn btn-falcon-default btn-sm ms-2"><span class="far fa-trash-alt"></span></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+
+            </div>
+
+            <div class="card shadow-none border-top round-top-0">
+                <div class="card-header border-bottom">
+                    <div class="row justify-content-between align-items-center">
+                        <div class="col-md">
+                            <h6 class="mb-3 mb-md-0">Products</h6>
+                        </div>
+                        <div class="col-auto">
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+
+                    <div class="row mb-3" hidden="@IsSearchProductFieldHide">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="inputAddressSearch">Search</label>
+                            <SfComboBox ID="inputGroupSearch" @bind-Value="@selectedProduct" @ref="filterProductsObj" AllowFiltering=true Placeholder="Search products" DataSource="@products" CssClass="py-1">
+                                <ComboBoxEvents TItem="ProductListModel" TValue="string" ValueChange="SelectProduct" Filtering="OnFilterProducts"></ComboBoxEvents>
+                                <ComboBoxFieldSettings Value="ProductTitle"></ComboBoxFieldSettings>
+                            </SfComboBox>
+                        </div>
+                        <div class="col-12 col-md-6" hidden="@(collectionProducts == null && collectionProducts.Count <= 0)">
+                            <label class="form-label" for="selSortProductsBy">Sort</label>
+                            <select id="selSortProductsBy" class="form-select" aria-label="Match Type" @onclick="OnSortProducts" @bind="storeCollection.CollectionSortType">
+                                <option value="@((int)CollectionSortType.ProductNameA_Z)" selected>Product Name A-Z</option>
+                                <option value="@((int)CollectionSortType.ProductNameZ_A)">Product Name Z-A</option>
+                                <option value="@((int)CollectionSortType.Manual)">Manual</option>
+                            </select>
+                        </div>
+                    </div>
+                    @if (collectionProducts != null && collectionProducts.Count > 0)
+                {
+                    @if (storeCollection.CollectionSortType != (int)CollectionSortType.Manual)
+                    {
+                        <ul class="list-group">
+                            @foreach (var item in collectionProducts)
+                            {
+                                <li class="list-group-item d-flex justify-content-start align-items-center p-3">
+                                    <span class="img-thumbnail far fa-image-polaroid fa-4x me-2" hidden="@(!string.IsNullOrEmpty(item.ProductImage))"></span>
+                                    <img class="img-fluid img-thumbnail me-2" width="50" alt="@item.ProductTitle" src="@(item.ProductImageURL)" hidden="@(string.IsNullOrEmpty(item.ProductImage))" />
+                                    <span class="flex-fill">@item.ProductTitle</span>
+                                    <a href="javascript:void();" @onclick="@(() => RemoveProduct(item, false))" class="text-dark"><span class="far fa-trash-alt"></span></a>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <SfListBox TValue="string[]" DataSource="@collectionProducts" TItem="StoreCollectionProduct" AllowDragAndDrop="true" @ref="ListBoxObj" CssClass="rounded cp-list">
+                            <ListBoxFieldSettings Text="ProductTitle" />
+                            <ListBoxEvents TValue="string[]" TItem="StoreCollectionProduct"></ListBoxEvents>
+                            <ListBoxTemplates TItem="StoreCollectionProduct">
+                                <ItemTemplate Context="contextProduct">
+                                    <div class="d-flex justify-content-start align-items-center">
+                                        <span class="far fa-sort me-2"></span>
+                                        <span class="img-thumbnail far fa-image-polaroid fa-4x me-2" hidden="@(!string.IsNullOrEmpty((contextProduct as StoreCollectionProduct).ProductImage))"></span>
+                                        <img class="img-fluid img-thumbnail me-2" width="50" alt="@((contextProduct as StoreCollectionProduct).ProductTitle)" src="@((contextProduct as StoreCollectionProduct).ProductImageURL)" hidden="@(string.IsNullOrEmpty((contextProduct as StoreCollectionProduct).ProductImageURL))" />
+                                        <span class="flex-fill">@((contextProduct as StoreCollectionProduct).ProductTitle)</span>
+                                        <a href="javascript:void();" @onclick="@(() => RemoveProduct((contextProduct as StoreCollectionProduct), true))" class="text-dark"><span class="far fa-trash-alt"></span></a>
+                                    </div>
+                                </ItemTemplate>
+                            </ListBoxTemplates>
+                        </SfListBox>
+                    }
+                    }
+                </div>
+            </div>
+        </div>
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private int productSelection = 0;
+    private bool posEnabled = false;
+    private bool availabilityEnabled = false;
+
+
+    private bool IsSearchProductFieldHide = false;
+
+
+    private string title = "Create Collection | Synergy Commerce Admin Panel";
+    private StoreCollectionRequestModel storeCollection = new StoreCollectionRequestModel();
+    private List<ProductTagModel> tags = new List<ProductTagModel>();
+    private Member currentMember;
+    private bool isAddEndDate;
+    public DateTime Min = new DateTime(DateTime.Now.Year - 1, DateTime.Now.Month, DateTime.Now.Day);
+    private bool isLoading;
+    private bool isEnterDataValid = true;
+    private string selectedProduct;
+    private List<ProductListModel> products = new List<ProductListModel>();
+    private List<ProductListModel> productListBasedOnMeta = new List<ProductListModel>();
+    ObservableCollection<StoreCollectionProduct> collectionProducts = new ObservableCollection<StoreCollectionProduct>();
+    SfComboBox<string, ProductListModel> filterProductsObj { get; set; }
+    SfListBox<string[], StoreCollectionProduct> ListBoxObj = new SfListBox<string[], StoreCollectionProduct>();
+
+    ObservableCollection<BusinessMetaDataModel> businessMetaDataList = new ObservableCollection<BusinessMetaDataModel>();
+    private int Category;
+
+    protected override async Task OnInitializedAsync()
+    {
+        storeCollection.DynamicConditions = new List<DynamicCondition>();
+        DynamicCondition dynamicCondition = new DynamicCondition()
+        {
+            DynamicType = 0,
+            DynamicComparer = 0,
+            DynamicValue = "",
+            DynamicDesc = ""
+        };
+        storeCollection.DynamicConditions.Add(dynamicCondition);
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        ProductTagResponse productTagResponse = await _productViewModel.GetProductTags(currentMember.Id);
+        if (productTagResponse.success)
+        {
+            tags = productTagResponse.data;
+        }
+
+        SearchProductResponse productResponse = await _productViewModel.SearchProducts(currentMember.Id, true, "");
+        if (productResponse.success)
+        {
+            products = productResponse.data;
+            if (products.Count > 0)
+            {
+                products = products.OrderBy(x => x.ProductTitle).ToList();
+            }
+        }
+        Category = (int)MetaDataCategory.Product;
+        await GetBusinessMetaData();
+        StateHasChanged();
+    }
+
+    private async Task GetBusinessMetaData()
+    {
+        var response = await _businessMetaDataViewModel.GetBusinessMetaDataListAsync(currentMember.Id, Category);
+        if(response != null)
+        {
+            response.data = response.data.OrderBy(x => x.Name).ToList();
+            businessMetaDataList = new ObservableCollection<BusinessMetaDataModel>(_mapper.Map<List<BusinessMetaDataModel>>(response.data));
+        }
+
+    }
+
+    private void SelectCollectionSelectionType(ChangeEventArgs args)
+    {
+        storeCollection.CollectionSelectionType = Convert.ToInt32(args.Value);
+    }
+
+    private void addorRemoveEndDate()
+    {
+        isAddEndDate = !isAddEndDate;
+        if (storeCollection.ScheduleEndDate.HasValue)
+        {
+            storeCollection.ScheduleEndDate = null;
+        }
+    }
+
+    private async void SaveStoreCollectionAsync()
+    {
+        if (storeCollection.ShowInPos && string.IsNullOrEmpty(storeCollection.PosTabName))
+        {
+            toastService.ShowToast("Please enter pos tab name", ToastLevel.Error);
+            return;
+        }
+        else if (!storeCollection.ShowInPos)
+        {
+            storeCollection.PosTabName = "";
+        }
+        isLoading = true;
+        if (storeCollection.CollectionSelectionType == (int)CollectionSelectionType.Dynamic && storeCollection.DynamicConditions.Count > 0)
+        {
+            foreach (var item in storeCollection.DynamicConditions)
+            {
+                if (item.DynamicType == (int)CollectionDynamicType.ProductTag)
+                {
+                    item.DynamicDesc += "Product Tag";
+                }
+                else if (item.DynamicType == (int)CollectionDynamicType.ProductPrice)
+                {
+                    item.DynamicDesc += "Product Price";
+                }
+                else if (item.DynamicType == (int)CollectionDynamicType.ProductInventoryQty)
+                {
+                    item.DynamicDesc += "Product Inventory Qty";
+                }
+
+                if (item.DynamicComparer == (int)CollectionDynamicComparer.EqualTo)
+                {
+                    item.DynamicDesc += " " + "is equal to";
+                }
+                else if (item.DynamicComparer == (int)CollectionDynamicComparer.NotEqualTo)
+                {
+                    item.DynamicDesc += " " + "is not equal to";
+                }
+                else if (item.DynamicComparer == (int)CollectionDynamicComparer.GreaterThan)
+                {
+                    item.DynamicDesc += " " + "is greater than";
+                }
+                else if (item.DynamicComparer == (int)CollectionDynamicComparer.LessThan)
+                {
+                    item.DynamicDesc += " " + "is less than";
+                }
+
+                item.DynamicDesc += " " + item.DynamicValue;
+            }
+
+        }
+
+        if (collectionProducts.Count > 0)
+        {
+            storeCollection.Products = new List<StoreCollectionProduct>();
+            if (storeCollection.CollectionSortType != (int)CollectionSortType.Manual)
+            {
+                foreach (var item in collectionProducts.Select((value, i) => new { i, value }))
+                {
+                    item.value.SortIndex = item.i;
+                    storeCollection.Products.Add(item.value);
+                }
+            }
+            else
+            {
+                var collectionProductsListBox = ListBoxObj.GetDataList();
+                foreach (var item in collectionProductsListBox.Select((value, i) => new { i, value }))
+                {
+                    item.value.SortIndex = item.i;
+                    storeCollection.Products.Add(item.value);
+                }
+            }
+        }
+
+        storeCollection.BusinessId = currentMember.Id;
+        AddEditStoreCollectionDetailResponse res = await _storeCollectionViewModel.AddUpdateCollection(storeCollection);
+        if (res.success)
+        {
+            toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+            _navigationManager.NavigateTo("/store/collections/" + res.data.CollectionGuid);
+        }
+        else
+        {
+            toastService.ShowToast(res.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void addCondition()
+    {
+        DynamicCondition dynamicCondition = new DynamicCondition()
+        {
+            DynamicType = 0,
+            DynamicComparer = 0,
+            DynamicValue = "",
+            DynamicDesc = ""
+        };
+        storeCollection.DynamicConditions.Add(dynamicCondition);
+        StateHasChanged();
+    }
+
+    private void removeCondition(DynamicCondition condition)
+    {
+        storeCollection.DynamicConditions.Remove(condition);
+        StateHasChanged();
+    }
+
+    private void SelectProduct()
+    {
+        var product = products.Where(x => x.ProductTitle == selectedProduct).FirstOrDefault();
+
+        if (product != null)
+        {
+            StoreCollectionProduct collectionProduct = new StoreCollectionProduct()
+            {
+                CollectionId = storeCollection.Id,
+                ProductId = product.Id,
+                ProductImage = product.ProductImage,
+                ProductImageURL = product.ProductImageURL,
+                ProductTitle = product.ProductTitle
+            };
+
+            if (collectionProducts != null && collectionProducts.Count > 0)
+            {
+                collectionProducts.Add(collectionProduct);
+            }
+            else
+            {
+                collectionProducts = new ObservableCollection<StoreCollectionProduct>();
+                collectionProducts.Add(collectionProduct);
+                StateHasChanged();
+            }
+
+            if (storeCollection.CollectionSortType == (int)CollectionSortType.Manual)
+            {
+                var Item = new List<StoreCollectionProduct>
+                ();
+                Item.Add(collectionProduct);
+                ListBoxObj.AddItems(Item);
+            }
+        }
+        StateHasChanged();
+    }
+    private async void AddCustomeProductBasedOnMetaData(string name)
+    {
+        var productlist = await _productViewModel.GetProductListBasedOnMetaName(name);
+        StoreCollectionProduct collectionMetaProduct;
+        if (productlist.success && productlist.data.Any())
+        {
+            try
+            {
+                foreach (var item in productlist.data)
+                {
+                    if (products.FirstOrDefault(x => x.Id == item.Id) is not null)
+                    {
+                        collectionMetaProduct = new StoreCollectionProduct()
+                            {
+                                CollectionId = storeCollection.Id,
+                                ProductId = item.Id,
+                                ProductImage = !string.IsNullOrEmpty(products.FirstOrDefault(x => x.Id == item.Id)?.ProductImage) ? products.FirstOrDefault(x => x.Id == item.Id)?.ProductImage : string.Empty,
+                                ProductImageURL = !string.IsNullOrEmpty(products.FirstOrDefault(x => x.Id == item.Id)?.ProductImageURL) ? products.FirstOrDefault(x => x.Id == item.Id)?.ProductImageURL : string.Empty,
+                                ProductTitle = item.ProductTitle
+                            };
+                        if (collectionProducts != null && collectionProducts.Count > 0)
+                        {
+                            if (collectionProducts.FirstOrDefault(x => x.ProductId == item.Id) is null)
+                            {
+                                collectionProducts.Add(collectionMetaProduct);
+                                StateHasChanged();
+                            }
+                        }
+                        else
+                        {
+                            collectionProducts = new ObservableCollection<StoreCollectionProduct>();
+                            collectionProducts.Add(collectionMetaProduct);
+                            StateHasChanged();
+                        }
+                    }
+
+                }
+            }catch(Exception e)
+            {
+                toastService.ShowToast("Failed to add product.Please try again.", ToastLevel.Error);
+            }
+        }
+        
+        StateHasChanged();
+    }
+
+    private void RemoveProduct(StoreCollectionProduct product, bool isManual)
+    {
+        if (isManual)
+        {
+            var Item = new List<StoreCollectionProduct>
+    {
+    new StoreCollectionProduct
+    {ProductId = product.Id, CollectionId = product.CollectionId, ProductImage = product.ProductImage,
+      ProductImageURL = product.ProductImageURL, ProductTitle = product.ProductTitle}};
+            ListBoxObj.RemoveItem(Item);
+            collectionProducts.Remove(product);
+        }
+        else
+        {
+            collectionProducts.Remove(product);
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task OnFilterProducts(FilteringEventArgs args)
+    {
+        args.PreventDefaultAction = true;
+        var query = new Query().Where(new WhereFilter() { Field = "ProductTitle", Operator = "contains", value = args.Text, IgnoreCase = true });
+
+        query = !string.IsNullOrEmpty(args.Text) ? query : new Query();
+
+        await filterProductsObj.Filter(products, query);
+    }
+
+    private void OnSortProducts()
+    {
+        if (collectionProducts.Count > 0)
+        {
+            if (storeCollection.CollectionSortType == (int)CollectionSortType.ProductNameA_Z)
+            {
+                collectionProducts = new ObservableCollection<StoreCollectionProduct>(collectionProducts.OrderBy(x => x.ProductTitle));
+            }
+            else if (storeCollection.CollectionSortType == (int)CollectionSortType.ProductNameZ_A)
+            {
+                collectionProducts = new ObservableCollection<StoreCollectionProduct>(collectionProducts.OrderByDescending(x => x.ProductTitle));
+            }
+            else if (storeCollection.CollectionSortType == (int)CollectionSortType.Manual)
+            {
+                collectionProducts = new ObservableCollection<StoreCollectionProduct>(collectionProducts.OrderBy(x => x.SortIndex));
+            }
+        }
+        StateHasChanged();
+    }
+}

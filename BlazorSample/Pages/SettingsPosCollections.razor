@@ -1,0 +1,128 @@
+﻿@page "/settings/pos/collections"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IProductViewModel _productViewModel
+@inject IStoreCollectionViewModel _storeCollectionViewModel
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="isLoading"></SfSpinner>
+        <div class="card shadow-none border">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-3 mb-md-0"><a href="settings/pos" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-layer-group me-2"></span>POS Collections</h5>
+                    </div>
+                    <div class="col-md-auto"><a class="btn btn-sm btn-primary" href="/settings/pos/collections/create">Add New</a></div>
+                </div>
+            </div>
+            <div class="card-body">
+
+                <SfListBox ID="sflbPosCollections" TValue="string[]" DataSource="@posCollections" TItem="StoreCollectionWithProductslPOS" AllowDragAndDrop="true" @ref="ListBoxObj" CssClass="rounded cp-list">
+                    <ListBoxFieldSettings Text="CollectionName" />
+                    <ListBoxEvents TValue="string[]" Dropped="SavePOSCollectionSortOrder" TItem="StoreCollectionWithProductslPOS"></ListBoxEvents>
+                    <ListBoxTemplates TItem="StoreCollectionWithProductslPOS">
+                        <ItemTemplate Context="contextPosCollections">
+                            <div class="d-flex justify-content-start align-items-center">
+                                <span class="far fa-sort me-4"></span>
+                                <span class="flex-fill"><a href="settings/pos/collections/@((contextPosCollections as StoreCollectionWithProductslPOS).CollectionGuid)" class="text-800">@((contextPosCollections as StoreCollectionWithProductslPOS).CollectionName)</a></span>
+                                <a href="javascript:void();" @onclick="@(() => RemoveCollection((contextPosCollections as StoreCollectionWithProductslPOS)))" class="text-dark"><span class="far fa-trash-alt"></span></a>
+                            </div>
+                        </ItemTemplate>
+                    </ListBoxTemplates>
+                </SfListBox>
+
+            </div>
+        </div>
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private bool isLoading = true;
+    private string title = "POS Collections | Synergy Commerce Admin Panel";
+    private Member currentMember;
+    private bool isProcessing;
+    ObservableCollection<StoreCollectionWithProductslPOS> posCollections = new ObservableCollection<StoreCollectionWithProductslPOS>();
+    SfListBox<string[], StoreCollectionWithProductslPOS> ListBoxObj = new SfListBox<string[], StoreCollectionWithProductslPOS>();
+    SavePOSCollectionSortRequestModel request = new SavePOSCollectionSortRequestModel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        StoreCollectionsWithProductsPOSResponse response = await _storeCollectionViewModel.GetAllCollectionsWithProductsPOS(currentMember.Id);
+        if (response.success)
+        {
+            if (response.data != null && response.data.Count > 0)
+            {
+                response.data = response.data.OrderBy(x => x.SortIndex).ToList();
+                posCollections = new ObservableCollection<StoreCollectionWithProductslPOS>(response.data);
+            }
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async void RemoveCollection(StoreCollectionWithProductslPOS collection)
+    {
+        var Item = new List<StoreCollectionWithProductslPOS>{
+    new StoreCollectionWithProductslPOS
+    {Id = collection.Id, CollectionName = collection.CollectionName, CollectionGuid = collection.CollectionGuid},
+    };
+        await ListBoxObj.RemoveItem(Item);
+        BaseResponse response = await _storeCollectionViewModel.DeleteStoreCollection(collection.Id);
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        StateHasChanged();
+    }
+
+    private async void SavePOSCollectionSortOrder()
+    {
+        if (posCollections.Count > 0)
+        {
+            isProcessing = true;
+            var collectionProductsListBox = ListBoxObj.GetDataList();
+            request.collections = new List<CollectionSortodel>();
+            foreach (var item in collectionProductsListBox.Select((value, i) => new { i, value }))
+            {
+                CollectionSortodel collectionSortodel = new CollectionSortodel()
+                {
+                    CollectionId = item.value.Id,
+                    SortIndex = item.i
+                };
+                request.collections.Add(collectionSortodel);
+            }
+            request.BusinessId = currentMember.Id;
+            BaseResponse response = await _storeCollectionViewModel.SavePOSCollectionSortOrder(request);
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+}

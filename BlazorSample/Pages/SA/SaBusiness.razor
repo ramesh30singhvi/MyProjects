@@ -1,0 +1,73 @@
+﻿@page "/sa/business"
+@layout SaLayout
+
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+
+<div class="row my-4">
+    <div class="col-sm-6 col-md-4 mb-3">
+        <div class="d-flex position-relative mb-2">
+            <span class="far fa-building fa-2x fa-fw me-2"></span>
+            <div class="flex-1">
+                <h6 class="fs-0 mb-0"><a class="stretched-link" href="sa/business/business-accounts">Business Accounts</a></h6>
+                <p class="fs--2">Manage CellarPass Business Accounts</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-4 mb-3">
+        <div class="d-flex position-relative mb-2">
+            <span class="far fa-plug fa-2x fa-fw me-2"></span>
+            <div class="flex-1">
+                <h6 class="fs-0 mb-0"><a class="stretched-link" href="sa/business/integrated-partners">Integrated Partners</a></h6>
+                <p class="fs--2">Connect to a host of certified integrated partners</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-4 mb-3">
+        <div class="d-flex position-relative mb-2">
+            <span class="far fa-clipboard-check fa-2x fa-fw me-2"></span>
+            <div class="flex-1">
+                <h6 class="fs-0 mb-0"><a class="stretched-link" href="sa/business/plan-features">Plan Features</a></h6>
+                <p class="fs--2">Configure available features</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-4 mb-3">
+        <div class="d-flex position-relative mb-2">
+            <span class="far fa-clipboard-list fa-2x fa-fw me-2"></span>
+            <div class="flex-1">
+                <h6 class="fs-0 mb-0"><a class="stretched-link" href="sa/business/subscription-plans">Subscription Plans</a></h6>
+                <p class="fs--2">Subscription sign up plans</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-4 mb-3">
+        <div class="d-flex position-relative mb-2">
+            <span class="far fa-ticket fa-2x fa-fw me-2"></span>
+            <div class="flex-1">
+                <h6 class="fs-0 mb-0"><a class="stretched-link" href="sa/business/ticketing-plans">Ticketing Plans</a></h6>
+                <p class="fs--2">Create & manage ticketing plans</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-4 mb-3">
+        <div class="d-flex position-relative mb-2">
+            <span class="far fa-money-bill-alt fa-2x fa-fw me-2"></span>
+            <div class="flex-1">
+                <h6 class="fs-0 mb-0"><a class="stretched-link" href="sa/business/service-agreements">Service Agreements</a></h6>
+                <p class="fs--2">Manage platform service agreements</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+@code
+{
+    private string title = "Business | Synergy Commerce Super Admin  Panel";
+
+
+}

@@ -1,0 +1,607 @@
+﻿@page "/settings/pos/profiles/{Id:guid}"
+@page "/settings/pos/profiles/create"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Enums
+@using Syncfusion.Blazor.Spinner
+@using AutoMapper;
+@inject IBusinessViewModel _businessViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject IBusinessPageViewModel _businessPageViewModel
+@inject IBusinessLocationViewModel _businessLocationViewModel
+@inject IProductViewModel _productViewModel
+@inject IStoreCollectionViewModel _storeCollectionViewModel
+@inject IPOSProfileViewModel _pOSProfileViewModel
+@inject IDiscountViewModel _discountViewModel
+@inject IBusinessReceiptProfileViewModel _businessReceiptProfileViewModel
+@inject IMapper _mapper
+@inject ToastService toastService
+@inject NavigationManager _navigationManager
+@inject IProductViewModel _productViewModel
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm Model="@pOSProfile" Context="formContext">
+    <DataAnnotationsValidator />
+    <div class="card shadow-none border">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-3 mb-md-0"><a href="settings/pos/profiles" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-store me-2"></span>POS Profile</h5>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-sm btn-primary" @onclick="@(() => SavePOSProfile(formContext))">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="card rounded-0 shadow-none border-bottom">
+                <div class="card-header border-bottom">
+                    <div class="row flex-between-center">
+                        <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                            <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-store me-2"></span>Profile</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="inputProfileName">Profile Name</label>
+                        <InputText id="inputProfileName" @bind-Value="pOSProfile.POSProfileName" class="form-control" type="text" placeholder="The POS profile name" />
+                        <ValidationMessage For="@(() => pOSProfile.POSProfileName)" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="inputOrderPrefix">OrderID Prefix</label>
+                        <InputText id="inputOrderPrefix" @bind-Value="pOSProfile.POSOrderPreFix" class="form-control" type="text" maxlength="4" placeholder="A prefix to show before each order number" />
+                        <ValidationMessage For="@(() => pOSProfile.POSOrderPreFix)" />
+                    </div>
+                    <div class="mb-3 sf-ddl">
+                        <label class="form-label" for="sfLocationAddress">Location Address</label>
+                        <SfDropDownList @bind-Value="pOSProfile.LocationId" id=sfLocationAddress TValue="int" TItem="BusinessLocationModel" Placeholder="Select Address" AllowFiltering="true" DataSource="@pOSLocations">
+                            <DropDownListFieldSettings Text="DestinationName" Value="Id"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => pOSProfile.LocationId)" />
+                    </div>
+                </div>
+            </div>
+            <div class="card rounded-0 shadow-none border-bottom">
+                <div class="card-header border-bottom">
+                    <div class="row flex-between-center">
+                        <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                            <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-heart me-2"></span>POS Favorites</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3 sf-ddl">
+                        <label class="form-label" for="sfCarryOutInv">Collection</label>
+                        <SfDropDownList @bind-Value="pOSProfile.POSFavoritesCollection" id=sfLocationAddress TValue="int" TItem="StoreCollectionModelAdmin" Placeholder="Select Collection" AllowFiltering="true" DataSource="@storeCollections">
+                            <DropDownListFieldSettings Text="CollectionName" Value="Id"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => pOSProfile.POSFavoritesCollection)" />
+                    </div>
+                </div>
+            </div>
+            <div class="card rounded-0 shadow-none border-bottom">
+                <div class="card-header border-bottom">
+                    <div class="row flex-between-center">
+                        <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                            <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-layer-group me-2"></span>POS Collections</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3 sf-ddl">
+                        <label class="form-label" for="sfmsCollections">Collections</label>
+                        <SfMultiSelect ID="sfmsCollections" @bind-Value="pOSCollections" TValue="int[]" TItem="StoreCollectionModelPOS" Mode="@VisualMode.Default" Placeholder="Select One or More Collections" DataSource="@posCollectionList" CssClass="form-control form-control-sm">
+                            <MultiSelectFieldSettings Text="PosTabName" Value="Id"></MultiSelectFieldSettings>
+                            <MultiSelectEvents TItem="StoreCollectionModelPOS" TValue="int[]" ValueChange="@(() => CollectionsChangeHandler(formContext))"></MultiSelectEvents>
+                        </SfMultiSelect>
+                        <ValidationMessage For="@(() => pOSProfile.POSCollections)" />
+                    </div>
+                </div>
+            </div>
+            <div class="card rounded-0 shadow-none border-bottom">
+                <div class="card-header border-bottom">
+                    <div class="row flex-between-center">
+                        <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                            <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-warehouse-full me-2"></span>Inventory Depletion</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3 sf-ddl">
+                        <label class="form-label" for="sfCarryOutInv">Carry Out Inventory</label>
+                        <SfDropDownList @bind-Value="pOSProfile.InventoryCarryOutLocation" id="sfCarryOutInv" TValue="int" TItem="BusinessLocationModel" Placeholder="Select Address" AllowFiltering="true" DataSource="@inventoryLocations">
+                            <DropDownListFieldSettings Text="DisplayLocationAddress" Value="Id"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => pOSProfile.InventoryCarryOutLocation)" />
+                    </div>
+
+                    <div class="mb-3 sf-ddl">
+                        <label class="form-label" for="sfPickupInv">Pickup Inventory</label>
+                        <SfDropDownList @bind-Value="pOSProfile.InventoryPickupLocation" id="sfPickupInv" TValue="int" TItem="BusinessLocationModel" Placeholder="Select Address" AllowFiltering="true" DataSource="@inventoryLocations">
+                            <DropDownListFieldSettings Text="DisplayLocationAddress" Value="Id"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => pOSProfile.InventoryPickupLocation)" />
+                    </div>
+
+                    <div class="mb-3 sf-ddl">
+                        <label class="form-label" for="sfShipInv">Ship Inventory</label>
+                        <SfDropDownList @bind-Value="pOSProfile.InventoryShipLocation" id="sfShipInv" TValue="int" TItem="BusinessLocationModel" Placeholder="Select Address" AllowFiltering="true" DataSource="@inventoryLocations">
+                            <DropDownListFieldSettings Text="DisplayLocationAddress" Value="Id"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => pOSProfile.InventoryShipLocation)" />
+                    </div>
+
+                    <div class="mb-3 sf-ddl">
+                        <label class="form-label" for="sfShipInv">Delivery Inventory</label>
+                        <SfDropDownList @bind-Value="pOSProfile.InventoryDeliveryLocation" id="sfDeliveryInv" TValue="int" TItem="BusinessLocationModel" Placeholder="Select Address" AllowFiltering="true" DataSource="@inventoryLocations">
+                            <DropDownListFieldSettings Text="DisplayLocationAddress" Value="Id"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => pOSProfile.InventoryDeliveryLocation)" />
+                    </div>
+                </div>
+            </div>
+            <div class="card rounded-0 shadow-none border-bottom">
+                <div class="card-header border-bottom">
+                    <div class="d-flex flex-between-center">
+                        <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-square-bolt me-2"></span>Custom Quick Charge Amounts</h5>
+                        <div class="form-check form-switch ps-0">
+                            <SfSwitch id="switchQuickChargeEnabled" OffLabel="OFF" OnLabel="ON" TChecked="bool" @bind-Checked="pOSProfile.QuickChargeEnabled"></SfSwitch>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body" hidden="@(!pOSProfile.QuickChargeEnabled)">
+                    <div class="mb-3">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="inputEmail4" class="form-label">Button 1</label>
+                                <SfNumericTextBox TValue="decimal?" ValidateDecimalOnType="true" Placeholder="0.00" Decimals=2 Format="c2" ShowSpinButton="false" @bind-Value=@pOSProfile.QuickChargeAmount1></SfNumericTextBox>
+                                <ValidationMessage For="@(() => pOSProfile.QuickChargeAmount1)" />
+                            </div>
+                            <div class="col-md-4">
+                                <label for="inputPassword4" class="form-label">Button 2</label>
+                                <SfNumericTextBox TValue="decimal?" ValidateDecimalOnType="true" Placeholder="0.00" Decimals=2 Format="c2" ShowSpinButton="false" @bind-Value=@pOSProfile.QuickChargeAmount2></SfNumericTextBox>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="inputQuickBtn3" class="form-label">Button 3</label>
+                                <SfNumericTextBox TValue="decimal?" ValidateDecimalOnType="true" Placeholder="0.00" Decimals=2 Format="c2" ShowSpinButton="false" @bind-Value=@pOSProfile.QuickChargeAmount3></SfNumericTextBox>
+                            </div>
+                        </div>
+                        <div class="row g-1 mt-2">
+                            <div class="col-md-12">
+                                <label for="inputProductSearch" class="form-label">Quick Charge Sku</label>
+                                <div class="mb-2 sf-ddl">
+                                    <SfComboBox ID="inputProductSearch" @bind-Value="pOSProfile.QuickChargeProduct" TValue="int?" TItem="ProductListModel" AllowFiltering=true Placeholder="Search Products" DataSource="@products" FilterType="Syncfusion.Blazor.DropDowns.FilterType.Contains">
+                                        <ComboBoxFieldSettings Text="ProductTitle" Value="Id"></ComboBoxFieldSettings>
+                                    </SfComboBox>
+                                    <ValidationMessage For="@(() => pOSProfile.QuickChargeProduct)" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card rounded-0 shadow-none border-bottom">
+                <div class="card-header border-bottom">
+                    <div class="d-flex flex-between-center">
+                        <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-square-bolt me-2"></span>Suggested Gratuity Amounts</h5>
+                        <div class="form-check form-switch ps-0">
+                            <SfSwitch id="switchGratuityAmounts" OffLabel="OFF" OnLabel="ON" TChecked="bool" @bind-Checked="pOSProfile.GratuityAmountsEnabled"></SfSwitch>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body" hidden="@(!pOSProfile.GratuityAmountsEnabled)">
+                    <div class="mb-3">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label for="inputGratuityAmount1" class="form-label">Button 1</label>
+                                <SfNumericTextBox TValue="int?" Placeholder="0" ShowSpinButton="false" @bind-Value=@pOSProfile.GratuityAmount1></SfNumericTextBox>
+                                <ValidationMessage For="@(() => pOSProfile.GratuityAmount1)" />
+                            </div>
+                            <div class="col-md-4">
+                                <label for="inputGratuityAmount2" class="form-label">Button 2</label>
+                                <SfNumericTextBox TValue="int?" Placeholder="0" ShowSpinButton="false" @bind-Value=@pOSProfile.GratuityAmount2></SfNumericTextBox>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="inputGratuityAmount3" class="form-label">Button 3</label>
+                                <SfNumericTextBox TValue="int?" Placeholder="0" ShowSpinButton="false" @bind-Value=@pOSProfile.GratuityAmount3></SfNumericTextBox>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card rounded-0 shadow-none border-bottom">
+                <div class="card-header border-bottom">
+                    <div class="row flex-between-center">
+                        <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                            <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-tag me-2"></span>Favorite Promo Codes</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3 sf-ddl">
+                        <SfMultiSelect ID="sfmsPromos" TValue="int[]" TItem="DropdownBindingModel" Mode="@VisualMode.Default" @bind-Value="pOSProfile.FavPromoCodes" Placeholder="Select up to 9 Promos" DataSource="@businessDiscounts" CssClass="form-control form-control-sm" aria-label="Promo List">
+                            <MultiSelectFieldSettings Text="Value" Value="Key"></MultiSelectFieldSettings>
+                        </SfMultiSelect>
+                    </div>
+                </div>
+            </div>
+            <div class="card rounded-0 shadow-none border-bottom">
+                <div class="card-header border-bottom">
+                    <div class="d-flex flex-between-center">
+                        <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-user-lock me-2"></span>Access &amp; Security - OLD</h5>
+                        <button @onclick="@(() => GenerateQR())" class="btn btn-link fs--1 me-2" disabled="@(SetQRBtnDisablity())"><span class="far fa-qrcode me-1"></span>QR Code</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="inputUsername">Username</label>
+                        <InputText @bind-Value="pOSProfile.POSLoginName" id="inputUsername" class="form-control" type="text" placeholder="" />
+                        <ValidationMessage For="@(() => pOSProfile.POSLoginName)" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="inputPassword">Password</label>
+                        <InputText @bind-Value="pOSProfile.POSLoginPassword" id="inputPassword" class="form-control" type="password" placeholder="" />
+                        <ValidationMessage For="@(() => pOSProfile.POSLoginPassword)" />
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="chkRequirePin" @bind="pOSProfile.RequirePINAfterSale">
+                            <label class="form-check-label" for="chkRequirePin">Require PIN After Sale</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @*<div class="card rounded-0 shadow-none border-bottom">
+            <div class="card-header border-bottom">
+                <div class="d-flex flex-between-center">
+                    <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-user-lock me-2"></span>Access &amp; Security</h5>
+                    <button @onclick="@(() => GenerateQR())" class="btn btn-link fs--1 me-2" disabled="@(SetQRBtnDisablity())"><span class="far fa-qrcode me-1"></span>QR Code</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label" for="inputAccessCode">Sign In Using this Code</label>
+                    <div class="row g-1 mb-3">
+                        <div class="col-12 col-md-10">
+                            <input id="inputAccessCode" type="text" aria-label="code section 1" class="form-control font-monospace text-center bg-white fs--1 fs-md-1" value="B3C7 D9F1 GBA3" style="letter-spacing:10px;" readonly>
+                        </div>
+                        <div class="col-12 col-md-2 d-grid">
+                            <button class="btn btn-outline-primary" type="button" @onclick="@(() => OpenGenerateDeviceCodeModal())">Generate Code</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="inputUsername">Send Code to Email or Phone</label>
+                    <div class="input-group">
+                        <select class="form-select" id="inputGroupSelect04" aria-label="Team Members">
+                            <option selected>Select Team Member</option>
+                            <option value="1">Jonathan Elliman</option>
+                            <option value="2">John Smith</option>
+                            <option value="3">Sarah Elliman</option>
+                        </select>
+                        <button class="btn btn-outline-primary" type="button">Email</button>
+                        <button class="btn btn-outline-primary" type="button">SMS</button>
+                    </div>
+                </div>
+            </div>
+        </div>*@
+            @*<div class="card rounded-0 shadow-none border-bottom">
+            <div class="card-header border-bottom">
+                <div class="row flex-between-center">
+                    <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                        <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-file-contract me-2"></span>Policies</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label" for="selOrderPolicy">Order Policy</label>
+                    <select class="form-select" id="selOrderPolicy">
+                        <option selected>Select Policy</option>
+                        <option value="1">Policy 1</option>
+                        <option value="2">Policy 2</option>
+                        <option value="3">...</option>
+                    </select>
+                </div>
+            </div>
+        </div>*@
+            <div class="card rounded-0 shadow-none border-bottom">
+                <div class="card-header border-bottom">
+                    <div class="row flex-between-center">
+                        <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                            <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-receipt me-2"></span>Receipt Settings</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="selPrimaryPrinter">Receipt Profile</label>
+                        <SfDropDownList @bind-Value="pOSProfile.BusinessReceiptProfileId" id=selPaymentProfile TValue="int" TItem="BusinessReceiptProfileListModel" Placeholder="Select Payment Profile" AllowFiltering="true" DataSource="@receiptProfiles">
+                            <DropDownListFieldSettings Text="ProfileName" Value="Id"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => pOSProfile.BusinessReceiptProfileId)" />
+                    </div>
+                    @{
+                        var url = "";
+                        if (pOSProfile.BusinessReceiptProfileId > 0)
+                        {
+                            url = "settings/receipt-profile/" + receiptProfiles.Where(x => x.Id == pOSProfile.BusinessReceiptProfileId).FirstOrDefault().IdGUID;
+                        }
+                        else
+                        {
+                            url = "settings/receipt-profile/create";
+                        }
+                    }
+                    <div class="mb-3">
+                        <a href="@url" class="btn btn-sm btn-outline-primary me-1 mb-1" type="button">Configure Receipt</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card rounded-0 shadow-none border-bottom">
+                <div class="card-header border-bottom">
+                    <div class="row flex-between-center">
+                        <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                            <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-hand-holding-dollar me-2"></span>Payment Profile</h5>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="selPaymentProfile">Profile</label>
+                        <SfDropDownList @bind-Value="pOSProfile.PaymentProfile" id=selPaymentProfile TValue="int" TItem="POSPaymentProfileModel" Placeholder="Select Payment Profile" AllowFiltering="true" DataSource="@paymentProfiles">
+                            <DropDownListFieldSettings Text="PaymentProfileName" Value="Id"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => pOSProfile.PaymentProfile)" />
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <ValidationSummary Model="@pOSProfile" />
+</EditForm>
+
+<SfDialog id="QRdialog" Width="600px" Height="560px" ShowCloseIcon="true" @bind-Visible="QRDialogVisibility">
+    <DialogTemplates>
+        <Header>
+            <h4 class="fs-1 fw-normal m-0">
+                <i class="fal fa-mobile-alt"></i>&nbsp;Scan to Authorize Guest Link Pro Point of Sale
+            </h4>
+        </Header>
+        <Content>
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <div class="mt-2 mb-5">
+                        <ol>
+                            <li class="fs-0 fw-normal h6">Download Guest Link Pro</li>
+                            <li class="fs-0 fw-normal h6">Launch Guest Link Pro on compatible device.</li>
+                            <li class="fs-0 fw-normal h6">Point camera at QR code below to authorize access to Guest Link Pro.</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            <div class="row p-2 text-center">
+                <div class="col">
+                    <SfQRCodeGenerator Width="200px" Height="200px" Value="@QRCodeText">
+                        <QRCodeGeneratorDisplayText Visibility="false"></QRCodeGeneratorDisplayText>
+                    </SfQRCodeGenerator>
+                </div>
+            </div>
+        </Content>
+    </DialogTemplates>
+    <DialogEvents></DialogEvents>
+    <DialogPositionData Y="100"></DialogPositionData>
+    <DialogButtons>
+        <DialogButton Content="Close" OnClick="@OnCancelBtnClick" />
+    </DialogButtons>
+</SfDialog>
+
+<SfDialog IsModal="true" Width="400px" ShowCloseIcon="true" @bind-Visible="GenerateDeviceCodeModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Generate New Device Code</h5></Header>
+        <Content>
+            <p>Requesting to generate a new Device code will immediately logout all devices using this code.</p>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary me-2" @onclick="@CloseGenerateDeviceCodeModal">Cancel</button>
+            <button type="button" class="btn btn-primary">Proceed</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private bool SpinnerVisibility { get; set; } = false;
+    private Member currentMember = new Member();
+    private string title = "POS Profile | Synergy Commerce Admin Panel";
+    private List<BusinessLocationModel> pOSLocations = new List<BusinessLocationModel>();
+    private List<BusinessLocationModel> inventoryLocations = new List<BusinessLocationModel>();
+    private List<StoreCollectionModelAdmin> storeCollections = new List<StoreCollectionModelAdmin>();
+    private List<ProductListModel> products = new List<ProductListModel>();
+    private List<POSPaymentProfileModel> paymentProfiles = new List<POSPaymentProfileModel>();
+    private List<StoreCollectionModelPOS> posCollectionList = new List<StoreCollectionModelPOS>();
+    POSProfileRequestModel pOSProfile = new POSProfileRequestModel();
+    int[] pOSCollections = new int[] { };
+    private string status { get; set; } = "Active";
+    List<DropdownBindingModel> businessDiscounts = new List<DropdownBindingModel>();
+    private bool QRDialogVisibility { get; set; } = false;
+    private string QRCodeText { get; set; } = string.Empty;
+    private List<BusinessReceiptProfileListModel> receiptProfiles = new List<BusinessReceiptProfileListModel>();
+
+    private bool GenerateDeviceCodeModalVisibility { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        //Get Current Member
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        //Get All Locations By Member Id
+        var locationResponse = await _businessLocationViewModel.GetBusinessLocations(currentMember.Id);
+        if (locationResponse.success)
+        {
+            pOSLocations = locationResponse?.data?.Where(x => x.IsPOS)?.ToList() ?? new List<BusinessLocationModel>();
+            inventoryLocations = locationResponse?.data?.Where(x => x.IsInventoryLocation)?.ToList() ?? new List<BusinessLocationModel>();
+        }
+        //Get Store Collections By Member Id
+        var storeCollectionResponse = await _storeCollectionViewModel.GetStoreCollectionsAdmin(currentMember.Id);
+        if (storeCollectionResponse.success)
+        {
+            storeCollections = storeCollectionResponse.data;
+            if (storeCollections != null && storeCollections.Count > 0)
+            {
+                storeCollections = storeCollections.OrderBy(x => x.CollectionName).ToList();
+            }
+        }
+
+        // Get POS Collections By Member Id
+        var posCollectionsResponse = await _storeCollectionViewModel.GetStoreCollectionsPOS(currentMember.Id);
+        if (posCollectionsResponse.success)
+        {
+            posCollectionList = posCollectionsResponse.data;
+        }
+
+
+        var paymentProfilesResponse = await _pOSProfileViewModel.GetPOSPaymentProfileList(currentMember.Id);
+        if (paymentProfilesResponse.success)
+        {
+            paymentProfiles = paymentProfilesResponse.data;
+        }
+
+        var getReceipts = await _businessReceiptProfileViewModel.GetBusinessReceiptProfiles(currentMember.Id);
+        if (getReceipts.success)
+        {
+            receiptProfiles = getReceipts.data.OrderBy(x => x.ProfileName).ToList();
+        }
+
+        //Get the Business Discounts
+        var businessDiscountResponse = await _discountViewModel.GetDiscounts(currentMember.Id, null, null, status, string.Empty, Channels.POS.ToString());
+        if (businessDiscountResponse.success)
+        {
+            businessDiscounts = businessDiscountResponse.data?.Select(x => new DropdownBindingModel { Key = x.Id, Value = x.DiscountName }).ToList() ?? new List<DropdownBindingModel>();
+        }
+
+        //Get POS Profile Details During Edit
+        if (Id != null)
+        {
+            var profileResponse = await _pOSProfileViewModel.GetPOSProfileDetails(0, Id.ToString());
+            if (profileResponse?.data != null)
+            {
+                pOSProfile = _mapper.Map<POSProfileRequestModel>(profileResponse.data);
+                pOSCollections = profileResponse?.data?.POSCollections?.Select(x => x.CollectionId)?.ToArray() ?? new int[] { };
+            }
+        }
+
+        //Get Products
+        var productResponse = await _productViewModel.SearchProducts(currentMember.Id, true, "");
+        if (productResponse.success)
+        {
+            products = productResponse?.data?.OrderBy(x => x.ProductTitle)?.ToList() ?? new List<ProductListModel>();
+        }
+
+        pOSProfile.BusinessId = currentMember.Id;
+        SpinnerVisibility = false;
+    }
+
+    private void OpenGenerateDeviceCodeModal()
+    {
+        this.GenerateDeviceCodeModalVisibility = true;
+    }
+    private void CloseGenerateDeviceCodeModal()
+    {
+        this.GenerateDeviceCodeModalVisibility = false;
+    }
+
+    private void CollectionsChangeHandler(EditContext editContext)
+    {
+        int sortIndex = 1;
+        var selectedPOSProfileCollections = new List<POSProfileCollection>();
+        if (pOSCollections != null)
+        {
+            foreach (var collectionId in pOSCollections)
+            {
+                var collection = storeCollections.Where(x => x.Id == collectionId).FirstOrDefault();
+                if (collection != null)
+                    selectedPOSProfileCollections.Add(new POSProfileCollection
+                    {
+                        CollectionId = collection.Id,
+                        SortIndex = sortIndex++
+                    });
+            }
+        }
+        pOSProfile.POSCollections = selectedPOSProfileCollections.Count == 0 ? null : selectedPOSProfileCollections;
+        editContext.Validate();
+    }
+
+    protected async Task SavePOSProfile(EditContext editContext)
+    {
+        if (!pOSProfile.QuickChargeEnabled)
+            pOSProfile.QuickChargeAmount1 = pOSProfile.QuickChargeAmount2 = pOSProfile.QuickChargeAmount3 = pOSProfile.QuickChargeProduct = null;
+                   
+        if (!pOSProfile.GratuityAmountsEnabled)
+            pOSProfile.GratuityAmount1 = pOSProfile.GratuityAmount2 = pOSProfile.GratuityAmount3 = null;
+
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+
+            var response = await _pOSProfileViewModel.AddUpdatePOSProfile(pOSProfile);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                if (Id == null)
+                {
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                }
+                else
+                {
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                }
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+        else
+        {
+            toastService.ShowToast("Please enter the required values", ToastLevel.Error);
+        }
+    }
+
+    protected void OnCancelBtnClick()
+    {
+        //Close Dialog
+        this.QRDialogVisibility = false;
+    }
+    /// <summary>
+    /// Generate QR using username and password
+    /// </summary>
+    protected void GenerateQR()
+    {
+        QRCodeText = pOSProfile.POSLoginName + "&" + pOSProfile.POSLoginPassword;
+        this.QRDialogVisibility = true;
+    }
+
+    protected bool SetQRBtnDisablity()
+    {
+        if (!string.IsNullOrEmpty(pOSProfile.POSLoginName) && !string.IsNullOrEmpty(pOSProfile.POSLoginPassword))
+            return false;
+        else
+            return true;
+    }
+}

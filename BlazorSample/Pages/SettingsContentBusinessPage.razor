@@ -1,0 +1,400 @@
+﻿@page "/settings/content/business-page"
+@page "/settings/content/business-page/{PropertyGuid:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums
+@using Syncfusion.Blazor.Spinner
+@inject ToastService toastService
+@*@inject IBusinessViewModel _businessViewModel*@
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject IBusinessPageViewModel _businessPageViewModel
+@inject IBusinessPropertyViewModel _businessPropertyViewModel
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+
+        <div class="card mb-3">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-desktop me-2"></span>Business Page</h5>
+                    </div>
+                    <div class="col-auto col-md-3 d-flex  mb-2 mb-md-0">
+
+                        <SfDropDownList id=sfLocationAddress TValue="int" @bind-Value="@BusinessContent.BusinessProperty"
+                                        TItem="BusinessPropertyModel" Placeholder="Select Business Profile" AllowFiltering="true"
+                                        DataSource="@businessProfiles">
+                            <DropDownListEvents TItem="BusinessPropertyModel" TValue="int" ValueChange="() => onProfileNameChange()"></DropDownListEvents>
+                            <DropDownListFieldSettings Text="PropertyName" Value="Id"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-falcon-default me-2" href="#!"><span class="far fa-eye me-1"></span>Preview</a>
+                        <a class="btn btn-sm btn-primary" href="javascript:void(0)" @onclick="SaveBusinessContent">Save</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+
+                <div class="row" hidden="@(String.IsNullOrEmpty(businessImage))">
+                    <div class="col-12 col-md-4">
+                        <div class="card cover-image mb-4">
+                            <div class="card-header"><strong>Business Listing Image(640px X 480px)</strong></div>
+                            <InputFile id="inputDropBusiness" OnChange="OnInputFileChange" class="opacity-0 w-100 h-100 position-absolute" />
+                            <div class="card-body">
+                                <a href="javascript:void();" @onclick="() => uploadBusinessImage()">
+                                    <img class="card-img-top" src="@(!String.IsNullOrEmpty(businessImage) ? businessImage :"https://ajaxuploader.com/images/drag-drop-file-upload.png")" width="480" alt="Business Banner Image">
+                                </a>
+                                <label class="cover-image-file-input mt-7 ms-4 d-flex align-items-center" href="javascript:void(0)" for="upload-cover-image" @onclick="() => uploadBusinessImage()">
+                                    <span class="far fa-cloud-upload-alt fa-2x me-2"></span>Change business image
+                                </label>
+                            </div>
+
+
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row" hidden="@(!String.IsNullOrEmpty(businessImage))">
+                    <div class="col-12 col-md-4">
+                        <div class="card cover-image mb-4">
+                            <div class="card-header"><strong>Business Listing Image(640px X 480px)</strong></div>
+                            <InputFile id="inputDropBusiness" OnChange="OnInputFileChange" class="opacity-0 w-100 h-100 position-absolute" />
+                            <div id="galleryImageUpload" class="my-4" @onclick="() => uploadBusinessImage()">
+                                <div class="dz-message dropzone-area px-2 py-3">
+                                    <div class="text-center">
+                                        <div class="far fa-cloud-upload-alt fa-4x d-block mx-auto mb-4"></div>
+                                        <p><span class="far fa-image fa-lg me-2"></span>Upload your business image</p><p class="fs--1 text-400">Upload a 480 x 284 jpg image with <br>a maximum size of 400KB</p>
+                                        <p class="fs--1">Drag and drop your files here or click to open file loading dialogue...</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+
+                    </div>
+                </div>
+
+                <div class="card cover-image hover-actions-trigger mb-4">
+                    <div class="card-header"><strong>Business Header(1700px X 368px)</strong></div>
+                    <div class="card-body">
+                        <a href="javascript:void();">
+                            <InputFile id="inputDropBanner" OnChange="OnInputFileBannerChange" class="opacity-0 w-100 h-100 position-absolute" />
+                            <img class="card-img-top" src="@(!String.IsNullOrEmpty(imageFileName) ? imageFileName :"https://ajaxuploader.com/images/drag-drop-file-upload.png")" alt="Business Banner Image">
+                        </a>
+
+                    </div>
+                    <div class="hover-actions">
+                        <a class="btn btn-dark mt-7 ms-4 btn-sm d-flex align-items-center" href="javascript:void();" @onclick="() => uploadBannerImage()" aria-label="Replace Image"><span class="far fa-cloud-upload-alt fa-2x me-2"></span>@(!String.IsNullOrEmpty(imageFileName) ? changeBanner: uploadBanner)</a>
+                    </div>
+
+                </div>
+
+                <form>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="inputTeaserText">Teaser Description</label>
+                        <input id="inputTeaserText" class="form-control" type="text" placeholder="A brief description of your business" @bind-value="BusinessContent.TeaserDescription" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="inputDescription">Business Description</label>
+                        <textarea id="inputDescription" class="form-control" rows="4" placeholder="Description show on your business page" @bind="BusinessContent.Description"></textarea>
+                    </div>
+
+                    <div class="border-dashed-bottom my-4"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="inputNotableFeatures">Notable Features</label>
+                        <SfMultiSelect @ref="NotableFeaturesRef" TValue="int[]" TItem="CP_Attribute" @bind-Value="@notableFeatures" DataSource="@NotableFeatures">
+                            <MultiSelectFieldSettings Text="Attribute" Value="Id"></MultiSelectFieldSettings>
+                        </SfMultiSelect>
+
+                        <p class="fs--2">Select up to 15 features.</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="inputVarietals">Varietals</label>
+                        <SfMultiSelect @ref="VarietalsRef" TValue="int[]" TItem="CP_Attribute" @bind-Value="@varietals" DataSource="@Varietals">
+                            <MultiSelectFieldSettings Text="Attribute" Value="Id"></MultiSelectFieldSettings>
+                        </SfMultiSelect>
+                        <p class="fs--2">Select up to 15 varietals.</p>
+                    </div>
+
+                    <div class="border-dashed-bottom my-4"></div>
+
+                    <h6 class="mb-3">Frequently Asked Questions</h6>
+
+
+                    <div class="card border shadow-none mb-3">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label" for="inputeQuestion1">Question 1</label>
+                                <input id="inputeQuestion1" class="form-control" type="text" placeholder="FAQ 1" @bind="BusinessContent.BusinessFAQs[0].Question" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="inputAnswer1">Answer</label>
+                                <input id="inputAnswer1" class="form-control" type="text" placeholder="Answer for FAQ 1" @bind="BusinessContent.BusinessFAQs[0].Answer" />
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                    <div class="card border shadow-none mb-3">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label" for="inputeQuestion2">Question 2</label>
+                                <input id="inputeQuestion2" class="form-control" type="text" placeholder="FAQ 2" @bind="BusinessContent.BusinessFAQs[1].Question" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="inputAnswer2">Answer</label>
+                                <input id="inputAnswer2" class="form-control" type="text" placeholder="Answer for FAQ 2" @bind="BusinessContent.BusinessFAQs[1].Answer" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card border shadow-none mb-3">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label" for="inputeQuestion3">Question 3</label>
+                                <input id="inputeQuestion3" class="form-control" type="text" placeholder="FAQ 3" @bind="BusinessContent.BusinessFAQs[2].Question" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="inputAnswer3">Answer</label>
+                                <input id="inputAnswer3" class="form-control" type="text" placeholder="Answer for FAQ 3" @bind="BusinessContent.BusinessFAQs[2].Answer" />
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+
+        <ImageCropper @ref="CropperModal" IsVisible="imageCroperActive" CropperConfiguration="cropperConfiguration" Cropped="OnCropped"></ImageCropper>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    [Parameter]
+    public Guid? PropertyGuid { get; set; }
+    private string title = "Business Page | Synergy Commerce Admin Panel";
+    private Member currentMember = new Member();
+    private ImageUploaderModal Modal { get; set; }
+    string businessImage;
+    string imageFileName;
+    private bool imageCroperActive = false;
+    private ImageCropperConfiguration cropperConfiguration = new ImageCropperConfiguration(21, 7);
+    private ImageCropper CropperModal { get; set; }
+    BusinessPageViewModel BusinessContent = new BusinessPageViewModel();
+    List<CP_Attribute> NotableFeatures = new List<CP_Attribute>();
+    List<CP_Attribute> Varietals = new List<CP_Attribute>();
+    SfMultiSelect<int[], CP_Attribute> NotableFeaturesRef;
+    SfMultiSelect<int[], CP_Attribute> VarietalsRef;
+    int[] notableFeatures = new int[] { };
+    int[] varietals = new int[] { };
+    public bool SpinnerVisibility = true;
+    private string selectedFileName = null;
+    private string imgType { get; set; }
+    List<BusinessPropertyModel> businessProfiles = new List<BusinessPropertyModel>();
+    private string changeBanner = "Change banner image";
+    private string uploadBanner = "Upload banner image";
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var attributes = await _businessPageViewModel.GetAttributeMastersAsync();
+
+        NotableFeatures = attributes.Where(x => x.AttributeType == Convert.ToInt32(AttributeType.Notable_Features)).ToList();
+        Varietals = attributes.Where(x => x.AttributeType == Convert.ToInt32(AttributeType.Varietals)).ToList();
+        businessProfiles = await _businessPropertyViewModel.GetBusinessProperties(currentMember.Id);
+
+        if (businessProfiles.Count > 0)
+        {
+            if (PropertyGuid.HasValue)
+            {
+                var requiredBusinessProfile = businessProfiles.FirstOrDefault(x => x.PropertyGuid == PropertyGuid.Value);
+                if(requiredBusinessProfile != null)
+                {
+                    await GetBusinessContent(requiredBusinessProfile.Id);
+                }
+            }
+            else
+            {
+                await GetBusinessContent(businessProfiles[0].Id);
+            }
+        }
+        SpinnerVisibility = false;
+        StateHasChanged();
+    }
+
+    private async void onProfileNameChange()
+    {
+        SpinnerVisibility = true;
+        await GetBusinessContent(BusinessContent.BusinessProperty);
+        SpinnerVisibility = false;
+        StateHasChanged();
+    }
+
+    private async Task GetBusinessContent(int propertyId)
+    {
+        var propId = propertyId;
+        BusinessContent = await _businessPageViewModel.GetBusinessContent(currentMember.Id, propertyId);
+        if (BusinessContent.BusinessProperty == 0)
+        {
+            BusinessContent.BusinessProperty = propId;
+        }
+
+        imageFileName = BusinessContent.BannerImage;
+        businessImage = BusinessContent.BusinessImage;
+
+        notableFeatures = BusinessContent.BusinessAttributes
+            .Where(x => x.AttributeType == Convert.ToInt32(AttributeType.Notable_Features))
+            .Select(x => x.AttributeId).ToArray();
+
+        varietals = BusinessContent.BusinessAttributes
+            .Where(x => x.AttributeType == Convert.ToInt32(AttributeType.Varietals))
+            .Select(x => x.AttributeId).ToArray();
+
+        var existingCount = BusinessContent.BusinessFAQs.Count;
+        for (int i = 0; i < 3 - existingCount; i++)
+        {
+            BusinessContent.BusinessFAQs.Add(new BusinessFAQViewModel());
+        }
+    }
+
+    private async Task SaveBusinessContent()
+    {
+        SpinnerVisibility = true;
+        BusinessContent.BusinessId = currentMember.Id;
+        List<BusinessAttributeViewModel> notableBusinessFeatures = new List<BusinessAttributeViewModel>();
+        List<BusinessAttributeViewModel> businessVarietals = new List<BusinessAttributeViewModel>();
+        if (NotableFeaturesRef.Value != null)
+        {
+            notableBusinessFeatures = NotableFeaturesRef.Value.Select(x => new BusinessAttributeViewModel
+            {
+                AttributeId = x
+            }).ToList();
+        }
+        if (VarietalsRef.Value != null)
+        {
+            businessVarietals = VarietalsRef.Value.Select(x => new BusinessAttributeViewModel
+            {
+                AttributeId = x
+            }).ToList();
+        }
+        BusinessContent.BusinessAttributes = notableBusinessFeatures.Union(businessVarietals).ToList();
+
+        if (BusinessContent.Id > 0)
+            BusinessContent = await _businessPageViewModel.UpdateBusinessContent(BusinessContent);
+        else
+            BusinessContent = await _businessPageViewModel.SaveBusinessContent(BusinessContent);
+        SpinnerVisibility = false;
+        toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+        StateHasChanged();
+    }
+
+    private async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        imgType = "BusinessImg";
+        var maxAllowedFiles = 1;
+        var format = "image/png";
+        foreach (var imageFile in e.GetMultipleFiles(maxAllowedFiles))
+        {
+            selectedFileName = imageFile.Name;
+
+            var buffer = new byte[imageFile.Size];
+            await imageFile.OpenReadStream(buffer.LongLength).ReadAsync(buffer);
+            var imageDataUrl =
+                $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+
+            await CropperModal.OnFileChange(imageDataUrl);
+            imageCroperActive = true;
+        }
+        StateHasChanged();
+    }
+
+    private async Task OnInputFileBannerChange(InputFileChangeEventArgs e)
+    {
+        imgType = "BannerImg";
+        var maxAllowedFiles = 1;
+        var format = "image/png";
+        foreach (var imageFile in e.GetMultipleFiles(maxAllowedFiles))
+        {
+            selectedFileName = imageFile.Name;
+
+            var buffer = new byte[imageFile.Size];
+            await imageFile.OpenReadStream(buffer.LongLength).ReadAsync(buffer);
+            var imageDataUrl =
+                $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+
+            await CropperModal.OnFileChange(imageDataUrl);
+            imageCroperActive = true;
+        }
+        StateHasChanged();
+    }
+
+    async Task OnCropped(string value)
+    {
+        imageCroperActive = false;
+        var base64 = value.Substring(value.IndexOf(',') + 1);
+        string filename = string.Format("{0}_{1}.{2}", DateTime.UtcNow.Ticks, currentMember.Id, selectedFileName.Substring(selectedFileName.LastIndexOf('.') + 1));
+
+        if (currentMember.Id > 0)
+        {
+            ImageUploadRequestModel requestModel = new ImageUploadRequestModel()
+            {
+                Image = base64,
+                Id = currentMember.Id,
+                MemberName = currentMember.Name,
+                BusinessId = currentMember.Id,
+                BusinessPropertyGuid = BusinessContent.PropertyGuid,
+                Filename = filename,
+                BusinessProperty = BusinessContent.BusinessProperty
+            };
+            UploadImageResponse response = null;
+            if (imgType == "BusinessImg")
+            {
+                response = await _businessPageViewModel.UpdateBusinessImage(requestModel);
+                businessImage = response.data.image_file_name;
+                BusinessContent.BusinessImage = businessImage;
+            }
+            else
+            {
+                response = await _businessPageViewModel.UpdateBusinessBannerImage(requestModel);
+                imageFileName = response.data.image_file_name;
+                BusinessContent.BannerImage = imageFileName;
+            }
+        }
+        StateHasChanged();
+    }
+
+    private async Task uploadBusinessImage()
+    {
+        imageCroperActive = false;
+        imgType = "BusinessImg";
+        await CropperModal.TriggerFileSelect("inputDropBusiness");
+    }
+    private async Task uploadBannerImage()
+    {
+        imageCroperActive = false;
+        imgType = "BannerImg";
+        await CropperModal.TriggerFileSelect("inputDropBanner");
+    }
+
+}

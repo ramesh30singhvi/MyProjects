@@ -1,0 +1,108 @@
+﻿@page "/settings/departments"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject IDepartmentViewModel _departmentViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-chart-tree-map me-2"></span>Departments</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-primary" href="/settings/departments/create">Add New</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body min-vh-50 p-0">
+                <div class="table-responsive scrollbar">
+                    <table class="table fs--1 mb-0">
+                        <thead class="text-900">
+                            <tr>
+                                <th class="pe-1 align-middle white-space-nowrap text-uppercase fs--2">Title</th>
+                                <th class="pe-1 align-middle white-space-nowrap text-uppercase fs--2">Code</th>
+                                <th class="pe-1 align-middle white-space-nowrap"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="" id="table-locations-body">
+                            @if (departments.Count > 0)
+                            {
+                                @foreach (var item in departments)
+                                {
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap"><a href="/settings/departments/edit/@item.DepartmentGuid" class="text-700">@item.DepartmentName</a></td>
+                                        <td class="align-middle white-space-nowrap">@item.DepartmentCode</td>
+                                        <td class="align-middle white-space-nowrap text-end"><a href="javascript:void(0)" @onclick="@(() => DeleteDepartment(item.DepartmentGuid))"><span class="far fa-trash-alt"></span></a></td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <p class="m-3">No Record Found</p>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+            <div class="card-footer">
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private string title = "Departments | Synergy Commerce Admin Panel";
+    private Member currentMember;
+    private List<BusinessDepartment> departments = new List<BusinessDepartment>();
+    private bool SpinnerVisibility { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        BusinessDepartmentListResponse result = await _departmentViewModel.GetBusinessDepartmentListAsync(currentMember.Id);
+        if (result.success)
+        {
+            departments = result.data;
+        }
+        SpinnerVisibility = false;
+    }
+
+    private async void DeleteDepartment(Guid id)
+    {
+        SpinnerVisibility = true;
+        BusinessDepartmentListResponse result = await _departmentViewModel.DeleteBusinessDepartmentByIdAsync(id);
+        if (result.success)
+        {
+            departments = result.data;
+            SpinnerVisibility = false;
+            toastService.ShowToast(Constants.DeleteMessage, ToastLevel.Success);
+        }
+        else
+        {
+            SpinnerVisibility = false;
+            toastService.ShowToast(result.error_info.description, ToastLevel.Error);
+        }
+        StateHasChanged();
+    }
+}

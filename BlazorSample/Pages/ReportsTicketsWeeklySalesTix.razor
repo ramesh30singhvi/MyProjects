@@ -1,0 +1,212 @@
+﻿@page  "/reports/tickets/weekly-sales-tix"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><span class="far fa-chart-line me-2"></span>Weekly Sales - Tickets</h5>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <form class="border-bottom">
+            <div class="row mt-3 px-3">
+                <div class="col-12 col-md-5">
+                    <label class="form-label">Event Name</label>
+                </div>
+                <div class="col-12 col-md-5">
+                    <label class="form-label">Week Range</label>
+                </div>
+            </div>
+            <div class="row mb-3 px-3">
+                <div class="col-12 col-md-5">
+                    <select class="form-select">
+                        <option value="0">Select Event</option>
+                        <option value="5447">11/25/2021 - 2021 Thanksgiving Feast</option>
+                        <option value="5445">8/26/2021 - Pass the CC Processing Fees Event</option>
+                        <option selected="selected" value="1628">8/13/2021 - 2021 Napa Valley Passport</option>
+                        <option value="5423">1/27/2021 - Behind the Cellar Door 2021</option>
+                        <option value="5421">11/15/2020 - Test Event for Dev with Processing Fees</option>
+                        <option value="5405">6/27/2020 - Summertime Lobster Fest Winemaker Dinner</option>
+                        <option value="5412">6/20/2020 - 2020 Rosé Wine Festival</option>
+                        <option value="5418">4/16/2020 - CellarPassTV with Diana Schweiger of Acumen Wines &amp; Christopher Sawyer</option>
+                        <option value="5406">2/15/2020 - Winemaker Dinner by Invitation Only</option>
+                        <option value="5407">12/9/2019 - Test Event for Dev</option>
+                        <option value="5408">12/1/2019 - 2020 Napa Valley Passport</option>
+                        <option value="5373">11/27/2019 - Winemaker Super Party</option>
+                        <option value="2185">10/13/2019 - Winemaker Super Post Capture Party</option>
+                        <option value="4601">4/28/2019 - Summertime Lobster Fest Winemaker Dinner</option>
+                        <option value="4563">3/14/2019 - Winemaker Dinner</option>
+                        <option value="4383">2/14/2019 - Napa Valley Passport- Non Passport</option>
+                        <option value="2845">12/9/2018 - Winemaker Dinner</option>
+                        <option value="3994">12/5/2018 - Stripe Test Trio</option>
+                        <option value="3991">12/2/2018 - Stripe Test Event</option>
+                        <option value="3992">12/2/2018 - Stripe Test Event Dose Testo</option>
+                        <option value="3780">9/29/2018 - Napa Valley Passport</option>
+                        <option value="3373">5/9/2018 - Private Wine Club Dinner</option>
+                        <option value="3228">4/8/2018 - Beringer Founder's Day Open House</option>
+                        <option value="3352">4/4/2018 - Rhine House Private Seated Tasting</option>
+                        <option value="2874">12/21/2017 - Will Call Time Slot Test Event</option>
+                        <option value="2869">12/16/2017 - ACH Report Test Event</option>
+                        <option value="1629">11/30/2017 - Jelliman's Open House Event</option>
+                        <option value="2621">9/8/2017 - Taste of CellarPass Sample Event</option>
+                        <option value="1621">8/1/2017 - Fun Event-Test</option>
+                        <option value="1620">7/1/2017 - Sample Event</option>
+                        <option value="2186">3/8/2017 - February Party - Access Code Test-CLONED-EVENT</option>
+                        <option value="2142">2/24/2017 - Multi Day Event - SAMPLE</option>
+                        <option value="2141">2/20/2017 - Sample Event - DEMO</option>
+                        <option value="2083">2/5/2017 - February Party - Access Code Test</option>
+                        <option value="2025">1/14/2017 - Wine Club Party-EVENT</option>
+                        <option value="1586">12/4/2016 - Your Best Event Ever</option>
+                        <option value="1872">10/29/2016 - t</option>
+                        <option value="1841">10/7/2016 - Passport Capture Test Event</option>
+                        <option value="1514">8/20/2016 - Fun Event</option>
+                        <option value="1716">8/13/2016 - Wine Club Party</option>
+                        <option value="1740">7/19/2016 - July - August Film Festival</option>
+                        <option value="1618">6/1/2016 - Multiple Venue Event</option>
+                        <option value="1462">4/28/2016 - Fake Event</option>
+                        <option value="1461">4/28/2016 - Vineyard Vixen Vine to Glass Expedition-CLONED-EVENT</option>
+                        <option value="1373">3/26/2016 - Vineyard Vixen Vine to Glass Expedition</option>
+                        <option value="93">3/8/2016 - Test Check-In Event</option>
+                        <option value="1256">2/29/2016 - Will Call Post Capture Test</option>
+                        <option value="910">2/13/2016 - Winemaker Lunch with Sarah Elliman</option>
+                        <option value="973">9/27/2015 - Passport Example</option>
+                        <option value="38">7/1/2015 - Winemaker Lunch with Sarah Elliman</option>
+                        <option value="5">5/1/2015 - Grand Tasting Event- TEST EVENT</option>
+                        <option value="674">3/24/2015 - Winemaker Dinner with Sarah Elliman</option>
+                        <option value="605">2/14/2015 - Dinner with Sarah Elliman</option>
+                        <option value="66">11/16/2013 - Dinner with Sarah Elliman</option>
+                        <option value="3">4/4/2013 - Test Event</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-5">
+                    <select class="form-select">
+                        <option value="3/29/2021">3/29/2021 - 4/4/2021</option>
+                        <option value="4/5/2021">4/5/2021 - 4/11/2021</option>
+                        <option selected="selected" value="7/19/2021">7/19/2021 - 7/25/2021</option>
+                        <option value="7/26/2021">7/26/2021 - 8/1/2021</option>
+                        <option value="8/2/2021">8/2/2021 - 8/8/2021</option>
+                        <option value="8/9/2021">8/9/2021 - 8/15/2021</option>
+                        <option value="10/4/2021">10/4/2021 - 10/10/2021</option>
+                        <option value="10/11/2021">10/11/2021 - 10/17/2021</option>
+                        <option value="11/8/2021">11/8/2021 - 11/14/2021</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-2">
+                    <button type="button" class="btn btn-primary">Submit</button>
+                </div>
+            </div>
+        </form>
+        <h5 class="p-3"><span class="far fa-ticket-alt me-2"></span>Completed Sales</h5>
+        <div class="sf-grid min-vh-25">
+            <SfGrid DataSource="@CompletedSalesList" AllowPaging="true" Width="100%">
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && CompletedSalesList.Count <= 0)
+                        {
+                            <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>There are no completed ticket sales in this date range.</h6>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn HeaderText="Ticket Level" TextAlign="TextAlign.Left" Width="150">
+                        <Template>
+                            @{
+                                var completedSales = (context as CompletedSales);
+                                <a href="javascript:void();">@completedSales.TicketLevel</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(CompletedSales.Sold) HeaderText="Sold" TextAlign="TextAlign.Left" Width="50"></GridColumn>
+                    <GridColumn Field=@nameof(CompletedSales.SubTotal) HeaderText="SubTotal" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(CompletedSales.Status) HeaderText="Status" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(CompletedSales.SalesEnd) HeaderText="Sales End" TextAlign="TextAlign.Left" Width="100"></GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+        <h5 class="p-3"><span class="far fa-ticket-alt me-2"></span>Canceled Sales</h5>
+        <div class="sf-grid min-vh-50">
+            <SfGrid DataSource="@CanceledSalesList" AllowPaging="true" Width="100%">
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && CanceledSalesList.Count <= 0)
+                        {
+                            <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>There are no canceled ticket sales in this date range.</h6>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn HeaderText="Ticket Level" TextAlign="TextAlign.Left" Width="150">
+                        <Template>
+                            @{
+                                var canceledSales = (context as CanceledSales);
+                                <a href="javascript:void();">@canceledSales.TicketLevel</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(CanceledSales.Canceled) HeaderText="Canceled" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(CanceledSales.SubTotal) HeaderText="SubTotal" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+</div>
+
+@code
+{
+
+    private string title = "Weekly Sales - Tickets | Synergy Commerce Admin Panel";
+
+    private Boolean isLoading = true;
+
+    public class CompletedSales
+    {
+        public string TicketLevel { get; set; }
+        public string Sold { get; set; }
+        public string SubTotal { get; set; }
+        public string Status { get; set; }
+        public string SalesEnd { get; set; }
+    }
+
+    public List<CompletedSales> CompletedSalesList = new List<CompletedSales>(){
+        new CompletedSales(){TicketLevel= "Weekend Pass - Food & Wine", Sold="15",SubTotal="$0.00", Status="On Sale", SalesEnd="02/13/22 11:59 PM"},
+        new CompletedSales(){TicketLevel= "Designated Driver - Food Only", Sold="3",SubTotal="$0.00", Status="On Sale", SalesEnd="02/13/22 11:59 PM"},
+        new CompletedSales(){TicketLevel= "Early Bird Weekend Pass - Food & Wine", Sold="8",SubTotal="$0.00", Status="On Sale", SalesEnd="11/30/21 11:59 PM"},
+    };
+
+    public class CanceledSales
+    {
+        public string TicketLevel { get; set; }
+        public string Canceled { get; set; }
+        public string SubTotal { get; set; }
+    }
+
+    public List<CanceledSales> CanceledSalesList = new List<CanceledSales>() {
+        new CanceledSales(){TicketLevel="Weekend Pass - Food & Wine", Canceled="10", SubTotal="$0.00" },
+    };
+
+
+}

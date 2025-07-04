@@ -1,0 +1,99 @@
+﻿@page "/settings/locations"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IBusinessLocationViewModel _businessLocationViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-map-marker-alt me-2"></span>Location Manager</h5>
+            </div>
+            <div class="col-auto">
+                <select class="form-select form-select-sm" @onchange="FilterLocations" aria-label="Active">
+                    <option value="1" selected>Active</option>
+                    <option value="0">Inactive</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="/settings/locations/create">Add New</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body min-vh-50 p-0">
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@filteredLocations" AllowPaging="true" Width="100%">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridColumns>
+                    <GridColumn HeaderText="Destination Name" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="300">
+                        <Template>
+                            @{
+                                <a href="settings/locations/@($"{(context as BusinessLocationModel).LocationGUID}")">@($"{(context as BusinessLocationModel).DestinationName}")</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(BusinessLocationModel.Id) HeaderText="Location Id" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" />
+                    <GridColumn Field=@nameof(BusinessLocationModel.TechnicalName) HeaderText="Technical Name" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="200" />
+                    <GridColumn Field=@nameof(BusinessLocationModel.Address1) HeaderText="Address 1" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" />
+                    <GridColumn Field=@nameof(BusinessLocationModel.Address2) HeaderText="Address 2" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" />
+                    <GridColumn Field=@nameof(BusinessLocationModel.City) HeaderText="City" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" />
+                    <GridColumn Field=@nameof(BusinessLocationModel.StateCode) HeaderText="State" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" />
+                    <GridColumn Field=@nameof(BusinessLocationModel.ZipCode) HeaderText="Zip Code" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" />
+                </GridColumns>
+            </SfGrid>
+        </div>
+       
+    </div>
+
+</div>
+
+
+@code
+{
+    private string title = "Location Manager | Synergy Commerce Admin Panel";
+    private Boolean isLoading = true;
+    Member currentMember = new Member();
+    private bool selectedStatus = true;
+    private List<BusinessLocationModel> locations = new List<BusinessLocationModel>();
+    private List<BusinessLocationModel> filteredLocations = new List<BusinessLocationModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        BusinessLocationResponse result = await _businessLocationViewModel.GetBusinessLocations(currentMember.Id);
+        if (result.success)
+        {
+            locations = result.data;
+            if (locations.Count > 0)
+            {
+                locations = locations.OrderBy(x => x.DestinationName).ToList();
+                filteredLocations = locations.Where(x => x.Active == true).ToList();
+            }
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void FilterLocations(ChangeEventArgs args)
+    {
+        if (Convert.ToInt32(args.Value) == 0)
+        {
+            filteredLocations = locations.Where(x => x.Active == false).ToList();
+        }
+        else
+        {
+            filteredLocations = locations.Where(x => x.Active == true).ToList();
+        }
+        StateHasChanged();
+    }
+}

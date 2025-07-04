@@ -1,0 +1,487 @@
+﻿@page  "/settings/club-members"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.WebUtilities;
+@using Microsoft.Extensions.Primitives;
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IClubViewModel _clubViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject NavigationManager navManager
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-12 col-sm-6 mb-3 mb-sm-0">
+                <h5 class="mb-0"><a href="/settings/club-management" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="fa-regular fa-users me-2"></span>Club Members</h5>
+            </div>
+            <div class="col-auto">
+                @*<a href="#" class="btn btn-sm btn-outline-primary me-2">Export</a>*@
+                <a href="/club/club-member-signup" class="btn btn-sm btn-primary">Add Member</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <ul class="nav nav-tabs mt-2 text-uppercase">
+            <li class="nav-item"><a class="nav-link @(selectedNavTab == "tab-all" ? "active" : "")" id="All-tab" data-bs-toggle="tab" href="javascript:void();" @onclick="@(() => selectTab("tab-all"))" role="tab" aria-controls="tab-All" aria-selected="true">All</a></li>
+            <li class="nav-item"><a class="nav-link @(selectedNavTab == "tab-NewMembers" ? "active" : "")" id="NewMembers-tab" data-bs-toggle="tab" href="javascript:void();" @onclick="@(() => selectTab("tab-NewMembers"))" role="tab" aria-controls="tab-NewMembers" aria-selected="false">New Members</a></li>
+            <li class="nav-item"><a class="nav-link @(selectedNavTab == "tab-Cancelled" ? "active" : "")" id="Cancelled-tab" data-bs-toggle="tab" href="javascript:void();" @onclick="@(() => selectTab("tab-Cancelled"))" role="tab" aria-controls="tab-Cancelled" aria-selected="false">Cancelled</a></li>
+            <li class="nav-item"><a class="nav-link @(selectedNavTab == "tab-VacationHold" ? "active" : "")" id="VacationHold-tab" data-bs-toggle="tab" href="javascript:void();" @onclick="@(() => selectTab("tab-VacationHold"))" role="tab" aria-controls="tab-VacationHold" aria-selected="false">Vacation Hold</a></li>
+        </ul>
+        <div class="tab-content p-3 mb-2" id="productTabContent">
+            <div class="@(selectedNavTab == "tab-all" ? "tab-pane fade show active" : "tab-pane fade")" id="tab-All" role="tabpanel" aria-labelledby="All-tab">
+                <div class="px-2">
+                    <div class="row my-3">
+                        <div class="col-12 col-md-12">
+                            <label class="form-label" for="inputGroupSearch">Search</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                                <input type="text" class="form-control" @bind="@searchText" @oninput="SearchBusinessClubMember" placeholder="Search Club Members" aria-label="Search Club Members">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sf-grid min-vh-75">
+                    <SfGrid @ref="clubMembersGrid" AllowExcelExport="true" DataSource="@clubMembers" AllowPaging="true" EnableVirtualization="true" Width="100%">
+                        <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                        <GridPageSettings PageSize="50"></GridPageSettings>
+                        <GridTemplates>
+                            <EmptyRecordTemplate>
+                                @if (!isLoading && clubMembers.Count <= 0)
+                                {
+                                    <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                        <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Data</h6>
+                                    </div>
+                                }
+                            </EmptyRecordTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            <GridColumn HeaderText="Last Name" TextAlign="TextAlign.Left" Width="50">
+                                <Template>
+                                    @{
+                                        var member = (context as BusinessClubMemberModel);
+                                        <a href="people/club-members/@member.ClubSubscriptionGUID/Shipments">@member.LastName</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(BusinessClubMemberModel.FirstName) HeaderText="First Name" TextAlign="TextAlign.Left" Width="50"></GridColumn>
+                            <GridColumn Field=@nameof(BusinessClubMemberModel.ClubName) HeaderText="Club" TextAlign="TextAlign.Left" Width="90" />
+                            <GridColumn HeaderText="Join Date" TextAlign="TextAlign.Left" Width="50">
+                                <Template>
+                                    @{
+                                        @($"{(context as BusinessClubMemberModel).DateJoined.ToString("MM/dd/yyyy hh:mm tt")}")
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(BusinessClubMemberModel.Frequency) HeaderText="Frequency" TextAlign="TextAlign.Left" Width="40" />
+                            <GridColumn HeaderText="Gift" TextAlign="TextAlign.Left" Width="30">
+                                <Template>
+                                    @{
+                                        var member = (context as BusinessClubMemberModel);
+                                        @(member.IsGiftSubscription ? "Yes" : "No")
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(BusinessClubMemberModel.DeliveryType) HeaderText="FulfillMent" TextAlign="TextAlign.Left" Width="40" />
+                            <GridColumn Field=@nameof(BusinessClubMemberModel.Source) HeaderText="Source" TextAlign="TextAlign.Left" Width="30" />
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+            <div class="@(selectedNavTab == "tab-NewMembers" ? "tab-pane fade show active" : "tab-pane fade")" id="tab-NewMembers" role="tabpanel" aria-labelledby="NewMembers-tab">
+                <div class="px-2">
+                    <div class="row my-3">
+                        <div class="col-12 col-md-12">
+                            <label class="form-label" for="inputGroupSearch">Search</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                                <input type="text" class="form-control" @bind="@searchText" @oninput="SearchBusinessClubMember" placeholder="Search Club Members" aria-label="Search Customers">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sf-grid min-vh-75">
+                    <SfGrid DataSource="@clubMembers" AllowPaging="true" EnableVirtualization="true" Width="100%">
+                        <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                        <GridPageSettings PageSize="50"></GridPageSettings>
+                        <GridTemplates>
+                            <EmptyRecordTemplate>
+                                @if (!isLoading && clubMembers.Count <= 0)
+                                {
+                                    <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                        <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Data</h6>
+                                    </div>
+                                }
+                            </EmptyRecordTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            <GridColumn HeaderText="Last Name" TextAlign="TextAlign.Left" Width="100px">
+                                <Template>
+                                    @{
+                                        var member = (context as BusinessClubMemberModel);
+                                        <a href="people/club-members/@member.ClubSubscriptionGUID/Shipments">@member.LastName</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(BusinessClubMemberModel.FirstName) HeaderText="First Name" TextAlign="TextAlign.Left" Width="100px"></GridColumn>
+                            <GridColumn Field=@nameof(BusinessClubMemberModel.ClubName) HeaderText="Club" TextAlign="TextAlign.Center" Width="190px" />
+                            <GridColumn HeaderText="Join Date" TextAlign="TextAlign.Center" Width="180px">
+                                <Template>
+                                    @{
+                                        @($"{(context as BusinessClubMemberModel).DateJoined.ToString("MM/dd/yyyy hh:mm tt")}")
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(BusinessClubMemberModel.Frequency) HeaderText="Frequency" TextAlign="TextAlign.Center" Width="130px" />
+                            <GridColumn HeaderText="Gift" TextAlign="TextAlign.Center" Width="50px">
+                                <Template>
+                                    @{
+                                        var member = (context as BusinessClubMemberModel);
+                                        @(member.IsGiftSubscription ? "Yes" : "No")
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(BusinessClubMemberModel.DeliveryType) HeaderText="FulfillMent" TextAlign="TextAlign.Center" Width="100px" />
+                            <GridColumn Field=@nameof(BusinessClubMemberModel.Source) HeaderText="Source" TextAlign="TextAlign.Center" Width="80px" />
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+            <div class="@(selectedNavTab == "tab-Cancelled" ? "tab-pane fade show active" : "tab-pane fade")" id="tab-Cancelled" role="tabpanel" aria-labelledby="Cancelled-tab">
+                <div class="px-2">
+                    <div class="row my-3">
+                        <div class="col-12 col-md-12">
+                            <label class="form-label" for="inputGroupSearch">Search</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                                <input type="text" class="form-control" @bind="@searchText" @oninput="SearchBusinessClubMember" placeholder="Search Club Members" aria-label="Search Customers">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sf-grid min-vh-75">
+                    <SfGrid @ref="clubMembersGrid" AllowExcelExport="true" DataSource="@clubMembers" AllowPaging="true" EnableVirtualization="true" Width="100%">
+                        <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                        <GridPageSettings PageSize="50"></GridPageSettings>
+                        <GridTemplates>
+                            <EmptyRecordTemplate>
+                                @if (!isLoading && clubMembers.Count <= 0)
+                                {
+                                    <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                        <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Data</h6>
+                                    </div>
+                                }
+                            </EmptyRecordTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            <GridColumn HeaderText="Last Name" TextAlign="TextAlign.Left" Width="50">
+                                <Template>
+                                    @{
+                                        var member = (context as BusinessClubMemberModel);
+                                        <a href="people/club-members/@member.ClubSubscriptionGUID/Shipments">@member.LastName</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(BusinessClubMemberModel.FirstName) HeaderText="First Name" TextAlign="TextAlign.Left" Width="50"></GridColumn>
+                            <GridColumn Field=@nameof(BusinessClubMemberModel.ClubName) HeaderText="Club" TextAlign="TextAlign.Left" Width="90" />
+                            <GridColumn HeaderText="Cancel Date" TextAlign="TextAlign.Left" Width="50">
+                                <Template>
+                                    @{
+                                        @($"{(context as BusinessClubMemberModel).DateCancelled.ToString("MM/dd/yyyy")}")
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(BusinessClubMemberModel.Frequency) HeaderText="Frequency" TextAlign="TextAlign.Left" Width="40" />
+                            <GridColumn HeaderText="Gift" TextAlign="TextAlign.Left" Width="30">
+                                <Template>
+                                    @{
+                                        var member = (context as BusinessClubMemberModel);
+                                        @(member.IsGiftSubscription ? "Yes" : "No")
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(BusinessClubMemberModel.CancelReason) HeaderText="Reason" TextAlign="TextAlign.Left" Width="60" />
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+            <div class="@(selectedNavTab == "tab-VacationHold" ? "tab-pane fade show active" : "tab-pane fade")" id="tab-VacationHold" role="tabpanel" aria-labelledby="VacationHold-tab">
+                <div class="px-2">
+                    <div class="row my-3">
+                        <div class="col-12 col-md-12">
+                            <label class="form-label" for="inputGroupSearch">Search</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                                <input type="text" class="form-control" @bind="@searchText" @oninput="SearchBusinessClubMember" placeholder="Search Club Members" aria-label="Search Customers">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sf-grid min-vh-75">
+                    <SfGrid @ref="clubMembersGrid" AllowExcelExport="true" DataSource="@clubMembers" AllowPaging="true" EnableVirtualization="true" Width="100%">
+                        <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                        <GridPageSettings PageSize="50"></GridPageSettings>
+                        <GridTemplates>
+                            <EmptyRecordTemplate>
+                                @if (!isLoading && clubMembers.Count <= 0)
+                                {
+                                    <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                        <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Data</h6>
+                                    </div>
+                                }
+                            </EmptyRecordTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            <GridColumn HeaderText="Last Name" TextAlign="TextAlign.Left" Width="50">
+                                <Template>
+                                    @{
+                                        var member = (context as BusinessClubMemberModel);
+                                        <a href="people/club-members/@member.ClubSubscriptionGUID/Shipments">@member.LastName</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(BusinessClubMemberModel.FirstName) HeaderText="First Name" TextAlign="TextAlign.Left" Width="50"></GridColumn>
+                            <GridColumn Field=@nameof(BusinessClubMemberModel.ClubName) HeaderText="Club" TextAlign="TextAlign.Left" Width="90" />
+                            <GridColumn HeaderText="Vacation Start Date" TextAlign="TextAlign.Left" Width="50">
+                                <Template>
+                                    @{
+                                        @($"{(context as BusinessClubMemberModel).VacationStartDate.ToString("MM/dd/yyyy")}")
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="Vacation End Date" TextAlign="TextAlign.Left" Width="50">
+                                <Template>
+                                    @{
+                                        @($"{(context as BusinessClubMemberModel).VacationEndDate.ToString("MM/dd/yyyy")}")
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(BusinessClubMemberModel.DeliveryType) HeaderText="FulfillMent" TextAlign="TextAlign.Left" Width="40" />
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code
+{
+
+    private string title = "Club Members | Synergy Commerce Admin Panel";
+    private Boolean isLoading = true;
+    private Member currentMember = new Member();
+    private List<BusinessClubMemberModel> clubMembers = new List<BusinessClubMemberModel>();
+    private List<BusinessClubMemberModel> allClubMembers = new List<BusinessClubMemberModel>();
+    private List<BusinessClubMemberModel> newClubMembers = new List<BusinessClubMemberModel>();
+    private List<BusinessClubMemberModel> cancelledClubMembers = new List<BusinessClubMemberModel>();
+    private List<BusinessClubMemberModel> vacationHoldClubMembers = new List<BusinessClubMemberModel>();
+    private string selectedNavTab = "tab-all";
+    public string searchText;
+    private SfGrid<BusinessClubMemberModel> clubMembersGrid;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        await GetAllClubMembers();
+        var uri = navManager.ToAbsoluteUri(navManager.Uri);
+        StringValues dateRange;
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("NewClubMembers", out dateRange))
+        {
+            var endDate = DateTime.UtcNow;
+            var startDate = endDate.Date;
+            var getDateRanges = DateTimeHelper.GetDateRange(DateRange.LastSevenDays);
+            var getEnumVal = (DateRange)Enum.Parse(typeof(DateRange), dateRange.ToString());
+            switch (getEnumVal)
+            {
+                case (DateRange.LastSevenDays):
+                    endDate = getDateRanges.enddate;
+                    startDate = getDateRanges.startDate;
+                    break;
+                case (DateRange.LastTenDays):
+                    getDateRanges = DateTimeHelper.GetDateRange(DateRange.LastSevenDays);
+                    endDate = getDateRanges.enddate;
+                    startDate = getDateRanges.startDate;
+                    break;
+                case (DateRange.LastThirtyDays):
+                    getDateRanges = DateTimeHelper.GetDateRange(DateRange.LastThirtyDays);
+                    endDate = getDateRanges.enddate;
+                    startDate = getDateRanges.startDate;
+                    break;
+                case (DateRange.LastMonth):
+                    getDateRanges = DateTimeHelper.GetDateRange(DateRange.LastMonth);
+                    endDate = getDateRanges.enddate;
+                    startDate = getDateRanges.startDate;
+                    break;
+                case (DateRange.ThisMonth):
+                    getDateRanges = DateTimeHelper.GetDateRange(DateRange.ThisMonth);
+                    endDate = getDateRanges.enddate;
+                    startDate = getDateRanges.startDate;
+                    break;
+            }
+            newClubMembers = allClubMembers.Where(x => x.DateJoined >= startDate && x.DateJoined <= endDate).OrderByDescending(x => x.DateJoined).ToList();
+            selectTab("tab-NewMembers");
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    public async Task GetAllClubMembers()
+    {
+        var response = await _clubViewModel.GetBusinessClubMembers(currentMember.Id, 0);
+        if (response.success)
+        {
+            allClubMembers = response.data;
+            clubMembers = allClubMembers.OrderBy(x => x.LastName)?.ToList() ?? new List<BusinessClubMemberModel>();
+        }
+    }
+
+    public async Task GetNewClubMembers()
+    {
+        isLoading = true;
+        var response = await _clubViewModel.GetBusinessClubMembers(currentMember.Id, 50);
+        if (response.success)
+        {
+            newClubMembers = response.data?.OrderByDescending(x => x.DateJoined).ToList() ?? new List<BusinessClubMemberModel>();
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    public async Task GetCancelledClubMembers()
+    {
+        isLoading = true;
+        var response = await _clubViewModel.GetBusinessCancelledClubMembers(currentMember.Id);
+        if (response.success)
+        {
+            cancelledClubMembers = response.data?.OrderByDescending(x => x.DateCancelled)?.ToList() ?? new List<BusinessClubMemberModel>();
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    public async Task GetVacationHoldClubMembers()
+    {
+        isLoading = true;
+        var response = await _clubViewModel.GetBusinessVacationHoldClubMembers(currentMember.Id);
+        if (response.success)
+        {
+            vacationHoldClubMembers = response.data;
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async void selectTab(string selectedTab)
+    {
+        searchText = string.Empty;
+        selectedNavTab = selectedTab;
+        if (selectedTab == "tab-all")
+        {
+            if (allClubMembers.Count > 0)
+            {
+                clubMembers = allClubMembers;
+            }
+            else
+            {
+                await GetAllClubMembers();
+                clubMembers = allClubMembers;
+            }
+        }
+        else if (selectedTab == "tab-NewMembers")
+        {
+            if (newClubMembers.Count > 0)
+            {
+                clubMembers = newClubMembers;
+            }
+            else
+            {
+                await GetNewClubMembers();
+                clubMembers = newClubMembers;
+            }
+        }
+        else if (selectedTab == "tab-Cancelled")
+        {
+            if (cancelledClubMembers.Count > 0)
+            {
+                clubMembers = cancelledClubMembers;
+            }
+            else
+            {
+                await GetCancelledClubMembers();
+                clubMembers = cancelledClubMembers;
+            }
+        }
+        else if (selectedTab == "tab-VacationHold")
+        {
+            if (vacationHoldClubMembers.Count > 0)
+            {
+                clubMembers = vacationHoldClubMembers;
+            }
+            else
+            {
+                await GetVacationHoldClubMembers();
+                clubMembers = vacationHoldClubMembers;
+            }
+        }
+        StateHasChanged();
+    }
+
+    private void SearchBusinessClubMember(ChangeEventArgs eventArgs)
+    {
+        searchText = eventArgs.Value == null ? string.Empty : eventArgs.Value.ToString();
+        if (!string.IsNullOrEmpty(searchText.ToLower()) && searchText.Length > 2)
+        {
+            isLoading = true;
+            if (selectedNavTab == "tab-all")
+            {
+                clubMembers = allClubMembers.Where(x => x.FirstName.ToLower().Contains(searchText.ToLower()) || x.LastName.ToLower().Contains(searchText.ToLower()) || x.ClubName.ToLower().Contains(searchText.ToLower())).ToList();
+            }
+            else if (selectedNavTab == "tab-NewMembers")
+            {
+                clubMembers = newClubMembers.Where(x => x.FirstName.ToLower().Contains(searchText.ToLower()) || x.LastName.ToLower().Contains(searchText.ToLower()) || x.ClubName.ToLower().Contains(searchText.ToLower())).ToList();
+            }
+            else if (selectedNavTab == "tab-Cancelled")
+            {
+                clubMembers = cancelledClubMembers.Where(x => x.FirstName.ToLower().Contains(searchText.ToLower()) || x.LastName.ToLower().Contains(searchText.ToLower()) || x.ClubName.ToLower().Contains(searchText.ToLower())).ToList();
+            }
+            else if (selectedNavTab == "tab-VacationHold")
+            {
+                clubMembers = vacationHoldClubMembers.Where(x => x.FirstName.ToLower().Contains(searchText.ToLower()) || x.LastName.ToLower().Contains(searchText.ToLower()) || x.ClubName.ToLower().Contains(searchText.ToLower())).ToList();
+            }
+            isLoading = false;
+
+        }
+        else
+        {
+            if (selectedNavTab == "tab-all")
+            {
+                clubMembers = allClubMembers;
+            }
+            else if (selectedNavTab == "tab-NewMembers")
+            {
+                clubMembers = newClubMembers;
+            }
+            else if (selectedNavTab == "tab-Cancelled")
+            {
+                clubMembers = cancelledClubMembers;
+            }
+            else if (selectedNavTab == "tab-VacationHold")
+            {
+                clubMembers = vacationHoldClubMembers;
+            }
+        }
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,151 @@
+﻿@page "/ticketing/orders"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings/ticketing" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="far fa-ticket me-2"></span>Ticket Orders</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="javascript:void(0)">Tickets Dashboard</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <form>
+            <div class="row my-3 p-3">
+                <div class="col-12 col-md-3">
+                    <input type="text" class="form-control" aria-label="Search">
+                </div>
+                <div class="col-12 col-md-4">
+                    <select class="form-select">
+                        <option value="0">Order Number</option>
+                        <option value="1">Email</option>
+                        <option selected="selected" value="3">Last Name</option>
+                        <option value="7">Phone</option>
+                        <option value="4">Ticket Number</option>
+                        <option value="2">Claim Code (when available)</option>
+
+                    </select>
+                </div>
+                <div class="col-12 col-md-2">
+                    <button type="button" class="btn btn-primary">Search</button>
+                </div>
+            </div>
+        </form>
+        <div class="sf-grid min-vh-75">
+            <SfGrid DataSource="@TicketList" AllowPaging="false" Width="100%">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && TicketList.Count <= 0)
+                        {
+                            <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Tickets</h6>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn HeaderText="" TextAlign="TextAlign.Left" Width="40">
+                        <Template>
+                            @{
+                                <a href="javascript:void();"><span class="far fa-file-alt"></span></a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="" TextAlign="TextAlign.Center" Width="40">
+                        <Template>
+                            @{
+                                <button class="delete_icon">
+                                    <span class="far fa-credit-card"></span>
+                                </button>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="Order #" TextAlign="TextAlign.Left" Width="80">
+                        <Template>
+                            @{
+                                var ticketData = (context as TicketData);
+                                <a href="javascript:void();">@ticketData.OrderNumber</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(TicketData.OrderDate) HeaderText="Order Date" TextAlign="TextAlign.Left" Width="90"></GridColumn>
+                    <GridColumn HeaderText="Customer" TextAlign="TextAlign.Left" Width="100">
+                        <Template>
+                            @{
+                                var ticketData = (context as TicketData);
+                                <a href="javascript:void();">@ticketData.CustomerName</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(TicketData.TicketHolders) HeaderText="Ticket Holders" TextAlign="TextAlign.Left" Width="130"></GridColumn>
+                    <GridColumn Field=@nameof(TicketData.Event) HeaderText="Event" TextAlign="TextAlign.Left" Width="100"></GridColumn>
+                    <GridColumn Field=@nameof(TicketData.Quantity) HeaderText="Quantity" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(TicketData.Tickets) HeaderText="Tickets" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(TicketData.SvcFees) HeaderText="Svc Fees" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(TicketData.Total) HeaderText="Total" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(TicketData.CCFee) HeaderText="CC Fee" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(TicketData.PromoCode) HeaderText="Promo Code" TextAlign="TextAlign.Left" Width="120"></GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+</div>
+
+@code
+{
+
+    private string title = "Ticket Orders | Synergy Commerce Admin Panel";
+
+    [Parameter]
+    public int Id { get; set; }
+
+    private bool SpinnerVisibility { get; set; } = false;
+    private Boolean isLoading = true;
+
+
+    public class TicketData
+    {
+        public int Id { get; set; }
+        public string OrderNumber { get; set; }
+        public string OrderDate { get; set; }
+        public string CustomerName { get; set; }
+        public string TicketHolders { get; set; }
+        public string Event { get; set; }
+        public string Quantity { get; set; }
+        public string Tickets { get; set; }
+        public string SvcFees { get; set; }
+        public string Total { get; set; }
+        public string CCFee { get; set; }
+        public string PromoCode { get; set; }
+    }
+
+    public List<TicketData> TicketList = new List<TicketData>()
+{
+        new TicketData(){ Id=1, OrderNumber= "212224", OrderDate = "11/10/2021", CustomerName= "Testing Six", TicketHolders="Testing Six", Event="Anderson Valley White Wine Weekend 2022", Quantity="2",Tickets="$0.00", SvcFees="$0.00", Total="$0.00", CCFee="N/A", PromoCode="Testing"   },
+        new TicketData(){ Id=2, OrderNumber= "212185", OrderDate = "11/10/2021", CustomerName= "Testing Two", TicketHolders="Testing Two", Event="Anderson Valley White Wine Weekend 2022", Quantity="1",Tickets="$0.00", SvcFees="$0.00", Total="$0.00", CCFee="N/A", PromoCode="Testing"   },
+  };
+
+
+
+}

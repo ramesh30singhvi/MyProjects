@@ -1,0 +1,86 @@
+﻿@page "/sa/business/subscription-plans/edit"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="py-3">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-0"><a href="sa/business/subscription-plans" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-clipboard-list me-2"></span>TablePro</h5>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-sm btn-primary" href="#!">Save</a>
+                </div>
+            </div>
+            <hr />
+        </div>
+
+        <form>
+            <div class="row mb-3">
+                <div class="col-6 col-md-3">
+                    <label class="form-label" for="chkAutoHide">Active</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="chkPlanActive" checked>
+                        <label class="form-check-label" for="chkPlanActive">
+                            Enabled
+                        </label>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label" for="inputSortOrder">Sort Order</label>
+                    <div class="form-label">
+                        <input id="inputSortOrder" class="form-control" type="email" placeholder="Sort Order" />
+                    </div>
+                </div>
+                <div class="mb-3 col-6 col-md-2"></div>
+                <div class="mb-3 col-6 col-md-2"></div>
+                <div class="mb-3 col-6 col-md-2"></div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="inputPlanName">Plan Name</label>
+                <input id="inputPlanName" class="form-control" type="text" placeholder="Name of Plan" value="TablePro" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="inputDescription">Plan Description <span class="form-text">(optional)</span></label>
+                <textarea class="form-control" rows="2" id="inputCollectionDescription" placeholder="Optional"></textarea>
+            </div>
+
+            <hr class="my-4" />
+
+            <div class="mb-3">
+                <label class="form-label" for="inputPlanName">Plan Features</label>
+                <input id="inputPlanFeatures" class="form-control" type="text" placeholder="Use Telerik MultiSelect to select features from the feature matrix." value="" />
+            </div>
+
+        </form>
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+
+    private string title = "Edit Subscription Plan | Synergy Commerce Super Admin  Panel";
+
+
+    [Parameter]
+    public int Id { get; set; }
+
+
+}

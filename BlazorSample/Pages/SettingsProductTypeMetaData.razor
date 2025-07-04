@@ -1,0 +1,281 @@
+﻿@page "/settings/product-type-meta-data"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Entities.v4;
+@using Syncfusion.Blazor.DropDowns;
+@using CellarPassAppAdmin.Shared.Models.RequestModel;
+@using CellarPassAppAdmin.Shared.Enums;
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject IBusinessMetaDataViewModel _businessMetaDataViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject IGuestTagViewModel _guestTagViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md-auto">
+                <h5 class="mb-3 mb-md-0"><a href="settings/product-meta-data" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-database me-2"></span>Meta Data Mapping - Products</h5>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="sf-grid min-vh-75">
+            <SfGrid DataSource="@businessMetaDataXProductTypeList" AllowPaging="false" Width="100%" class="border-x-0">
+                <GridColumns>
+                    <GridColumn HeaderText="Product Type" TextAlign="TextAlign.Left" Width="40">
+                        <Template Context="BusinessTagContext">
+                            @{
+                                var businessTag = (BusinessTagContext as BusinessMetaDataXProductTypeModel);
+                                <a href="javascript:void(0)" @onclick="@(() => OpenMetaMappingDialog(businessTag))">@businessTag.TypeName</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(BusinessMetaDataXProductTypeModel.MappedMetaData) HeaderText="Mapped Meta Data" TextAlign="TextAlign.Left" Width="60"></GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+</div>
+
+<SfDialog CssClass="syncfusion-dialog-size syncfusion-dialog-size-md" IsModal="true" @bind-Visible="@IsMetaMappingDialogVisible">
+    <DialogTemplates>
+        <Header>@selectedTypeName</Header>
+        <Content>
+            <div id="metaDataDropdown">
+                <label class="form-label" for="metaDataDropdown">Meta Data Item</label>
+                <div class="input-group mb-3">
+                    <SfDropDownList TValue="int?" TItem="BusinessMetaDataXProductTypeItemModel" @bind-Value="selectedBusinessMetaDataXProductTypeItem" Placeholder="Select Meta Data" AllowFiltering="true" DataSource="@itemDataList" CssClass="form-control form-control-sm pb-0 w-auto">
+                        <DropDownListFieldSettings Text="Name" Value="MetaDataId" />
+                    </SfDropDownList>
+                    <button class="btn btn-outline-primary" type="button" @onclick="()=>AddBusinessMetaDataXProductTypeItem()">Add</button>
+                </div>
+                <SfListBox @ref="listItem" ID="listItem" TValue="string[]" DataSource="@appliedItemDataList" TItem="BusinessMetaDataXProductTypeItemModel" AllowDragAndDrop="true" CssClass="rounded cp-list cp-no-selection">
+                    <ListBoxFieldSettings Text="SortOrder" />
+                    <ListBoxEvents TValue="string[]" TItem="BusinessMetaDataXProductTypeItemModel"></ListBoxEvents>
+                    <ListBoxTemplates TItem="BusinessMetaDataXProductTypeItemModel">
+                        <ItemTemplate Context="modContext">
+                            <div class="my-2">
+                                <div class="d-flex align-items-center">
+                                    <span class="far fa-sort me-4"></span>
+                                    <h6>@((modContext as BusinessMetaDataXProductTypeItemModel).Name)</h6>
+                                    <a href="javascript:void();" class="text-dark ms-auto" @onclick="() => DeleteBusinessMetaDataXProductTypeItem((modContext as BusinessMetaDataXProductTypeItemModel))"><span class="far fa-trash-alt"></span></a>
+                                </div>
+                            </div>
+                        </ItemTemplate>
+                    </ListBoxTemplates>
+                </SfListBox>
+            </div>
+        </Content>
+    </DialogTemplates>
+    <DialogButtons>
+        <DialogButton Content="Cancel" OnClick="@CloseMetaMappingDialog" />
+        <DialogButton Content="Save" IsPrimary="true" @onclick="() => SaveBusinessMetaDataXProductTypeItem()" />
+    </DialogButtons>
+</SfDialog>
+
+@code
+{
+
+    private bool SpinnerVisibility { get; set; } = true;
+    private string title = "Meta Data Mapping | Synergy Commerce Admin Panel";
+    private bool IsMetaMappingDialogVisible = false;
+    private int? selectedBusinessMetaDataXProductTypeItem = null;
+    private int? selectedTypeId = null;
+    private string selectedTypeName = "";
+    SfListBox<string[], BusinessMetaDataXProductTypeItemModel> listItem;
+
+    private Member currentMember = new Member();
+    List<BusinessMetaDataXProductTypeModel> businessMetaDataXProductTypeList = new List<BusinessMetaDataXProductTypeModel>();
+
+    ObservableCollection<BusinessMetaDataXProductTypeItemModel> itemDataList = new ObservableCollection<BusinessMetaDataXProductTypeItemModel>();
+    ObservableCollection<BusinessMetaDataXProductTypeItemModel> appliedItemDataList = new ObservableCollection<BusinessMetaDataXProductTypeItemModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        //Get Current Member
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        await GetBusinessMetaDataXProductType();
+        SpinnerVisibility = false;
+        StateHasChanged();
+    }
+
+    private async Task GetBusinessMetaDataXProductType()
+    {
+        var response = await _businessMetaDataViewModel.GetBusinessMetaDataXProductTypeListAsync();
+        businessMetaDataXProductTypeList = response?.data ?? new List<BusinessMetaDataXProductTypeModel>();
+        if (businessMetaDataXProductTypeList != null)
+        {
+            businessMetaDataXProductTypeList = businessMetaDataXProductTypeList.OrderBy(x => x.TypeName).ToList();
+        }
+    }
+
+    private async Task GetBusinessMetaDataXProductTypeItem(int? id)
+    {
+        var response = await _businessMetaDataViewModel.GetBusinessMetaDataXProductTypeItemListAsync(id, currentMember.Id);
+        if (response.success && response.data != null)
+        {
+            itemDataList = new ObservableCollection<BusinessMetaDataXProductTypeItemModel>();
+            appliedItemDataList = new ObservableCollection<BusinessMetaDataXProductTypeItemModel>();
+            foreach (var item in response.data.Where(x => x.Id == null).OrderBy(x => x.Name))
+            {
+                var data = new BusinessMetaDataXProductTypeItemModel()
+                {
+                    Id = item.Id,
+                    BusinessMetaDataId = item.BusinessMetaDataId,
+                    ProductTypeId = item.ProductTypeId,
+                    MetaDataId = item.MetaDataId,
+                    Name = item.Name,
+                    ContentType = item.ContentType,
+                    SortOrder = 0
+                };
+                itemDataList.Add(data);
+            }
+            foreach (var item in response.data.Where(x => x.Id != null).OrderBy(x => x.SortOrder))
+            {
+                var data = new BusinessMetaDataXProductTypeItemModel()
+                {
+                    Id = item.Id,
+                    BusinessMetaDataId = item.BusinessMetaDataId,
+                    ProductTypeId = item.ProductTypeId,
+                    MetaDataId = item.MetaDataId,
+                    Name = item.Name,
+                    ContentType = item.ContentType,
+                    SortOrder = (int)item.SortOrder
+                };
+                appliedItemDataList.Add(data);
+            }
+        }
+    }
+
+    private void AddBusinessMetaDataXProductTypeItem()
+    {
+        if (selectedBusinessMetaDataXProductTypeItem == null || selectedBusinessMetaDataXProductTypeItem == 0)
+        {
+            toastService.ShowToast("Please select pickup location.", ToastLevel.Error);
+            return;
+        }
+        else
+        {
+            var isAlreadyExist = appliedItemDataList.Any(x => x.MetaDataId == selectedBusinessMetaDataXProductTypeItem);
+            if (isAlreadyExist)
+            {
+                toastService.ShowToast("Meta Data Item is already added.", ToastLevel.Error);
+            }
+            else
+            {
+                var data = itemDataList.Where(x => x.MetaDataId == selectedBusinessMetaDataXProductTypeItem).FirstOrDefault();
+                appliedItemDataList.Add(data);
+                itemDataList.Remove(data);
+                selectedBusinessMetaDataXProductTypeItem = null;
+            }
+        }
+    }
+
+    private async void SaveBusinessMetaDataXProductTypeItem()
+    {
+        List<BusinessMetaDataXProductTypeItemRequestModel> requestItems = new List<BusinessMetaDataXProductTypeItemRequestModel>();
+        int sortOrder = 0;
+        var listboxData = listItem.GetDataList();
+        foreach (var item in listboxData)
+        {
+            sortOrder++;
+            requestItems.Add(new BusinessMetaDataXProductTypeItemRequestModel
+            {
+                Id = item.Id,
+                BusinessMetaDataId = item.MetaDataId,
+                ProductTypeId = (int)selectedTypeId,
+                SortOrder = sortOrder
+            });
+        }
+        if (requestItems.Count > 0)
+        {
+            SpinnerVisibility = true;
+            BusinessMetaDataXProductTypeRequestModel model = new BusinessMetaDataXProductTypeRequestModel()
+            {
+                ProductTypeId = (int)selectedTypeId,
+                BusinessMetaDataXProductTypeItem = requestItems
+            };
+            var response = await _businessMetaDataViewModel.AddUpdateBusinessMetaDataXProductTypeAsync(model);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                await GetBusinessMetaDataXProductType();
+                CloseMetaMappingDialog();
+                StateHasChanged();
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    private void DeleteBusinessMetaDataXProductTypeItem(BusinessMetaDataXProductTypeItemModel data)
+    {
+        appliedItemDataList.Remove(data);
+        itemDataList.Add(data);
+    }
+
+    private async Task OpenMetaMappingDialog(BusinessMetaDataXProductTypeModel data)
+    {
+        selectedTypeId = data.Id;
+        selectedTypeName = data.TypeName;
+        selectedBusinessMetaDataXProductTypeItem = null;
+        await GetBusinessMetaDataXProductTypeItem(data.Id);
+        IsMetaMappingDialogVisible = true;
+    }
+
+    private void CloseMetaMappingDialog()
+    {
+        selectedTypeId = null;
+        selectedTypeName = "";
+        IsMetaMappingDialogVisible = false;
+    }
+
+    ////placehodler data
+    //public class MetaData
+    //{
+    //    public string ProductType { get; set; }
+    //    public string MappedMetaData { get; set; }
+
+    //}
+    ////placehodler data
+    //public List<MetaData> MetaDataList = new List<MetaData>(){
+    //    new MetaData(){ ProductType= "General Merchandise", MappedMetaData="" },
+    //    new MetaData(){ ProductType= "Alcohol- Beer", MappedMetaData="Hops" },
+    //    new MetaData(){ ProductType= "Alcohol- Spirits", MappedMetaData="" },
+    //    new MetaData(){ ProductType= "Alcohol- Wine", MappedMetaData="Varietal, Appellation, Winemaker Video" },
+    //    new MetaData(){ ProductType= "Food & Menu Items", MappedMetaData="Link to Recipe" },
+    //    new MetaData(){ ProductType= "Product Bundle / Kit", MappedMetaData="" },
+    //    new MetaData(){ ProductType= "Attractions, Activities & Tours", MappedMetaData="Link to Book Virtual Tasting" },
+    //    new MetaData(){ ProductType= "Collateral Materials", MappedMetaData="" },
+    //    new MetaData(){ ProductType= "Rebate & Credit", MappedMetaData="" },
+    //};
+
+    ////Placeholder data
+    //public class MetaDropdownItem
+    //{
+    //    public int Id { get; set; }
+    //    public string Name { get; set; }
+    //    public int SortOrder { get; set; }
+    //}
+    ////placehodler data
+    //public List<MetaDropdownItem> MetaDropdownItemList = new List<MetaDropdownItem>{
+    //new MetaDropdownItem{ Id = 1, Name = "Varietal", SortOrder = 0 },
+    //new MetaDropdownItem{ Id = 2, Name = "Appellation", SortOrder = 1 },
+    //new MetaDropdownItem{ Id = 3, Name = "Winemaker Video", SortOrder = 2 }
+    //};
+}

@@ -1,0 +1,195 @@
+﻿@page "/settings/notifications/email"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject IBusinessViewModel _businessViewModel
+@inject ISettingsViewModel _settingsViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject NavigationManager _navigationManager
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="isLoading"></SfSpinner>
+        <div class="card shadow-none border">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-0"><a href="settings/notifications" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-envelope me-2"></span>Email Notifications</h5>
+                    </div>
+                    <div class="col-md-auto"></div>
+                </div>
+            </div>
+            <div class="card-body">
+
+                <div class="row my-4">
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-bag-shopping fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                @{
+                                    var isClubServiceEnabled = !string.IsNullOrEmpty(clubServiceSettingName) && clubServiceSettingName == _synergyCommerce;
+                                    var isWebServicesEnabled = ((!string.IsNullOrEmpty(webServiceSettingName) && webServiceSettingName == _synergyCommerce) || isClubServiceEnabled);
+                                }
+                                <h6 class="fs-0 mb-0"><a class="stretched-link @(isWebServicesEnabled ?"":"link-secondary")" href="javascript:void();" @onclick="() => CheckWebServicesEnabled(isWebServicesEnabled)">Orders</a></h6>
+                                <p class="fs--2">Configure your transactional emails</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-gem fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link @(isClubServiceEnabled ?"":"link-secondary")" href="javascript:void();" @onclick="() => CheckClubServicesEnabled(isClubServiceEnabled)">Club</a></h6>
+                                <p class="fs--2">Configure your club emails</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-ticket fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/notifications/email/ticketing">Ticketing</a></h6>
+                                <p class="fs--2">Configure your ticketing emails</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-calendar-star fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                @{
+                                    var isReservationsServiceEnabled = !string.IsNullOrEmpty(reservationsServiceSettingName) && reservationsServiceSettingName == _synergyCommerce;
+                                }
+                                <h6 class="fs-0 mb-0"><a class="stretched-link @(isReservationsServiceEnabled ?"":"link-secondary")" href="javascript:void();" @onclick="() => CheckReservationsEnabled(isReservationsServiceEnabled)">Reservations</a></h6>
+                                <p class="fs--2">Configure your reservation emails</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-user fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/notifications/email/account">Account</a></h6>
+                                <p class="fs--2">Configure your account emails</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </Authorized>
+</AuthorizeView>
+
+<DisabledModal DisabledHeading="@disabledModalHeader" OnDialogClose="() => displayDisabledModal = false" OpenDisabledDialog="@displayDisabledModal"></DisabledModal>
+
+@code
+{
+    bool isDisabledModalVisible = false;
+    private bool isLoading { get; set; }
+    private string title = "Email Notifications | Synergy Commerce Admin Panel";
+    Member currentMember = null;
+    private string reservationsServiceSettingName = "";
+    private string webServiceSettingName = "";
+    private string clubServiceSettingName = "";
+    private const string _synergyCommerce = "Synergy Commerce";
+    private DisabledModal disabledModal;
+    private bool displayDisabledModal { get; set; }
+    private string disabledModalHeader = "";
+
+    [Parameter]
+    public int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        //Get ReservationsService Settings
+        var reservationSetting = await _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount, BusinessSettingsMetaKey.ReservationsService);
+        var isReservationsServiceSettingsSaved = !string.IsNullOrEmpty(reservationSetting?.data?.MetaValue ?? string.Empty);
+        if (isReservationsServiceSettingsSaved)
+        {
+            //Get ReservationsService Configuration
+            var businessReservationsServiceConfigurationResponse = await _businessViewModel.GetBusinessConfigurationOptionDetail(BusinessConfigurationNamespace.ReservationsService, reservationSetting.data.MetaValue);
+            reservationsServiceSettingName = businessReservationsServiceConfigurationResponse?.data?.SettingName ?? string.Empty;
+        }
+
+        //Get Web Service Settings
+        var webServiceSetting = await _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount, BusinessSettingsMetaKey.WebSync);
+        var isWebServiceSettingsSaved = !string.IsNullOrEmpty(reservationSetting?.data?.MetaValue ?? string.Empty);
+        if (isWebServiceSettingsSaved)
+        {
+            //Get WebService Configuration
+            var businessWebServiceConfigurationResponse = await _businessViewModel.GetBusinessConfigurationOptionDetail(BusinessConfigurationNamespace.WebSync, webServiceSetting.data.MetaValue);
+            webServiceSettingName = businessWebServiceConfigurationResponse?.data?.SettingName ?? string.Empty;
+        }
+
+        //Get Club Service Settings
+        var clubServiceSetting = await _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount, BusinessSettingsMetaKey.ClubService);
+        var isClubServiceSettingsSaved = !string.IsNullOrEmpty(clubServiceSetting?.data?.MetaValue ?? string.Empty);
+        if (isClubServiceSettingsSaved)
+        {
+            //Get ClubService Configuration
+            var businessClubServiceConfigurationResponse = await _businessViewModel.GetBusinessConfigurationOptionDetail(BusinessConfigurationNamespace.ClubService, clubServiceSetting.data.MetaValue);
+            clubServiceSettingName = businessClubServiceConfigurationResponse?.data?.SettingName ?? string.Empty;
+        }
+        isLoading = false;
+    }
+
+    private void CheckWebServicesEnabled(bool isWebServicesEnabled)
+    {
+        isLoading = true;
+        if (isWebServicesEnabled)
+        {
+            _navigationManager.NavigateTo("settings/notifications/email/orders");
+        }
+        else
+        {
+            disabledModalHeader = "Orders";
+            displayDisabledModal = true;
+        }
+        isLoading = false;
+    }
+
+    private void CheckClubServicesEnabled(bool isClubServicesEnabled)
+    {
+        isLoading = true;
+        if (isClubServicesEnabled)
+        {
+            _navigationManager.NavigateTo("settings/notifications/email/club");
+        }
+        else
+        {
+            disabledModalHeader = "Club";
+            displayDisabledModal = true;
+        }
+        isLoading = false;
+    }
+
+    private void CheckReservationsEnabled(bool isReservationsEnabled)
+    {
+        isLoading = true;
+
+        if (isReservationsEnabled)
+        {
+            _navigationManager.NavigateTo("settings/notifications/email/reservations");
+        }
+        else
+        {
+            disabledModalHeader = "Reservations";
+            displayDisabledModal = true;
+        }
+        isLoading = false;
+    }
+}

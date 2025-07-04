@@ -1,0 +1,106 @@
+﻿@page "/settings/pos"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card shadow-none border">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="fa-regular fa-cash-register me-2"></span>Point of Sale</h5>
+                    </div>
+                    <div class="col-md-auto"></div>
+                </div>
+            </div>
+            <div class="card-body">
+
+                <div class="row my-4">
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="fa-regular fa-store fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/pos/profiles">POS Profiles</a></h6>
+                                <p class="fs--2">Create & manage POS configurations.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="fa-regular fa-layer-group fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/pos/collections">POS Collections</a></h6>
+                                <p class="fs--2">Create product groups for POS.</p>
+                            </div>
+                        </div>
+                    </div>
+                    @*<div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="fa-regular fa-keyboard fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/pos/quick-keys">Quick Keys</a></h6>
+                                <p class="fs--2">Define up to 12 Quick Keys.</p>
+                            </div>
+                        </div>
+                    </div>*@
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="fa-regular fa-key fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/pos/licenses">POS Licenses</a></h6>
+                                <p class="fs--2">Configure Point of Sale licenses.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="fa-regular fa-calendar-times fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/pos/closing-procedures">Closing Procedures</a></h6>
+                                <p class="fs--2">Custom actions required before Close of Day.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="fa-regular fa-money-bill-alt fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/pos/cash-drawers">Cash Drawers</a></h6>
+                                <p class="fs--2">Configure & manage cash drawers.</p>
+                            </div>
+                        </div>
+                    </div>
+                    @*<div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="fa-regular fa-file-contract fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/pos/policies">Order Policies</a></h6>
+                                <p class="fs--2">Create & manage POS order policies.</p>
+                            </div>
+                        </div>
+                    </div>*@
+                </div>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private string title = "Point of Sale | Synergy Commerce Admin Panel";
+}

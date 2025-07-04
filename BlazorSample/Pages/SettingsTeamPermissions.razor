@@ -1,0 +1,207 @@
+﻿@page "/settings/team-management/access-positions"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject IPositionNameViewModel _positionNameViewModel
+@inject IBusinessPositionNameViewModel _businessPositionNameViewModel
+@inject ITeamViewModel _teamViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ToastService toastService
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="fa-regular fa-key me-2"></span>Access & Positions</h5>
+                    </div>
+                    <div class="col-md-auto">
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="card rounded-0 shadow-none" id="sectionPositions">
+                    <div class="card-header border-bottom">
+                        <h5 class="mb-0 text-nowrap py-2 py-xl-0">Position Title</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row border-bottom">
+                            <div class="col-12 col-xl-6">
+                                <div class="mb-3">
+                                    <div class="list-group my-3">
+                                        @foreach (var businessPositionName in businessPositionNames.OrderBy(x=> x.TitleName))
+                                        {
+                                            <div class="list-group-item list-group-item-action">
+                                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                                    <h6 class="mb-1"><a href="settings/team-management/access-positions/edit">@businessPositionName.TitleName</a></h6>
+                                                    <div class="dropdown font-sans-serif">
+                                                        <button class="btn btn-sm dropdown-toggle p-1 dropdown-caret-none" type="button" id="user-actions-toggle" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                        <div class="dropdown-menu dropdown-menu-end py-3" aria-labelledby="user-actions-toggle" style="">
+                                                            <a class="dropdown-item" href="#!">Set as Active</a>
+                                                            <a class="dropdown-item text-danger" href="javascript:void();">Set as Inactive</a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                    <div class="d-grid">
+                                        <button class="btn btn-sm btn-outline-dark border-dashed text-start p-3" @onclick="@OpenModal">
+                                            <span class="fa-regular fa-plus me-2"></span>Add Position
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+<SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="ModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Add Position</h5></Header>
+        <Content>
+            <div class="mb-3">
+                <label class="form-label" for="selPositions">Positions</label>
+                <select id="selPositions" class="form-select" @bind="@positionsValue">
+                    <option value="" selected>Select Position</option>
+                    @foreach (var cpPositionName in cpPositionNames)
+                    {
+                        <option value="@cpPositionName.TitleName">@cpPositionName.TitleName</option>
+                    }
+                </select>
+            </div>
+            @if (positionsValue == "Create New")
+            {
+                <div class="mb-3">
+                    <label class="form-label" for="inputCustomRoleName">Custom Role Name</label>
+                    <input id="inputCustomRoleName" class="form-control" type="text" @bind="customName" />
+                </div>
+            }
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="@CloseModal">Close</button>
+            <button type="button" class="btn btn-primary" @onclick="@(() => SaveBusinessPositionName())">Save</button>
+        </FooterTemplate>
+    </DialogTemplates>
+    <DialogPositionData Y="100" />
+</SfDialog>
+
+@code
+{
+    private string title = "Roles & Permissions | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+
+    private bool ModalVisibility { get; set; } = false;
+    private string positionsValue;
+    private string customName;
+
+    List<UserBusinessTeamModel> userBusinessTeams = new List<UserBusinessTeamModel>();
+    List<CPPositionNameModel> cpPositionNames = new List<CPPositionNameModel>();
+    List<BusinessPositionNameModel> businessPositionNames = new List<BusinessPositionNameModel>();
+    private int DefaultAdminAccountId { get; set; }
+    private int CurrentUserId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        //Get Current User
+        var getUserData = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+        CurrentUserId = getUserData?.Id ?? 0;
+        if (CurrentUserId > 0)
+        {
+            //Get Business Teams for current user
+            var userBusinessTeamsResponse = await _teamViewModel.GetUserBusinessTeams(CurrentUserId);
+            userBusinessTeams = userBusinessTeamsResponse?.data ?? new List<UserBusinessTeamModel>();
+            DefaultAdminAccountId = userBusinessTeams.Where(x => x.IsDefault)?.FirstOrDefault()?.BusinessId ?? 0;
+
+            await GetPositionNames();
+            await GetBusinessPositionNames();
+
+        }
+        SpinnerVisibility = false;
+    }
+
+    private async Task GetPositionNames()
+    {
+        var response = await _positionNameViewModel.GetPositionNameAsync(null);
+        cpPositionNames = response?.data ?? new List<CPPositionNameModel>();
+    }
+    private async Task GetBusinessPositionNames()
+    {
+        var response = await _businessPositionNameViewModel.GetBusinessPositionNameListAsync(DefaultAdminAccountId);
+        businessPositionNames = response?.data ?? new List<BusinessPositionNameModel>();
+    }
+
+    private void OpenModal()
+    {
+        this.ModalVisibility = true;
+    }
+    private void CloseModal()
+    {
+        this.ModalVisibility = false;
+    }
+
+    private async Task SaveBusinessPositionName()
+    {
+        Console.WriteLine(positionsValue);
+        if (string.IsNullOrEmpty(positionsValue))
+        {
+            toastService.ShowToast("Please select position.", ToastLevel.Error);
+            return;
+        }
+
+        var businessPositionName = new BusinessPositionNameRequestModel();
+        businessPositionName.TitleName = positionsValue;
+        if (positionsValue == "Create New" && customName == null)
+        {
+            toastService.ShowToast("Please add custom name.", ToastLevel.Error);
+            return;
+        }
+        if (customName != null)
+            businessPositionName.TitleName = customName;
+
+        if (businessPositionNames.Any(x => x.TitleName == businessPositionName.TitleName))
+        {
+            toastService.ShowToast("Position is already added.", ToastLevel.Error);
+            return;
+        }
+        SpinnerVisibility = true;
+
+        businessPositionName.Business_Id = DefaultAdminAccountId;
+        var response = await _businessPositionNameViewModel.AddUpdateBusinessPositionNameListAsync(businessPositionName);
+        SpinnerVisibility = false;
+        if (response.success)
+        {
+            positionsValue = "";
+            customName = "";
+            toastService.ShowToast("Position Added successfully.", ToastLevel.Success);
+            this.ModalVisibility = false;
+            await GetBusinessPositionNames();
+            StateHasChanged();
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+
+}

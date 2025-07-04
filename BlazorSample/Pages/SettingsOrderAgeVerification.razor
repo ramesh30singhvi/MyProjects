@@ -1,0 +1,98 @@
+﻿@page "/settings/age-verification"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Entities.v4;
+@using Blazored.LocalStorage
+@using Syncfusion.Blazor.Grids
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject IProductViewModel _productViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<div class="card shadow-none border mb-4">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md mb-2">
+                <h5 class="mb-0"><a href="settings/orders" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-calendar-exclamation me-2"></span>Age Verification</h5>
+            </div>
+            <div class="col-md-auto">
+                <button class="btn btn-sm btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div>
+            <SfGrid DataSource="@productTypesVerification" @ref="ProductTypesGrid" TValue="ProductTypeAgeVerification" AllowPaging="true" Width="100%">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="20"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!productTypesVerification.Any())
+                        {
+                            <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Product types</h6>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn Field=@nameof(ProductTypeAgeVerification.TypeName) Type="ColumnType.String" HeaderText="Item Type" TextAlign="TextAlign.Left" Width="200"></GridColumn>
+                    <GridColumn HeaderText="21+" TextAlign="TextAlign.Left" Width="200">
+                <Template>
+                    @{
+                        var productType = (context as ProductTypeAgeVerification);
+                        <SfCheckBox @bind-Checked="productType.isAgeVerificationRequired"></SfCheckBox>
+                    }
+                </Template>
+            </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string title = "Settings Order Age verification | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    public List<ProductTypeAgeVerification> productTypesVerification = new List<ProductTypeAgeVerification>();
+    SfGrid<ProductTypeAgeVerification> ProductTypesGrid = new SfGrid<ProductTypeAgeVerification>();
+
+    public class ProductTypeAgeVerification
+    {
+        public int Id { get; set; }
+        public string TypeName { get; set; }
+        public bool isAgeVerificationRequired { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        var productTypesResponse = await _productViewModel.GetProductTypes();
+        if (productTypesResponse.success)
+        {
+            foreach (var propductType in productTypesResponse.data)
+            {
+                productTypesVerification.Add(new ProductTypeAgeVerification
+                {
+                    Id = propductType.Id,
+                    TypeName = propductType.TypeName,
+                    isAgeVerificationRequired = true
+                });
+            }
+        }
+        await ProductTypesGrid.ResetPersistDataAsync();
+        SpinnerVisibility = false;
+    }
+}

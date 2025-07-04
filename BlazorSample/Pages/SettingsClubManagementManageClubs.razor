@@ -1,0 +1,121 @@
+﻿@page "/settings/manage-clubs"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject IClubViewModel _clubViewModel
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings/club-management" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-gem me-2"></span>Manage Clubs</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="/settings/manage-club-add">Add New</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="row m-2 mb-4 row-cols-2 row-cols-lg-5 g-2 g-lg-3 justify-content-start">
+            <div class="col-auto me-3">
+                <label class="form-label">TOTAL MEMBERS @TotalMembers</label>
+            </div>
+            <div class="col-auto me-3">
+                <label class="form-label">HOLD @TotalHold</label>
+            </div>
+            <div class="col-auto me-3">
+                <label class="form-label">SHIP @TotalShip</label>
+            </div>
+            <div class="col-auto">
+                <label class="form-label">PICK UP @TotalPickup</label>
+            </div>
+        </div>
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@businessClubs" AllowPaging="true" AllowTextWrap="true" Width="100%" class="border-x-0">
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTextWrapSettings WrapMode="WrapMode.Content"></GridTextWrapSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && businessClubs.Count <= 0)
+                        {
+                            <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Clubs Available</h6>
+                                <button type="button" class="btn btn-outline-primary">Get Started</button>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn HeaderText="Friendly Name" TextAlign="TextAlign.Left" Width="160">
+                        <Template>
+                            @{
+                                var businessClub = (context as BusinessClubListModel);
+                                <a href="/settings/manage-club-edit/@businessClub.ClubGUID">@($"{businessClub.ClubName}")</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(BusinessClubListModel.TechnicalName) HeaderText="Technical Name" TextAlign="TextAlign.Left" Width="160" />
+                    <GridColumn Field=@nameof(BusinessClubListModel.Id) HeaderText="Club ID" TextAlign="TextAlign.Left" Width="80" />
+                    <GridColumn Field=@nameof(BusinessClubListModel.ClubTypeText) HeaderText="Type" TextAlign="TextAlign.Left" Width="80" />
+                    <GridColumn Field=@nameof(BusinessClubListModel.Frequency) HeaderText="Frequency" TextAlign="TextAlign.Left" Width="100" />
+                    <GridColumn Field=@nameof(BusinessClubListModel.Total) HeaderText="Total" TextAlign="TextAlign.Left" Width="80" />
+                    <GridColumn Field=@nameof(BusinessClubListModel.Hold) HeaderText="Hold" TextAlign="TextAlign.Left" Width="80" />
+                    <GridColumn Field=@nameof(BusinessClubListModel.Ship) HeaderText="Ship" TextAlign="TextAlign.Left" Width="60" />
+                    <GridColumn Field=@nameof(BusinessClubListModel.PickUp) HeaderText="Pick Up" TextAlign="TextAlign.Left" Width="80" />
+                    <GridColumn Field=@nameof(BusinessClubListModel.NextShipmentDate) HeaderText="Next Shipment" TextAlign="TextAlign.Left" Width="125" />
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+    <div class="card-footer">
+    </div>
+</div>
+
+@code
+{
+    private string title = "Manage Clubs | Synergy Commerce Admin Panel";
+    private Boolean isLoading = false;
+    private Member currentMember = new Member();
+    List<BusinessClubListModel> businessClubs = new List<BusinessClubListModel>();
+    private int TotalMembers { get; set; }
+    private int TotalHold { get; set; }
+    private int TotalShip { get; set; }
+    private int TotalPickup { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var clubListResponse = await _clubViewModel.GetClubListAsync(currentMember.Id);
+        businessClubs = clubListResponse?.data ?? new List<BusinessClubListModel>();
+
+        //Below is test data for now (This data will be TBD)
+        businessClubs = businessClubs.Select(c =>
+        {
+        //c.Total = 216; //These are coming from DB
+        //c.Hold = 3;    //These are coming from DB
+        //c.Ship = 186;  //These are coming from DB
+        //c.PickUp = 13; //These are coming from DB
+        c.NextShipmentDate = Convert.ToDateTime("1/15/2022");
+            return c;
+        }).ToList();
+
+        TotalMembers = businessClubs?.Sum(x => x.Total) ?? 0;
+        TotalHold = businessClubs?.Sum(x => x.Hold) ?? 0;
+        TotalShip = businessClubs?.Sum(x => x.Ship) ?? 0;
+        TotalPickup = businessClubs?.Sum(x => x.PickUp) ?? 0;
+
+        isLoading = false;
+    }
+}

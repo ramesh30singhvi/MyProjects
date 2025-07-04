@@ -1,0 +1,258 @@
+﻿@page "/sa/content/business-notification-edit/{Type:int}/{Category:int}"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using Blazored.LocalStorage
+@using System.Text.RegularExpressions
+@using AutoMapper
+@inject IMapper _mapper
+@inject ToastService toastService
+@inject ILocalStorageService localStorage
+@inject IEmailNotificationViewModel _emailNotificationViewModel
+@inject ISaSystemNotificationsViewModel _saSystemNotificationsViewModel
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility" />
+@if (IsNotificationTypeDefined)
+{
+    <EditForm Model="@notificationEmailTemplate" Context="formContext">
+        <DataAnnotationsValidator />
+        <div class="pt-3">
+            <div class="row justify-content-between">
+                <div class="col-md-auto mb-4 mb-md-0"><h5><a href="sa/content/business-notifications" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><i class="fa-regular fa-envelope-open-text me-2"></i>@Heading</h5></div>
+                <div class="col-md-auto">
+                    <button type="button" class="btn btn-sm btn-primary" @onclick="() => Save(formContext)">Save</button>
+                </div>
+            </div>
+            <hr />
+        </div>
+        <div class="">
+            <ul class="nav nav-tabs border-bottom-0 nav-fill">
+                <li class="nav-item border-bottom">
+                    <button class="nav-link text-uppercase active " id="email-tab" data-bs-toggle="tab" data-bs-target="#tabEmail" type="button" role="tab" aria-controls="tabActive">Email</button>
+                </li>
+                <li class="nav-item border-bottom">
+                    <button class="nav-link text-uppercase" id="sms-tab" data-bs-toggle="tab" data-bs-target="#tabSms" type="button" role="tab" aria-controls="tabInactive">SMS</button>
+                </li>
+            </ul>
+            <div class="tab-content pt-4" id="tabContent">
+                <div class="tab-pane fade show active" id="tabEmail" role="tabpanel" aria-labelledby="email-tab">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="inputPreviewEmail" class="form-label">Preview Email</label>
+                            <InputText @bind-Value="previewEmail" type="text" class="form-control" id="inputPreviewEmail" placeholder="Preview Email" />
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <button type="button" class="btn btn-sm btn-outline-primary mb-1" @onclick="PreviewEmail">Preview Email</button>
+                        </div>
+                    </div>
+                    <hr />
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="inputEmailName" class="form-label">Email Name</label>
+                            <InputText @bind-Value="notificationEmailTemplate.EmailName" type="text" class="form-control" id="inputEmailName" placeholder="Email Name" />
+                            <ValidationMessage For="@(() => notificationEmailTemplate.EmailName)" />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="inputEmailSubject" class="form-label">Email Subject</label>
+                            <InputText @bind-Value="notificationEmailTemplate.EmailSubject" type="text" class="form-control" id="inputEmailSubject" placeholder="Email Subject" />
+                            <ValidationMessage For="@(() => notificationEmailTemplate.EmailSubject)" />
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="inputTemplateName" class="form-label">Template Name</label>
+                            <InputText @bind-Value="notificationEmailTemplate.TemplateName" type="text" class="form-control" id="inputTemplateName" placeholder="Template Name" />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="inputDescription" class="form-label">Description</label>
+                            <InputText @bind-Value="notificationEmailTemplate.Description" type="text" class="form-control" id="inputDescription" placeholder="Description" />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="inputDefaultContent" class="form-label">Default Business Message</label>
+                        <InputTextArea @bind-Value="notificationEmailTemplate.EmailContent" class="form-control" id="inputDefaultContent" rows="2"></InputTextArea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="inputHtmlTemplate" class="form-label">HTML Template</label>
+                        <InputTextArea @bind-Value="notificationEmailTemplate.EmailBody" class="form-control" id="inputHtmlTemplate" rows="50"></InputTextArea>
+                    </div>
+
+                </div>
+                <div class="tab-pane fade" id="tabSms" role="tabpanel" aria-labelledby="sms-tab">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="inputPreviewSms" class="form-label">Preview SMS</label>
+                            <input type="text" class="form-control" id="inputPreviewSms" placeholder="Mobile Number">
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <button type="button" class="btn btn-sm btn-outline-primary mb-1">Preview SMS</button>
+                        </div>
+                    </div>
+                    <hr />
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="inputSmsSender" class="form-label">SMS Sender Number</label>
+                            <input type="text" class="form-control" id="inputSmsSender" placeholder="Sender Number" />
+                        </div>
+                        <div class="col-md-6">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="inputSmsContent" class="form-label">SMS Content</label>
+                        <textarea class="form-control" id="inputSmsContent" rows="6"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+}
+
+@code
+{
+    [Parameter]
+    public int? Type { get; set; }
+    [Parameter]
+    public int? Category { get; set; }
+    private string title = "Business Notification | Synergy Commerce Super Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    private bool IsNotificationTypeDefined { get; set; } = false;
+    private string previewEmail { get; set; }
+    private NotificationsTypes? NotificationsType { get; set; }
+    private string Heading { get; set; }
+    AddCPNotificationEmailRequestModel notificationEmailTemplate = new AddCPNotificationEmailRequestModel();
+    EmailNotificationDetailModel emailNotificationDetail = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Type > 0 && Enum.IsDefined(typeof(NotificationsTypes), Type))
+        {
+            IsNotificationTypeDefined = true;
+        }
+        else
+        {
+            return;
+        }
+        SpinnerVisibility = true;
+        if (Type != null && Enum.IsDefined(typeof(NotificationsTypes), Type))
+            NotificationsType = (NotificationsTypes)Enum.ToObject(typeof(NotificationsTypes), Type);
+        if (NotificationsType != null)
+            Heading = Helper.GetDisplayName(NotificationsType);
+
+        var getUserData = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+        previewEmail = getUserData?.Email ?? string.Empty;
+
+        await GetEmailNotificationDetail();
+        SpinnerVisibility = false;
+    }
+
+    private async Task GetEmailNotificationDetail()
+    {
+        var notificationDetailResponse = await _emailNotificationViewModel.GetEmailNotificationDetail(null, Type, Category);
+        emailNotificationDetail = notificationDetailResponse?.data?.FirstOrDefault() ?? null;
+        if (emailNotificationDetail != null)
+        {
+            notificationEmailTemplate = _mapper.Map<AddCPNotificationEmailRequestModel>(emailNotificationDetail);
+        }
+    }
+
+    protected async Task Save(EditContext editContext)
+    {
+        if (editContext.Validate() && NotificationsType != null)
+        {
+            if (emailNotificationDetail != null)
+            {
+                await UpdateNotificationEmailTemplate();
+            }
+            else
+            {
+                await AddNotificationEmailTemplate();
+            }
+            await GetEmailNotificationDetail();
+        }
+    }
+
+    protected async Task AddNotificationEmailTemplate()
+    {
+        SpinnerVisibility = true;
+        notificationEmailTemplate.Category = Category.Value;
+        notificationEmailTemplate.NotificationType = Type.Value;
+        notificationEmailTemplate.EmailContent = string.IsNullOrEmpty(notificationEmailTemplate.EmailContent) ? string.Empty : notificationEmailTemplate.EmailContent;
+        var response = await _emailNotificationViewModel.AddCPNotificationEmailTemplate(notificationEmailTemplate);
+        SpinnerVisibility = false;
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+
+    protected async Task UpdateNotificationEmailTemplate()
+    {
+        SpinnerVisibility = true;
+        var request = _mapper.Map<UpdateCPNotificationEmailRequestModel>(notificationEmailTemplate);
+        request.EmailTemplateId = emailNotificationDetail.EmailTemplateId;
+        request.NotificationEmailId = emailNotificationDetail.Id;
+        request.NotificationEmailVariables = emailNotificationDetail?.NotificationEmailVariables?.Select(x => new UpdateCPNotificationEmailVariableRequestModel
+        {
+            BlockContent = x.BlockContent,
+            NotificationEmailBlockId = x.NotificationEmailBlockId,
+            NotificationEmailVariableId = x.NotificationEmailVariableId,
+            VariableName = x.VariableName,
+            VariableType = x.VariableType
+        })?.ToList() ?? new List<UpdateCPNotificationEmailVariableRequestModel>();
+
+        var response = await _emailNotificationViewModel.UpdateCPNotificationEmailTemplate(request);
+        SpinnerVisibility = false;
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+
+    protected async Task PreviewEmail()
+    {
+        if (string.IsNullOrEmpty(previewEmail))
+        {
+            toastService.ShowToast("Please enter Preview Email.", ToastLevel.Error);
+            return;
+        }
+        if (!Regex.IsMatch(previewEmail, @"^([\w\.\-]+)@([\w\.\-]+)((\.(\w){2,3})+)$"))
+        {
+            toastService.ShowToast("Please enter valid Preview Email address.", ToastLevel.Error);
+            return;
+        }
+        SpinnerVisibility = true;
+        var response = await _saSystemNotificationsViewModel.SendPreviewEmailToBusQueue(new PreviewEmailRequestModel
+        {
+            IsPreviewEmail = true,
+            Email = previewEmail,
+            RefId = string.Empty,
+            NotificationType = Type.Value
+        });
+        SpinnerVisibility = false;
+        if (response.success)
+        {
+            toastService.ShowToast("Preview email sent.", ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+}
+
+

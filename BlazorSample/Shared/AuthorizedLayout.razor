@@ -1,0 +1,88 @@
+﻿@inherits LayoutComponentBase
+@layout AdminLayout
+@inject NavigationManager _navigationManager
+@using CellarPassAppAdmin.Shared.Services
+@inject IUserService _userService;
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@using System.Security.Claims
+@inject IMemberViewModel _memberViewModel
+@inject ILocalStorageService localStorage
+
+<main class="main" id="main-authorized">
+
+    <AuthorizeView>
+        <Authorized>
+
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-xl-2 d-xl-block bg-white min-vh-xl-100 border-end">
+
+                        <nav class="navbar navbar-light navbar-vertical navbar-expand-xl pt-0 pt-xl-7">
+
+                            <div id="sidebarMenu" class="collapse navbar-collapse bg-white">
+                                <div class="navbar-vertical-content scrollbar border-bottom">
+
+                                    @*@if (selectedMember != null  && !isLoading)
+                                        {
+                                        <div class="text-center h6">@selectedMember.Name<span class="text-400 ms-1">(@selecedMember.Id)</span></div>
+
+                                        }*@
+
+                                    <NavMenu />
+
+                                    <div class="navbar-vertical-divider"></div>
+
+                                    <div class="mt-4 text-center">
+                                        @if (user != null && !string.IsNullOrEmpty(user.SubscriptionName))
+                                        {
+                                            <h6 class="text-800 text-uppercase" aria-hidden="true">@(user.SubscriptionName)</h6>
+                                        }
+                                        @if (user != null && !string.IsNullOrEmpty(user.EcommercePartner))
+                                        {
+                                            <h6 class="text-800 fs--2" aria-hidden="true">@(user.EcommercePartner)</h6>
+                                        }
+                                    </div>
+
+                                </div>
+                            </div>
+                        </nav>
+
+                    </div>
+
+                    <div class="col-xl-10 ms-sm-auto pt-2">
+
+                        @Body
+
+                        <footer>
+                            <div class="row g-0 justify-content-between fs--1 mt-4 mb-3">
+                                <div class="col-12 col-sm-auto text-center">
+                                </div>
+                                <div class="col-12 col-sm-auto text-center">
+                                    <p class="mb-0 text-800">v4.0a</p>
+                                </div>
+                            </div>
+                        </footer>
+
+                    </div>
+                </div>
+            </div>
+
+        </Authorized>
+    </AuthorizeView>
+    <Toast></Toast>
+</main>
+
+@code
+{
+    private UserDetailViewModel user = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,114 @@
+﻿@page "/reports/tickets/abandoned-carts-tickets"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><span class="far fa-chart-line me-2"></span>Abandoned Carts - Tickets</h5>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <form>
+            <div class="row m-2 mb-4 row-cols-2 row-cols-lg-5 g-2 g-lg-3">
+                <div class="col-12 col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                        <input type="text" class="form-control" placeholder="Search">
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div class="sf-grid min-vh-75">
+            <SfGrid DataSource="@TicketList" AllowPaging="true" Toolbar="@(new List<object>() { "PdfExport", "ExcelExport", "CsvExport", "Print" })" AllowExcelExport="true" AllowPdfExport="true" Width="100%">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && TicketList.Count <= 0)
+                        {
+                            <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Tickets</h6>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn Field=@nameof(TicketData.Date) HeaderText="Date" TextAlign="TextAlign.Left" Width="100"></GridColumn>
+                    <GridColumn Field=@nameof(TicketData.EventName) HeaderText="EventName" TextAlign="TextAlign.Left" Width="150"></GridColumn>
+                    <GridColumn HeaderText="Email" TextAlign="TextAlign.Left" Width="100">
+                        <Template>
+                            @{
+                                var ticketData = (context as TicketData);
+                                <a href="javascript:void();">@ticketData.Email</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(TicketData.AccessCode) HeaderText="Access Code" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(TicketData.PromoCode) HeaderText="Promo Code" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(TicketData.Widget) HeaderText="Widget" TextAlign="TextAlign.Left" Width="50"></GridColumn>
+                    <GridColumn HeaderText="" Width="80">
+                        <Template>
+                            @{
+                                <a class="btn btn-primary btm-sm" href="javascript:void();">Send Email</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+</div>
+
+@code
+{
+
+    private string title = "Abandoned Carts- Tickets | Synergy Commerce Admin Panel";
+
+    [Parameter]
+    public int Id { get; set; }
+
+    private bool SpinnerVisibility { get; set; } = false;
+    private Boolean isLoading = true;
+
+
+    public class TicketData
+    {
+        public string Date { get; set; }
+        public string EventName { get; set; }
+        public string Email { get; set; }
+        public string AccessCode { get; set; }
+        public string PromoCode { get; set; }
+        public string Widget { get; set; }
+    }
+
+    public List<TicketData> TicketList = new List<TicketData>()
+{
+        new TicketData(){ Date = "5/09/2021 05:36 PM", EventName= "Anderson Valley Passport to Pinot", Email="clymerj@oregonstate.edu", AccessCode="", PromoCode="" , Widget="False"  },
+        new TicketData(){ Date = "5/09/2021 05:36 PM", EventName= "Anderson Valley Passport to Pinot", Email="clymerj@oregonstate.edu", AccessCode="", PromoCode="" , Widget="False"  },
+        new TicketData(){ Date = "5/09/2021 05:35 PM", EventName= "Anderson Valley Passport to Pinot", Email="clymerj@oregonstate.edu", AccessCode="", PromoCode="" , Widget="False"  },
+        new TicketData(){ Date = "5/09/2021 01:53 PM", EventName= "Anderson Valley Passport to Pinot", Email="carlosm81@gmx.com", AccessCode="", PromoCode="" , Widget="False"  },
+        new TicketData(){ Date = "5/09/2021 01:45 PM", EventName= "Anderson Valley Passport to Pinot", Email="carlosm81@gmx.com", AccessCode="", PromoCode="" , Widget="False"  },
+        new TicketData(){ Date = "5/07/2021 02:46 PM", EventName= "Anderson Valley Passport to Pinot", Email="carlosm81@gmx.com", AccessCode="", PromoCode="" , Widget="False"  },
+  };
+
+
+
+}

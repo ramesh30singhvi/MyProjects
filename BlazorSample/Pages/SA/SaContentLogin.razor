@@ -1,0 +1,92 @@
+﻿@page "/sa/content/admin-login-message"
+@layout SaLayout
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums;
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA;
+@using Syncfusion.Blazor.RichTextEditor
+@inject ISaContentViewModel _saContentViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<style>
+    .e-richtexteditor .e-rte-srctextarea {
+        height: calc(100vh - 370px);
+    }
+
+    main#main-authorized .vh-100 {
+        height: calc(100vh - 70px) !important;
+    }
+</style>
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<div class="py-3">
+    <div class="row justify-content-between">
+        <div class="col-md-auto mb-4 mb-md-0"><h5><a href="sa/content" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><i class="fa-regular fa-comment-alt-lines me-2"></i>Admin Login Message</h5></div>
+        <div class="col-md-auto">
+            <button type="button" class="btn btn-sm btn-primary" @onclick="SaveContent">Save</button>
+        </div>
+    </div>
+    <hr />
+</div>
+
+<SfRichTextEditor @bind-Value="Content">
+    <RichTextEditorFontFamily Default="Poppins" Items="@FontFamilyItems" />
+    <RichTextEditorToolbarSettings Items="@SfRichTextEditorHelper.Tools" Type="ToolbarType.MultiRow" />
+    <RichTextEditorFormat Items="@SfRichTextEditorHelper.FormatItems" />
+</SfRichTextEditor>
+
+
+@code
+{
+    private string title = "Admin Login Message | Synergy Commerce Super Admin  Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    private string Content { get; set; }
+    CPContentRequestModel cPContentRequest = new CPContentRequestModel();
+    CPContent cPContent = new CPContent();
+
+    private List<DropDownItemModel> FontFamilyItems = new List<DropDownItemModel>()
+    {
+        new DropDownItemModel() { CssClass = "e-poppins", Command = "Font", SubCommand = "FontName", Text = "Poppins", Value = "Poppins,Helvetica,sans-serif" },
+        new DropDownItemModel() { CssClass = "e-segoe-ui", Command = "Font", SubCommand = "FontName", Text = "Segoe UI", Value = "Segoe UI,Helvetica,sans-serif" },
+        new DropDownItemModel() { CssClass = "e-arial", Command = "Font", SubCommand = "FontName", Text = "Arial", Value = "Roboto" },
+        new DropDownItemModel() { CssClass = "e-georgia", Command = "Font", SubCommand = "FontName", Text = "Georgia", Value = "Georgia,serif" },
+        new DropDownItemModel() { CssClass = "e-impact", Command = "Font", SubCommand = "FontName", Text = "Impact", Value = "Impact,Charcoal,sans-serif" },
+        new DropDownItemModel() { CssClass = "e-tahoma", Command = "Font", SubCommand = "FontName", Text = "Tahoma", Value = "Tahoma,Geneva,sans-serif" },
+        new DropDownItemModel() { CssClass = "e-times-new-roman", Command = "Font", SubCommand = "FontName", Text = "Times New Roman", Value = "Times New Roman,Charcoal,sans-serif" },
+        new DropDownItemModel() { CssClass = "e-verdana", Command = "Font", SubCommand = "FontName", Text = "Verdana", Value = "Verdana,Geneva,sans-serif" }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+
+        //Get Content for Admin Login Message
+        var response = await _saContentViewModel.GetCPContentByContentTypeAsync(0,Convert.ToInt32(CPContentType.AdminLoginMessage), EnumHelper.GetDescription(CPContentType.AdminLoginMessage));
+        cPContent = response?.data ?? new CPContent();
+        Content = response?.data?.Content ?? string.Empty;
+        SpinnerVisibility = false;
+    }
+    public async Task SaveContent()
+    {
+        SpinnerVisibility = true;
+        var response = await _saContentViewModel.AddUpdateCPContentAsync(
+                   new CPContentRequestModel
+                   {
+                       Id = cPContent.Id > 0 ? cPContent.Id : 0,
+                       ContentName = "Admin Login Message",
+                       Content = Content,
+                       ContentType = Convert.ToInt32(CPContentType.AdminLoginMessage)
+                   });
+        SpinnerVisibility = false;
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+}

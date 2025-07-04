@@ -1,0 +1,389 @@
+﻿@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using System.Globalization;
+@using System.Text;
+@inject ToastService toastService
+
+<SfDialog CssClass="syncfusion-dialog-size syncfusion-dialog-size-md" IsModal="true" @bind-Visible="@MetaDialogVisible">
+    <DialogTemplates>
+        <Header>@((BusinessMetaData.Id > 0)? "Edit Meta Data" : "Create Meta Data") </Header>
+        <Content>
+            <EditForm Model="BusinessMetaData" OnValidSubmit="@OnSubmit" Class="row g-3">
+                <DataAnnotationsValidator />
+                <div id="meta-data-form">
+                    <div class="row gx-2 mb-3">
+                        <div class="@(BusinessMetaData.Category == (int)MetaDataCategory.Product ? "col-sm-12": "col-sm-8")" >
+                            <label class="form-label" for="inputMetaName">Meta Name</label>
+                            <InputText id="inputMetaName" @bind-Value="BusinessMetaData.Name" class="form-control" />
+                            <ValidationMessage For="() => BusinessMetaData.Name" />
+                        </div>
+                        <div class="col-sm-4" hidden="@(BusinessMetaData.Category == (int)MetaDataCategory.Product)">
+                            <label class="form-label" ></label>
+                            <div class="form-check form-switch pt-3 ms-3">
+                                <input class="form-check-input" type="checkbox" id="inputActive" @bind-value="BusinessMetaData.IsActive" checked="@BusinessMetaData.IsActive">
+                                <label class="form-check-label" for="inputActive">Active</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="selMetaType">Meta Type</label>
+                        <select id="selMetaType" class="form-select" @bind="@BusinessMetaData.ContentType" @onclick="onChangeMetaType" disabled="@(BusinessMetaData.Id > 0 ? true : false)">
+                            <option value="3">Dropdown</option>
+                            <option value="2">Date</option>
+                            <option value="5">URL</option>
+                            <option value="1">Text Box</option>
+                            <option value="6">Switch</option>
+                            <option value="4">Price</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <MessageInstruction @ref="messageInstruction" MaxTextCount="256" RowsCount="3" MessageText="@BusinessMetaData.Description"></MessageInstruction>
+                    </div>
+                        <div class="mb-3" hidden="@(BusinessMetaData.Category != (int)MetaDataCategory.Product)">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="chkVisibility" @bind="@BusinessMetaData.IsPublic">
+                                <label class="form-check-label" for="chkVisibility">
+                                    Display to Public
+                                </label>
+                            </div>
+                        </div>
+                    <hr />
+                    <div id="metaDropdown" hidden="@(BusinessMetaData.ContentType != (int)MetaDataContentType.Choice)">
+                        <label class="form-label" for="metaDropdownItem">Dropdown Item</label>
+                        <div class="input-group mb-3">
+                            <input id="metaDropdownItem" type="text" class="form-control" @bind-value="@metaDropdownItemDetail.Choice">
+                            <button class="btn btn-outline-primary" type="button" @onclick="AddMetaDropdownItem">Add</button>
+                        </div>
+                        <SfListBox @ref="listGroupItem" ID="listGroupItem" TValue="string[]" DataSource="@BusinessMetaData.MetaDropdownItemData" TItem="MetaDropdownItem" AllowDragAndDrop="true" CssClass="rounded cp-list cp-no-selection">
+                            <ListBoxFieldSettings Text="SortOrder" />
+                            <ListBoxEvents TValue="string[]" TItem="MetaDropdownItem"></ListBoxEvents>
+                            <ListBoxTemplates TItem="MetaDropdownItem">
+                                <ItemTemplate Context="modContext">
+                                    <div class="my-2">
+                                        <div class="d-flex align-items-center">
+                                            <span class="far fa-sort me-4"></span>
+                                            @{
+                                                var choice = modContext as MetaDropdownItem;
+                                                if (editableChoice.SortOrder == choice.SortOrder)
+                                                {
+                                                    <input class="form-control" @bind-value="@editableChoice.Choice" />
+                                                    <button type="button" class="btn btn-secondary mx-2 me-0" @onclick="CancelEditingChoice">Cancel</button>
+                                                    <button type="button" class="btn btn-primary mx-2 me-0" @onclick="EditChoiceItem">Save</button>
+                                                }
+                                                else
+                                                {
+                                                    <h6 class="me-auto">@choice.Choice</h6>
+                                                    <a href="javascript:void();" class="text-dark me-4" @onclick="() => StartChoiceItemEdit(choice)"><span class="fas fa-pencil-alt"></span></a>
+                                                    <a href="javascript:void();" class="text-dark" @onclick="() => DeleteDialogOpen(choice.SortOrder)"><span class="far fa-trash-alt"></span></a>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                </ItemTemplate>
+                            </ListBoxTemplates>
+                        </SfListBox>
+                    </div>
+                    <div id="metaDate" hidden="@(BusinessMetaData.ContentType != (int)MetaDataContentType.Date)">
+                        <label class="form-label" for="dpDefaultDate">Date Input</label>
+                        <SfDatePicker id="dpDefaultDate" TValue="DateTime?" @bind-Value="dateDefaultValue" @onchange="@OnChange" Placeholder="Default Value">
+                            <DatePickerEvents TValue="DateTime?" ValueChange="DateValueChange"></DatePickerEvents>
+                        </SfDatePicker>
+                    </div>
+                    <div id="metaUrl" hidden="@(BusinessMetaData.ContentType != (int)MetaDataContentType.Url)">
+                        <label class="form-label" for="inputURL">URL Input</label>
+                        <InputText id="inputURL" @bind-Value="BusinessMetaData.DefaultValue" class="form-control" />
+                    </div>
+                    <div id="metaTextBox" hidden="@(BusinessMetaData.ContentType != (int)MetaDataContentType.Text)">
+                        <label class="form-label" for="inputTextBox">Default Text</label>
+                        <InputText id="inputTextBox" @bind-Value="BusinessMetaData.DefaultValue" class="form-control" />
+                    </div>
+                    <div id="metaSwitch" hidden="@(BusinessMetaData.ContentType != (int)MetaDataContentType.Boolean)">
+                        <label class="form-label" for="inputSwitch">Switch</label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="inputSwitch" @bind-value="switchDefaultValue" checked="@switchDefaultValue">
+                        </div>
+                    </div>
+                    <div class="row gx-2" hidden="@(BusinessMetaData.ContentType != (int)MetaDataContentType.Boolean)">
+                        <div class="col-sm-6">
+                            <label class="form-label" for="inputOffLabel">“Off” Label</label>
+                            <InputText id="inputOffLabel" @bind-Value="BusinessMetaData.OffLabel" class="form-control" />
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label" for="inputOnLabel">“On” Label</label>
+                            <InputText id="inputOnLabel" @bind-Value="BusinessMetaData.OnLabel" class="form-control" />
+                        </div>
+                    </div>
+                    <div id="metaPrice" hidden="@(BusinessMetaData.ContentType != (int)MetaDataContentType.Price)">
+                        <label class="form-label" for="numPrice">Price Input</label>
+                        <SfNumericTextBox id="numPrice" TValue="decimal?" Format="c2" @bind-Value="priceDefaultValue" Placeholder="Default Value" @onchange="()=> OnChangeAmount()"></SfNumericTextBox>
+                    </div>
+                    <div class="my-3" hidden="@(BusinessMetaData.Id > 0 ? false : true)">
+                        <label class="form-label" for="inputMetaDataKey">Meta Data Key / Space</label>
+                        <InputText id="inputMetaDataKey" @bind-Value="BusinessMetaData.DataKey" class="form-control" readonly />
+                        <ValidationMessage For="() => BusinessMetaData.DataKey" />
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @onclick="@CloseMetaDialog">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </div>
+            </EditForm>
+        </Content>
+    </DialogTemplates>
+    <DialogEvents Closed="@ClosedHandler"></DialogEvents>
+</SfDialog>
+
+<DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="DeleteChoice"></DeleteConfirmation>
+
+
+@code {
+
+    [Parameter]
+    public bool MetaDialogVisible { get; set; }
+
+    [Parameter]
+    public EventCallback OnValidSubmit { get; set; }
+
+    [Parameter]
+    public EventCallback OnDialogClose { get; set; }
+
+    private BusinessMetaDataRequestModel businessMetaData { get; set; } = new BusinessMetaDataRequestModel();
+
+    [Parameter]
+    public BusinessMetaDataRequestModel BusinessMetaData
+    {
+        get { return businessMetaData; }
+        set
+        {
+            if (value.ContentType == (int)MetaDataContentType.Boolean)
+            {
+                switchDefaultValue = value.DefaultValue == "true" ? true : false;
+            }
+            if (value.ContentType == (int)MetaDataContentType.Price)
+            {
+                priceDefaultValue = !string.IsNullOrEmpty(value.DefaultValue)  ? Convert.ToDecimal(value.DefaultValue) : 0;
+            }
+            if (value.ContentType == (int)MetaDataContentType.Date)
+            {
+                dateDefaultValue = !string.IsNullOrEmpty(value.DefaultValue) ? Convert.ToDateTime(value.DefaultValue) :null;
+            }
+            businessMetaData = value;
+        }
+    }
+
+
+    public int MaxMetaDescriptionCount = 256;
+    public DateTime? dateDefaultValue { get; set; }
+    public decimal? priceDefaultValue { get; set; } = 0;
+    public bool switchDefaultValue { get; set; } = false;
+    private MetaDropdownItem editableChoice = new MetaDropdownItem();
+    bool openDeleteDialog = false;
+    int idForDelete { get; set; }
+    private void DialogClose() => openDeleteDialog = false;
+
+    public MessageInstruction messageInstruction;
+
+    MetaDropdownItem metaDropdownItemDetail = new MetaDropdownItem()
+    {
+        Choice = ""
+    };
+    SfListBox<string[], MetaDropdownItem> listGroupItem;
+
+    public void RefreshMe()
+    {
+        Console.WriteLine(BusinessMetaData.IsActive);
+        metaDropdownItemDetail = new MetaDropdownItem()
+        {
+            Choice = ""
+        };
+        StateHasChanged();
+    }
+
+    protected async Task CloseMetaDialog()
+    {
+        await OnDialogClose.InvokeAsync();
+    }
+
+    protected async Task OnSubmit()
+    {
+        BusinessMetaData.Description = messageInstruction.MessageText;
+        int sortOrder = 0;
+        var listboxData = listGroupItem.GetDataList();
+        var metaItem = new List<MetaDropdownItem>();
+        foreach (var item in listboxData)
+        {
+            sortOrder++;
+            MetaDropdownItem requestModel = new MetaDropdownItem()
+            {
+                Choice = item.Choice,
+                SortOrder = sortOrder
+            };
+            metaItem.Add(requestModel);
+        }
+        string serializedString = System.Text.Json.JsonSerializer.Serialize(metaItem);
+        //MetaDropdownItem data = System.Text.Json.JsonSerializer.Deserialize<MetaDropdownItem>(serializedString);
+
+        Console.WriteLine(serializedString);
+        BusinessMetaData.ContentChoices = serializedString;
+        if (BusinessMetaData.ContentType == (int)MetaDataContentType.Boolean)
+        {
+            BusinessMetaData.DefaultValue = switchDefaultValue ? "true" : "false";
+        }
+
+        await OnValidSubmit.InvokeAsync();
+    }
+
+    private async Task ClosedHandler(CloseEventArgs args)
+    {
+        await CloseMetaDialog();
+    }
+
+    private void GetEmailInstructionsCount(Microsoft.AspNetCore.Components.ChangeEventArgs eventArgs)
+    {
+        var value = eventArgs.Value.ToString().Count();
+        MaxMetaDescriptionCount = 256 - value;
+        StateHasChanged();
+    }
+
+    private void DateValueChange(ChangedEventArgs<DateTime?> args)
+    {
+        var dt = (DateTime)args.Value;
+        BusinessMetaData.DefaultValue = dt.ToLongDateString();
+        StateHasChanged();
+    }
+
+    public void OnChange(ChangeEventArgs args)
+    {
+        DateTime parsedDate;
+        var result = DateTime.TryParseExact(args.Value.ToString(), "MMddyyyy", new CultureInfo("en-US"), DateTimeStyles.None, out parsedDate);
+        if (result)
+        {
+            BusinessMetaData.DefaultValue = parsedDate.ToString();
+        }
+        else { BusinessMetaData.DefaultValue = ""; }
+    }
+
+    private void OnChangeAmount()
+    {
+        BusinessMetaData.DefaultValue = priceDefaultValue.ToString();
+    }
+
+    private void onChangeMetaType()
+    {
+        if (BusinessMetaData.ContentType == (int)MetaDataContentType.Choice)
+        {
+            BusinessMetaData.DefaultValue = "0";
+        }
+        else { BusinessMetaData.DefaultValue = ""; }
+    }
+
+    private void AddMetaDropdownItem()
+    {
+        if (BusinessMetaData.MetaDropdownItemData == null)
+        {
+            BusinessMetaData.MetaDropdownItemData = new ObservableCollection<MetaDropdownItem>();
+        }
+        if (!string.IsNullOrEmpty(metaDropdownItemDetail.Choice))
+        {
+            var isNameAlreadyExist = BusinessMetaData.MetaDropdownItemData.Any(x => x.Choice.ToLower() == metaDropdownItemDetail.Choice.ToLower());
+            if (isNameAlreadyExist)
+            {
+                toastService.ShowToast("Name must be unique.", ToastLevel.Error);
+            }
+            else
+            {
+                int maxInt = 0;
+                for (int i = 0; i < BusinessMetaData.MetaDropdownItemData.Count; i++)
+                {
+                    if (maxInt < BusinessMetaData.MetaDropdownItemData[0].SortOrder)
+                    {
+                        maxInt = BusinessMetaData.MetaDropdownItemData[0].SortOrder;
+                    }
+                }
+                BusinessMetaData.MetaDropdownItemData.Add(new MetaDropdownItem()
+                    {
+                        Choice = metaDropdownItemDetail.Choice,
+                        //SortOrder = metaDropdownItemDetail.SortOrder,
+                        SortOrder = maxInt + 1
+            });
+                metaDropdownItemDetail = new MetaDropdownItem();
+                BusinessMetaData.MetaDropdownItemData = new ObservableCollection<MetaDropdownItem>(BusinessMetaData.MetaDropdownItemData);
+                StateHasChanged();
+            }
+        }
+        else
+        {
+            if (string.IsNullOrEmpty(metaDropdownItemDetail.Choice))
+            {
+                toastService.ShowToast("Please add name.", ToastLevel.Error);
+            }
+        }
+    }
+
+    //private void OnInputName(Microsoft.AspNetCore.Components.ChangeEventArgs eventArgs)
+    //{
+    //    if (BusinessMetaData.Id <= 0)
+    //    {
+    //        var value = eventArgs.Value.ToString();
+    //        var name = value.ToLower().Replace(" ", "_");
+    //        BusinessMetaData.DataKey = "my_fields." + name;
+    //    }
+    //    StateHasChanged();
+    //}
+
+    //public List<MetaDropdownItem> MetaDropdownItemList = new List<MetaDropdownItem>{
+    //new MetaDropdownItem{ Choice = "Albarino", SortOrder = 0 },
+    //new MetaDropdownItem{ Choice = "Cabernet Sauvignon", SortOrder = 1 },
+    //new MetaDropdownItem{ Choice = "Tempranillo", SortOrder = 2 }
+    //};
+
+    private void StartChoiceItemEdit(MetaDropdownItem dropdownItem)
+    {
+        editableChoice = new MetaDropdownItem { Choice = dropdownItem.Choice, SortOrder = dropdownItem.SortOrder};
+    }
+
+    private void EditChoiceItem()
+    {
+        if(BusinessMetaData.MetaDropdownItemData != null && BusinessMetaData.MetaDropdownItemData.Any())
+        {
+            if(BusinessMetaData.MetaDropdownItemData.Any(x => x.Choice.ToLower() == editableChoice.Choice.ToLower() && x.SortOrder != editableChoice.SortOrder))
+            {
+                toastService.ShowToast("Name must be unique.", ToastLevel.Error);
+                return;
+            }
+        }
+        foreach(var choice in BusinessMetaData.MetaDropdownItemData)
+        {
+            if (choice.SortOrder == editableChoice.SortOrder)
+            {
+                choice.Choice = editableChoice.Choice;
+                toastService.ShowToast("Choice Updated successfully", ToastLevel.Success);
+            }
+        }
+        editableChoice = new MetaDropdownItem();
+    }
+
+
+
+    private void CancelEditingChoice()
+    {
+        editableChoice = new MetaDropdownItem();
+    }
+
+    private void DeleteDialogOpen(int id)
+    {
+        idForDelete = id;
+        openDeleteDialog = true;
+    }
+
+    private void DeleteChoice()
+    {
+        var choiceForDelete = BusinessMetaData.MetaDropdownItemData.FirstOrDefault(x => x.SortOrder == idForDelete);
+        BusinessMetaData.MetaDropdownItemData.Remove(choiceForDelete);
+        openDeleteDialog = false;
+        toastService.ShowToast(Constants.DeleteMessage, ToastLevel.Success);
+    }
+}

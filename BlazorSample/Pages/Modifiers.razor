@@ -1,0 +1,517 @@
+﻿@page "/settings/menu/modifiers"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject ToastService toastService
+@inject IBusinessModifierGroupViewModel _businessModifierGroupViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings/menu" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="far fa-square-pen me-2"></span>Modifiers</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="javascript:void(0)" @onclick="()=>OpenModModal(null)">Add Modifier</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="theme-wizard border-bottom p-3">
+            <ul class="nav justify-content-between nav-wizard">
+                <li class="nav-item">
+                    <a class="nav-link active fw-semi-bold" href="#bootstrap-wizard-tab1" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-1"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Click Add Modifier</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab2" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-2"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Name Modifier Group</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab3" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-3"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Create Modifiers</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab4" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-4"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Select Items</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab5" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-5"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Publish Modifier Group</span>
+                    </a>
+                </li>
+
+            </ul>
+        </div>
+
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@businessModifierGroupData" AllowPaging="true" Width="100%" class="border-x-0">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && businessModifierGroupData.Count <= 0)
+                        {
+                            <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Modifieres</h6>
+                                <button type="button" class="btn btn-outline-primary">Get Started</button>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn HeaderText="Modifier Group" TextAlign="TextAlign.Left" Width="200px">
+                        <Template>
+                            @{
+                                var pholder = (context as BusinessModifierGroupModel);
+                                <a href="javascript:void(0)" @onclick="()=>OpenModModal(pholder.Id)">@(pholder.ModifierGroupName)</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="CHOICES" TextAlign="TextAlign.Left" Width="400">
+                        <Template>
+                            @{
+                                var pholder = (context as BusinessModifierGroupModel);
+                                @(pholder.ModifierItemNames)
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="" Width="50px">
+                        <Template>
+                            @{
+                                var pholder = (context as BusinessModifierGroupModel);
+                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                    @*<a class="dropdown-item" href="javascript:void();">Select Items</a>*@
+                                    <a class="dropdown-item" href="javascript:void();">Archive</a>
+                                    <a class="dropdown-item" @onclick="()=>OpenDeleteDialog(pholder.Id)" href="javascript:void(0)">Delete</a>
+                                </div>
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+    <div class="card-footer">
+    </div>
+</div>
+
+<EditForm Model="@modifierRequest" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog IsModal="true" Width="800px" ShowCloseIcon="true" @bind-Visible="ModModalVisibility">
+        <DialogTemplates>
+            <Header><h5 class="modal-title" id="modalLabel">@(modifierRequest.Id > 0 ? "Edit Modifier" : "Create Modifier")</h5></Header>
+            <Content>
+                <div class="my-3" hidden="@(modifierRequest.Id > 0)">
+                    <h6 class="mb-3">How will you modify this item?</h6>
+                    <div class="btn-group d-flex flex-fill" role="group" aria-label="Modifier Group Type">
+                        <input type="radio" class="btn-check" name="btnradio" id="btnradio1" value="0" autocomplete="off" @onchange="SelectModifier" checked="@(modifierRequest.ModifierType == 0)">
+                        <label class="btn btn-outline-dark mx-2" for="btnradio1">
+                            <span class="fa-regular fa-list-check fa-4x m-2"></span><br />
+                            <span class="fs--1">Select from a list</span>
+                        </label>
+
+                        <input type="radio" class="btn-check" name="btnradio" id="btnradio2" value="1" autocomplete="off" @onchange="SelectModifier" checked="@(modifierRequest.ModifierType == 1)">
+                        <label class="btn btn-outline-dark mx-2" for="btnradio2">
+                            <span class="fa-regular fa-input-pipe fa-4x m-2"></span><br />
+                            <span class="fs--1">Type into a textbox</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="inputGroupName">Modifier Group Name</label>
+                    <InputText id="inputGroupName" class="form-control" @bind-Value="@modifierRequest.ModifierGroupName"></InputText>
+                    <ValidationMessage For="@(() => modifierRequest.ModifierGroupName)" />
+                </div>
+                @if (modifierRequest.ModifierType == 0)
+                {
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="chkSingleSelection" @bind="@modifierRequest.LimitSelection">
+                            <label class="form-check-label" for="chkSingleSelection">
+                                Only allow a single selection
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <h6>Create Modifiers for staff and customers to choose from</h6>
+                    </div>
+                    <div class="card shadow-none">
+                        <div class="card-header bg-100">
+                            <div class="row">
+                                <div class="col-7">
+                                    <h6 class="mb-0">Modifer</h6>
+                                </div>
+                                <div class="col-5">
+                                    <h6 class="mb-0">Additional Cost</h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="row g-2 my-2">
+                                <div class="col-7">
+                                    <input type="text" class="form-control" @bind-value="@businessModifierGroupItemDetail.ItemName" placeholder="Modifier Name" aria-label="Modifier Name" required>
+                                    @*<input type="text" class="form-control" placeholder="Modifier Name" aria-label="Modifier Name">*@
+                                </div>
+                                <div class="col-4">
+                                    <input type="text" class="form-control" @bind-value="@businessModifierGroupItemDetail.Price" placeholder="0.00" aria-label="Additional Cost" required>
+                                    @* <input type="text" class="form-control">*@
+                                </div>
+                                <div class="col-1 text-end">
+                                    <button class="btn btn-outline-primary" @onclick="AddBusinessModifierGroupItem">Add</button>
+                                    @*<button class="btn btn-link btn-sm">Add</button>*@
+                                </div>
+                            </div>
+                            <div class="my-3">
+                                <SfListBox @ref="listGroupItem" ID="listGroupItem" TValue="string[]" DataSource="@businessModifierGroupItemData" TItem="BusinessModifierGroupItemModel" AllowDragAndDrop="true" CssClass="rounded cp-list cp-no-selection">
+                                    <ListBoxFieldSettings Text="SortOrder" />
+                                    <ListBoxEvents TValue="string[]" TItem="BusinessModifierGroupItemModel"></ListBoxEvents>
+                                    <ListBoxTemplates TItem="BusinessModifierGroupItemModel">
+                                        <ItemTemplate>
+                                            <div class="d-flex justify-content-start align-items-center">
+                                                <span class="far fa-sort me-2"></span>
+                                                <div class="row flex-fill mx-2">
+                                                    <div class="col-12 col-md-7 mb-2 pt-2">
+                                                        <SfInPlaceEditor @bind-Value="@((context as BusinessModifierGroupItemModel).ItemName)" TValue="string" Type="Syncfusion.Blazor.InPlaceEditor.InputType.Text" ShowButtons="false" SubmitOnEnter="true">
+                                                            <EditorComponent>
+                                                                <SfTextBox @bind-Value="@((context as BusinessModifierGroupItemModel).ItemName)"></SfTextBox>
+                                                            </EditorComponent>
+                                                        </SfInPlaceEditor>
+                                                    </div>
+                                                    <div class="col-12 col-md-4">
+                                                        <SfInPlaceEditor @bind-Value="@((context as BusinessModifierGroupItemModel).Price)" TValue="decimal" Type="Syncfusion.Blazor.InPlaceEditor.InputType.Numeric" ShowButtons="false" SubmitOnEnter="true">
+                                                            <EditorComponent>
+                                                                <SfNumericTextBox @bind-Value="@((context as BusinessModifierGroupItemModel).Price)" TValue="decimal" ValidateDecimalOnType="true" Decimals=2 ShowSpinButton="false" Format="c2"></SfNumericTextBox>
+                                                            </EditorComponent>
+                                                        </SfInPlaceEditor>
+                                                    </div>
+                                                </div>
+                                                <a href="javascript:void();" class="text-dark" @onclick="() => DeleteBusinessModifierGroupItem((context as BusinessModifierGroupItemModel))"><span class="far fa-trash-alt"></span></a>
+                                            </div>
+                                        </ItemTemplate>
+                                    </ListBoxTemplates>
+                                </SfListBox>
+                            </div>
+                        </div>
+                    </div>
+                }
+                @*//This section is shown only when Type into a textbox is selected*@
+                @*<p class="bg-info p-2">DEV NOTE: This section is shown only when 'Type into a textbox' is selected</p>*@
+                @if (modifierRequest.ModifierType == 1)
+                {
+                    <div class="mt-4">
+                        <div class="mb-3">
+                            <label for="inputTextboxLabel" class="form-label">Textbox Label</label>
+                            <InputText id="inputTextboxLabel" class="form-control" @bind-Value="@modifierRequest.TextboxLabel" placeholder="Name your textbox so customers will know what they are typing"></InputText>
+                            <ValidationMessage For="@(() => modifierRequest.TextboxLabel)" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="inputCharacterLimit" class="form-label">Character Limit</label>
+                            <InputText id="inputCharacterLimit" class="form-control" @bind-Value="@modifierRequest.TextboxCharacterLimit"></InputText>
+                            <ValidationMessage For="@(() => modifierRequest.TextboxCharacterLimit)" />
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkTextboxRequired" @bind="@modifierRequest.IsRequired">
+                                <label class="form-check-label" for="chkTextboxRequired">
+                                    Make this a required field
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                }
+                @*//End section*@
+            </Content>
+            <FooterTemplate>
+                <button type="button" class="btn btn-secondary" @onclick="@CloseModModal">Close</button>
+                <button class="btn btn-primary" @onclick="@(()=>CreateModifier(formContext))">Save</button>
+            </FooterTemplate>
+        </DialogTemplates>
+    </SfDialog>
+</EditForm>
+
+@*Delete confimation dialog*@
+<DeleteConfirmation OpenDeleteDialog="DeleteDialogVisibility" OnDialogClose="CloseDeleteDialog" OnDeleteConfirmed="DeleteConfirmation"></DeleteConfirmation>
+@code
+{
+    private string title = "Modifiers | Synergy Admin Panel";
+    private Boolean isLoading = true;
+    private bool DeleteDialogVisibility { get; set; } = false;
+    int idForDelete = 0;
+    int charachterLimit = 150;
+
+    private bool ModModalVisibility { get; set; } = false;
+    List<BusinessModifierGroupModel> businessModifierGroupData = new List<BusinessModifierGroupModel>();
+    ObservableCollection<BusinessModifierGroupItemModel> businessModifierGroupItemData = new ObservableCollection<BusinessModifierGroupItemModel>();
+    private BusinessModifierGroupRequestModel modifierRequest = new BusinessModifierGroupRequestModel();
+
+    List<PlaceholderData> PlaceholderDataList = new List<PlaceholderData>();
+    List<PlaceholderModData> PlaceholderModDataList = new List<PlaceholderModData>();
+
+    SfListBox<string[], BusinessModifierGroupItemModel> listGroupItem;
+
+    BusinessModifierGroupItemRequestModel businessModifierGroupItemDetail = new BusinessModifierGroupItemRequestModel()
+    {
+        ItemName = "",
+        Price = 0
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetBusinessModifierGroup();
+        PlaceholderDataList = PlaceholderList;
+        PlaceholderModDataList = PlaceholderModList;
+        isLoading = false;
+    }
+
+    private async Task GetBusinessModifierGroup()
+    {
+        var response = await _businessModifierGroupViewModel.GetBusinessModifierGroupListAsync();
+        businessModifierGroupData = response?.data.OrderBy(x=>x.ModifierGroupName).ToList() ?? new List<BusinessModifierGroupModel>();
+    }
+
+    private async Task OpenModModal(int? id)
+    {
+        if (id != null)
+        {
+            var requestData = businessModifierGroupData.Where(x => x.Id == id).FirstOrDefault();
+            if (requestData != null)
+            {
+                modifierRequest = new BusinessModifierGroupRequestModel()
+                {
+                    Id = requestData.Id,
+                    ModifierGroupName = requestData.ModifierGroupName,
+                    ModifierType = requestData.ModifierType,
+                    LimitSelection = requestData.LimitSelection,
+                    IsRequired = requestData.IsRequired,
+                    TextboxLabel = requestData.TextboxLabel,
+                    TextboxCharacterLimit = requestData.TextboxCharacterLimit
+                };
+                var response = await _businessModifierGroupViewModel.GetBusinessModifierGroupItemListAsync(requestData.Id);
+                if (response.data != null)
+                {
+                    businessModifierGroupItemData = new ObservableCollection<BusinessModifierGroupItemModel>();
+                    foreach (var item in response.data.OrderBy(x => x.SortOrder))
+                    {
+                        BusinessModifierGroupItemModel model = new BusinessModifierGroupItemModel()
+                        {
+                            Id = item.Id,
+                            Price = Decimal.Round(item.Price, 2, MidpointRounding.AwayFromZero),
+                            ItemName = item.ItemName,
+                            SortOrder = item.SortOrder,
+                            BusinessModifierGroupId = item.BusinessModifierGroupId
+                        };
+                        businessModifierGroupItemData.Add(model);
+                    }
+                }
+            }
+        }
+        else
+        {
+            modifierRequest = new BusinessModifierGroupRequestModel();
+            modifierRequest.ModifierType = 0;
+            businessModifierGroupItemData = new ObservableCollection<BusinessModifierGroupItemModel>();
+        }
+        this.ModModalVisibility = true;
+    }
+    private void CloseModModal()
+    {
+        this.ModModalVisibility = false;
+    }
+
+    private void SelectModifier(ChangeEventArgs args)
+    {
+        int modifierType = Convert.ToInt32(args.Value);
+        modifierRequest.ModifierType = modifierType;
+    }
+
+    private async Task CreateModifier(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            var isNameAlreadyExist = businessModifierGroupData.Any(x => x.ModifierGroupName.ToLower() == modifierRequest.ModifierGroupName.ToLower() && x.Id != modifierRequest.Id);
+            if (isNameAlreadyExist)
+            {
+                toastService.ShowToast("Modifier group name must be unique.", ToastLevel.Error);
+            }
+            else
+            {
+                isLoading = true;
+
+                modifierRequest.ModifierGroupItem = new List<BusinessModifierGroupItemRequestModel>();
+
+                if (modifierRequest.ModifierType == 0)
+                {
+                    modifierRequest.TextboxLabel = "";
+                    modifierRequest.TextboxCharacterLimit = "";
+                    int sortOrder = 0;
+                    var listboxData = listGroupItem.GetDataList();
+                    foreach (var item in listboxData)
+                    {
+                        sortOrder++;
+                        BusinessModifierGroupItemRequestModel requestModel = new BusinessModifierGroupItemRequestModel()
+                        {
+                            Id = item.Id,
+                            Price = item.Price,
+                            ItemName = item.ItemName,
+                            SortOrder = sortOrder,
+                            BusinessModifierGroupId = modifierRequest.Id
+                        };
+                        modifierRequest.ModifierGroupItem.Add(requestModel);
+                    }
+                }
+                else
+                {
+                    modifierRequest.LimitSelection = false;
+                    modifierRequest.ModifierGroupItem = new List<BusinessModifierGroupItemRequestModel>();
+                    if (Convert.ToInt32(modifierRequest.TextboxCharacterLimit) > charachterLimit)
+                    {
+                        toastService.ShowToast("The character limit cannot exceed "+ charachterLimit + " characters.", ToastLevel.Error);
+                        isLoading = false;
+                        return;
+                    }
+                }
+
+                var response = await _businessModifierGroupViewModel.AddUpdateBusinessModifierGroupAsync(modifierRequest);
+                isLoading = false;
+                if (response.success)
+                {
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                    CloseModModal();
+                    await GetBusinessModifierGroup();
+                }
+                else
+                {
+                    toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+                }
+            }
+        }
+        StateHasChanged();
+    }
+
+    private void CloseDeleteDialog() => DeleteDialogVisibility = false;
+
+
+    private async Task OpenDeleteDialog(int id)
+    {
+        DeleteDialogVisibility = true;
+        idForDelete = id;
+    }
+
+    private async Task DeleteConfirmation()
+    {
+        isLoading = true;
+        var response = await _businessModifierGroupViewModel.DeleteBusinessModifierGroupByIdAsync(idForDelete);
+        DeleteDialogVisibility = false;
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.DeleteMessage, ToastLevel.Success);
+            businessModifierGroupData = response.data;
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void AddBusinessModifierGroupItem()
+    {
+        if (businessModifierGroupItemData == null)
+        {
+            businessModifierGroupItemData = new ObservableCollection<BusinessModifierGroupItemModel>();
+        }
+        if (businessModifierGroupItemDetail.Price >= 0 && !string.IsNullOrEmpty(businessModifierGroupItemDetail.ItemName))
+        {
+            var isNameAlreadyExist = businessModifierGroupItemData.Any(x => x.ItemName.ToLower() == businessModifierGroupItemDetail.ItemName.ToLower());
+            if (isNameAlreadyExist)
+            {
+                toastService.ShowToast("Item names must be unique.", ToastLevel.Error);
+            }
+            else
+            {
+                businessModifierGroupItemData.Add(new BusinessModifierGroupItemModel()
+                {
+                    Id = businessModifierGroupItemDetail.Id,
+                    BusinessModifierGroupId = businessModifierGroupItemDetail.BusinessModifierGroupId,
+                    ItemName = businessModifierGroupItemDetail.ItemName,
+                    Price = businessModifierGroupItemDetail.Price,
+                    SortOrder = businessModifierGroupItemDetail.SortOrder,
+
+                });
+                businessModifierGroupItemDetail = new BusinessModifierGroupItemRequestModel();
+
+                businessModifierGroupItemData = new ObservableCollection<BusinessModifierGroupItemModel>(businessModifierGroupItemData);
+                StateHasChanged();
+            }
+        }
+        else
+        {
+            if (string.IsNullOrEmpty(businessModifierGroupItemDetail.ItemName))
+            {
+                toastService.ShowToast("Please add modifier name.", ToastLevel.Error);
+            }
+            if (businessModifierGroupItemDetail.Price < 0)
+            {
+                toastService.ShowToast("Price must be greater then or equal to 0.", ToastLevel.Error);
+            }
+        }
+    }
+
+    private void DeleteBusinessModifierGroupItem(BusinessModifierGroupItemModel item)
+    {
+        businessModifierGroupItemData.Remove(item);
+        //toastService.ShowToast(Constants.DeleteMessage, ToastLevel.Success);
+        StateHasChanged();
+    }
+
+    public class PlaceholderData
+    {
+        public int Id { get; set; }
+        public string ModifierGroupName { get; set; }
+        public string Modifiers { get; set; }
+    }
+
+    public List<PlaceholderData> PlaceholderList = new List<PlaceholderData>()
+{
+    new PlaceholderData(){ Id=1, ModifierGroupName= "Temperature", Modifiers = "Rare, Medium Rare, Medium, Medium Well, Well Done" },
+    new PlaceholderData(){ Id=2, ModifierGroupName= "Hamburger Sides", Modifiers = "Side Salad, French Fries, Sweet Potato Fries" },
+    new PlaceholderData(){ Id=3, ModifierGroupName= "Hamburger Toppings", Modifiers = "American Cheese, Swiss Cheese, Cheddar Cheese, Bacon" },
+     };
+
+    public class PlaceholderModData
+    {
+        public int Id { get; set; }
+        public string ModifierName { get; set; }
+        public string ModifierPrice { get; set; }
+    }
+
+    public List<PlaceholderModData> PlaceholderModList = new List<PlaceholderModData>()
+{
+    new PlaceholderModData(){ Id=1, ModifierName= "Rare", ModifierPrice = "0.00" },
+    new PlaceholderModData(){ Id=2, ModifierName= "Medium Rare", ModifierPrice = "0.00" },
+    new PlaceholderModData(){ Id=2, ModifierName= "Medium", ModifierPrice = "0.00" },
+     };
+
+}

@@ -1,0 +1,449 @@
+﻿@page "/content/web-receipt"
+@layout AuthorizedLayout
+@using Syncfusion.Blazor.Inputs
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.Blazor.Spinner
+@inject IBusinessViewModel _businessViewModel
+@inject IWebReceiptViewModel _webReceiptViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ToastService toastService
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized Context="webReceiptForm">
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        <EditForm Model="@webReceipt" OnValidSubmit="@SaveWebReceipt">
+            <ObjectGraphDataAnnotationsValidator />
+            <div class="row">
+                <div class="col-12 col-lg-7 mb-4">
+                    <div class="card shadow-none border">
+                        <div class="card-header border-bottom">
+                            <div class="row justify-content-between">
+                                <div class="col-md-auto">
+                                    <h5 class="mb-3 mb-md-0"><a href="settings/sales-channels/web" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-receipt me-2"></span>Receipt Settings</h5>
+                                </div>
+        
+                                <div class="col-auto">
+                                    <button type="submit" class="btn btn-sm btn-primary" href="javascript:void(0)">Save</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+
+                            <p>To display your custom branding please upload your logo as either a png or jpeg, and select your brand color.</p>
+
+                            <form>
+
+                                <div class="mb-3">
+                                    <label class="form-label" for="receiptLogoImageUpload">Receipt Logo</label>
+                                    <div class="row my-2">
+                                        <div class="col-12 col-md-6">
+                                            <InputFile id="inputDrop" OnChange="OnInputFileChange" class="opacity-0 w-50 h-20 position-absolute" />
+                                            <div id="receiptLogoImageUpload" @onclick="() => uploadImage()">
+                                                <div class="dz-message dropzone-area px-2 py-3">
+                                                    <div class="text-center">
+                                                        <div class="far fa-cloud-upload-alt fa-4x d-block mx-auto mb-4"></div>
+                                                        <p><span class="far fa-image fa-lg me-2"></span>Upload your logo image</p><p class="fs--1 text-400">Upload a 100 x 100 jpg image with <br>a maximum size of 400KB</p>
+                                                        <p class="fs--1">Drag and drop your files here or click to open file loading dialogue...</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Brand Color</label>
+                                  
+                                    <h4>Select a color</h4>
+                                    <SfColorPicker Mode="Syncfusion.Blazor.Inputs.ColorPickerMode.Palette" CssClass="circle-palette" ModeSwitcher="false" Inline="true"  ShowButtons="false" Columns="6" PresetColors="@customColors" @bind-Value="@colorPick" ValueChange="OnChange"></SfColorPicker><br />
+
+                                    <div class="col-md-3">
+                                        <SfTextBox Placeholder="HEX Color" @bind-Value="@hexVal" @oninput="@OnChangeinput" FloatLabelType="@FloatLabelType.Auto"></SfTextBox>
+                                    </div>
+                                   
+
+                                </div>
+
+
+
+                                <div class="mb-3">
+                                    <label class="form-label">Display Options</label>
+                                    <div class="form-check">
+                                        <SfCheckBox @bind-Checked="@checkShowDescription"></SfCheckBox>
+                                        <label class="form-check-label" for="chkSHowItemDescription">
+                                            Show item description
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <SfCheckBox @bind-Checked="@checkShowLocAddress"></SfCheckBox>
+                                        <label class="form-check-label" for="chkShowLocationAddress">
+                                            Show location address and map
+                                        </label>
+                                    </div>
+
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label" for="inputCustomText">Custom Text</label>
+                                    <SfTextBox Multiline=true Placeholder="Enter the custom text" @bind-Value="@webReceipt.WebReceipt.CustomText"></SfTextBox>
+                                    <ValidationMessage For="() => webReceipt.WebReceipt.CustomText" />
+                                </div>
+
+
+                            </form>
+
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-5 mb-4">
+                    <div class="card shadow-none border">
+                        <div class="card-header bg-white borde-bottom">
+                            <div class="row justify-content-between">
+                                <div class="col-md-auto">
+                                    <h5 class="mb-3 mb-md-0"><span class="far fa-eye me-2"></span>Preview</h5>
+                                </div>
+                                <div class="col-md-auto">
+                                    <select class="form-select form-select-sm" aria-label="Bulk actions">
+                                        <option value="0" selected>Order Receipt- Thermal Receipt</option>
+                                        <option value="1">Order Receipt- Full Page</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body d-flex justify-content-center">
+
+                            <div id="receiptPreview" class="col-12 p-0 border" style="max-width:400px">
+                                <div id="receipt-brand" class="text-center py-4" style="@styleValue">
+                                    <img src="@(!String.IsNullOrEmpty(imgUrl) ? imgUrl :"https://cdn.cellarpass.com/photos/members/web-receipt-logo-26.jpg?clearcache=189")" width="100" class="pb-4 text-white" alt="Member Logo" />
+                                    <h5 class="text-white">Member Name</h5>
+                                </div>
+                                <div id="receipt-rating" class="bg-400 text-center py-2">
+                                    <p class="fs-1">How was your experience?</p>
+                                    <div class="d-flex justify-content-center pb-2">
+                                        <a href="#!"><i class="fas fa-smile fa-4x px-2 text-white"></i></a><a href="#!"><i class="fas fa-meh fa-4x px-2 text-white"></i></a><a href="#!"><i class="fas fa-frown fa-4x px-2 text-white"></i></a>
+                                    </div>
+                                </div>
+                                <div id="receipt-body" class="py-2 bg-white small">
+                                    <div class="text-center py-2">
+                                        <div class="fs-7 fw-normal"><span class="small">$</span>179.85</div>
+                                    </div>
+                                    @if (checkShowDescription)
+                                    {
+                                        <div id="receipt-table" class="px-2">
+                                            <table class="table table-borderless table-sm">
+                                                <tbody>
+                                                    <tr><td colspan="2" style="border-top: 1px dashed #e0e1e2;"></td></tr>
+                                                    <tr>
+                                                        <td class="text-start">
+                                                            <p class="mb-1 fw-bold">2016 Cabernet Sauvignon</p>
+                                                            <p class="text-500 mb-0">The 2016 Napa Valley Cabernet Sauvignon delivers mouth-filling, deeply intense blackberry fruit...</p>
+                                                        </td>
+                                                        <td class="text-end">
+                                                            <p class="mb-1 fw-bold">$120.00</p>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="text-start">
+                                                            <p class="mb-1 fw-bold">Cheese Platter</p>
+                                                            <p class="text-500 mb-0">Composed of artisan cheeses, almonds, bread, and fig spread</p>
+                                                            <p class="text-500 ps-2 mb-0 mt-1">+ Charcuterie  $10.00</p>
+                                                        </td>
+                                                        <td class="text-end">
+                                                            <p class="mb-1 fw-bold">$30.00</p>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="text-start">
+                                                            <p class="mb-1 fw-bold">Wine Glass</p>
+                                                            <p class="text-500 ps-2 mb-0">Discount: Special (50%)</p>
+                                                        </td>
+                                                        <td class="text-end">
+                                                            <p class="mb-1 fw-bold">$30.00</p>
+                                                            <p>($15.00)</p>
+                                                        </td>
+                                                    </tr>
+                                                    <tr><td colspan="2" style="border-top: 1px dashed #e0e1e2;" height="1"></td></tr>
+                                                    <tr>
+                                                        <td class="text-start">
+                                                            <p class="mb-1 fw-bold">Purchase Subtotal</p>
+                                                        </td>
+                                                        <td class="text-end">
+                                                            <p class="mb-1 fw-bold">$165.00</p>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="text-start">
+                                                            <p class="mb-1 fw-bold">Sales Tax (9%)</p>
+                                                        </td>
+                                                        <td class="text-end">
+                                                            <p class="mb-1 fw-bold">$14.85</p>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="text-start">
+                                                            <p class="mb-1 fw-bold">Tip</p>
+                                                        </td>
+                                                        <td class="text-end">
+                                                            <p class="mb-1 fw-bold">$0.00</p>
+                                                        </td>
+                                                    </tr>
+                                                    <tr><td colspan="2" style="border-top: 1px dashed #e0e1e2;" height="1"></td></tr>
+                                                    <tr>
+                                                        <td class="text-start">
+                                                            <p class="mb-1 fw-bold">Total</p>
+                                                        </td>
+                                                        <td class="text-end">
+                                                            <p class="mb-1 fw-bold">$179.85</p>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+
+                                    @if (checkShowLocAddress)
+                                    {
+                                        <div id="receiptMapImage" class="my-4">
+                                            <a href="#!" target="_blank"><img class="mw-100" src="https://maps.googleapis.com/maps/api/staticmap?center=50&20California&20Street&20Suite&201500&20San%20Francisco%2C&20CA&2094111&zoom=16&size=600x250&maptype=terrain&markers=size:mid%7Ccolor:0xd82746%7Clabel:%7C50&20California&20Street&20Suite&201500&20San&20Francisco%2C&20CA&2094111&2037.7940487%2C-122.3973037&key=AIzaSyDKGd8SyV0GhpzD-onvM0ItLpzq5GhCFfA" alt="Memer location Map Image" /></a>
+                                        </div>
+                                        <div id="receipt-member" class="my-4 px-2">
+                                            <div class="text-center">
+                                                <h6 class="fw-bold">Member Name</h6>
+                                            </div>
+                                            <div class="text-center">
+                                                <p class="mb-0">50 California Street, Suite 1500</p>
+                                                <p class="mb-0">San Francisco, CA 94111</p>
+                                            </div>
+                                        </div>
+
+                                    }
+
+                                    <div id="receipt-payment" class="px-2">
+                                        <table class="table table-borderless table-sm text-500">
+                                            <tbody>
+                                                <tr><td colspan="2" style="border-top: 1px dashed #e0e1e2;" height="1"></td></tr>
+                                                <tr>
+                                                    <td class="text-start">
+                                                        <div>Visa 2404</div>
+                                                        <div><i class="fab fa-cc-visa fa-lg"></i></div>
+                                                        <div class="text-uppercase">Jonathan Elliman</div>
+                                                    </td>
+                                                    <td class="text-end">
+                                                        <div>Jan 26 2021 at 3:14 PM</div>
+                                                        <div>#12345</div><div class="p">Auth code: 022117</div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(webReceipt.WebReceipt.CustomText))
+                                    {
+                                        <div id="receipt-custom-text" class="text-center py-4 border-dashed">
+                                            <p class="mb-0 fw-bold">@webReceipt.WebReceipt.CustomText</p>
+                                        </div>
+                                    }
+
+                                    <div id="receipt-footer" class="text-center my-4 small bg-light">
+                                        <img src="https://cdn.cellarpass.com/static/images/cellarpass-logo.png" width="100" class="pb-4" alt="CellarPass Logo" />
+                                        <div>
+                                            <p class="mb-0">&#169; 2021 CellarPass, Inc.</p>
+                                            <p class="mb-0">50 California Street, Suite 1500</p>
+                                            <p class="mb-0">San Francisco, CA 94111</p>
+                                            <p class="mb-0">(855) 423-4448</p>
+                                            <a href="https://www.cellarpass.com/business/legal/cellarpass-privacy-policy" target="_blank">Privacy Policy</a>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert alert-primary" role="alert">Get help with this page <a href="#!" target="_blank">here</a>.</div>
+        </EditForm>
+        
+
+        <ImageCropper @ref="CropperModal" IsVisible="imageCroperActive" CropperConfiguration="cropperConfiguration" Cropped="OnCropped"></ImageCropper>
+        @*<ImageUploaderModal @ref="Modal" Cropped="OnCropped"></ImageUploaderModal>*@
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+
+{
+
+    private string title = "Receipt | Synergy Commerce Admin Panel";
+
+    private Member currentMember = new Member();
+    private ImageUploaderModal Modal { get; set; }
+    string imgUrl;
+    string imageFileName;
+    private ImageCropperConfiguration cropperConfiguration = new ImageCropperConfiguration();
+    private ImageCropper CropperModal { get; set; }
+    private bool imageCroperActive = false;
+    private WebReceiptViewModel webReceipt = new WebReceiptViewModel();
+    private BusinessSettingsRequestModel setting = new BusinessSettingsRequestModel();
+    const string _WebReceiptNamespace = "Web_Receipt";
+    private bool checkShowDescription = false;
+    private bool checkShowLocAddress = false;
+    private string customText { get; set; }
+    private string colorPick = "#ef9a";
+    private string styleValue = "background-color: none";
+    BusinessDetailModel businessDetail = new BusinessDetailModel();
+    private string hexVal = "";
+    public bool SpinnerVisibility = true;
+    private void OnChange(ColorPickerEventArgs args)
+    {
+        hexVal = args.CurrentValue.Hex;
+        styleValue = "background-color: " + hexVal;
+    }
+
+    private void OnChangeinput(ChangeEventArgs args)
+    {
+        colorPick = "#ef9a";
+        styleValue = "background-color: " + args.Value.ToString();
+        var colors = customColors["Custom"];
+        if(colors.Where(x => x.Equals(args.Value.ToString(), StringComparison.OrdinalIgnoreCase)).Any())
+        {
+            colorPick = args.Value.ToString();
+            styleValue = "background-color: " + colorPick;
+        }
+        StateHasChanged();
+    }
+
+    private Dictionary<string, string[]> customColors = new Dictionary<string, string[]> {
+        { "Custom", new string[] { "#ef9a9a", "#e57373", "#ef5350", "#f44336", "#f48fb1", "#f06292",
+                    "#ec407a", "#e91e63", "#ce93d8", "#ba68c8", "#ab47bc", "#9c27b0", "#b39ddb","#9575cd",
+                    "#7e57c2", "#673AB7", "#9FA8DA", "#7986CB", "#5C6BC0", "#3F51B5", "#90CAF9", "#64B5F6",
+                    "#42A5F5","#2196F3", "#81D4FA", "#4FC3F7", "#29B6F6", "#03A9F4", "#80DEEA", "#4DD0E1",
+                    "#26C6DA", "#00BCD4", "#80CBC4", "#4DB6AC", "#26A69A", "#009688","#A5D6A7", "#81C784",
+                    "#66BB6A", "#4CAF50", "#C5E1A5", "#AED581", "#9CCC65", "#8BC34A", "#E6EE9C","#DCE775",
+                    "#D4E157", "#CDDC39" }
+        }
+   };
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var businessDetailResponse = await _businessViewModel.GetBusinessDetail(Guid.Empty, currentMember.Id);
+        businessDetail = businessDetailResponse?.data ?? new BusinessDetailModel();
+        webReceipt = await _webReceiptViewModel.GetWebReceiptAsync(currentMember.Id);
+        if (webReceipt.BusinessId > 0)
+        {
+            imgUrl = webReceipt.WebReceipt.ImageName;
+            var checkShowItem = webReceipt.WebReceipt.ShowItemDesc;
+            if (checkShowItem == "True" || checkShowItem == "False")
+            {
+                checkShowDescription = Convert.ToBoolean(checkShowItem);
+            }
+            var checkShowAddress = webReceipt.WebReceipt.ShowAddressAndMap;
+            if (checkShowAddress == "True" || checkShowAddress == "False")
+            {
+                checkShowLocAddress = Convert.ToBoolean(checkShowAddress);
+            }
+            if (string.IsNullOrEmpty(webReceipt.WebReceipt.CustomText))
+            {
+                webReceipt.WebReceipt.CustomText = "";
+            }
+
+            if (!string.IsNullOrEmpty(webReceipt.WebReceipt.BrandColors))
+            {
+                styleValue = "background-color: " + webReceipt.WebReceipt.BrandColors;
+                colorPick = webReceipt.WebReceipt.BrandColors;
+                hexVal = webReceipt.WebReceipt.BrandColors;
+            }
+
+        }
+        else
+        {
+            imgUrl = "";
+        }
+
+        SpinnerVisibility = false;
+        StateHasChanged();
+    }
+
+    private async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        var maxAllowedFiles = 1;
+        var format = "image/png";
+        foreach (var imageFile in e.GetMultipleFiles(maxAllowedFiles))
+        {
+            setting.Title = imageFile.Name;
+            var buffer = new byte[imageFile.Size];
+            await imageFile.OpenReadStream(buffer.LongLength).ReadAsync(buffer);
+            var imageDataUrl =
+                $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+
+            await CropperModal.OnFileChange(imageDataUrl);
+            imageCroperActive = true;
+        }
+        StateHasChanged();
+    }
+
+    async Task OnCropped(string value)
+    {
+        imageCroperActive = false;
+        var base64 = value.Substring(value.IndexOf(',') + 1);
+        setting.Title = string.Format("{0}-{1}-web-receipt.jpg", currentMember.Id, businessDetail.BusinessGuid);
+        setting.MetaNamespace = _WebReceiptNamespace;
+        setting.MetaKey = Constants.ImageName;
+        setting.MetaValue = base64;
+        setting.BusinessId = currentMember.Id;
+        setting.ValueType = 0;
+        setting.Description = " ";
+
+        SpinnerVisibility = true;
+        var result = await _webReceiptViewModel.CreateWebReceiptLogoAsync(setting);
+        imgUrl = result.data.MetaValue;
+        SpinnerVisibility = false;
+        toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+
+    }
+
+    private async Task uploadImage()
+    {
+        imageCroperActive = false;
+        await CropperModal.TriggerFileSelect("inputDrop");
+    }
+
+    private async Task SaveWebReceipt()
+    {
+        webReceipt.BusinessId = currentMember.Id;
+        webReceipt.WebReceipt.BrandColors = hexVal;
+        webReceipt.WebReceipt.ImageName = imgUrl;
+        webReceipt.WebReceipt.ShowAddressAndMap = checkShowLocAddress.ToString();
+        webReceipt.WebReceipt.ShowItemDesc = checkShowDescription.ToString();
+
+
+        SpinnerVisibility = true;
+        webReceipt = await _webReceiptViewModel.CreateWebReceiptAsync(webReceipt);
+        if (!string.IsNullOrEmpty(webReceipt.WebReceipt.BrandColors))
+        {
+
+            colorPick = webReceipt.WebReceipt.BrandColors;
+            hexVal = webReceipt.WebReceipt.BrandColors;
+        }
+        styleValue = "background-color: " + webReceipt.WebReceipt.BrandColors;
+        SpinnerVisibility = false;
+        toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+        StateHasChanged();
+    }
+
+}

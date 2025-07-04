@@ -1,0 +1,328 @@
+﻿@page "/playground"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IBusinessViewModel _businesViewModel
+@inject ICountryViewModel _countryViewModel
+@inject IStateViewModel _stateViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject NavigationManager _navigationManager
+@attribute [Authorize]
+
+<Title Value="Playground"></Title>
+
+<div class="card mb-3">
+
+    <div class="card-header">
+        Playground
+    </div>
+    <div class="card-body bg-light">
+
+        <div class="row">
+            <div class="col">
+                <div class="mb-3">
+                    <label class="form-label" for="inputVendorPhone">Contact Phone</label>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-2">
+                            <SfDropDownList TValue="string" TItem="CountryFlag" DataSource="@CounryFlagData" @bind-Value="@PhoneCountry" CssClass="form-control form-control-sm" PopupWidth="350px">
+                                <DropDownListFieldSettings Text="CountryName" Value="CountryCode"></DropDownListFieldSettings>
+                                <DropDownListTemplates TItem="CountryFlag">
+                                    <ItemTemplate Context="contextCountryFlag">
+                                        <div>
+                                            <div class="@((contextCountryFlag as CountryFlag).FlagClass) mx-0 px-0">@((contextCountryFlag as CountryFlag).FlagClass)</div>
+                                        </div>
+                                    </ItemTemplate>
+                                    <ValueTemplate Context="contextCountryFlag">
+                                        <div>
+                                            <div class="@((contextCountryFlag as CountryFlag).FlagClass) m-2"></div>
+                                        </div>
+                                    </ValueTemplate>
+                                </DropDownListTemplates>
+                            </SfDropDownList>
+                        </div>
+                        <div class="col-sm">
+                            <SfMaskedTextBox ID="inputVendorPhone" Mask="000-000-0000" CssClass="form-control form-control-sm" Placeholder="Contact phone number"></SfMaskedTextBox>
+                            @*                                <input id="inputVendorPhone" class="form-control" type="text" @bind-value="request.Phone" placeholder="Contact phone number" />*@
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+@code
+{
+
+    public string PhoneCountry = "US";
+
+    public class CountryFlag
+    {
+        public string FlagClass { get; set; }
+        public string CountryCode { get; set; }
+    }
+
+    List<CountryFlag> CounryFlagData = new List<CountryFlag>()
+    {
+    new CountryFlag() { FlagClass="flag-icon flag-icon-af", CountryCode="AF" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-al", CountryCode="AL" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-dz", CountryCode="DZ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-as", CountryCode="AS" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ad", CountryCode="AD" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ao", CountryCode="AO" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ai", CountryCode="AI" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-aq", CountryCode="AQ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ag", CountryCode="AG" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ar", CountryCode="AR" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-am", CountryCode="AM" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-aw", CountryCode="AW" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-au", CountryCode="AU" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-at", CountryCode="AT" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-az", CountryCode="AZ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-bs", CountryCode="BS" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-bh", CountryCode="BH" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-bd", CountryCode="BD" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-bb", CountryCode="BB" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-by", CountryCode="BY" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-be", CountryCode="BE" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-bz", CountryCode="BZ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-bj", CountryCode="BJ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-bm", CountryCode="BM" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-bt", CountryCode="BT" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-bo", CountryCode="BO" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-bq", CountryCode="BQ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ba", CountryCode="BA" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-bw", CountryCode="BW" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-bv", CountryCode="BV" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-br", CountryCode="BR" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-io", CountryCode="IO" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-bn", CountryCode="BN" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-bg", CountryCode="BG" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-bf", CountryCode="BF" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-bi", CountryCode="BI" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-cv", CountryCode="CV" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-kh", CountryCode="KH" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-cm", CountryCode="CM" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ca", CountryCode="CA" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ky", CountryCode="KY" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-cf", CountryCode="CF" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-td", CountryCode="TD" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-cl", CountryCode="CL" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-cn", CountryCode="CN" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-cx", CountryCode="CX" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-cc", CountryCode="CC" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-co", CountryCode="CO" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-km", CountryCode="KM" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-cd", CountryCode="CD" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-cg", CountryCode="CG" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ck", CountryCode="CK" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-cr", CountryCode="CR" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-hr", CountryCode="HR" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-cu", CountryCode="CU" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-cw", CountryCode="CW" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-cy", CountryCode="CY" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-cz", CountryCode="CZ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ci", CountryCode="CI" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-dk", CountryCode="DK" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-dj", CountryCode="DJ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-dm", CountryCode="DM" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-do", CountryCode="DO" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ec", CountryCode="EC" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-eg", CountryCode="EG" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-sv", CountryCode="SV" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-gq", CountryCode="GQ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-er", CountryCode="ER" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ee", CountryCode="EE" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-sz", CountryCode="SZ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-et", CountryCode="ET" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-fk", CountryCode="FK" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-fo", CountryCode="FO" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-fj", CountryCode="FJ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-fi", CountryCode="FI" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-fr", CountryCode="FR" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-gf", CountryCode="GF" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-pf", CountryCode="PF" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-tf", CountryCode="TF" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ga", CountryCode="GA" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-gm", CountryCode="GM" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ge", CountryCode="GE" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-de", CountryCode="DE" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-gh", CountryCode="GH" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-gi", CountryCode="GI" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-gr", CountryCode="GR" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-gl", CountryCode="GL" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-gd", CountryCode="GD" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-gp", CountryCode="GP" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-gu", CountryCode="GU" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-gt", CountryCode="GT" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-gg", CountryCode="GG" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-gn", CountryCode="GN" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-gw", CountryCode="GW" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-gy", CountryCode="GY" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ht", CountryCode="HT" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-hm", CountryCode="HM" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-va", CountryCode="VA" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-hn", CountryCode="HN" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-hk", CountryCode="HK" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-hu", CountryCode="HU" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-is", CountryCode="IS" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-in", CountryCode="IN" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-id", CountryCode="ID" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ir", CountryCode="IR" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-iq", CountryCode="IQ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ie", CountryCode="IE" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-im", CountryCode="IM" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-il", CountryCode="IL" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-it", CountryCode="IT" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-jm", CountryCode="JM" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-jp", CountryCode="JP" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-je", CountryCode="JE" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-jo", CountryCode="JO" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-kz", CountryCode="KZ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ke", CountryCode="KE" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ki", CountryCode="KI" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-kp", CountryCode="KP" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-kr", CountryCode="KR" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-kw", CountryCode="KW" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-kg", CountryCode="KG" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-la", CountryCode="LA" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-lv", CountryCode="LV" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-lb", CountryCode="LB" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ls", CountryCode="LS" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-lr", CountryCode="LR" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ly", CountryCode="LY" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-li", CountryCode="LI" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-lt", CountryCode="LT" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-lu", CountryCode="LU" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-mo", CountryCode="MO" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-mg", CountryCode="MG" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-mw", CountryCode="MW" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-my", CountryCode="MY" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-mv", CountryCode="MV" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ml", CountryCode="ML" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-mt", CountryCode="MT" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-mh", CountryCode="MH" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-mq", CountryCode="MQ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-mr", CountryCode="MR" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-mu", CountryCode="MU" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-yt", CountryCode="YT" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-mx", CountryCode="MX" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-fm", CountryCode="FM" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-md", CountryCode="MD" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-mc", CountryCode="MC" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-mn", CountryCode="MN" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-me", CountryCode="ME" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ms", CountryCode="MS" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ma", CountryCode="MA" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-mz", CountryCode="MZ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-mm", CountryCode="MM" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-na", CountryCode="NA" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-nr", CountryCode="NR" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-np", CountryCode="NP" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-nl", CountryCode="NL" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-nc", CountryCode="NC" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-nz", CountryCode="NZ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ni", CountryCode="NI" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ne", CountryCode="NE" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ng", CountryCode="NG" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-nu", CountryCode="NU" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-nf", CountryCode="NF" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-mp", CountryCode="MP" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-no", CountryCode="NO" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-om", CountryCode="OM" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-pk", CountryCode="PK" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-pw", CountryCode="PW" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ps", CountryCode="PS" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-pa", CountryCode="PA" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-pg", CountryCode="PG" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-py", CountryCode="PY" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-pe", CountryCode="PE" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ph", CountryCode="PH" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-pn", CountryCode="PN" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-pl", CountryCode="PL" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-pt", CountryCode="PT" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-pr", CountryCode="PR" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-qa", CountryCode="QA" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-mk", CountryCode="MK" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ro", CountryCode="RO" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ru", CountryCode="RU" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-rw", CountryCode="RW" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-re", CountryCode="RE" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-bl", CountryCode="BL" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-sh", CountryCode="SH" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-kn", CountryCode="KN" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-lc", CountryCode="LC" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-mf", CountryCode="MF" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-pm", CountryCode="PM" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-vc", CountryCode="VC" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ws", CountryCode="WS" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-sm", CountryCode="SM" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-st", CountryCode="ST" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-sa", CountryCode="SA" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-sn", CountryCode="SN" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-rs", CountryCode="RS" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-sc", CountryCode="SC" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-sl", CountryCode="SL" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-sg", CountryCode="SG" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-sx", CountryCode="SX" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-sk", CountryCode="SK" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-si", CountryCode="SI" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-sb", CountryCode="SB" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-so", CountryCode="SO" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-za", CountryCode="ZA" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-gs", CountryCode="GS" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ss", CountryCode="SS" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-es", CountryCode="ES" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-lk", CountryCode="LK" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-sd", CountryCode="SD" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-sr", CountryCode="SR" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-sj", CountryCode="SJ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-se", CountryCode="SE" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ch", CountryCode="CH" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-sy", CountryCode="SY" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-tw", CountryCode="TW" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-tj", CountryCode="TJ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-tz", CountryCode="TZ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-th", CountryCode="TH" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-tl", CountryCode="TL" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-tg", CountryCode="TG" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-tk", CountryCode="TK" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-to", CountryCode="TO" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-tt", CountryCode="TT" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-tn", CountryCode="TN" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-tr", CountryCode="TR" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-tm", CountryCode="TM" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-tc", CountryCode="TC" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-tv", CountryCode="TV" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ug", CountryCode="UG" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ua", CountryCode="UA" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ae", CountryCode="AE" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-gb", CountryCode="GB" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-um", CountryCode="UM" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-us", CountryCode="US" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-uy", CountryCode="UY" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-uz", CountryCode="UZ" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-vu", CountryCode="VU" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ve", CountryCode="VE" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-vn", CountryCode="VN" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-vg", CountryCode="VG" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-vi", CountryCode="VI" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-wf", CountryCode="WF" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-eh", CountryCode="EH" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ye", CountryCode="YE" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-zm", CountryCode="ZM" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-zw", CountryCode="ZW" },
+    new CountryFlag() { FlagClass="flag-icon flag-icon-ax", CountryCode="AX" }
+    };
+
+}

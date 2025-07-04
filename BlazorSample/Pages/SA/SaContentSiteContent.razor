@@ -1,0 +1,225 @@
+﻿@page "/sa/content/sitecontent"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using System.ComponentModel.DataAnnotations
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Client.ViewModels
+@using Syncfusion.Blazor.RichTextEditor
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA
+@inject ToastService toastService
+@inject ISaContentViewModel _saContentViewModel
+@inject IBusinessViewModel _businessViewModel
+@attribute [Authorize]
+
+<style>
+    .no_content.e-richtexteditor .e-rte-content .e-content {
+        min-height: 250px;
+    }
+
+    .e-richtexteditor .e-rte-srctextarea {
+        height: calc(100vh - 370px);
+    }
+
+    main#main-authorized .vh-100 {
+        height: calc(100vh - 70px) !important;
+    }
+</style>
+
+<AuthorizeView>
+    <Authorized>
+        <SfSpinner @bind-Visible="isLoading"></SfSpinner>
+        <Title Value="@title"></Title>
+
+        <div class="py-3">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-0"><a href="/sa/content" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-lightbulb me-2"></span>Site Content</h5>
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-sm btn-outline-primary me-2" @onclick="DisplayAddContentBlockModal">Add Content Block</button>
+                    <button type="button" class="btn btn-sm btn-primary" @onclick="SaveSiteContent">Save</button>
+                </div>
+            </div>
+            <hr />
+        </div>
+        @if (!isLoading)
+        {
+            var contentNames = siteContentNames.OrderBy(x => x.ContentName).ToList();
+            <div class="row mb-3">
+                <div class="col-md-12 mb-3">
+                    <SfDropDownList TValue="int" @bind-Value="bindedContentBlock" ID="selContentSection" TItem="CPContentNameModel" AllowFiltering="true" Placeholder="Select Content Block" DataSource="@contentNames">
+                        <DropDownListEvents TItem="CPContentNameModel" TValue="int" OnValueSelect="HandleContentBlockChange"></DropDownListEvents>
+                        <DropDownListFieldSettings Text="ContentName" Value="Id"></DropDownListFieldSettings>
+                    </SfDropDownList>
+                </div>
+            </div>
+        }
+
+        <SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="AddContentBlockModalVisible">
+            <DialogEvents OnOverlayClick="() => AddContentBlockModalVisible = false"></DialogEvents>
+            <DialogTemplates>
+                <Header><h5 class="modal-title" id="modalLabel">Add Content Block</h5></Header>
+                <Content>
+                    <EditForm Model="addContentBlock" @ref="addContentBlockForm" Context="formContext">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <label class="form-label" for="inputCreateNew">Block Name</label>
+                            <InputText @bind-Value="addContentBlock.ContentBlockName" id="inputCreateNew" class="form-control" type="text" />
+                            <ValidationMessage For="@(() => addContentBlock.ContentBlockName)" />
+                        </div>
+                    </EditForm>
+                </Content>
+                <FooterTemplate>
+                    <button type="button" class="btn btn-secondary" @onclick="() => AddContentBlockModalVisible = false">Cancel</button>
+                    <button type="button" @onclick="SaveContentBlock" class="btn btn-primary">Save</button>
+                </FooterTemplate>
+            </DialogTemplates>
+        </SfDialog>
+    </Authorized>
+</AuthorizeView>
+
+<SfRichTextEditor @bind-Value="Content">
+    <RichTextEditorFontFamily Default="Poppins" Items="@FontFamilyItems" />
+    <RichTextEditorToolbarSettings Items="@SfRichTextEditorHelper.Tools" Type="ToolbarType.MultiRow" />
+    <RichTextEditorFormat Items="@SfRichTextEditorHelper.FormatItems" />
+</SfRichTextEditor>
+
+@code
+{
+    private string title = "Site Content | Synergy Commerce Admin Panel";
+    private bool isLoading = true;
+    private string Content { get; set; }
+    private bool AddContentBlockModalVisible = false;
+    EditForm addContentBlockForm;
+    AddContentBlockModel addContentBlock = new AddContentBlockModel();
+    List<CPContentNameModel> siteContentNames = new List<CPContentNameModel>();
+    int bindedContentBlock = 0;
+    SfDropDownList<CPContentNameModel, int> ContentBlocksList;
+    private List<DropDownItemModel> FontFamilyItems = new List<DropDownItemModel>()
+    {
+        new DropDownItemModel() { CssClass = "e-poppins", Command = "Font", SubCommand = "FontName", Text = "Poppins", Value = "Poppins,Helvetica,sans-serif" },
+        new DropDownItemModel() { CssClass = "e-segoe-ui", Command = "Font", SubCommand = "FontName", Text = "Segoe UI", Value = "Segoe UI,Helvetica,sans-serif" },
+        new DropDownItemModel() { CssClass = "e-arial", Command = "Font", SubCommand = "FontName", Text = "Arial", Value = "Roboto" },
+        new DropDownItemModel() { CssClass = "e-georgia", Command = "Font", SubCommand = "FontName", Text = "Georgia", Value = "Georgia,serif" },
+        new DropDownItemModel() { CssClass = "e-impact", Command = "Font", SubCommand = "FontName", Text = "Impact", Value = "Impact,Charcoal,sans-serif" },
+        new DropDownItemModel() { CssClass = "e-tahoma", Command = "Font", SubCommand = "FontName", Text = "Tahoma", Value = "Tahoma,Geneva,sans-serif" },
+        new DropDownItemModel() { CssClass = "e-times-new-roman", Command = "Font", SubCommand = "FontName", Text = "Times New Roman", Value = "Times New Roman,Charcoal,sans-serif" },
+        new DropDownItemModel() { CssClass = "e-verdana", Command = "Font", SubCommand = "FontName", Text = "Verdana", Value = "Verdana,Geneva,sans-serif" }
+    };
+
+    public class AddContentBlockModel
+    {
+        [Required(ErrorMessage = "Please enter the Content Block Name.")]
+        public string ContentBlockName { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var getContentBlocks = await _saContentViewModel.GetCPContentNamesByContentType((int)CPContentType.SiteContentBlock);
+        if (getContentBlocks.success)
+        {
+            siteContentNames = getContentBlocks.data;
+            if (siteContentNames.Any())
+            {
+                bindedContentBlock = siteContentNames[0].Id;
+                await GetContent();
+            }
+        }
+        isLoading = false;
+    }
+
+    private async Task GetContent()
+    {
+        if (bindedContentBlock > 0)
+        {
+            var getContentResponse = await _saContentViewModel.GetCPContentByContentTypeAsync(bindedContentBlock, 0, string.Empty);
+            if (getContentResponse.success)
+            {
+                Content = getContentResponse.data.Content;
+            }
+        }
+    }
+
+    private async Task HandleContentBlockChange(SelectEventArgs<CPContentNameModel> args)
+    {
+        isLoading = true;
+        bindedContentBlock = args.ItemData.Id;
+        await GetContent();
+        isLoading = false;
+    }
+
+    private void DisplayAddContentBlockModal()
+    {
+        addContentBlock = new AddContentBlockModel();
+        AddContentBlockModalVisible = true;
+    }
+
+    private async Task<CPContent> AddUpdateSiteContent(CPContentRequestModel request)
+    {
+        var addUpdateResponse =await _saContentViewModel.AddUpdateCPContentAsync(request);
+        if (!addUpdateResponse.success)
+        {
+            toastService.ShowToast(addUpdateResponse.error_info.description, ToastLevel.Error);
+        }
+        return  addUpdateResponse.data;
+    }
+
+    private async Task SaveSiteContent()
+    {
+        isLoading = true;
+        var request = new CPContentRequestModel
+        {
+            Content = Content,
+            ContentName = siteContentNames.Where(x => x.Id == bindedContentBlock).FirstOrDefault().ContentName,
+            ContentType = (int)CPContentType.SiteContentBlock,
+            Id = bindedContentBlock
+        };
+        var response = await AddUpdateSiteContent(request);
+        if(response.Id > 0)
+        {
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        isLoading = false;
+    }
+
+    private async Task SaveContentBlock()
+    {
+        addContentBlockForm.EditContext.Validate();
+        if (addContentBlockForm.EditContext.Validate())
+        {
+            isLoading = true;
+            if (siteContentNames.Exists(x => x.ContentName.ToLower().Equals(addContentBlock.ContentBlockName.ToLower())))
+            {
+                toastService.ShowToast("Content Block Name already exists.", ToastLevel.Error);
+            }
+            else
+            {
+                var newContentBlock = new CPContentNameModel
+                {
+                    ContentType = (int)CPContentType.SiteContentBlock,
+                    ContentName = addContentBlock.ContentBlockName
+                };
+                var request = new CPContentRequestModel
+                {
+                    Content = "",
+                    ContentName = newContentBlock.ContentName,
+                    ContentType = (int)CPContentType.SiteContentBlock
+                };
+                var response = await AddUpdateSiteContent(request);
+                if(response.Id > 0)
+                {
+                    newContentBlock.Id = response.Id;
+                    siteContentNames.Add(newContentBlock);
+                    toastService.ShowToast("Content Block Saved Successfully", ToastLevel.Success);
+                    bindedContentBlock = newContentBlock.Id;
+                    Content = "";
+                    StateHasChanged();
+                    AddContentBlockModalVisible = false;
+                }
+            }
+            isLoading = false;
+        }
+    }
+}

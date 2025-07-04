@@ -1,0 +1,78 @@
+﻿@page "/store/inventory"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card shadow-none border">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-0"><span class="fa-regular fa-warehouse-full fa-fw me-2"></span>Inventory</h5>
+                    </div>
+                    <div class="col-md-auto"></div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row my-4">
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="fa-regular fa-forklift fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="store/update-inventory">Update Inventory</a></h6>
+                                <p class="fs--2">Handles monthly inventory reconciliation</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="fa-regular fa-arrow-right-arrow-left fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="store/transfer-inventory">Transfer Inventory</a></h6>
+                                <p class="fs--2">Transfer inventory between locations</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="fa-regular fa-recycle fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="store/returns-dashboard">Returns Manager</a></h6>
+                                <p class="fs--2">Accept & process returned items</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-gear fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="store/inventory-settings">Inventory Settings</a></h6>
+                                <p class="fs--2">Configure inventory settings.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private string title = "Inventory | Synergy Commerce Admin Panel";
+}

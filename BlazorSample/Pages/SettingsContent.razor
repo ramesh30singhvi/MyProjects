@@ -1,0 +1,99 @@
+﻿@page "/content"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-0"><span class="far fa-desktop me-2"></span>Content</h5>
+                    </div>
+                    <div class="col-md-auto"></div>
+                </div>
+            </div>
+            <div class="card-body">
+
+                <div class="row my-4">
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-store fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="content/business-page">Business Page</a></h6>
+                                <p class="fs--2">Manage the content for your business page.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-palette fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="content/brand">Branding</a></h6>
+                                <p class="fs--2">Manage your brand assets.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-share-alt fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="content/social">Social Sharing</a></h6>
+                                <p class="fs--2">Manage your social media links.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row my-4">
+                    <div class="col-sm-6 col-md-4 mb-3">
+                    <div class="d-flex position-relative mb-2">
+                        <span class="far fa-receipt fa-2x fa-fw me-2"></span>
+                        <div class="flex-1">
+                            <h6 class="fs-0 mb-0"><a class="stretched-link" href="content/web-receipt">Web Receipt</a></h6>
+                            <p class="fs--2">Configure the web receipt.</p>
+                        </div>
+                    </div>
+                </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-shield-virus fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="content/safety">CellarPass Safety Pledge</a></h6>
+                                <p class="fs--2">Display and configure the safety pledge.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+
+{
+
+    private string title = "Content | Synergy Commerce Admin Panel";
+
+
+    [Parameter]
+    public int Id { get; set; }
+
+}

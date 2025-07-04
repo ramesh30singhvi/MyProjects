@@ -1,0 +1,102 @@
+﻿@inherits LayoutComponentBase
+@layout AdminLayout
+@inject NavigationManager _navigationManager
+@using CellarPassAppAdmin.Shared.Services
+@inject IUserService _userService;
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@using System.Security.Claims
+@inject IMemberViewModel _memberViewModel
+@inject ILocalStorageService localStorage
+
+<main class="main" id="main-authorized">
+
+    <AuthorizeView>
+        <Authorized>
+
+            <div class="container-fluid">
+                <div class="row">
+                    <div  id="sidebarMenu" class="col-sm-auto bg-light border-end px-2 pt-3 d-lg-block collapse">
+                        <div class="d-flex flex-sm-column flex-row flex-nowrap align-items-center">
+                            <ul class="nav nav-pills nav-flush flex-column mb-auto text-center">
+                                <li class="nav-item">
+                                    <SfTooltip Position="Position.RightCenter" Content="Dashboard" class="fs-0">
+                                        <a href="#" class="nav-link text-dark py-3 px-2" title="Dashboard" data-bs-toggle="tooltip" data-bs-placement="right">
+                                            <i class="fa-thin fa-house-blank fa-fw fa-lg"></i>
+                                        </a>
+                                    </SfTooltip>
+                                </li>
+                                <li>
+                                    <SfTooltip Position="Position.RightCenter" Content="Store" class="fs-0">
+                                        <a href="#" class="nav-link text-dark py-3 px-2" title="Store" data-bs-toggle="tooltip" data-bs-placement="right">
+                                            <i class="fa-thin fa-store fa-fw fa-lg"></i>
+                                        </a>
+                                    </SfTooltip>
+                                </li>
+                                <li>
+                                    <SfTooltip Position="Position.RightCenter" Content="Calendar" class="fs-0">
+                                        <a id="aCalendar" href="#" class="nav-link text-dark py-3 px-2" title="Calendar" data-bs-toggle="tooltip" data-bs-placement="right">
+                                            <i class="fa-thin fa-calendar fa-fw fa-lg"></i>
+                                        </a>
+                                    </SfTooltip>
+                                </li>
+                                <li>
+                                    <a href="#" class="nav-link text-dark py-3 px-2" title="Experiences" data-bs-toggle="tooltip" data-bs-placement="right">
+                                        <i class="fa-thin fa-calendar-star fa-fw fa-lg"></i>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="#" class="nav-link text-dark py-3 px-2" title="Customers" data-bs-toggle="tooltip" data-bs-placement="right">
+                                        <i class="fa-thin fa-users fa-fw fa-lg"></i>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="#" class="nav-link text-dark py-3 px-2" title="Reports" data-bs-toggle="tooltip" data-bs-placement="right">
+                                        <i class="fa-thin fa-chart-simple fa-fw fa-lg"></i>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="#" class="nav-link text-dark py-3 px-2" title="Business" data-bs-toggle="tooltip" data-bs-placement="right">
+                                        <i class="fa-thin fa-gear fa-fw fa-lg"></i>
+                                    </a>
+                                </li>
+                               
+                            </ul>
+                            <div class="dropdown">
+                                <a href="#" class="d-flex align-items-center justify-content-center p-3 link-dark text-decoration-none dropdown-toggle" id="dropdownUser3" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fa-thin fa-user fa-fw fa-lg"></i>
+                                </a>
+                                <ul class="dropdown-menu text-small shadow" aria-labelledby="dropdownUser3">
+                                    <li><a class="dropdown-item" href="#">Something Here...</a></li>
+                                    <li><a class="dropdown-item" href="#">Settings</a></li>
+                                    <li><a class="dropdown-item" href="#">Profile</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm">
+
+                        @Body
+
+                    </div>
+                </div>
+            </div>
+
+        </Authorized>
+    </AuthorizeView>
+    <Toast></Toast>
+</main>
+
+@code
+{
+    private UserDetailViewModel user = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+        StateHasChanged();
+    }
+}

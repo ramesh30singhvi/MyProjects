@@ -1,0 +1,96 @@
+﻿@page "/settings/sales-channels/web/policies"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.Blazor.RichTextEditor
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings/sales-channels/web" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-file-contract me-2"></span>Web Policies</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="#!">Save</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+
+        <form>
+            <div class="mb-3">
+                <label class="form-label" for="rteWebOrderPolicy">Web Order Policy</label>
+                <SfRichTextEditor id="rteWebOrderPolicy" @ref="@RteObj">
+                    <RichTextEditorToolbarSettings Items="@Tools" Type="ToolbarType.MultiRow">
+                        <RichTextEditorCustomToolbarItems>
+                            <RichTextEditorCustomToolbarItem Name="Tags">
+                                <Template>
+                                    <SfDropDownList TValue="string" TItem="ReplacementTag" DataSource="replacementTags" Placeholder="Replacement Tags">
+                                        <DropDownListFieldSettings Value="Name" Text="Name"></DropDownListFieldSettings>
+                                        <DropDownListEvents ValueChange="OnTagClick" TItem="ReplacementTag" TValue="string"></DropDownListEvents>
+                                    </SfDropDownList>
+                                </Template>
+                            </RichTextEditorCustomToolbarItem>
+                        </RichTextEditorCustomToolbarItems>
+                    </RichTextEditorToolbarSettings>
+                </SfRichTextEditor>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+
+
+
+@code
+{
+
+    private string title = "Web Policies | Synergy Commerce Admin Panel";
+
+
+    [Parameter]
+    public int Id { get; set; }
+
+    SfRichTextEditor RteObj;
+
+    private List<ToolbarItemModel> Tools = new List<ToolbarItemModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        Tools.Add(new ToolbarItemModel() { Command = ToolbarCommand.Bold });
+        Tools.Add(new ToolbarItemModel() { Name = "Tags", TooltipText = "Replacement Tags" });
+
+    }
+
+    private async Task OnTagClick(ChangeEventArgs<string, ReplacementTag> args)
+    {
+        if (!string.IsNullOrEmpty(args?.Value ?? null))
+            await this.RteObj.ExecuteCommandAsync(CommandName.InsertText, args.Value);
+    }
+    private List<ReplacementTag> replacementTags = new List<ReplacementTag>{
+        new ReplacementTag{ Name = "[[Tag1]]", Value = "[[Tag1]]" },
+        new ReplacementTag{ Name = "[[Tag2]]", Value = "[[Tag2]]" },
+        new ReplacementTag{ Name = "[[Tag3]]", Value = "[[Tag3]]" },
+    };
+    public class ReplacementTag
+    {
+        public string Name { get; set; }
+        public string Value { get; set; }
+    }
+}

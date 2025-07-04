@@ -1,0 +1,36 @@
+﻿@using CellarPassAppAdmin.Shared.Enums
+
+<span class="badge badge rounded-pill @badgeClass" style="width:100px;">@StatusText</span>
+
+
+@code {
+    [Parameter]
+    public string StatusText { get; set; }
+
+    [Parameter]
+    public int Status { get; set; }
+
+    private string badgeClass = "";
+
+    protected override void OnInitialized()
+    {
+
+        //Set Color of Badge
+        switch (Status)
+        {
+            case (int)TicketsOrderStatus.Completed:
+                badgeClass = "bg-success";
+                break;
+            case (int)TicketsOrderStatus.Problem:
+                badgeClass = "bg-warning";
+                break;
+            case (int)TicketsOrderStatus.Void:
+                badgeClass = "bg-danger";
+                break;
+            default:
+                badgeClass = "badge-soft-secondary";
+                break;
+        }
+
+    }
+}

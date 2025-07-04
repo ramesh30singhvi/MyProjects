@@ -1,0 +1,62 @@
+﻿@page "/events/ticket-events"
+@layout AuthorizedLayoutSlim
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject IBusinessViewModel _businessViewModel
+@inject ISettingsViewModel _settingsViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject NavigationManager _navigationManager
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="isLoading"></SfSpinner>
+
+        <div class="row justify-content-lg-center">
+            <div class="col-lg-8 pt-4">
+                <h1>Events</h1>
+                <ul class="nav nav-tabs mt-4">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="#">Events</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Collections</a>
+                    </li>
+                </ul>
+
+                <div class="list-group">
+                    <a href="/events/ticket-event" class="list-group-item list-group-item-action">This is an Event</a>
+                    <a href="/events/ticket-event" class="list-group-item list-group-item-action">This is another event</a>
+                </div>
+
+            </div>
+        </div>
+
+    </Authorized>
+</AuthorizeView>
+
+@code
+{
+    private bool isLoading { get; set; }
+
+    private string title = "Ticket Events | Synergy Commerce Admin Panel";
+   
+
+    protected override async Task OnInitializedAsync()
+    {
+       
+
+    }
+
+}
+

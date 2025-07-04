@@ -1,0 +1,53 @@
+﻿@using System.Web
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@inject ISaContentViewModel _saContentViewModel
+
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<SfDialog CssClass="e-fixed" IsModal="true" Width="800px" Height="@((string.IsNullOrEmpty(content)?"200px":"700px"))" ShowCloseIcon="true" @bind-Visible="OpenSiteContentDialog">
+    <DialogTemplates >
+        <Header>Synergy @contentBlockNameDesc</Header>
+        <Content>
+            <div class="row">
+                <div class="col-12 align-items-center">
+                    @if (!String.IsNullOrEmpty(content))
+                    {
+                        @((MarkupString)content)
+                    }
+                </div>
+            </div>
+        </Content>
+    </DialogTemplates>
+    <DialogEvents Closed="@DialogClose" OnOverlayClick="@DialogClose"></DialogEvents>
+</SfDialog>
+
+@code {
+
+    [Parameter]
+    public bool OpenSiteContentDialog { get; set; }
+
+    [Parameter]
+    public EventCallback OnDialogClose { get; set; }
+
+    public bool SpinnerVisibility { get; set; }
+    private string contentBlockNameDesc = "";
+    private string content { get; set; }
+
+    protected async Task DialogClose()
+    {
+        await OnDialogClose.InvokeAsync();
+    }
+
+    public async Task DisplaySiteContent(ContentBlocks contentBlockName, CPContentType cpContentType)
+    {
+        SpinnerVisibility = true;
+        contentBlockNameDesc = EnumHelper.GetDescription(contentBlockName);
+        content = "";
+        var getContent = await _saContentViewModel.GetCPContentByContentTypeAsync(0, (int)cpContentType, contentBlockNameDesc);
+        if (getContent.success)
+        {
+            content = !string.IsNullOrWhiteSpace(getContent.data.Content) ? getContent.data.Content : "";
+        }
+        SpinnerVisibility = false;
+    }
+}

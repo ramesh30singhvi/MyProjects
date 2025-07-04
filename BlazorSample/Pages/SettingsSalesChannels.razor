@@ -1,0 +1,132 @@
+﻿@page "/settings/sales-channels"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card shadow-none border">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-sitemap me-2"></span>Sales Channels</h5>
+                    </div>
+                    <div class="col-md-auto"></div>
+                </div>
+            </div>
+            <div class="card-body">
+
+                <div class="card border shadow-none mb-4">
+                    <div class="card-header py-2">
+                        <div class="row justify-content-between align-items-center">
+                            <div class="col-8 col-md-auto">
+                                <h6 class="mb-3 mb-md-0"><span class="far fa-cash-register me-2"></span>Point of Sale</h6>
+                            </div>
+                            <div class="col-4 col-md-auto"><a class="btn btn-sm btn-primary" href="#!">Save</a></div>
+                        </div>
+                    </div>
+                    <div class="card-body bg-light">
+
+                        <form>
+                            <div class="mb-3">
+                                <label for="selCarryOutLocation" class="form-label">Carry Out</label>
+                                <select id="selCarryOutLocation" class="form-select" aria-label="Carry Out Location">
+                                    <option value="0" selected>None</option>
+                                    <option value="1">Location 1</option>
+                                    <option value="2">Location 2</option>
+                                    <option value="3">...</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="selPickupLocation" class="form-label">Pickup</label>
+                                <select id="selPickupLocation" class="form-select" aria-label="Pickup Location">
+                                    <option value="0" selected>None</option>
+                                    <option value="1">Location 1</option>
+                                    <option value="2">Location 2</option>
+                                    <option value="3">...</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="selShippedLocation" class="form-label">Shipped</label>
+                                <select id="selShippedLocation" class="form-select" aria-label="Shipped Location">
+                                    <option value="0" selected>None</option>
+                                    <option value="1">Location 1</option>
+                                    <option value="2">Location 2</option>
+                                    <option value="3">...</option>
+                                </select>
+                            </div>
+
+
+                        </form>
+
+                    </div>
+                </div>
+
+                <div class="card border shadow-none mb-4">
+                    <div class="card-header py-2">
+                        <div class="row justify-content-between align-items-center">
+                            <div class="col-8 col-md-auto">
+                                <h6 class="mb-3 mb-md-0"><span class="far fa-cash-register me-2"></span>Ecommerce</h6>
+                            </div>
+                            <div class="col-4 col-md-auto"><a class="btn btn-sm btn-primary" href="#!">Save</a></div>
+                        </div>
+                    </div>
+                    <div class="card-body bg-light">
+
+                        <form>
+                            <div class="mb-3">
+                                <label for="selPickupLocation" class="form-label">Pickup</label>
+                                <select id="selPickupLocation" class="form-select" aria-label="Pickup Location">
+                                    <option value="0" selected>None</option>
+                                    <option value="1">Location 1</option>
+                                    <option value="2">Location 2</option>
+                                    <option value="3">...</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="selShippedLocation" class="form-label">Ship</label>
+                                <select id="selShippedLocation" class="form-select" aria-label="Ship Location">
+                                    <option value="0" selected>None</option>
+                                    <option value="1">Location 1</option>
+                                    <option value="2">Location 2</option>
+                                    <option value="3">...</option>
+                                </select>
+                            </div>
+                        </form>
+
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    bool isDisabledModalVisible = false;
+
+    private string title = "Sales Channels | Synergy Commerce Admin Panel";
+    private int rsvpSelectedGateway = 3;
+
+    [Parameter]
+    public int Id { get; set; }
+
+    
+}

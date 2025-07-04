@@ -1,0 +1,143 @@
+﻿@page "/settings/integrated-partners/commerce7/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm Model="@commerce7" Context="formContext" Class="row g-3">
+    <DataAnnotationsValidator />
+
+    <div class="card">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h5 class="mb-0"><a href="marketplace/partner/@Id" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-plug me-2"></span>Commerce 7</h5>
+                </div>
+                <div class="col-md-auto">
+                    <button @onclick="@(() => TestLogin(formContext))" class="btn btn-sm btn-outline-secondary me-2" hidden="@(SetTestLoginBtnVisibility())">Test Login</button>
+                    <button class="btn btn-sm btn-primary" @onclick="@(() => SaveCommerce7(formContext))">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="inputCommerce7Username" class="form-label">Commerce7 API Username</label>
+                <InputText class="form-control" @bind-Value="commerce7.APIUsername" id="inputCommerce7Username" type="text" placeholder="API Username"></InputText>
+                <ValidationMessage For="@(() => commerce7.APIUsername)" />
+            </div>
+            <div class="mb-3">
+                <label for="inputCommerce7Password" class="form-label">Commerce7 API Password</label>
+                <InputText class="form-control" @bind-Value="commerce7.APIPassword" id="inputCommerce7Password" type="password" placeholder="API Password"></InputText>
+                <ValidationMessage For="@(() => commerce7.APIPassword)" />
+            </div>
+            <div class="mb-3">
+                <label for="inputCommerce7Tenant" class="form-label">Commerce7 Tenant</label>
+                <InputText class="form-control" @bind-Value="commerce7.Tenant" id="inputCommerce7Tenant" type="text" placeholder="Tenant"></InputText>
+                <ValidationMessage For="@(() => commerce7.Tenant)" />
+            </div>
+            <div class="mb-3">
+                <label for="inputCommerce7ProfileId" class="form-label">Commerce7 POS Profile ID</label>
+                <InputText class="form-control" @bind-Value="commerce7.POSProfileId" id="inputCommerce7ProfileId" type="text" placeholder="Profile ID"></InputText>
+                <ValidationMessage For="@(() => commerce7.POSProfileId)" />
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "Commerce 7 | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    Member currentMember = new Member();
+    Commerce7RequestModel commerce7 = new Commerce7RequestModel();
+    List<string> commerce7MetaKeys = new List<string>(){
+        BusinessSettingsMetaKey.Commerce7APIUsername,
+        BusinessSettingsMetaKey.Commerce7APIPassword,
+        BusinessSettingsMetaKey.Commerce7POSProfileId,
+        BusinessSettingsMetaKey.Commerce7Tenant
+    };
+
+    protected bool SetTestLoginBtnVisibility()
+    {
+        if (!string.IsNullOrEmpty(commerce7.APIUsername) &&
+            !string.IsNullOrEmpty(commerce7.APIPassword) &&
+            !string.IsNullOrEmpty(commerce7.POSProfileId) &&
+            !string.IsNullOrEmpty(commerce7.Tenant))
+        {
+            return false;
+        }
+        else
+            return true;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get business settings for Commerce7
+        var response = await _settingsViewModel.GetBusinessSettingsListAsync(currentMember.Id, BusinessSettingsMetaNamespace.Commerce7);
+        foreach (var metaKey in commerce7MetaKeys)
+        {
+            var metaValue = response?.data?.Where(x => x.MetaKey == metaKey)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+            Helper.SetPropertyValue(commerce7, metaKey, metaValue);//Note: meta key and request model property name should be same
+        }
+        SetTestLoginBtnVisibility();
+        SpinnerVisibility = false;
+    }
+    private async Task TestLogin(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var response = await _settingsViewModel.Commerce7TestLogin(commerce7.APIUsername, commerce7.APIPassword, commerce7.Tenant);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.LoginSuccessful, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(string.IsNullOrEmpty(response.error_info.description) ? Constants.LoginFailed : response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    public async Task SaveCommerce7(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var businessSettings = await Helper.BusinessSettingsMapping(commerce7, currentMember.Id, BusinessSettingsMetaNamespace.Commerce7, commerce7MetaKeys);
+            var response = await _settingsViewModel.CreateBusinessSettingListAsync(businessSettings);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+}

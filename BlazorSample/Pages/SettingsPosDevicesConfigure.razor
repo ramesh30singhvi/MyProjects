@@ -1,0 +1,138 @@
+﻿@page "/settings/devices/{Id:int}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Syncfusion.Blazor.Spinner
+@using Syncfusion.Blazor
+@using Microsoft.Extensions.Configuration;
+@using Syncfusion.Blazor.Buttons
+@inject ILocalStorageService localStorage
+@inject HttpClient _httpClient
+@inject IBusinessService _businessService
+@inject IPOSDeviceSettingViewModel _posDeviceSettingViewModel
+@inject IConfiguration _configuration
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ToastService toastService
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0">
+                            <a href="settings/devices" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back">
+                                <span class="far fa-arrow-left me-1"></span>
+                            </a><span class="far  fa-tablet me-2"></span>
+                            Devices
+                        </h5>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-primary" href="javascript:void(0)" @onclick="Save">Save</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body vh-75">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="licenseedit">Device Friendly Name</label>
+                            <input class="form-control" @bind="@(SelectedItem.DeviceName)" type="text" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-2 align-items-center">
+                    <label for="switchByAppointmentOnly" class="col-md-4 col-form-label">Use Cash Drawer</label>
+                    <div class="col-md-1">
+                        <div class="form-check form-switch ps-0">
+                            <SfSwitch id="switchByAppointmentOnly" @bind-Checked="@(SelectedItem.UseCashDrawer)" OffLabel="OFF" OnLabel="ON" TChecked="bool"></SfSwitch>
+                        </div>
+                    </div>
+                    <p class="fs--2">Configure preferences on individual devices</p>
+                </div>
+
+                <div class="row mb-2 align-items-center">
+                    <label for="switchByAppointmentOnly" class="col-md-4 col-form-label">Require BOD / EOD</label>
+                    <div class="col-md-1">
+                        <div class="form-check form-switch ps-0">
+                            <SfSwitch id="switchByAppointmentOnly" @bind-Checked="@(SelectedItem.RequireBODEOD)" OffLabel="OFF" OnLabel="ON" TChecked="bool"></SfSwitch>
+                        </div>
+                    </div>
+                    <p class="fs--2">Configure preferences on individual devices</p>
+                </div>
+
+                <div class="row mb-2 align-items-center">
+                    <label for="switchByAppointmentOnly" class="col-md-4 col-form-label">Require PIN Use</label>
+                    <div class="col-md-1">
+                        <div class="form-check form-switch ps-0">
+                            <SfSwitch id="switchByAppointmentOnly" @bind-Checked="@(SelectedItem.RequirePinUse)" OffLabel="OFF" OnLabel="ON" TChecked="bool"></SfSwitch>
+                        </div>
+                    </div>
+                    <p class="fs--2">Configure preferences on individual devices</p>
+                </div>
+
+                <div class="row mb-2 align-items-center">
+                    <label for="switchByAppointmentOnly" class="col-md-4 col-form-label">Customer Engagement</label>
+                    <div class="col-md-1">
+                        <div class="form-check form-switch ps-0">
+                            <SfSwitch id="switchByAppointmentOnly" @bind-Checked="@(SelectedItem.CustomerEngagement)" OffLabel="OFF" OnLabel="ON" TChecked="bool"></SfSwitch>
+                        </div>
+                    </div>
+                    <p class="fs--2">Configure preferences on individual devices</p>
+                </div>
+
+                <div class="row mb-2 align-items-center">
+                    <label for="switchByAppointmentOnly" class="col-md-4 col-form-label">Allow Offline Mode</label>
+                    <div class="col-md-1">
+                        <div class="form-check form-switch ps-0">
+                            <SfSwitch id="switchByAppointmentOnly" @bind-Checked="@(SelectedItem.AllowOfflineMode)" OffLabel="OFF" OnLabel="ON" TChecked="bool"></SfSwitch>
+                        </div>
+                    </div>
+                    <p class="fs--2">Configure preferences on individual devices</p>
+                </div>
+
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+@code
+{
+    [Parameter]
+    public int Id { get; set; }
+    private string title = "Device Settings";
+    private bool SpinnerVisibility = false;
+    private POSDeviceSettingViewModel SelectedItem = new POSDeviceSettingViewModel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        SelectedItem = await _posDeviceSettingViewModel.GetDeviceSettingDetails(Id);
+        SpinnerVisibility = false;
+        await base.OnInitializedAsync();
+    }
+
+    public async Task Save()
+    {
+        SpinnerVisibility = true;
+        var response = await _posDeviceSettingViewModel.SaveDeviceSettingDetails(SelectedItem);
+        if(response == null)
+        {
+            toastService.ShowToast(Constants.InternalServerError, ToastLevel.Error);
+        }
+        else
+        {
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+
+        SpinnerVisibility = false;
+    }
+}

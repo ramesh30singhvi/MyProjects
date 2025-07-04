@@ -1,0 +1,239 @@
+﻿@page "/settings/pos/report-cash-drawer"
+@layout AuthorizedLayout
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card">
+    <div class="card-header bg-light">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings/pos" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-money-bill-alt me-2"></span>Drawers Report</h5>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <form>
+            <div class="row m-2 mb-4 row-cols-2 row-cols-lg-5 g-2 g-lg-3 justify-content-end">
+                <div class="col">
+                    <SfDateRangePicker TValue="DateTime?" Format="MMM yyyy" Placeholder="Choose a Range" Start="CalendarView.Year" Depth="CalendarView.Year"></SfDateRangePicker>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select form-select-sm" aria-label=".form-select-sm example">
+                        <option selected="selected">All Locations</option>
+                        <option>Location 1</option>
+                        <option>Location 2</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select form-select-sm" aria-label=".form-select-sm example">
+                        <option selected="selected">All Drawers</option>
+                        <option>Drawer 1</option>
+                        <option>Drawer 2</option>
+                    </select>
+                </div>
+            </div>
+        </form>
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@Drawers" ShowColumnChooser="true" Width="100%" Toolbar=@ToolbarItems>
+                <GridColumns>
+                    <GridColumn HeaderText="Start Time" Width="130">
+                        <Template>
+                            @{
+                                var eData = (context as DrawerData);
+                                <a href="javascript:void();" @onclick="() => EditDialogOpen()">@eData.StartTime</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(DrawerData.EndTime) HeaderText="End Time" Width="130"></GridColumn>
+                    <GridColumn Field=@nameof(DrawerData.Device) HeaderText="Device" Width="120"></GridColumn>
+                    <GridColumn Field=@nameof(DrawerData.Description) HeaderText="Description" Width="120"></GridColumn>
+                    <GridColumn Field=@nameof(DrawerData.Location) HeaderText="Location" Width="120"></GridColumn>
+                    <GridColumn Field=@nameof(DrawerData.PaidIn) HeaderText="Paid In" Width="120"></GridColumn>
+                    <GridColumn Field=@nameof(DrawerData.PaidOut) HeaderText="Paid Out" Width="120"></GridColumn>
+                    <GridColumn Field=@nameof(DrawerData.ExpectedAmount) HeaderText="Expected Amount" Width="120"></GridColumn>
+                    <GridColumn Field=@nameof(DrawerData.ActualAmount) HeaderText="Actual Amount" Width="120"></GridColumn>
+                    <GridColumn Field=@nameof(DrawerData.Difference) HeaderText="Difference" Width="120"></GridColumn>
+                    <GridColumn Field=@nameof(DrawerData.Status) HeaderText="Status" Width="120"></GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+    <div class="card-footer">
+    </div>
+</div>
+
+<div class="modal @ModalClass" tabindex="-1" role="dialog" style="display:@ModalDisplay">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="btn-close m-0" data-bs-dismiss="modal" @onclick="()=>CloseAddEditDialog()" aria-label="Close"></button>
+                <h5 class="modal-title" id="staticBackdropLabel">Drawer Report</h5>
+                <button class="btn btn-link text-600 btn-sm btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                    <a class="dropdown-item" href="javascript:void();">Enter Description</a>
+                    <a class="dropdown-item" href="javascript:void();">End Drawer</a>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="m-0">
+                        <div class="card-header border-bottom ps-0">
+                            <div class="row flex-between-center">
+                                <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                                    <h6 class="mb-0 text-nowrap py-2 py-xl-0 fw-semi-bold">DRAWER REPORT</h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body ps-0 pe-0">
+                            <div class="mb-2 mt-n2">
+                                <label class="form-label fs--0">STARTED</label>
+                                <p class="fs--2 mb-1">October 21, 2021 9:52AM</p>
+                                <p class="fs--2 mb-0">By Jonathan Ellliman from [[BusinessProfileName]]</p>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label fs--0">ENDED</label>
+                                <p class="fs--2 mb-1">-</p>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label fs--0">CLOSED</label>
+                                <p class="fs--2 mb-1">-</p>
+                            </div>
+                            <div class="mb-2">
+                                <div class="row">
+                                    <div class="col">
+                                        <label class="form-label fs--0">EXPECTED AMOUNT</label>
+                                        <p class="fs--2 mb-1">$124.00</p>
+                                    </div>
+                                    <div class="col">
+                                        <label class="form-label fs--0">Actual AMOUNT</label>
+                                        <p class="fs--2 mb-1">-</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label fs--0">DESCRIPTION</label>
+                                <p class="fs--2 mb-1">-</p>
+                            </div>
+                        </div>
+                        <div class="card-header border-bottom border-top ps-0">
+                            <div class="row flex-between-center">
+                                <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                                    <h6 class="mb-0 text-nowrap py-2 py-xl-0 fw-semi-bold">DRAWER REPORT</h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body ps-0 pe-0">
+                            <table class="table table-borderless fs--1 mb-0 mt-n2">
+                                <tr>
+                                    <td class="ps-0">Starting Cash</td>
+                                    <td class="pe-0 text-end">$100.00</td>
+                                </tr>
+                                <tr>
+                                    <td class="ps-0">Cash Sales</td>
+                                    <td class="pe-0 text-end">$24.00</td>
+                                </tr>
+                                <tr>
+                                    <td class="ps-0">Cash Refunds</td>
+                                    <td class="pe-0 text-end">$0.00</td>
+                                </tr>
+                                <tr>
+                                    <td class="ps-0">Paid In/Out</td>
+                                    <td class="pe-0 text-end">$0.00</td>
+                                </tr>
+                                <tr>
+                                    <td class="ps-0">Expected Amount</td>
+                                    <td class="pe-0 text-end">$124.00</td>
+                                </tr>
+                                <tr>
+                                    <td class="ps-0">Actual Amount</td>
+                                    <td class="pe-0 text-end">-</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer justify-content-center">
+                        <button type="submit" class="btn btn-primary">Enter Description</button>
+                        <button type="submit" class="btn btn-primary">End Drawer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (ShowBackdrop)
+{
+    <div class="modal-backdrop fade show"></div>
+}
+
+
+@code
+{
+    private string title = "Drawers Report | Synergy Commerce Admin Panel";
+    private Boolean isLoading = false;
+    public string[] ToolbarItems = new string[] { "ColumnChooser" };
+    public List<DrawerData> Drawers { get; set; }
+
+    public string ModalDisplay = "none;";
+    public string ModalClass = "";
+    public bool ShowBackdrop = false;
+
+    protected override void OnInitialized()
+    {
+        Drawers = Enumerable.Range(1, 9).Select(x => new DrawerData()
+        {
+            StartTime = DateTime.Now.AddMonths(-x).AddHours(-x).ToString("MMM, yy hh:mm tt"),
+            EndTime = DateTime.Now.AddHours(x).ToString("MMM, yy hh:mm tt"),
+            Device = (new string[] { "Device 1", "Device 2", "Device 3", "Device 4", "Device 5" })[new Random().Next(5)],
+            Description = (new string[] { "", "Description 1", "", "", "Description 2" })[new Random().Next(5)],
+            Location = (new string[] { "New york", "London", "Paris" })[new Random().Next(3)],
+            PaidIn = "$0.00",
+            PaidOut = "$0.00",
+            ExpectedAmount = (new string[] { "$100.00", "$50.00", "$10.00", "$15.15", "$151.00" })[new Random().Next(5)],
+            ActualAmount = (new string[] { "$100.00", "$50.00", "$10.00", "$15.15", "$151.00" })[new Random().Next(5)],
+            Difference = "$0.00",
+            Status = "Closed",
+        }).ToList();
+    }
+
+    public class DrawerData
+    {
+        public string StartTime { get; set; }
+        public string EndTime { get; set; }
+        public string Device { get; set; }
+        public string Description { get; set; }
+        public string Location { get; set; }
+        public string PaidIn { get; set; }
+        public string PaidOut { get; set; }
+        public string ExpectedAmount { get; set; }
+        public string ActualAmount { get; set; }
+        public string Difference { get; set; }
+        public string Status { get; set; }
+    }
+
+    public void OpenAddEditDialog()
+    {
+        ModalDisplay = "block;";
+        ModalClass = "Show";
+        ShowBackdrop = true;
+        StateHasChanged();
+    }
+
+    public void CloseAddEditDialog()
+    {
+        ModalDisplay = "none";
+        ModalClass = "";
+        ShowBackdrop = false;
+        StateHasChanged();
+    }
+
+    private void EditDialogOpen()
+    {
+        OpenAddEditDialog();
+    }
+}

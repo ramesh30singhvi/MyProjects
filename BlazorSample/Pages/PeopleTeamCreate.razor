@@ -1,0 +1,275 @@
+﻿@page "/people/team/create"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Enums;
+@using CellarPassAppAdmin.Client.ViewModels;
+@using CellarPassAppAdmin.Shared.Models;
+@using CellarPassAppAdmin.Shared.Entities.v4;
+@using CellarPassAppAdmin.Shared.Models.RequestModel;
+@using CellarPassAppAdmin.Shared.Models.ViewModel;
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head;
+@using Syncfusion.Blazor.Buttons
+@inject ICountryViewModel _countryViewModel
+@inject IStateViewModel _stateViewModel
+@inject IBusinessViewModel _businessViewModel
+@inject IUserViewModel _userViewModel
+@inject ITeamViewModel _teamViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject NavigationManager _navigationManager
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+
+<div class="card shadow-none border mb-3">
+    <EditForm Model="@request" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-3 mb-md-0"><a href="people/team" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-user-tie me-2"></span>Add Team</h5>
+                </div>
+                <div class="col-auto">
+                    @if (isSaving)
+                    {
+                        <Loader />
+                    }
+                    <button class="btn btn-sm btn-primary" type="submit" hidden="@(isSaving)">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col">
+                    <div class="mb-3">
+                        <label class="form-label" for="inputTeamEmail">Contact Email</label>
+                        <InputText id="inputTeamEmail" class="form-control" @bind-Value="@request.Email" @oninput="SearchBusinessTeamAsync" type="email" placeholder="Email Address" />
+                        <ValidationMessage For="@(() => request.Email)" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="inputTeamFirstName">First Name</label>
+                        <InputText id="inputTeamFirstName" class="form-control" @bind-Value="@request.FirstName" placeholder="First Name" />
+                        <ValidationMessage For="@(() => request.FirstName)" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="inputTeamLastName">Last Name</label>
+                        <InputText id="inputTeamLastName" class="form-control" @bind-Value="@request.LastName" placeholder="Last Name" />
+                        <ValidationMessage For="@(() => request.LastName)" />
+                    </div>
+                    <div class="border-dashed-bottom mt-4 mb-3"></div>
+                    <AddressControl countries="@countries" states="@states" @bind-address1="@request.Address1" @bind-address2="@request.Address2" @bind-selectedCountry="@request.CountryCode" @bind-stateCode="@request.StateCode" @bind-city="@request.City" @bind-zipCode="@request.ZipCode" @ref="address" SelectedNewAddress="AddressChanged" />
+                </div>
+                <div class="col">
+                    <div class="mb-3">
+                        <label class="form-label" for="inputTeamCompany">Company</label>
+                        <InputText id="inputTeamCompany" class="form-control" @bind-Value="@request.Company" placeholder="Company Name" />
+                        <ValidationMessage For="@(() => request.Company)" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="inputTeamTitle">Position/Title</label>
+                        <InputText id="inputTeamTitle" class="form-control" @bind-Value="@request.Title" placeholder="Position/Title" />
+                        <ValidationMessage For="@(() => request.Title)" />
+                    </div>
+                    @if (!string.IsNullOrEmpty(request.BusinessPhoneCountry))
+                    {
+                        <div class="mb-3">
+                            <PhoneNumber phoneCountry="@request.BusinessPhoneCountry" @bind-phone="@request.BusinessPhone" label="Work Phone" @ref="businessPhone" />
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(request.PhoneCountry))
+                    {
+                        <div class="mb-3">
+                            <PhoneNumber PhoneCountry="@request.PhoneCountry" @bind-phone="@request.Phone" @ref="phone" />
+                        </div>
+                    }
+
+                    <div class="card mb-3" id="profileTabs">
+                        <ul class="list-group">
+                            <li class="list-group-item p-4 d-flex justify-content-between align-items-center">
+                                <div class="me-2">
+                                    <h6 class="mb-1">Administrator Role<a href="#!"><span class="fas fa-life-ring ms-2"></span></a></h6>
+                                    <p class="mb-0">Assign the Administrator role to Users that need access to the entire CellarPass platform. No other Roles are required to be assigned.</p>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" id="chkAdminRole" @bind-value="@request.AdminRole" type="checkbox" name="radioRole" />
+                                    <label class="sr-only" for="chkAdminRole">Admin Role Checkbox</label>
+                                </div>
+                            </li>
+                            <li class="list-group-item p-4 d-flex justify-content-between align-items-center">
+
+                                <div class="me-2">
+                                    <h6 class="mb-1">Basic Role</h6>
+                                    <p class="mb-0">This role provides limited access to the platform and should be assigned to day-to-day team members that need access to book, modify and view guest bookings.</p>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" id="chkBasicRole" @bind-value="@request.BasicRole" type="checkbox" name="radioRole" />
+                                    <label class="sr-only" for="chkBasicRole">Basic Role Checkbox</label>
+                                </div>
+                            </li>
+                            <li class="list-group-item p-4 d-flex justify-content-between align-items-center">
+                                <div class="me-2">
+                                    <h6 class="mb-1">Accounting Role</h6>
+                                    <p class="mb-0">If you have an internal or 3rd party bookkeeper, assign the Accounting role to provide limited access to view & print CellarPass invoices. Do not combine this role with any other roles.</p>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" id="chkAccountingRole" @bind-value="@request.AccountingRole" type="checkbox" name="radioRole" />
+                                    <label class="sr-only" for="chkAccountingRole">Accounting Role Checkbox</label>
+                                </div>
+                            </li>
+                            <li class="list-group-item p-4 d-flex justify-content-between align-items-center">
+                                <div class="me-2">
+                                    <h6 class="mb-1">Server Role <span class="text-muted fs--2">(Table Pro Only)</span><a href="#!"><span class="fas fa-life-ring ms-2"></span></a></h6>
+                                    <p class="mb-0">This role should be assigned to User accounts to be displayed as assignable Servers within Table Pro.</p>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" id="chkServerRole" @bind-value="@request.ServerRole" type="checkbox" />
+                                    <label class="sr-only" for="chkServerRole">Server Role Checkbox</label>
+                                </div>
+                            </li>
+                        </ul>
+
+                        <div class="mt-2">
+                            <a href="#!"><span class="fas fa-life-ring me-1"></span>Help</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+</div>
+
+@code
+{
+    private string title = "Add Team | Synergy Commerce Admin Panel";
+    private List<CpCountry> countries = new List<CpCountry>();
+    private List<CpState> states = new List<CpState>();
+    private AddTeamRequestModel request = new AddTeamRequestModel();
+    private Member currentMember = new Member();
+    private UserDetailModel user = new UserDetailModel();
+    private BusinessDetailModel business = new BusinessDetailModel();
+    private AddressControl address;
+    private PhoneNumber phone;
+    private PhoneNumber businessPhone;
+    private bool isSaving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        CountryResponse res = await _countryViewModel.GetCountries();
+        if (res.success)
+        {
+            countries = res.data;
+        }
+
+        StateResponse stateResponse = await _stateViewModel.GetStates();
+        if (stateResponse.success)
+        {
+            states = stateResponse.data;
+        }
+
+        request.CountryCode = "US";
+        request.StateCode = "";
+        request.PhoneCountry = "US";
+        request.BusinessPhoneCountry = "US";
+
+        StateHasChanged();
+    }
+
+    public async void SearchBusinessTeamAsync(ChangeEventArgs eventArgs)
+    {
+        request.Email = eventArgs.Value.ToString();
+        if (!string.IsNullOrEmpty(request.Email) && Validator.EmailIsValid(request.Email))
+        {
+            UserDetailResponse userResponse = await _userViewModel.GetUserByEmail(request.Email);
+            if (userResponse.success)
+            {
+                user = userResponse.data;
+                if (user == null)
+                {
+                    BusinessDetailResponse businessDetailResponse = await _businessViewModel.GetBusinessDetail(Guid.Empty, currentMember.Id);
+                    if (businessDetailResponse.success)
+                    {
+                        business = businessDetailResponse.data;
+                        if (business != null)
+                        {
+                            user = new UserDetailModel();
+                            request.Company = business.BusinessName;
+                            request.Address1 = business.Address1;
+                            request.Address2 = business.Address2;
+                            request.City = business.City;
+                            request.CountryCode = business.CountryCode;
+                            request.StateCode = business.StateCode;
+                            request.Phone = business.Phone;
+                            request.BusinessPhone = business.AddressPhone;
+                        }
+                    }
+                }
+                else
+                {
+                    business = new BusinessDetailModel();
+                    request.FirstName = user.FirstName;
+                    request.LastName = user.LastName;
+                    request.Company = user.Company;
+                    request.Address1 = user.Address1;
+                    request.Address2 = user.Address2;
+                    request.City = user.City;
+                    request.CountryCode = user.CountryCode;
+                    request.StateCode = user.StateCode;
+                    request.ZipCode = user.ZipCode;
+                    request.Phone = user.Phone;
+                    request.BusinessPhone = user.AddressPhone;
+                }
+            }
+        }
+        StateHasChanged();
+    }
+
+    private void HandleValidSubmit(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SaveTeam();
+        }
+    }
+
+    private async void SaveTeam()
+    {
+        isSaving = true;
+        request.BusinessId = currentMember.Id;
+        request.PhoneCountry = phone.phoneCountry;
+        request.Phone = phone.phone;
+        request.BusinessPhoneCountry = businessPhone.phoneCountry;
+        request.BusinessPhone = businessPhone.phone;
+        if (!string.IsNullOrEmpty(request.CountryCode))
+        {
+            request.Country = countries.FirstOrDefault(x => x.CountryCode == request.CountryCode).Name;
+        }
+        if (!string.IsNullOrEmpty(request.StateCode))
+        {
+            request.State = states.FirstOrDefault(x => x.StateCode == request.StateCode).State;
+        }
+        var result = await _teamViewModel.AddBusinessTeam(request);
+        if (result.success)
+        {
+            isSaving = false;
+            toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+            _navigationManager.NavigateTo("/people/team");
+        }
+        else
+        {
+            isSaving = false;
+            toastService.ShowToast(result.error_info.description, ToastLevel.Error);
+        }
+        StateHasChanged();
+    }
+
+    private void AddressChanged(bool isAddressChanged)
+    {
+        if (isAddressChanged)
+        {
+            request.Address2 = "";
+        }
+        StateHasChanged();
+    }
+}
+

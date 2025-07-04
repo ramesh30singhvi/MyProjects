@@ -1,0 +1,170 @@
+﻿@page "/settings/pos/policies"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.Blazor.RichTextEditor
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card shadow-none">
+    <div class="card-header bg-light">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings/pos" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-file-contract me-2"></span>POS Order Policies</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="javascript:void(0)" @onclick="@OpenPolicyModal">Add Policy</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@PlaceholderDataList" AllowPaging="true" AllowTextWrap="true" Width="100%">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && PlaceholderDataList.Count <= 0)
+                    {
+                        <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                            <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Policies</h6>
+                        </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn HeaderText="Policy Name" TextAlign="TextAlign.Left" Width="400px">
+                        <Template>
+                            @{
+                                var pholder = (context as PlaceholderData);
+                                <a href="javascript:void(0)" @onclick="@OpenPolicyModal">@(pholder.PolicyName)</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="Policy Description" TextAlign="TextAlign.Left">
+                        <Template>
+                            @{
+                                var pholder = (context as PlaceholderData);
+                                @(pholder.PolicyDesc)
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="" Width="50px">
+                        <Template>
+                            @{
+                                <a href="javascript:void(0)"><span class="fa-refular fa-trash-can"></span></a>
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+    <div class="card-footer">
+    </div>
+</div>
+
+<SfDialog IsModal="true" Width="800px" ShowCloseIcon="true" @bind-Visible="PolicyModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">POS Order Policy</h5></Header>
+        <Content>
+            <SfRichTextEditor @ref="@RteObj">
+                <RichTextEditorToolbarSettings Items="@Tools" Type="ToolbarType.MultiRow">
+                    <RichTextEditorCustomToolbarItems>
+                        <RichTextEditorCustomToolbarItem Name="Tags">
+                            <Template>
+                                <SfDropDownList TValue="string" TItem="ReplacementTag" DataSource="replacementTags" Placeholder="Replacement Tags">
+                                    <DropDownListFieldSettings Value="Name" Text="Name"></DropDownListFieldSettings>
+                                    <DropDownListEvents ValueChange="OnTagClick" TItem="ReplacementTag" TValue="string"></DropDownListEvents>
+                                </SfDropDownList>
+                            </Template>
+                        </RichTextEditorCustomToolbarItem>
+                    </RichTextEditorCustomToolbarItems>
+                </RichTextEditorToolbarSettings>
+            </SfRichTextEditor>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary me-2" @onclick="@ClosePolicyModal">Close</button>
+            <button type="button" class="btn btn-primary">Save</button>
+        </FooterTemplate>
+    </DialogTemplates>
+    <DialogEvents Opened="@onPolicyModalOpen"></DialogEvents> 
+</SfDialog>
+
+@code
+{
+    private string title = "POS Order Policies | Synergy Commerce Admin Panel";
+    private Boolean isLoading = false;
+
+    private bool PolicyModalVisibility { get; set; } = false;
+
+    SfRichTextEditor RteObj;
+
+    private List<ToolbarItemModel> Tools = new List<ToolbarItemModel>();
+
+    List<PlaceholderData> PlaceholderDataList = new List<PlaceholderData>();
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        Tools.Add(new ToolbarItemModel() { Command = ToolbarCommand.Bold });
+        Tools.Add(new ToolbarItemModel() { Name = "Tags", TooltipText = "Replacement Tags" });
+
+        PlaceholderDataList = PlaceholderList;
+        isLoading = false;
+    }
+
+    private void OpenPolicyModal()
+    {
+        this.PolicyModalVisibility = true;
+    }
+    private void ClosePolicyModal()
+    {
+        this.PolicyModalVisibility = false;
+    }
+
+    private void onPolicyModalOpen() 
+    { 
+        this.RteObj.RefreshUI(); 
+    } 
+
+    public class PlaceholderData
+    {
+        public int Id { get; set; }
+        public string PolicyName { get; set; }
+        public string PolicyDesc { get; set; }
+    }
+
+    public List<PlaceholderData> PlaceholderList = new List<PlaceholderData>()
+    {
+    new PlaceholderData(){ Id=1, PolicyName= "POS Policy 1", PolicyDesc = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum." },
+    new PlaceholderData(){ Id=2, PolicyName= "POS Policy 2", PolicyDesc = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur." },
+     };
+
+    private async Task OnTagClick(ChangeEventArgs<string, ReplacementTag> args)
+    {
+        if (!string.IsNullOrEmpty(args?.Value ?? null))
+            await this.RteObj.ExecuteCommandAsync(CommandName.InsertText, args.Value);
+    }
+    private List<ReplacementTag> replacementTags = new List<ReplacementTag>{
+        new ReplacementTag{ Name = "[[Tag1]]", Value = "[[Tag1]]" },
+        new ReplacementTag{ Name = "[[Tag2]]", Value = "[[Tag2]]" },
+        new ReplacementTag{ Name = "[[Tag3]]", Value = "[[Tag3]]" },
+    };
+    public class ReplacementTag
+    {
+        public string Name { get; set; }
+        public string Value { get; set; }
+    }
+
+
+}

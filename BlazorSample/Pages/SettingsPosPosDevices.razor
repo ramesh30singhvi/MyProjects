@@ -1,0 +1,102 @@
+﻿@page "/settings/pos/pos-devices"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Syncfusion.Blazor.Spinner
+@using Syncfusion.Blazor
+@using Microsoft.Extensions.Configuration;
+@inject ILocalStorageService localStorage
+@inject HttpClient _httpClient
+@inject IBusinessService _businessService
+@inject IPOSLicenceService _posLicenceService
+@inject IConfiguration _configuration
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ToastService toastService
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0">
+                            <a href="settings/pos" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back">
+                                <span class="far fa-arrow-left me-1"></span>
+                            </a><span class="far fa-tablet me-2"></span>
+                            POS Devices
+                        </h5>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-primary" href="javascript:void();">Add Device</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body vh-75 p-0">
+                <SfGrid ID="Grid" @ref="Grid" TValue="POSLicenceViewModel" AllowPaging="true" AllowFiltering="false" Width="100%" Height="100%">
+                    <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" Mode="EditMode.Dialog"></GridEditSettings>
+                    <GridEvents RowSelected="RowSelectHandler" TValue="POSLicenceViewModel"></GridEvents>
+
+                    <SfDataManager Url="@_gridDataUrl" Adaptor="Adaptors.WebApiAdaptor"></SfDataManager>
+                    <GridPageSettings PageSize="10"></GridPageSettings>
+                    <GridColumns>
+                        <GridColumn HeaderText="Friendly Name" TextAlign="TextAlign.Left" Width="340px">
+                            <Template Context="licenseContext">
+                                @{
+                                    var license = (licenseContext as POSLicenceViewModel);
+                                    <a  href="/settings/devices/@license.Id">@license.DeviceName</a>
+                                }
+                            </Template>
+                        </GridColumn>
+                        <GridColumn Field=@nameof(POSLicenceViewModel.LicenseKey) HeaderText="License Key" Format="C2" TextAlign="TextAlign.Center " Width="300">
+                            <Template Context="licenseContext">
+                                @{ var license = (licenseContext as POSLicenceViewModel);
+                                    var arr = license.LicenseKey.Split('-');
+                                    if (arr.Length > 4)
+                                    {
+                                        var licenseKey = string.Format("{0}-****-{1}", arr[0], arr[4]);
+                                        <span>@licenseKey</span>
+                                    }
+                                    <span>@license.LicenseKey</span>
+                                }
+                            </Template>
+                        </GridColumn>
+                    </GridColumns>
+                </SfGrid>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+@code
+{ 
+    private string title = "POS Devices";
+    private bool SpinnerVisibility = false;
+    SfGrid<POSLicenceViewModel> Grid;
+    private string _gridDataUrl;
+    private Member currentMember = new Member();
+    private POSLicenceViewModel SelectedItem = new POSLicenceViewModel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _gridDataUrl = _configuration["App:SettingsApiUrl"] + "POSLicence/get-pos-license-keys";
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        var userToken = await localStorage.GetItemAsStringAsync("token");
+        userToken = userToken.Replace("\"", string.Empty);
+        _httpClient.DefaultRequestHeaders.Remove("Authorization");
+        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {userToken}");
+
+        await base.OnInitializedAsync();
+    }
+
+    public void RowSelectHandler(RowSelectEventArgs<POSLicenceViewModel> args)
+    {
+        SelectedItem = args.Data;
+    }
+}

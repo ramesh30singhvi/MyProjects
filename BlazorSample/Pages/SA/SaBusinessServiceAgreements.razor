@@ -1,0 +1,114 @@
+﻿@page "/sa/business/service-agreements"
+@layout SaLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Models.ViewModel.SA
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Enums;
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISaIntegrationPartnerViewModel _saIntegrationPartnerViewModel
+@inject IServiceAgreementsViewModel _serviceAgreementsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card mb-4">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md-auto">
+                <h5 class="mb-3 mb-md-0"><a href="sa/business" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-file-contract me-2"></span>Service Agreements</h5>
+            </div>
+            <div class="col-md-auto">
+                <a class="btn btn-sm btn-primary" href="/sa/business/service-agreements-create">Add Agreement</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body vh-75 p-0 sf-grid">
+        <SfGrid DataSource="@serviceAgreements" AllowPaging="false" AllowSorting="true" Width="100%" Height="100%">
+            <GridSortSettings>
+                <GridSortColumns>
+                    <GridSortColumn Field="AgreementName" Direction="SortDirection.Ascending"></GridSortColumn>
+                </GridSortColumns>
+            </GridSortSettings>
+            <GridColumns>
+                <GridColumn Field=@nameof(ServiceAgreementModel.Active) HeaderText="Active" TextAlign="TextAlign.Center" DisplayAsCheckBox="true" Width="10%"></GridColumn>
+                <GridColumn Field=@nameof(ServiceAgreementModel.AgreementName) HeaderText="Agreement Name" Width="45%">
+                    <Template>
+                        @{
+                            var agreementName = (context as ServiceAgreementModel).AgreementName;
+                            var idGuid = (context as ServiceAgreementModel).IdGUID;
+                            <a href="/sa/business/service-agreements-edit/@idGuid">@($"{agreementName}")</a>
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn Field=@nameof(ServiceAgreementModel.InternalName) HeaderText="Technical Name" Width="30%"></GridColumn>
+                <GridColumn HeaderText="" TextAlign="TextAlign.Right" Width="15%">
+                    <Template Context="serviceAgreementContext">
+                        <div class="dropdown font-sans-serif position-static d-inline-block">
+                            <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                            <div class="dropdown-menu dropdown-menu-end border py-2 z-1090" aria-labelledby="dropdown0">
+                                @{
+                                    var agreement = (serviceAgreementContext as ServiceAgreementModel);
+                                    <a class="dropdown-item text-danger" href="javascript:void(0)" @onclick="()=> DeleteServiceAgreement(agreement.Id)">Delete</a>
+                                }
+                            </div>
+                        </div>
+                    </Template>
+                </GridColumn>
+            </GridColumns>
+        </SfGrid>
+    </div>
+    <DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="()=>DeleteServiceAgreementConfirm(idForDelete)"></DeleteConfirmation>
+</div>
+
+@code
+{
+    private bool isLoading { get; set; } = true;
+    bool openDeleteDialog = false;
+    private string title = "Service Agreements | Synergy Commerce Admin Panel";
+    DeleteConfirmation DeleteConfirmation;
+    private int idForDelete = 0;
+
+    private List<ServiceAgreementModel> serviceAgreements = new List<ServiceAgreementModel>();
+
+    private void DialogClose() => openDeleteDialog = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var response = await _serviceAgreementsViewModel.GetServiceAgreements();
+        if (response.success)
+        {
+            serviceAgreements = response.data;
+        }
+        isLoading = false;
+    }
+
+    private async Task DeleteServiceAgreementConfirm(int Id)
+    {
+        openDeleteDialog = false;
+        isLoading = true;
+        var response = await _serviceAgreementsViewModel.DeleteServiceAgreement(Id);
+        if (response.success)
+        {
+            serviceAgreements = response.data;
+        }
+        isLoading = false;
+        toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+    }
+
+    private void DeleteServiceAgreement(int Id)
+    {
+        openDeleteDialog = true;
+        idForDelete = Id;
+    }
+}
+

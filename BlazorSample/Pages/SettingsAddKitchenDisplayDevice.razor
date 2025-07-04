@@ -1,0 +1,55 @@
+﻿@page  "/settings/add-kitchen-display-device"
+@layout AuthorizedLayout
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head;
+@inject NavigationManager _navigationManager
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+
+<div class="card mb-3">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="/settings/devices" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-desktop me-2"></span>Add Kitchen Display</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="settings/kitchen-display-device-code">Add Device</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-12 col-xl-5 col-md-6">
+                <div class="mb-3">
+                    <label class="form-label" for="inputDeviceName">Device Name</label>
+                    <input id="inputDeviceName" class="form-control" type="text" placeholder="Device Name" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Display Type</label>
+                    <div class="border p-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioDefault1" checked>
+                            <label class="form-check-label" for="flexRadioDefault1">
+                                Prep Station<br /><p class="fs--2">View order tickets & mark items as complete as they are finished.</p>
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioDefault2">
+                            <label class="form-check-label" for="flexRadioDefault2">
+                                Traffic Coordinator<br /><p class="fs--2">View orders and prioritize kitchen tickets across stations, marking them as ‘ready’ when ready to be delivered to customer.</p>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    private Boolean isLoading;
+    private string title = "Add Kitchen Display | Synergy Commerce Admin Panel";
+
+}

@@ -1,0 +1,126 @@
+﻿@page "/sa/content/system-update-edit"
+@page "/sa/content/system-update-edit/{IdGUID:guid}"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Syncfusion.Blazor.Spinner
+@using CellarPassAppAdmin.Shared.Enums
+@using Syncfusion.Blazor
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ISystemUpdatesViewModel _systemUpdatesViewModel
+@inject IBusinessViewModel _businessViewModel
+@inject ILocalStorageService localStorage
+@inject ToastService toastService
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized Context="ArtcileEdit">
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        <EditForm Model="@systemUpdate" OnValidSubmit="@SaveArticle">
+            <DataAnnotationsValidator />
+            <div class="card mb-3">
+                <div class="card-header border-bottom">
+                    <div class="row justify-content-between align-items-center">
+                        <div class="col-md">
+                            <h5 class="mb-3 mb-md-0"><a href="/sa/content/system-updates" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-bullhorn me-2"></span>@(IdGUID.HasValue?"Edit System Update Article":"Create System Update Article")</h5>
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-sm btn-primary" href="javascript:void(0)">Save</button>
+                        </div>
+                    </div>  
+                </div>
+                <div class="card-body row g-3 mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Published Date</label>
+                        <SfDatePicker TValue="DateTime?" @bind-Value="@systemUpdate.ArticlePublishDate" class="form-control" Placeholder="Published Date"></SfDatePicker>
+                        <ValidationMessage For="() => systemUpdate.ArticlePublishDate" />
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Article Name</label>
+                        <InputText @bind-Value=@systemUpdate.Article class="form-control" Placeholder="Enter article name" id="ArticleName" />
+                        <ValidationMessage For="() => systemUpdate.Article" />
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Article Title</label>
+                        <InputText @bind-Value=@systemUpdate.ArticleTitle class="form-control" Placeholder="Enter article title" id="ArticleTitle" />
+                        <ValidationMessage For="() => systemUpdate.ArticleTitle" />
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Article URL</label>
+                        <InputText @bind-Value=@systemUpdate.ArticleURL class="form-control" Placeholder="Enter article URL" id="ArticleUrl" />
+                        <ValidationMessage For="() => systemUpdate.ArticleURL" />
+                    </div>
+                </div>
+            </div>
+        </EditForm>
+    </Authorized>
+</AuthorizeView>
+
+
+@code{
+
+    [Parameter]
+    public Guid? IdGUID { get; set; }
+    private string title = "Create System Update Article | Synergy Commerce Super Admin  Panel";
+    SystemUpdatesModel systemUpdate = new SystemUpdatesModel();
+    public Guid memberGuid { get; set; }
+    Member currentMember = null;
+    public bool SpinnerVisibility = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var businessess = await _businessViewModel.GetBusinessList();
+        memberGuid = businessess.Where(x => x.Id == currentMember.Id).FirstOrDefault().BusinessGuid;
+        if (IdGUID.HasValue)
+        {
+            var response = await _systemUpdatesViewModel.GetSystemUpdateByIdGUID(IdGUID.Value);
+            if (response.success)
+            {
+                systemUpdate = response.data;
+            }
+            systemUpdate.ArticleModifiedBy = memberGuid;
+            title = "Edit System Update Article | Synergy Commerce Super Admin  Panel";
+        }
+        else
+        {
+            systemUpdate.ArticlePublishedBy = memberGuid;
+        }
+        SpinnerVisibility = false;
+
+    }
+
+    private async Task SaveArticle()
+    {
+        SpinnerVisibility = true;
+        var sysUpdateId = systemUpdate.Id;
+        var response = await _systemUpdatesViewModel.CreateSystemUpdatesAsync(systemUpdate);
+
+        SpinnerVisibility = false;
+        if (response.success)
+        {
+            systemUpdate = response.data;
+            if (sysUpdateId > 0)
+            {
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+            }
+        }
+
+        NavigationManager.NavigateTo(string.Format("/sa/content/system-update-edit/{0}", systemUpdate.IdGUID));
+    }
+
+}

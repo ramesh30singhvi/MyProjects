@@ -1,0 +1,98 @@
+﻿@page "/settings/tags1"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><span class="far fa-tags me-2"></span>Guest Tags</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-primary" href="#!">Add New</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body min-vh-50 p-0">
+
+                <div class="table-responsive scrollbar">
+                    <table class="table fs--1 mb-0">
+                        <thead class="bg-200 text-900">
+                            <tr>
+                                <th class="pe-1 align-middle white-space-nowrap"></th>
+                                <th class="pe-1 align-middle white-space-nowrap">Public</th>
+                                <th class="pe-1 align-middle white-space-nowrap">Tag Name</th>
+                                <th class="pe-1 align-middle white-space-nowrap">Tag Type</th>
+                                <th class="pe-1 align-middle white-space-nowrap"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="" id="table-locations-body">
+                            <tr>
+                                <td class="align-middle white-space-nowrap"><a href="settings/tags/edit"><span class="far fa-pencil-alt"></span></a></td>
+                                <td class="align-middle white-space-nowrap"><span class="fas fa-check"></span></td>
+                                <td class="align-middle white-space-nowrap">Anniversary</td>
+                                <td class="align-middle white-space-nowrap">Special Event</td>
+                                <td class="align-middle white-space-nowrap text-end"><a href="#!"><span class="far fa-trash-alt"></span></a></td>
+                            </tr>
+                            <tr>
+                                <td class="align-middle white-space-nowrap"><a href="settings/tags/edit"><span class="far fa-pencil-alt"></span></a></td>
+                                <td class="align-middle white-space-nowrap"><span class="fas fa-check"></span></td>
+                                <td class="align-middle white-space-nowrap">Birthday</td>
+                                <td class="align-middle white-space-nowrap">Special Event</td>
+                                <td class="align-middle white-space-nowrap text-end"><a href="#!"><span class="far fa-trash-alt"></span></a></td>
+                            </tr>
+                            <tr>
+                                <td class="align-middle white-space-nowrap"><a href="settings/tags/edit"><span class="far fa-pencil-alt"></span></a></td>
+                                <td class="align-middle white-space-nowrap"></td>
+                                <td class="align-middle white-space-nowrap">First Date	</td>
+                                <td class="align-middle white-space-nowrap">Special Event</td>
+                                <td class="align-middle white-space-nowrap text-end"><a href="#!"><span class="far fa-trash-alt"></span></a></td>
+                            </tr>
+                            <tr>
+                                <td class="align-middle white-space-nowrap"><a href="settings/tags/edit"><span class="far fa-pencil-alt"></span></a></td>
+                                <td class="align-middle white-space-nowrap"></td>
+                                <td class="align-middle white-space-nowrap">Friend of Employee	</td>
+                                <td class="align-middle white-space-nowrap">Special Guests</td>
+                                <td class="align-middle white-space-nowrap text-end"><a href="#!"><span class="far fa-trash-alt"></span></a></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+            <div class="card-footer">
+            </div>
+        </div>
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    bool isDisabledModalVisible = false;
+
+    private string title = "Tags | Synergy Commerce Admin Panel";
+
+
+    [Parameter]
+    public int Id { get; set; }
+
+
+}

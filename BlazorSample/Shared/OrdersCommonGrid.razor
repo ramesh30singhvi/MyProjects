@@ -1,0 +1,219 @@
+﻿@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Enums
+@using Syncfusion.Blazor.Grids
+@inject NavigationManager _navigationManager 
+
+<div class="sf-grid min-vh-75">
+    <SfGrid DataSource="@Orders" @ref="OrdersGrid" TValue="OrderDetailFullModel" AllowPaging="true" Width="100%">
+        <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+        @if (EnableOrderSelection)
+        {
+            <GridEvents RowSelected="RowSelectHandler" RowDeselected="RowDeselectHandler" TValue="OrderDetailFullModel"></GridEvents>
+        }
+        <GridPageSettings PageSize="50"></GridPageSettings>
+        <GridTemplates>
+            <EmptyRecordTemplate>
+                @if (!IsLoading && Orders.Count == 0)
+                {
+                    <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                        <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Orders</h6>
+                    </div>
+                }
+            </EmptyRecordTemplate>
+        </GridTemplates>
+        <GridColumns>
+            @if (EnableOrderSelection)
+            {
+                <GridColumn Type="Syncfusion.Blazor.Grids.ColumnType.CheckBox" TextAlign="TextAlign.Left" Width="40"></GridColumn>
+            }
+            <GridColumn HeaderText="Order" TextAlign="TextAlign.Left" Width="110px">
+                <Template>
+                    @{
+                        var order = (context as OrderDetailFullModel);
+                        <a  href="javascript:void(0);" @onclick="() => DisplayOrderDetails(order.OrderGuid)">@order.FormattedOrderNumber</a>
+                    }
+                </Template>
+            </GridColumn>
+            <GridColumn Visible="!FromAdminLayout" HeaderText="Note" TextAlign="TextAlign.Left" Width="65px">
+                <Template>
+                    @{
+                        var order = (context as OrderDetailFullModel);
+                        <div class="d-flex justify-content-start">
+                            @{
+                                if (order.OrderNotes != null && order.OrderNotes.Count > 0)
+                                {
+                                    if (order.OrderNotes.Count(x => x.NoteType == (int)OrderNote.Private) > 0)
+                                    {
+                                        <SfTooltip>
+                                            <TooltipTemplates><Content>This order has Internal notes</Content></TooltipTemplates>
+                                            <span class="far fa-comment-alt-lines mx-1"></span>
+                                        </SfTooltip>
+                                    }
+                                    if (order.OrderNotes.Count(x => x.NoteType == (int)OrderNote.Customer) > 0)
+                                    {
+                                        <SfTooltip>
+                                            <TooltipTemplates><Content>This order has Customer notes</Content></TooltipTemplates>
+                                            <span class="far fa-comment-dots mx-1"></span>
+                                        </SfTooltip>
+                                    }
+                                }
+                            }
+                        </div>
+                    }
+                </Template>
+            </GridColumn>
+            <GridColumn HeaderText="Date" TextAlign="TextAlign.Left" Width="160px">
+                <Template>
+                    @{
+                        var createdDate = (context as OrderDetailFullModel).CreatedDate;
+                        createdDate = createdDate.AddMinutes(OffSetMinutes);
+                        @(createdDate.ToString("MMM dd, yyyy hh:mm tt"))
+                    }
+                </Template>
+            </GridColumn>
+            <GridColumn HeaderText="Customer" TextAlign="TextAlign.Left" Width="200px">
+                <Template>
+                    @{
+                        var order = (context as OrderDetailFullModel);
+                        if (order.BillingCustomer != null)
+                        {
+                            <div class="text-wrap">
+                                @((!string.IsNullOrWhiteSpace(order.BillingCustomer.FirstName)? order.BillingCustomer.FirstName+" ":"")+(!string.IsNullOrWhiteSpace(order.BillingCustomer.LastName)?order.BillingCustomer.LastName:""))
+                                <br />
+                                @if (order.BillToAddress != null)
+                                {
+                                    var billingAddress = order.BillToAddress;
+                                    @((!string.IsNullOrWhiteSpace(billingAddress.City)? billingAddress.City+", ":"")+(!string.IsNullOrWhiteSpace(billingAddress.State)?billingAddress.State+", ":"")+(!string.IsNullOrWhiteSpace(billingAddress.ZipCode)?billingAddress.ZipCode:""))
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            @("No Customer")
+                        }
+                    }
+                </Template>
+            </GridColumn>
+            <GridColumn HeaderText="Ship To" TextAlign="TextAlign.Left" Width="200px">
+                <Template>
+                    @{
+                        var order = (context as OrderDetailFullModel);
+                        if (order.DeliveryMethod == OrderDeliveryMethod.CarryOut || order.DeliveryMethod == OrderDeliveryMethod.Pickup)
+                        {
+
+                        }
+                        else
+                        {
+                            if (order.ShippingCustomer != null)
+                            {
+                                <div class="text-wrap">
+                                    @((! string.IsNullOrWhiteSpace(order.ShippingCustomer.FirstName)?order.ShippingCustomer.FirstName + " ": "")+(!string.IsNullOrWhiteSpace(order.ShippingCustomer.LastName)? order.ShippingCustomer.LastName: ""))
+                                    <br>
+                                    @if (order.ShipToAddress != null)
+                                    {
+                                        var shippingAddress = order.ShipToAddress;
+                                        @((!string.IsNullOrWhiteSpace(shippingAddress.City)?shippingAddress.City+", ":"")+(!string.IsNullOrWhiteSpace(shippingAddress.State)?shippingAddress.State+", ":"")+(!string.IsNullOrWhiteSpace(shippingAddress.ZipCode)?shippingAddress.ZipCode:""))
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                @("No Customer")
+                            }
+                        }
+                    }
+                </Template>
+            </GridColumn>
+            <GridColumn Visible="!FromAdminLayout" HeaderText="Source" TextAlign="TextAlign.Center" Width="80px">
+                <Template>
+                    @{
+                        var order = (context as OrderDetailFullModel);
+                        var source = order.OrderSource;
+                        if (!string.IsNullOrWhiteSpace(order.OrderSourceText))
+                            @(order.OrderSourceText.ToUpper())
+                    }
+                </Template>
+            </GridColumn>
+            <GridColumn Visible="!FromAdminLayout" HeaderText="Fulfillment" TextAlign="TextAlign.Center" Width="120px">
+                <Template>
+                    @{
+                        var order = (context as OrderDetailFullModel);
+                        if (order.DeliveryMethod == OrderDeliveryMethod.Ship)
+                        {
+                            @(OrderDeliveryMethod.Ship.ToString())
+                        }
+                        else
+                        {
+                            @(order.DeliveryMethodText)
+                        }
+                    }
+                </Template>
+            </GridColumn>
+            <GridColumn Visible="!FromAdminLayout" HeaderText="Status" TextAlign="TextAlign.Center" Width="100px">
+                <Template>
+                    @{
+                        var order = (context as OrderDetailFullModel);
+                        <span class="badge badge rounded-pill d-block @EnumHelper.GetStatusBadge(order.OrderStatus)"> @(order.OrderStatusText)</span>
+                        <span class="badge badge rounded-pill d-block mt-2 @EnumHelper.GetStatusBadge(order.PaymentStatus)">@(order.PaymentStatusText)</span>
+                    }
+                </Template>
+            </GridColumn>
+            <GridColumn HeaderText="Total" TextAlign="TextAlign.Left" Width="110px">
+                <Template>
+                    @{
+                        var order = (context as OrderDetailFullModel);
+                        @($"{order.Currency}{order.GrandTotal.ToString("n2")}")
+                    }
+                </Template>
+            </GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+
+@code {
+
+    [Parameter]
+    public List<OrderDetailFullModel> Orders { get; set; } = new List<OrderDetailFullModel>();
+    [Parameter]
+    public bool IsLoading { get; set; }
+
+    [Parameter] public EventCallback<int> OnOrderSelected { get; set; }
+
+    [Parameter]
+    public bool EnableOrderSelection { get; set; }
+
+    [Parameter]
+    public int OffSetMinutes { get; set; }
+
+    [Parameter]
+    public bool FromAdminLayout { get; set; }
+
+    [Parameter] public EventCallback<Guid> DisplayOrderDetail { get; set; }
+
+    SfGrid<OrderDetailFullModel> OrdersGrid;
+    public async Task RowSelectHandler(RowSelectEventArgs<OrderDetailFullModel> args)
+    {
+        var selectedOrders = OrdersGrid.SelectedRecords.Count();
+        await OnOrderSelected.InvokeAsync(selectedOrders);
+    }
+
+    public async Task RowDeselectHandler(RowDeselectEventArgs<OrderDetailFullModel> args)
+    {
+        var selectedOrders = OrdersGrid.SelectedRecords.Count();
+        await OnOrderSelected.InvokeAsync(selectedOrders);
+    }
+
+    public async Task<List<OrderDetailFullModel>> GetSelectedOrdersAsync()
+    {
+        return  await OrdersGrid.GetSelectedRecordsAsync();
+    }
+
+    private async Task DisplayOrderDetails(Guid orderGuid)
+    {
+        if (FromAdminLayout)
+            await DisplayOrderDetail.InvokeAsync(orderGuid);
+        else
+            _navigationManager.NavigateTo($"/store/orders/order/{orderGuid}", false);
+
+    }
+}

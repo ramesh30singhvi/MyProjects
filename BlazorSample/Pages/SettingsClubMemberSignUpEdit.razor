@@ -1,0 +1,2322 @@
+﻿@page  "/club/club-member-signup"
+@*@page  "/club/club-member-signup/{SignUpName}"*@
+@page  "/club/club-member-signup/{Status:int}/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Syncfusion.Blazor.DropDowns
+@using System.Globalization
+@using System
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using System.ComponentModel.DataAnnotations
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject IOrderViewModel _orderViewModel
+@inject IUserViewModel _userViewModel
+@inject ICountryViewModel _countryViewModel
+@inject IStateViewModel _stateViewModel
+@inject ITeamViewModel _teamViewModel
+@inject IProductViewModel _productViewModel
+@inject ICustomerViewModel _customerViewModel
+@inject ILocalStorageService localStorage
+@inject ToastService toastService
+@inject NavigationManager NavigationManager
+@inject IClubViewModel _clubViewModel
+@inject IShippingRatesViewModel _shippingRatesViewModel
+@inject IBusinessLocationViewModel _businessLocationViewModel
+@inject IPaymentViewModel _paymentViewModel
+@inject ISettingsViewModel _settingsViewModel
+@inject IBusinessCustomerTypesViewModel _businessCustomerTypesViewModel
+@inject IShippingCarrierViewModel _shippingCarrierViewModel
+@inject HttpClient http
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized Context="create_order">
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        <div class="card shadow-none border mb-4">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0">
+                            @{
+                                if (step1Active)
+                                {
+                                    if (!HideBackButton)
+                                    {
+                                        <a href="/clubs/member-sign-ups" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a>
+                                    }
+                                }
+                                else if (signUpStep2Active || giftSignUpStep2Active)
+                                {
+                                    <a href="javascript:void(0)" @onclick="() => ActivateStep(1)" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a>
+                                }
+                                else if (signUpStep3Active || giftSignUpStep3Active)
+                                {
+                                    <a href="javascript:void(0)" @onclick="() => ActivateStep(2)" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a>
+                                }
+                                else if (giftSignUpStep4Active)
+                                {
+                                    <a href="javascript:void(0)" @onclick="() => ActivateStep(3)" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a>
+                                }
+                                else if (allStepsFollowed)
+                                {
+                                    <a href="javascript:void(0)" @onclick="() => ActivateStep(IsGiftSignup ? 4 : 3)" class="btn btn-falcon-default btn-sm px-2 me-3 @(IsSignUpConfirmed ? "disabled-div" : "")" title="Back"><span class="far fa-arrow-left me-1"></span></a>
+                                }
+                            }
+                            <span class="far fa-users-medical me-2"></span>
+                            Club Member Sign-up
+                        </h5>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                @{
+                    var defaultBillingAddress = customerAddresses.FirstOrDefault(x => x.IsDefaultBilling);
+                    var defaultShippingAddress = customerAddresses.FirstOrDefault(x => x.IsDefaultShipping);
+                    var otherAddresses = customerAddresses.Where(x => !x.IsDefaultBilling && !x.IsDefaultShipping).ToList();
+                    var displayBillingCustomerAddresses = (defaultBillingAddress == null && (defaultShippingAddress != null)) || (defaultShippingAddress != null && defaultBillingAddress.AddresGuid != defaultShippingAddress.AddresGuid) || otherAddresses.Any();
+                    if (step1Active)
+                    {
+                        <div class="col-12">
+                            <h6 class="fw-bold text-500">STEP 1 OF 3</h6>
+                            <h5>Select Membership Level</h5>
+                        </div>
+                        <div class="row my-4">
+                            <ClubMembershipLevel BusinessClubs="businessClubs" OnSelectClub="SelectClub"></ClubMembershipLevel>
+                        </div>
+                    }
+                    else if (IsGiftSignup && !allStepsFollowed)//Gift Sign-Up steps
+                    {
+                        if (giftSignUpStep2Active)
+                        {
+                            <SelectCustomer StepNumber="STEP 2 OF 4"
+                                            Title="Select Bill To Customer"
+                                            FulfillmentTitle="Bill To"
+                                            SelectedClubName="@selectedClubName"
+                                            Customers="customers"
+                                            FilterExistingCustomers="FilterExistingCustomers"
+                                            OnAddNewCustomerBtnClick="AddNewCustomer"
+                                            OnExistingCustomerSelection="OnExistingCustomerSelection"
+                                            ClubCustomerType="@ClubCustomerType.BillTo"></SelectCustomer>
+                        }
+                        else if (giftSignUpStep3Active)
+                        {
+                            <div class="col-12 col-md-9">
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h6 class="fw-bold text-500">STEP 3 OF 4</h6>
+                                        <h5>Select Gifted To Customer</h5>
+                                    </div>
+                                    <div class="col-12">
+                                        <h5 class="mb-5 mt-4 fs-0 text-500">Membership: @selectedClubName</h5>
+                                    </div>
+                                    <ClubCustomerAddressView Title="Bill To"
+                                                             CustomerFirstName="@billToCustomer?.FirstName"
+                                                             CustomerLastName="@billToCustomer?.LastName"
+                                                             CustomerEmail="@billToCustomer?.Email"
+                                                             PhoneFormatted="@billingAddress?.PhoneFormatted"
+                                                             Address1="@billingAddress?.Address1"
+                                                             Address2="@billingAddress?.Address2"
+                                                             City="@billingAddress?.City"
+                                                             StateCode="@billingAddress?.StateCode"
+                                                             Country="@billingAddress?.Country"
+                                                             ZipCode="@billingAddress?.ZipCode"
+                                                             ClubCustomerType="ClubCustomerType.BillTo"
+                                                             EditCustomer="EditCustomer">
+                                    </ClubCustomerAddressView>
+                                    <SelectCustomer OnlySelectCustomerSection="true"
+                                                    StepNumber=""
+                                                    Title=""
+                                                    FulfillmentTitle="Gifted To"
+                                                    SelectedClubName=""
+                                                    Customers="customers"
+                                                    FilterExistingCustomers="FilterExistingCustomers"
+                                                    OnAddNewCustomerBtnClick="AddNewCustomer"
+                                                    OnExistingCustomerSelection="OnExistingCustomerSelection"
+                                                    ClubCustomerType="@ClubCustomerType.GiftedTo">
+                                    </SelectCustomer>
+                                </div>
+                            </div>
+                        }
+                        else if (giftSignUpStep4Active)
+                        {
+                            <div class="col-12 col-md-9">
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h6 class="fw-bold text-500">STEP 4 OF 4</h6>
+                                        <h5>Add Payment</h5>
+                                    </div>
+                                    <div class="col-12">
+                                        <h5 class="mb-5 mt-4 fs-0 text-500">Membership: @selectedClubName</h5>
+                                    </div>
+                                    <ClubCustomerAddressView Title="Bill To"
+                                                             CustomerFirstName="@billToCustomer?.FirstName"
+                                                             CustomerLastName="@billToCustomer?.LastName"
+                                                             CustomerEmail="@billToCustomer?.Email"
+                                                             PhoneFormatted="@billingAddress?.PhoneFormatted"
+                                                             Address1="@billingAddress?.Address1"
+                                                             Address2="@billingAddress?.Address2"
+                                                             City="@billingAddress?.City"
+                                                             StateCode="@billingAddress?.StateCode"
+                                                             Country="@billingAddress?.Country"
+                                                             ZipCode="@billingAddress?.ZipCode"
+                                                             ClubCustomerType="ClubCustomerType.BillTo"
+                                                             EditCustomer="() => EditCustomer(ClubCustomerType.BillTo)"
+                                                             IsAddressesAvailable=displayBillingCustomerAddresses
+                                                             DisplayAddresses="ChangeAddress">
+                                    </ClubCustomerAddressView>
+                                    <ClubCustomerAddressView Title="Gifted To"
+                                                             CustomerFirstName="@giftedToCustomer?.FirstName"
+                                                             CustomerLastName="@giftedToCustomer?.LastName"
+                                                             CustomerEmail="@giftedToCustomer?.Email"
+                                                             PhoneFormatted="@giftingAddress?.PhoneFormatted"
+                                                             Address1="@giftingAddress?.Address1"
+                                                             Address2="@giftingAddress?.Address2"
+                                                             City="@giftingAddress?.City"
+                                                             StateCode="@giftingAddress?.StateCode"
+                                                             Country="@giftingAddress?.Country"
+                                                             ZipCode="@giftingAddress?.ZipCode"
+                                                             ClubCustomerType="ClubCustomerType.GiftedTo"
+                                                             EditCustomer="EditCustomer">
+                                    </ClubCustomerAddressView>
+                                    <ClubCustomerAddPayment HideCVV="@((Status == (int)ClubSignupStatus.Suspended))" SaveCreditCard="SaveCreditCard" CreditCard="creditCard"></ClubCustomerAddPayment>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else if (!IsGiftSignup && !allStepsFollowed)//Standard Sign-Up steps
+                    {
+                        if (signUpStep2Active)
+                        {
+                            <SelectCustomer StepNumber="STEP 2 OF 3"
+                                            Title="Select Customer"
+                                            FulfillmentTitle="Bill To"
+                                            SelectedClubName="@selectedClubName"
+                                            Customers="customers"
+                                            FilterExistingCustomers="FilterExistingCustomers"
+                                            OnAddNewCustomerBtnClick="AddNewCustomer"
+                                            OnExistingCustomerSelection="OnExistingCustomerSelection"
+                                            ClubCustomerType="@ClubCustomerType.BillTo">
+                            </SelectCustomer>
+                        }
+                        else if (signUpStep3Active)
+                        {
+                            <div class="col-12 col-md-9">
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h6 class="fw-bold text-500">STEP 3 OF 3</h6>
+                                        <h5>Add Payment</h5>
+                                    </div>
+                                    <div class="col-12">
+                                        <h5 class="mb-5 mt-4 fs-0 text-500">Membership: @selectedClubName</h5>
+                                    </div>
+                                    @if (billToCustomerSelected)
+                                    {
+                                        <ClubCustomerAddressView Title="Bill To"
+                                                                 CustomerFirstName="@billToCustomer?.FirstName"
+                                                                 CustomerLastName="@billToCustomer?.LastName"
+                                                                 CustomerEmail="@billToCustomer?.Email"
+                                                                 PhoneFormatted="@billingAddress?.PhoneFormatted"
+                                                                 Address1="@billingAddress?.Address1"
+                                                                 Address2="@billingAddress?.Address2"
+                                                                 City="@billingAddress?.City"
+                                                                 StateCode="@billingAddress?.StateCode"
+                                                                 Country="@billingAddress?.Country"
+                                                                 ZipCode="@billingAddress?.ZipCode"
+                                                                 ClubCustomerType="ClubCustomerType.BillTo"
+                                                                 EditCustomer="() => EditCustomer(ClubCustomerType.BillTo)"
+                                                                 IsAddressesAvailable=displayBillingCustomerAddresses
+                                                                 DisplayAddresses="ChangeAddress">
+                                        </ClubCustomerAddressView>
+                                    }
+                                    @if (billToCustomerSelected && DeliveryMethod != ClubDeliveryType.Pickup)
+                                    {
+                                        var displayShippingCustomerAddresses = (defaultShippingAddress == null && (defaultBillingAddress != null)) || (defaultBillingAddress != null && defaultBillingAddress.AddresGuid != defaultShippingAddress.AddresGuid) || otherAddresses.Any();
+                                        <ClubCustomerAddressView Title="@fulfillmentMethodType"
+                                                                 CustomerFirstName="@shipToCustomer?.FirstName"
+                                                                 CustomerLastName="@shipToCustomer?.LastName"
+                                                                 CustomerEmail="@shipToCustomer?.Email"
+                                                                 PhoneFormatted="@shippingAddress?.PhoneFormatted"
+                                                                 Address1="@shippingAddress?.Address1"
+                                                                 Address2="@shippingAddress?.Address2"
+                                                                 City="@shippingAddress?.City"
+                                                                 StateCode="@shippingAddress?.StateCode"
+                                                                 Country="@shippingAddress?.Country"
+                                                                 ZipCode="@shippingAddress?.ZipCode"
+                                                                 ClubCustomerType="ClubCustomerType.ShipTo"
+                                                                 IsEditIcon="false"
+                                                                 EditCustomer="() => UpdateAddress(ClubCustomerType.ShipTo)"
+                                                                 IsAddressesAvailable=displayShippingCustomerAddresses
+                                                                 DisplayAddresses="ChangeAddress">
+                                        </ClubCustomerAddressView>
+                                    }
+                                    <ClubCustomerAddPayment HideCVV="@((Status == (int)ClubSignupStatus.Suspended))" SaveCreditCard="SaveCreditCard" CreditCard="creditCard"></ClubCustomerAddPayment>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else if (allStepsFollowed)
+                    {
+                        <div class="row">
+                            <div class="col-12 col-md-9">
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <h5 class="mb-5 mt-4 fs-0 text-500 @(IsSignUpConfirmed ? "disabled-div" : "")">Membership: <a href="javascript:void(0)" @onclick="() => ShowSelectMembershipModal()">@selectedClubName </a></h5>
+                                    </div>
+                                    @if (billToCustomerSelected)
+                                    {
+                                        <ClubCustomerAddressView Title="Bill To"
+                                                                 CustomerFirstName="@billToCustomer?.FirstName"
+                                                                 CustomerLastName="@billToCustomer?.LastName"
+                                                                 CustomerEmail="@billToCustomer?.Email"
+                                                                 PhoneFormatted="@billingAddress?.PhoneFormatted"
+                                                                 Address1="@billingAddress?.Address1"
+                                                                 Address2="@billingAddress?.Address2"
+                                                                 City="@billingAddress?.City"
+                                                                 StateCode="@billingAddress?.StateCode"
+                                                                 Country="@billingAddress?.Country"
+                                                                 ZipCode="@billingAddress?.ZipCode"
+                                                                 ClubCustomerType="ClubCustomerType.BillTo"
+                                                                 EditCustomer="EditCustomer"
+                                                                 IsButtonDisabled="IsSignUpConfirmed">
+                                        </ClubCustomerAddressView>
+                                    }
+                                    @if (billToCustomerSelected && DeliveryMethod != ClubDeliveryType.Pickup && !IsGiftSignup)
+                                    {
+                                        <ClubCustomerAddressView Title="@fulfillmentMethodType"
+                                                                 CustomerFirstName="@shipToCustomer?.FirstName"
+                                                                 CustomerLastName="@shipToCustomer?.LastName"
+                                                                 CustomerEmail="@shipToCustomer?.Email"
+                                                                 PhoneFormatted="@shippingAddress?.PhoneFormatted"
+                                                                 Address1="@shippingAddress?.Address1"
+                                                                 Address2="@shippingAddress?.Address2"
+                                                                 City="@shippingAddress?.City"
+                                                                 StateCode="@shippingAddress?.StateCode"
+                                                                 Country="@shippingAddress?.Country"
+                                                                 ZipCode="@shippingAddress?.ZipCode"
+                                                                 ClubCustomerType="ClubCustomerType.ShipTo"
+                                                                 IsEditIcon="false"
+                                                                 EditCustomer="EditCustomer"
+                                                                 IsButtonDisabled="IsSignUpConfirmed">
+                                        </ClubCustomerAddressView>
+                                    }
+                                    else if (IsGiftSignup)
+                                    {
+                                        if (giftedToCustomer == null || giftedToCustomer.UserId == 0)
+                                        {
+                                            <SelectCustomer OnlySelectCustomerSection="true"
+                                                            StepNumber=""
+                                                            Title=""
+                                                            FulfillmentTitle="Gifted To"
+                                                            SelectedClubName=""
+                                                            Customers="customers"
+                                                            FilterExistingCustomers="FilterExistingCustomers"
+                                                            OnAddNewCustomerBtnClick="AddNewCustomer"
+                                                            OnExistingCustomerSelection="OnExistingCustomerSelection"
+                                                            ClubCustomerType="@ClubCustomerType.GiftedTo">
+                                            </SelectCustomer>
+                                        }
+                                        else
+                                        {
+                                            <ClubCustomerAddressView Title="Gifted To"
+                                                                     CustomerFirstName="@giftedToCustomer?.FirstName"
+                                                                     CustomerLastName="@giftedToCustomer?.LastName"
+                                                                     CustomerEmail="@giftedToCustomer?.Email"
+                                                                     PhoneFormatted="@giftingAddress?.PhoneFormatted"
+                                                                     Address1="@giftingAddress?.Address1"
+                                                                     Address2="@giftingAddress?.Address2"
+                                                                     City="@giftingAddress?.City"
+                                                                     StateCode="@giftingAddress?.StateCode"
+                                                                     Country="@giftingAddress?.Country"
+                                                                     ZipCode="@giftingAddress?.ZipCode"
+                                                                     ClubCustomerType="ClubCustomerType.GiftedTo"
+                                                                     EditCustomer="EditCustomer"
+                                                                     IsButtonDisabled="IsSignUpConfirmed">
+                                            </ClubCustomerAddressView>
+                                        }
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-3">
+                                <div class="card shadow-none border h-100">
+                                    <div class="card-body">
+                                        <div class="mb-3 text-center">
+                                            <div class="d-grid gap-2 mb-1">
+                                                <button disabled="@(!clubDetail.AllowCustomerPickup || IsSignUpConfirmed || (clubDetail.ClubPickupLocation?.Count ?? 0) == 0)" class="btn btn-sm btn-outline-primary" @onclick="@ShowFullfillmentTypeModal">@(EnumHelper.GetDescription(clubDeliveryType))</button>
+                                            </div>
+                                        </div>
+                                        @if (clubDeliveryType == ClubDeliveryType.Ship && clubDetail.AllowAlternativeDeliveryOptions && defaultShipMethodId > 0 && !string.IsNullOrEmpty(defaultShippingCodeName))
+                                        {
+                                            <div class="mb-3">
+                                                @*<label class="form-label btn-reveal-trigger d-flex flex-center" for="">
+                                                        Preferred Shipping Method
+                                                    </label>*@
+                                                <p class="text-center">
+                                                    <a class="@(IsSignUpConfirmed ? "disabled-div" : "")" href="javascript:void(0)" @onclick="() => ShowFulfillmentModal()">@defaultShippingCodeName</a>
+                                                </p>
+                                            </div>
+                                        }
+                                        @if (clubDeliveryType == ClubDeliveryType.Pickup && clubDetail.AllowCustomerPickup && defaultPickupLocationId > 0 && !string.IsNullOrEmpty(pickupLocationName))
+                                        {
+                                            <div class="mb-3">
+                                                <label class="form-label btn-reveal-trigger d-flex flex-center" for="">
+                                                    Pickup Location
+                                                </label>
+                                                <p class="text-center">
+                                                    <a href="javascript:void(0)" class="@(IsSignUpConfirmed ? "disabled-div" : "")" @onclick="() => ShowPickupLocationModal()">@pickupLocationName</a>
+                                                </p>
+                                            </div>
+                                        }
+                                        <hr class="mt-4 mb-3" />
+                                        <div class="mb-3">
+                                            <label class="form-label btn-reveal-trigger d-flex flex-between-center" for="giftedMembership">Gifted Membership</label>
+                                            @{
+                                                var numberOfShipmentSelected = giftShipmentList?.FirstOrDefault(x => x.Key == (selectedGiftShipment?.NumberOfShipments ?? 0))?.Value ?? "";
+                                            }
+                                            <p class="text-left"><a href="javascript:void(0)" class="@(IsSignUpConfirmed ? "disabled-div" : "")" @onclick="() => ShowGiftedMembershipModal()">@(IsGiftSignup ? "Yes" : "No")</a><span class="ps-4 text-700">@(numberOfShipmentSelected == "Never Expires" ? numberOfShipmentSelected : ( string.IsNullOrEmpty(numberOfShipmentSelected)? "" : numberOfShipmentSelected + " Shipments"))</span></p>
+                                        </div>
+                                        <hr class="mt-4 mb-3" />
+                                        <div class="mb-3">
+                                            <label class="form-label btn-reveal-trigger d-flex flex-between-center" for="">Payment Method</label>
+                                            <p class="text-wrap">
+                                                @if (!string.IsNullOrEmpty(creditCard.CreditCardNumber))
+                                                {
+                                                    <a href="javascript:void(0)" @onclick="() => ActivateAddPaymentStep()">
+                                                        @($"{Helper.GetCardType(creditCard.CreditCardNumber)}- {creditCard.CreditCardNumber?.Substring(creditCard.CreditCardNumber.Length - 4)??""} exp {creditCard.ExpirationMonth}/{creditCard.ExpirationYear}")
+                                                    </a>
+                                                }
+                                            </p>
+                                        </div>
+                                        <hr class="mt-4 mb-3" />
+                                        <div class="mb-3">
+                                            <label class="form-label btn-reveal-trigger d-flex flex-between-center" for="">
+                                                Membership Notes
+                                                <button class="btn btn-link btn-sm btn-reveal text-600 @(IsSignUpConfirmed ? "disabled-div" : "")" @onclick="@(() => ShowMembershipNoteModal())"><span class="fas fa-plus"></span></button>
+                                            </label>
+                                            @if (membershipNoteList?.Count > 0)
+                                            {
+                                                foreach (var note in membershipNoteList?.OrderBy(x => x.Id)?.ToList() ?? new List<MembershipNoteModel>())
+                                                {
+                                                    <p class="text-wrap">
+                                                        <a href="javascript:void(0)" class="@(IsSignUpConfirmed ? "disabled-div" : "")" @onclick="() => ShowMembershipNoteModal(note)">@note.Note</a>
+                                                    </p>
+                                                }
+                                            }
+                                        </div>
+                                        <hr class="mt-4 mb-4" />
+                                        <div class="mb-4">
+                                            <label class="form-label btn-reveal-trigger d-flex flex-between-center" for="">
+                                                Member Tags <button class="btn btn-link btn-sm btn-reveal text-600 @(IsSignUpConfirmed ? "disabled-div" : "")" @onclick="@ShowTagsModal"><span class="fas fa-plus"></span></button>
+                                            </label>
+                                            @if (selectedClubSubscriptionTags.Any())
+                                            {
+                                                <p class="text-wrap">@string.Join(", ", selectedClubSubscriptionTags)</p>
+                                            }
+                                        </div>
+                                        <hr class="mt-4 mb-3" />
+                                        <div class="mb-3">
+                                            <label class="form-label btn-reveal-trigger d-flex flex-between-center" for="salesReps">
+                                                Sales Rep
+                                                @if (salesRep > 0)
+                                                {
+                                                    <button class="btn btn-link btn-sm btn-reveal text-600 @(IsSignUpConfirmed ? "disabled-div" : "")" @onclick="@ShowSalesRepsModal"><span class="fas fa-plus"></span></button>
+                                                }
+                                            </label>
+                                            @if (salesRep > 0)
+                                            {
+                                                var salesRepDetail = teamUsers.FirstOrDefault(x => x.TeamId == salesRep);
+                                                if (salesRepDetail != null)
+                                                {
+                                                    <p class="text-wrap">
+                                                        <a href="javascript:void(0)" class="@(IsSignUpConfirmed ? "disabled-div" : "")" @onclick="() => ShowSalesRepsModal()">@($"{salesRepDetail.FirstName} {salesRepDetail.LastName}")</a>
+                                                    </p>
+                                                }
+                                            }
+                                        </div>
+                                        <hr class="mt-4 mb-3" />
+                                        <div class="mb-3 text-center">
+                                            <div class="d-grid gap-2 mb-1">
+                                                <button class="btn btn-sm btn-outline-primary @(IsSignUpConfirmed ? "disabled-div" : "")" @onclick="SuspendSignup">
+                                                    Suspend Signup
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mb-4 text-center">
+                                            <div class="d-grid gap-2 mb-1">
+                                                @if (isCreateMembershipBtnDisable)
+                                                {
+                                                    <button style="background-color: #f0eded;" class="btn btn-sm text-secondary">Create Membership</button>
+                                                }
+                                                else
+                                                {
+                                                    <button class="btn btn-sm btn-primary @(IsSignUpConfirmed ? "disabled-div" : "")" @onclick="CreateSubscription">Create Membership</button>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+
+        <!--#region Dialogs -->
+        <SfDialog Width="400px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsFullfillmentTypeModalVisible" CssClass="fulfillmentType">
+            <DialogTemplates>
+                <Header>Fulfillment Type</Header>
+                <Content>
+                    <div class="row border-bottom text-center">
+                        <div class="col-md-12">
+                            <p class="fw-bold my-3"><a href="javascript:void(0)" @onclick="() => ChangeDeliveryType(ClubDeliveryType.Ship)">Ship To Customer</a></p>
+                        </div>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col-md-12 @((clubDetail.ClubPickupLocation?.Count ?? 0) == 0 ? "disabled-div" : "")">
+                            <p class="fw-bold my-3"><a href="javascript:void(0)" @onclick="() => ChangeDeliveryType(ClubDeliveryType.Pickup)">Customer Pickup</a></p>
+                        </div>
+                    </div>
+                </Content>
+            </DialogTemplates>
+        </SfDialog>
+
+        <SfDialog Width="970px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsSelectMembershipModalVisible" CssClass="fulfillmentType">
+            <DialogTemplates>
+                <Header>Select Membership Level</Header>
+                <Content>
+                    <div class="card-body">
+                        <div class="row my-4">
+                            <ClubMembershipLevel BusinessClubs="businessClubs" OnSelectClub="SelectClub"></ClubMembershipLevel>
+                        </div>
+                    </div>
+                </Content>
+            </DialogTemplates>
+        </SfDialog>
+
+        <SfDialog Width="500px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsFulfillmentModalVisible">
+            <DialogTemplates>
+                <Header>
+                    Preferred Shipping Method
+                </Header>
+                <Content>
+                    @foreach (var option in clubDetail?.ClubDeliveryOption ?? new List<ClubDeliveryOptionModel>())
+                    {
+                        var serviceCodeName = serviceCodes?.FirstOrDefault(x => x.Id == option.ShipMethodId)?.ServiceCodeName ?? string.Empty;
+                        <div class="row mb-2">
+                            <div class="col-md">
+                                <input class="form-check-input" type="radio" name="radioShippingDefaultOption" id="radioShippingDefaultOption" @onchange="@(() => SetDefaultShippingOption(option))" checked="@(option.IsDefault)">
+                                <label class="form-check-label" for="radioShippingDefaultOption">@serviceCodeName</label> <span>@(option.IsDefault ? "(Default)" : "")</span>
+                            </div>
+                        </div>
+                    }
+                </Content>
+            </DialogTemplates>
+            <DialogButtons>
+                <DialogButton Content="Cancel" OnClick="@HideFulfillmentModal" />
+                <DialogButton Content="Save" OnClick="@HideFulfillmentModal" IsPrimary="true" />
+            </DialogButtons>
+        </SfDialog>
+
+        <SfDialog Width="500px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsPickupLocationModalVisible">
+            <DialogTemplates>
+                <Header>
+                    Pickup Location
+                </Header>
+                <Content>
+                    @{
+                        foreach (var location in clubDetail?.ClubPickupLocation ?? new List<ClubPickupLocationModel>())
+                        {
+                            var pickupLocationAddress = inventoryLocations?.FirstOrDefault(x => x.Id == location.LocationId) ?? null;
+                            if (pickupLocationAddress != null)
+                            {
+                                <div class="row mb-2">
+                                    <div class="col-md">
+                                        <label class="form-check-label d-flex lh-base" for="radioPickupDefaultOption">
+                                            <input style="min-width: 1em; margin-top: 5px;" class="form-check-input me-2" type="radio" name="radioPickupDefaultOption" id="radioPickupDefaultOption" @onchange="@(() => SetDefaultPickupLocation(location))" checked="@(location.LocationId == defaultPickupLocationId)">
+                                            @pickupLocationAddress.LocationName <br />
+                                            @pickupLocationAddress.Address1 @pickupLocationAddress.City, @pickupLocationAddress.State, @pickupLocationAddress.ZipCode
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    }
+                </Content>
+            </DialogTemplates>
+            <DialogButtons>
+                <DialogButton Content="Cancel" OnClick="@HidePickupLocationModal" />
+                <DialogButton Content="Save" OnClick="@HidePickupLocationModal" IsPrimary="true" />
+            </DialogButtons>
+        </SfDialog>
+
+        <EditForm Model="@selectedGiftShipment" Context="formContext">
+            <DataAnnotationsValidator />
+            <SfDialog Width="400px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsGiftedMembershipModalVisible">
+                <DialogTemplates>
+                    <Header>Gifted Membership</Header>
+                    <Content>
+                        <div class="row">
+                            <label class="form-label" for="">Is Gifted Membership</label>
+                            <div class="col-md-12 mb-3">
+                                <button class="btn btn-sm @(!IsGiftSignup ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => ChangeGiftedMembership(false))">
+                                    No
+                                </button>
+                                <button class="btn btn-sm @(IsGiftSignup ? "btn-primary" : "btn-outline-primary")" @onclick="@(() => ChangeGiftedMembership(true))">
+                                    Yes
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12 sf-ddl">
+                                <label class="form-label" for="clubGiftShipmentsDDN">Number of Shipments</label>
+                                <SfDropDownList TValue="int" TItem="DropdownBindingModel" @bind-Value="selectedGiftShipment.NumberOfShipments" DataSource="@giftShipmentList" Placeholder="Select Number of shipments">
+                                    <DropDownListFieldSettings Text="Value" Value="Key"></DropDownListFieldSettings>
+                                    <DropDownListEvents ValueChange="SetCreateMembershipBtnState" TItem="DropdownBindingModel" TValue="int"></DropDownListEvents>
+                                </SfDropDownList>
+                                <ValidationMessage For="@(() => selectedGiftShipment.NumberOfShipments)" />
+                            </div>
+                        </div>
+                    </Content>
+                </DialogTemplates>
+                <DialogButtons>
+                    <DialogButton Content="Cancel" OnClick="HideGiftedMembershipModal" />
+                    <DialogButton Content="Save" OnClick="() => SaveNumberOfShipments(formContext)" IsPrimary="true" />
+                </DialogButtons>
+            </SfDialog>
+        </EditForm>
+
+        <SfDialog Width="500px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsSalesRepsModalVisible">
+            <DialogTemplates>
+                <Header>
+                    Sales Reps
+                </Header>
+                <Content>
+                    <div class="row">
+                        <div class="mb-3 col-10 sf-ddl">
+                            <SfDropDownList TValue="int" @bind-Value="salesRep" TItem="SalesRepresentative" DataSource="@salesRepresentatives" AllowFiltering="true">
+                                <DropDownListFieldSettings Text="Name" Value="TeamId"></DropDownListFieldSettings>
+                            </SfDropDownList>
+                        </div>
+                        <div class="col-2 p-0">
+                            <a href="javascript:void(0)" class="btn btn-primary" type="button" @onclick="HideSalesRepsModal">Save</a>
+                        </div>
+                    </div>
+                </Content>
+            </DialogTemplates>
+        </SfDialog>
+
+        <EditForm Model="@membershipNote" Context="formContext">
+            <DataAnnotationsValidator />
+            <SfDialog Width="500px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@MembershipNoteModalVisible">
+                <DialogTemplates>
+                    <Header>
+                        Membership Notes
+                    </Header>
+                    <Content>
+                        <div class="mb-3">
+                            <SfTextBox Multiline="true" placeholder="Enter the note" class="form-control" id="textCustomerNote" rows="4" @bind-Value="membershipNote.Note"></SfTextBox>
+                            <ValidationMessage For="() => membershipNote.Note" />
+                        </div>
+                    </Content>
+                </DialogTemplates>
+                <DialogButtons>
+                    <DialogButton Content="Cancel" @onclick="HideMembershipNoteModal" />
+                    <DialogButton Content="Save" IsPrimary="true" @onclick="() => SaveMembershipNote(formContext)" />
+                </DialogButtons>
+            </SfDialog>
+        </EditForm>
+
+        <SfDialog Width="500px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsTagsDialogVisible">
+            <DialogTemplates>
+                <Header>
+                    Member Tags
+                </Header>
+                <Content>
+                    <div class="row">
+                        <div class="mb-3 col-10">
+                            <SfMultiSelect Placeholder="Select one or more Member Tags." TValue="string[]" @bind-Value="selectedClubSubscriptionTags" TItem="ClubSubscriptionTagListModel" DataSource="@clubSubscriptionTags" AllowFiltering="true" Mode="@VisualMode.Box">
+                                <MultiSelectFieldSettings Text="Value" Value="Value"></MultiSelectFieldSettings>
+                            </SfMultiSelect>
+                        </div>
+                        <div class="col-2 p-0">
+                            <a href="javascript:void(0)" class="btn btn-sm btn-primary" type="button" @onclick="SaveTags">Save</a>
+                        </div>
+                    </div>
+                </Content>
+            </DialogTemplates>
+        </SfDialog>
+
+        <SfDialog IsModal="true" CssClass="syncfusion-dialog-size syncfusion-dialog-size-sm" ShowCloseIcon="true" @bind-Visible="IsCreateCustomerDialogVisible">
+            <DialogEvents Closed="@CloseCreateCustomerModal"></DialogEvents>
+            <DialogTemplates>
+                <Header>
+                    @if (isAddCustomer)
+                    {
+                        <h5 class="modal-title" id="modalLabel">Add New Customer</h5>
+                    }
+                    else
+                    {
+                        <h5 class="modal-title" id="modalLabel">@(!isAddAddress ? "Update Address" : "Add New Address")</h5>
+                    }
+                </Header>
+                <Content>
+                    <EditForm OnValidSubmit="@HandleAddressSubmit" Model="@addressRequestModel" Context="addressFormContext">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3" hidden="@(!isAddCustomer ? true : false)">
+                            <label class="form-label">Email</label>
+                            <InputText type="text" class="form-control" @bind-Value="@addressRequestModel.Email" id="inputCompany" placeholder="Email" />
+                            <ValidationMessage For="@(() => addressRequestModel.Email)" />
+                        </div>
+                        <div class="row gx-2">
+                            <div class="col-sm-6 mb-3">
+                                <label class="form-label" for="inputFirstName">First Name</label>
+                                <InputText id="inputFirstName" class="form-control" @bind-Value="@addressRequestModel.FirstName" placeholder="First Name" />
+                                <ValidationMessage For="@(() => addressRequestModel.FirstName)" />
+                            </div>
+                            <div class="col-sm-6 mb-3">
+                                <label class="form-label" for="inputLastName">Last Name</label>
+                                <InputText id="inputLastName" class="form-control" @bind-Value="@addressRequestModel.LastName" placeholder="Last Name" />
+                                <ValidationMessage For="@(() => addressRequestModel.LastName)" />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Company</label>
+                            <input type="text" class="form-control" @bind-value="@addressRequestModel.Company" id="inputCompany" placeholder="Company" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Date of Birth</label>
+                            @*<SfDatePicker TValue="DateTime?" Placeholder='Date of Birth' AllowEdit="false" Format="MM/dd/yyyy" @bind-Value="@addressRequestModel.DOB"></SfDatePicker>*@
+                            <SfMaskedTextBox Placeholder='Date of Birth' Mask="00/00/0000" @bind-Value="@UserDob" @ref="UserDobObj"></SfMaskedTextBox>
+                        </div>
+                        <div class="mb-3">
+                            <AddressControl countries="@countries" states="@states" @bind-address1="@addressRequestModel.Address1" @bind-address2="@addressRequestModel.Address2" @bind-selectedCountry="@addressRequestModel.CountryCode" @bind-stateCode="@addressRequestModel.StateCode" @bind-city="@addressRequestModel.City" @bind-zipCode="@addressRequestModel.ZipCode" />
+                        </div>
+                        @if (showPhoneControl)
+                        {
+                            <div class="mb-3">
+                                <PhoneNumber countries="@countries" OnPhoneCountryChanged="(args) => { addressRequestModel.PhoneCountry = args?.ToString(); }" phoneMasks="@phoneMasks" phoneCountry="@addressRequestModel.PhoneCountry" @bind-phone="@addressRequestModel.Phone" label="@(!string.IsNullOrEmpty(addressRequestModel.PhoneType)?addressRequestModel.PhoneType.ToTitleCase(): "Phone")" />
+                            </div>
+                        }
+                        <div class="mb-3">
+                            <div>
+                                <SfCheckBox Label="Set as Default Billing Address" @bind-Checked="@addressRequestModel.IsDefaultBilling"></SfCheckBox>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div>
+                                <SfCheckBox Label="Set as Default Shipping Address" @bind-Checked="@addressRequestModel.IsDefaultShipping"></SfCheckBox>
+                            </div>
+                        </div>
+
+                        <hr />
+                        <div class="float-end pb-3">
+                            <button type="button" class="btn btn-secondary" @onclick="@CloseCreateCustomerModal">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </div>
+                    </EditForm>
+                </Content>
+            </DialogTemplates>
+        </SfDialog>
+
+        <SfDialog IsModal="true" ShowCloseIcon="false" CssClass="syncfusion-dialog-size syncfusion-dialog-size-md" @bind-Visible="AddressModalVisibility">
+            <DialogTemplates>
+                <Content>
+                    <div class="row mb-3">
+                        <div class="card-header border-bottom pt-0">
+                            <label class="h5">Addresses on File</label>
+                            <button type="button" class="btn btn-primary float-end" @onclick="@AddNewAddress">Add New</button>
+                        </div>
+                    </div>
+                    @{
+                        var defaultBillingAddress = customerAddresses.FirstOrDefault(x => x.IsDefaultBilling);
+                        var defaultShippingAddress = customerAddresses.FirstOrDefault(x => x.IsDefaultShipping);
+                        var otherAddresses = customerAddresses.Where(x => !x.IsDefaultBilling && !x.IsDefaultShipping).ToList();
+                    }
+                    <div class="row">
+                        @{
+                            if (defaultBillingAddress != null)
+                            {
+                                <div class="col-sm-6">
+                                    <h6 class="fw-bold">Default Billing Address</h6>
+                                    <div class="card shadow-none border h-100">
+                                        <div class="card-body">
+                                            <button class="btn btn-link  float-end mt-n2" @onclick="() => EditAddress(defaultBillingAddress.AddresGuid)"><span class="fas fa-pencil fs--1"></span></button>
+                                            <p class="text-start">
+                                                @defaultBillingAddress.FirstName @defaultBillingAddress.LastName<br>
+                                                @defaultBillingAddress.Address1<br>
+                                                @defaultBillingAddress.Address2<br>
+                                                @defaultBillingAddress.City, @defaultBillingAddress.StateCode, @defaultBillingAddress.ZipCode<br>
+                                                @defaultBillingAddress.Country<br><br>
+                                                @defaultBillingAddress.PhoneFormatted
+                                            </p>
+                                            @{
+                                                if (defaultBillingAddress.Id != billingAddress.Id)
+                                                {
+                                                    <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => ChangeBillingAddress(defaultBillingAddress.AddresGuid)">Use for Billing</button>
+                                                }
+
+                                                if (defaultBillingAddress.Id != shippingAddress.Id)
+                                                {
+                                                    if (EditableClubCustomerType == ClubCustomerType.GiftedTo)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ChangeGiftingAddress(defaultBillingAddress.AddresGuid)">Use for Gifting</button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ChangeShippingAddress(defaultBillingAddress.AddresGuid)">Use for Shipping</button>
+                                                    }
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                            if (defaultShippingAddress != null)
+                            {
+                                <div class="col-sm-6">
+                                    <h6 class="fw-bold">Default Shipping Address</h6>
+                                    <div class="card shadow-none border h-100">
+                                        <div class="card-body">
+                                            <button class="btn btn-link  float-end mt-n2" @onclick="() => EditAddress(defaultShippingAddress.AddresGuid)"><span class="fas fa-pencil fs--1"></span></button>
+                                            <p class="text-start">
+                                                @defaultShippingAddress.FirstName @defaultShippingAddress.LastName<br>
+                                                @defaultShippingAddress.Address1<br>
+                                                @defaultShippingAddress.Address2<br>
+                                                @defaultShippingAddress.City, @defaultShippingAddress.StateCode, @defaultShippingAddress.ZipCode<br>
+                                                @defaultShippingAddress.Country<br><br>
+                                                @defaultShippingAddress.PhoneFormatted
+                                            </p>
+                                            @{
+                                                if (defaultShippingAddress.Id != shippingAddress.Id)
+                                                {
+                                                    <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => ChangeShippingAddress(defaultShippingAddress.AddresGuid)">Use for Shipping</button>
+                                                }
+
+                                                if (defaultShippingAddress.Id != billingAddress.Id)
+                                                {
+                                                    if (EditableClubCustomerType == ClubCustomerType.GiftedTo)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ChangeGiftingAddress(defaultShippingAddress.AddresGuid)">Use for Gifting</button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ChangeBillingAddress(defaultShippingAddress.AddresGuid)">Use for Billing</button>
+                                                    }
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                    <div class="row mt-5">
+                        <h6 class="fw-bold" hidden="@(otherAddresses.Any() ? false : true)">Other Addresses</h6>
+                        @{
+                            foreach (var otherAddress in otherAddresses)
+                            {
+                                <div class="col-sm-6 mb-3">
+                                    <div class="card shadow-none border h-100">
+                                        <div class="card-body">
+                                            <button class="btn btn-link  float-end mt-n2" @onclick="() => EditAddress(otherAddress.AddresGuid)"><span class="fas fa-pencil fs--1"></span></button>
+                                            <p class="text-start">
+                                                @otherAddress.FirstName @otherAddress.LastName<br>
+                                                @otherAddress.Address1<br>
+                                                @otherAddress.Address2<br>
+                                                @otherAddress.City, @otherAddress.StateCode, @otherAddress.ZipCode<br>
+                                                @otherAddress.Country<br><br>
+                                                @otherAddress.PhoneFormatted
+                                            </p>
+                                            @if (EditableClubCustomerType == ClubCustomerType.GiftedTo)
+                                            {
+                                                if (otherAddress.Id != shippingAddress.Id)
+                                                {
+                                                    <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => ChangeGiftingAddress(otherAddress.AddresGuid)">Use for Gifting</button>
+                                                }
+
+                                            }
+                                            else
+                                            {
+                                                if (otherAddress.Id != billingAddress.Id)
+                                                {
+                                                    <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => ChangeBillingAddress(otherAddress.AddresGuid)">Use for Billing</button>
+                                                }
+                                                if (otherAddress.Id != shippingAddress.Id)
+                                                {
+                                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => ChangeShippingAddress(otherAddress.AddresGuid)">Use for Shipping</button>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </Content>
+                <FooterTemplate>
+                    <button type="button" class="btn btn-secondary" @onclick="@CloseAddressModal">Close</button>
+                </FooterTemplate>
+            </DialogTemplates>
+        </SfDialog>
+
+        <SfDialog Width="500px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsSignUpConfirmedModalVisible">
+            <DialogTemplates>
+                <Header>
+                    Membership Sign-up Confirmed
+                </Header>
+                <Content>
+                    <div class="border-bottom">
+                        <div class="mb-3">
+                            <label class="fw-normal m-0 text-500">Club Name</label>
+                            <h6 class="fw-normal m-0">@clubDetail.ClubName</h6>
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-normal m-0 text-500">Effective Date</label>
+                            @{
+                                if (clubDetail != null && clubDetail.DateCreated != DateTime.MinValue && loggedInUser != null)
+                                {
+                                    <h6 class="fw-normal">@(clubDetail.DateCreated.AddMinutes(loggedInUser.OffsetMinutes).ToString("MM/dd/yyyy"))</h6>
+                                }
+                            }
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-normal m-0 text-500">Bill To Customer</label>
+                            <h6 class="fw-normal m-0">@((billToCustomer?.FirstName ?? "") + " " + (billToCustomer?.LastName ?? ""))</h6>
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-normal m-0 text-500">Fulfillment Type</label>
+                            <h6 class="fw-normal m-0">@EnumHelper.GetDescription(clubDeliveryType)</h6>
+                        </div>
+                        @if (clubDeliveryType != ClubDeliveryType.Pickup)
+                        {
+                            if (IsGiftSignup)
+                            {
+                                <div class="mb-3">
+                                    <div class="row">
+                                        <div class="col-sm-6">
+                                            <label class="fw-normal m-0 text-500">Gifted To Customer</label>
+                                            <h6 class="fw-normal m-0">
+                                                @((giftedToCustomer?.FirstName ?? "") + " " + (giftedToCustomer?.LastName ?? ""))<br />
+                                                @if (!string.IsNullOrEmpty(giftingAddress.Company))
+                                                {
+                                                    @giftingAddress.Company<br />
+                                                }
+                                                @giftingAddress.Address1<br />
+                                                @if (!string.IsNullOrEmpty(giftingAddress.Address2))
+                                                {
+                                                    @giftingAddress.Address2<br />
+                                                }
+                                                @giftingAddress.City, @giftingAddress.State @giftingAddress.ZipCode<br />
+                                                @giftingAddress.Country<br /><br />
+                                                @giftingAddress.PhoneFormatted
+                                            </h6>
+                                        </div>
+                                        <div class=" col-sm-6">
+                                            <label class="fw-normal m-0 text-500">Number of Shipments</label>
+                                            @{
+                                                var numberOfShipmentSelected = giftShipmentList?.FirstOrDefault(x => x.Key == (selectedGiftShipment?.NumberOfShipments ?? 0))?.Value ?? "";
+                                                <h6 class="fw-normal m-0">@numberOfShipmentSelected</h6>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="mb-3">
+                                    <label class="fw-normal m-0 text-500">ShipTo Customer</label>
+                                    <h6 class="fw-normal m-0">
+                                        @shippingAddress.FirstName @shippingAddress.LastName<br />
+                                        @if (!string.IsNullOrEmpty(shippingAddress.Company))
+                                        {
+                                            @shippingAddress.Company<br />
+                                        }
+                                        @shippingAddress.Address1<br />
+                                        @if (!string.IsNullOrEmpty(shippingAddress.Address2))
+                                        {
+                                            @shippingAddress.Address2<br />
+                                        }
+                                        @shippingAddress.City, @shippingAddress.State @shippingAddress.ZipCode<br />
+                                        @shippingAddress.Country<br /><br />
+                                        @shippingAddress.PhoneFormatted
+                                    </h6>
+                                    @*<h6 class="fw-normal m-0">@((shipToCustomer?.FirstName ?? "") + " " + (shipToCustomer?.LastName ?? ""))</h6>*@
+                                </div>
+                            }
+                        }
+                        @if (clubDeliveryType == ClubDeliveryType.Ship && !string.IsNullOrEmpty(defaultShippingCodeName))
+                        {
+                            <div class="mb-3">
+                                <label class="fw-normal m-0 text-500">Shipping Method</label>
+                                <h6 class="fw-normal m-0">@defaultShippingCodeName</h6>
+                            </div>
+                        }
+                        else if (clubDeliveryType == ClubDeliveryType.Pickup && !string.IsNullOrEmpty(pickupLocationName))
+                        {
+                            <div class="mb-3">
+                                <label class="fw-normal m-0 text-500">Customer Pickup</label>
+                                <h6 class="fw-normal m-0">@pickupLocationName</h6>
+                            </div>
+                        }
+                        <div class="mb-3">
+                            <label class="fw-normal m-0 text-500">Payment Method</label>
+                            <h6 class="fw-normal m-0">@($"{Helper.GetCardType(creditCard.CreditCardNumber)}- {creditCard.CreditCardNumber?.Substring(creditCard.CreditCardNumber.Length - 4)??""} exp {creditCard.ExpirationMonth}/{creditCard.ExpirationYear}")</h6>
+                        </div>
+                    </div>
+                </Content>
+            </DialogTemplates>
+            <DialogButtons>
+                <div class="float-end pt-3">
+                    <a type="button" class="btn btn-sm btn-outline-primary" href="people/club-members/@subscriptionGUID/subscriptions">View Record</a>
+                    <button type="submit" class="btn btn-sm btn-primary" @onclick="NewClubSignup">New Signup</button>
+                </div>
+            </DialogButtons>
+        </SfDialog>
+
+        <SfDialog Width="400px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsEditCustomerConfimationModalVisible">
+            <DialogTemplates>
+                <Header>
+                    @{
+                        switch (EditableClubCustomerType)
+                        {
+                            case ClubCustomerType.BillTo: @("Edit Bill To Customer") break;
+                            case ClubCustomerType.GiftedTo: @("Edit Gifted To Customer") break;
+                        }
+                    }
+                </Header>
+                <Content>
+                    <div class="row">
+                        <p>Would you like to</p>
+                        <div class="col-md-12 mb-3 mt-4 text-center">
+                            <button class="btn btn-sm btn-outline-primary text-center" @onclick="ChangeCustomer">Change Customer</button>
+                            <button class="btn btn-sm btn-primary" @onclick="() => UpdateAddress(EditableClubCustomerType.Value)">Update Address</button>
+                        </div>
+                    </div>
+                </Content>
+            </DialogTemplates>
+        </SfDialog>
+
+        <SfDialog Width="400px" IsModal="true" ShowCloseIcon="false" @bind-Visible="@IsAuthorizationFailedModalVisible">
+            <DialogTemplates>
+                <Header>Credit Card Authorization Failed</Header>
+                <Content>
+                    <div class="row">
+                        <p>We’re sorry, but the credit card was declined.</p>
+                        <p>Please review the credit card number and cardholder details and try again.</p>
+                    </div>
+                </Content>
+            </DialogTemplates>
+            <DialogButtons>
+                <DialogButton Content="Ok" OnClick="HideAuthorizationFailedModal" IsPrimary="true" />
+            </DialogButtons>
+        </SfDialog>
+        <!--#endregion Dialogs -->
+    </Authorized>
+</AuthorizeView>
+
+@code
+{
+    #region On Load
+    [Parameter]
+    public int Status { get; set; }
+    [Parameter]
+    public Guid? Id { get; set; }
+    [Parameter]
+    public bool ClubsMustSupportGiftSignUp { get; set; }
+    [Parameter]
+    public bool HideBackButton { get; set; }
+    private string title = "Add Member | Synergy Commerce";
+    private bool step1Active = true;
+    private bool signUpStep2Active = false;
+    private bool signUpStep3Active = false;
+    private bool giftSignUpStep2Active = false;
+    private bool giftSignUpStep3Active = false;
+    private bool giftSignUpStep4Active = true;
+    private bool allStepsFollowed = false;
+    Member currentMember = null;
+    private bool SpinnerVisibility { get; set; } = true;
+    List<TeamsViewModel> teamUsers = new List<TeamsViewModel>();
+    List<SalesRepresentative> salesRepresentatives = new List<SalesRepresentative>();
+    private AddressRequestModel addressRequestModel = new AddressRequestModel { CountryCode = "US" };
+    private List<CpCountry> countries = new List<CpCountry>();
+    private List<CpState> states = new List<CpState>();
+    private List<CustomersViewModel> searchCustomers = new List<CustomersViewModel>();
+    private List<CustomCustomerModel> customers = new List<CustomCustomerModel>();
+    private List<UserAddressModel> customerAddresses = new List<UserAddressModel>();
+    UserDetailModel loggedInUser = new UserDetailModel();
+    CustomersViewModel billingCustomer = new CustomersViewModel();
+    CustomersViewModel giftedCustomer = new CustomersViewModel();
+    private List<PhoneMask> phoneMasks = new List<PhoneMask>();
+    private Guid? billToCustomerGuid { get; set; }
+    private Guid? giftToCustomerGuid { get; set; }
+    private bool showPhoneControl;
+    private bool billToCustomerSelected { get; set; }
+    private bool giftedToCustomerSelected { get; set; }
+    private bool IsCreateCustomerDialogVisible { get; set; }
+    List<ClubSubscriptionTagListModel> clubSubscriptionTags = new List<ClubSubscriptionTagListModel>();
+    public string[] selectedClubSubscriptionTags = new string[] { };
+    private int billToCustomerId { get; set; }
+    private int giftedToCustomerId { get; set; }
+    List<BusinessClubListModel> businessClubs = new List<BusinessClubListModel>();
+    private EditContext? addressFormContext;
+    List<ShippingRateModel> shippingRates = new List<ShippingRateModel>();
+    private List<ShippingCarrierCodeModel> serviceCodes = new List<ShippingCarrierCodeModel>();
+    private List<BusinessLocationModel> inventoryLocations = new List<BusinessLocationModel>();
+    ClubDeliveryType clubDeliveryType = ClubDeliveryType.Ship;
+    private string fulfillmentMethodType = "SHIP TO";
+    MembershipNoteModel membershipNote = new MembershipNoteModel();
+    List<MembershipNoteModel> membershipNoteList = new List<MembershipNoteModel>();
+    int salesRep = 0;
+    private bool isCreateMembershipBtnDisable = true;
+    TeamDetailViewModel teamDetail = new TeamDetailViewModel();
+    ClubSignUpAddResponseModel clubSignUpAddResponse = new ClubSignUpAddResponseModel();
+    private SelectGiftShipment selectedGiftShipment = new SelectGiftShipment();
+    List<DropdownBindingModel> giftShipmentList = new List<DropdownBindingModel>();
+    ClubSignUpDetailsModel clubSignUpDetail = null;
+    private string UserDob;
+    SfMaskedTextBox UserDobObj;
+    private bool isAddAddress { get; set; }
+    private bool isAddCustomer { get; set; }
+    private string giftSignUp = "GiftSignUp";
+
+    protected override async Task OnInitializedAsync()
+    {
+        addressFormContext = new EditContext(addressRequestModel);
+        phoneMasks = await http.GetFromJsonAsync<List<PhoneMask>>("PhoneMasks.json");
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var teamResponse = await _teamViewModel.GetBusinessTeams(currentMember.Id);
+        if (teamResponse.success)
+        {
+            teamUsers = teamResponse.data;
+            salesRepresentatives = teamUsers.OrderBy(x => x.LastName).Select(x => new SalesRepresentative { TeamId = x.TeamId, Name = $"{x.LastName} {x.FirstName} ({x.Email})" }).ToList();
+        }
+        var getUserData = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+        var userByEmail = await _userViewModel.GetUserByEmail(getUserData.Email);
+        if (userByEmail.success)
+        {
+            loggedInUser = userByEmail.data;
+            salesRep = teamUsers?.Where(x => x.UserId == (loggedInUser?.Id ?? 0))?.FirstOrDefault()?.TeamId ?? 0;
+        }
+
+        var countriesResponse = await _countryViewModel.GetCountries();
+        countries = countriesResponse?.data ?? new List<CpCountry>();
+
+        var statesResponse = await _stateViewModel.GetStates();
+        states = statesResponse?.data ?? new List<CpState>();
+
+        //Get Club List
+        var clubResponse = await _clubViewModel.GetClubListAsync(currentMember.Id);
+        businessClubs = clubResponse?.data ?? new List<BusinessClubListModel>();
+        if (ClubsMustSupportGiftSignUp)
+            businessClubs = businessClubs.Where(x => x.AllowGiftMemberships).ToList();
+
+        //Get shipping Rates
+        var getShippingRatesResponse = await _shippingRatesViewModel.GetShippingRates(currentMember.Id);
+        shippingRates = getShippingRatesResponse?.data ?? new List<ShippingRateModel>();
+
+        //Get Shipping Carrier Service Codes
+        var shippingServiceCodesResponse = await _shippingCarrierViewModel.GetAllShippingCarrierServiceCodes();
+        if (shippingServiceCodesResponse.success)
+        {
+            foreach (var rate in shippingRates)
+            {
+                if (rate.IsClubSalesChannel)
+                {
+                    if (!serviceCodes.Any(x => x.Id == rate.ShippingServiceCode))
+                    {
+                        serviceCodes.Add(shippingServiceCodesResponse.data.FirstOrDefault(x => x.Id == rate.ShippingServiceCode));
+                    }
+                }
+            }
+            serviceCodes = serviceCodes.OrderBy(x => x.ShippingCarrier).ThenBy(y => y.ServiceCodeName).ToList();
+        }
+
+        var locationResponse = await _businessLocationViewModel.GetBusinessLocations(currentMember.Id);
+        if (locationResponse.success)
+        {
+            //Get Inventory Locations Only
+            inventoryLocations = locationResponse?.data?.Where(x => x.IsInventoryLocation)?.OrderBy(x => x.DisplayLocationAddress)?.ToList() ?? new List<BusinessLocationModel>();
+        }
+
+        //var clubSubscriptionTagsResponse = await _clubViewModel.GetClubSubscriptionTagListAsync(currentMember.Id);
+        var clubSubscriptionTagsResponse = await _businessCustomerTypesViewModel.GetBusinessCustomerTypes(currentMember.Id);
+        clubSubscriptionTags = clubSubscriptionTagsResponse?.data?.Select(x => new ClubSubscriptionTagListModel { Value = x.Value }).ToList() ?? new List<ClubSubscriptionTagListModel>();
+
+        var customerTeam = await _teamViewModel.GetBusinessTeamDetail(loggedInUser.UserGUID);
+        teamDetail = customerTeam?.data ?? new TeamDetailViewModel();
+
+        // Edit
+        if (Id.HasValue)
+        {
+            if (Status == (int)ClubSignupStatus.Incomplete)
+            {
+                var signUpDetailsResponse = await _clubViewModel.GetSignupById(0, Id.Value.ToString());
+                clubSignUpDetail = signUpDetailsResponse?.data ?? null;
+                if (clubSignUpDetail != null)
+                {
+                    clubSignUpAddResponse.SignUpGUID = clubSignUpDetail.SignUpGUID;
+                    clubSignUpAddResponse.Id = clubSignUpDetail.Id;
+                    var selectedClub = businessClubs?.FirstOrDefault(x => x.Id == clubSignUpDetail.BusinessClubId) ?? null;
+                    if (selectedClub != null)
+                    {
+                        await SelectClub(new SelectClubEventCallbackArgs { Club = selectedClub, IsGiftSignup = clubSignUpDetail.IsGiftSubscription });
+                        var customerListResponse = await _customerViewModel.GetBusinessCustomerList(new BusinessCustomerRequestModel
+                        {
+                            BusinessId = currentMember.Id,
+                            PageNo = 1,
+                            PageCount = 9999
+                        });
+                        var customerList = customerListResponse?.data?.Customers ?? new List<CustomerModel>();
+                        if (customerList != null && customerList.Count > 0)
+                        {
+                            var selectedCustomer = customerList.FirstOrDefault(x => x.CustomerId == clubSignUpDetail.BusinessCustomerId);
+                            if (selectedCustomer != null)
+                                await FilterExistingCustomers(new FilteringEventArgs { Text = selectedCustomer.FirstName });
+                            if (searchCustomers != null)
+                                await OnExistingCustomerSelection(new SelectEventArgs<CustomCustomerModel> { ItemData = new CustomCustomerModel { Id = selectedCustomer.CustomerId } });
+                        }
+                    }
+                }
+            }
+            else if (Status == (int)ClubSignupStatus.Suspended)
+            {
+                var signUpDetailsResponse = await _clubViewModel.GetClubSubscriptions(subscriptionsGuid: Id.Value);
+                var checkExistingData = signUpDetailsResponse?.data ?? new List<ClubSubscriptionsListModel>();
+                if (checkExistingData.Any())
+                {
+                    var reqData = checkExistingData[0];
+                    var selectedClub = businessClubs?.FirstOrDefault(x => x.Id == reqData.ClubId) ?? null;
+                    if (selectedClub != null)
+                    {
+                        await SelectClub(new SelectClubEventCallbackArgs { Club = selectedClub, IsGiftSignup = reqData.IsGiftSubscription });
+                        await FilterExistingCustomers(new FilteringEventArgs { Text = reqData.BillToAddress.LastName });
+                        if (searchCustomers != null)
+                            await OnExistingCustomerSelection(new SelectEventArgs<CustomCustomerModel> { ItemData = new CustomCustomerModel { Id = reqData.BillToAddress.BusinessCustomerId } });
+                        creditCard = new CreditCardRequestModel();
+                        if (reqData.SubscriptionPayment != null)
+                        {
+                            DateTime dt = DateTime.ParseExact(reqData.SubscriptionPayment.CardExp, "MM/yyyy", CultureInfo.InvariantCulture);
+                            var month = dt.Month;
+                            var year = dt.Year;
+                            creditCard.ExpirationMonth = month.ToString();
+                            creditCard.ExpirationYear = year.ToString();
+                            creditCard.CardHolderName = reqData.BusinessCustomerBilling.FirstName + " " + reqData.BusinessCustomerBilling.LastName;
+                            creditCard.CardToken = reqData.SubscriptionPayment.CardToken;
+                            creditCard.CardType = reqData.SubscriptionPayment.CardType;
+                            creditCard.CreditCardNumber = "XXXXXXXXXXXX" + reqData.SubscriptionPayment.CardLastFour;
+                            creditCard.CVV = "123"; // This is just for binding the validation
+                        }
+                        if (reqData.IsGiftSubscription)
+                        {
+                            IsGiftSignup = true;
+                            selectedGiftShipment.IsGiftedMembership = true;
+                            selectedGiftShipment.NumberOfShipments = reqData.GiftShipments;
+                            await FilterExistingCustomers(new FilteringEventArgs { Text = reqData.ShipToAddress.LastName });
+                            if (searchCustomers != null)
+                                await OnExistingCustomerSelection(new SelectEventArgs<CustomCustomerModel> { ItemData = new CustomCustomerModel { Id = reqData.ShipToAddress.BusinessCustomerId, ClubCustomerType = ClubCustomerType.GiftedTo } });
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            DeliveryMethod = ClubDeliveryType.Ship;
+        }
+        SpinnerVisibility = false;
+    }
+    #endregion On Load
+
+    #region Show/Hide Dialogs and Other
+    private bool MembershipNoteModalVisible { get; set; } = false;
+    private bool IsFullfillmentTypeModalVisible { get; set; } = false;
+    private bool IsTagsDialogVisible { get; set; } = false;
+    private bool IsSalesRepsModalVisible { get; set; } = false;
+    private bool IsFulfillmentModalVisible { get; set; } = false;
+    private bool IsPickupLocationModalVisible { get; set; } = false;
+    private bool AddressModalVisibility { get; set; } = false;
+    private bool IsGiftedMembershipModalVisible { get; set; } = false;
+
+    private void ActivateStep(int step)
+    {
+        if (IsGiftSignup)
+        {
+            step1Active = giftSignUpStep2Active = giftSignUpStep3Active = giftSignUpStep4Active = allStepsFollowed = false;
+            switch (step)
+            {
+                case -1:
+                    allStepsFollowed = true;
+                    break;
+                case 1:
+                    Id = null;
+                    step1Active = true;
+                    clubSignUpAddResponse = null;
+                    break;
+                case 2:
+                    giftSignUpStep2Active = true;
+                    break;
+                case 3:
+                    giftSignUpStep3Active = true;
+                    break;
+                case 4:
+                    giftSignUpStep4Active = true;
+                    break;
+            }
+        }
+        else
+        {
+            step1Active = signUpStep2Active = signUpStep3Active = allStepsFollowed = false;
+            switch (step)
+            {
+                case -1:
+                    allStepsFollowed = true;
+                    break;
+                case 1:
+                    Id = null;
+                    clubSignUpAddResponse = null;
+                    step1Active = true;
+                    break;
+                case 2:
+                    signUpStep2Active = true;
+                    break;
+                case 3:
+                    signUpStep3Active = true;
+                    break;
+            }
+        }
+    }
+
+    private void ShowFulfillmentModal() => IsFulfillmentModalVisible = true;
+
+    private void HideFulfillmentModal() => IsFulfillmentModalVisible = false;
+
+    private void SetDefaultShippingOption(ClubDeliveryOptionModel model)
+    {
+        clubDetail.ClubDeliveryOption = clubDetail.ClubDeliveryOption.Select(x => { x.IsDefault = false; return x; }).ToList();
+        model.IsDefault = true;
+        defaultShipMethodId = model?.ShipMethodId ?? 0;
+        defaultShippingCodeName = serviceCodes?.FirstOrDefault(x => x.Id == defaultShipMethodId)?.ServiceCodeName ?? string.Empty;
+        StateHasChanged();
+    }
+
+    private void ShowGiftedMembershipModal()
+    {
+        selectedGiftShipment.IsGiftedMembership = IsGiftSignup;
+        IsGiftedMembershipModalVisible = true;
+    }
+
+    private void HideGiftedMembershipModal() => IsGiftedMembershipModalVisible = false;
+
+    private void SaveNumberOfShipments(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            IsGiftedMembershipModalVisible = false;
+        }
+    }
+
+    private void ChangeGiftedMembership(bool isGift)
+    {
+        IsGiftSignup = isGift;
+        selectedGiftShipment.IsGiftedMembership = isGift;
+        if (!isGift && allStepsFollowed)
+        {
+            giftedToCustomer = new BillToCustomerModel();
+            giftingAddress = new BillingAddressModel();
+            selectedGiftShipment = new SelectGiftShipment();
+            IsGiftedMembershipModalVisible = false;
+        }
+        else if (!isGift && !allStepsFollowed)//This will call on step 3 becuse in step 3(if is a gift sign up), after selecting the Gifted To selection, we should show Gifted Membership modal immediately.
+        {
+            selectedGiftShipment = new SelectGiftShipment();
+            IsGiftedMembershipModalVisible = false;
+            ActivateStep(3);//Activate step 3 for standard sign in
+        }
+        SetCreateMembershipBtnState();
+    }
+
+    private void ShowPickupLocationModal() => IsPickupLocationModalVisible = true;
+
+    private void HidePickupLocationModal() => IsPickupLocationModalVisible = false;
+
+    private void SetDefaultPickupLocation(ClubPickupLocationModel model)
+    {
+        defaultPickupLocationId = model.LocationId;
+        pickupLocationName = inventoryLocations?.FirstOrDefault(x => x.Id == defaultPickupLocationId)?.LocationName ?? string.Empty;
+        StateHasChanged();
+    }
+
+    private void OpenAddressModal() => AddressModalVisibility = true;
+
+    private void CloseAddressModal() => AddressModalVisibility = false;
+
+    private void ShowFullfillmentTypeModal() => IsFullfillmentTypeModalVisible = true;
+
+    private void CloseFullfillmentTypeModal() => IsFullfillmentTypeModalVisible = false;
+
+    private void ChangeDeliveryType(ClubDeliveryType deliveryType)
+    {
+        clubDeliveryType = deliveryType;
+        IsFullfillmentTypeModalVisible = false;
+        if (deliveryType == ClubDeliveryType.Ship)
+        {
+            fulfillmentMethodType = "SHIP TO";
+        }
+        else if (deliveryType == ClubDeliveryType.Pickup)
+        {
+            fulfillmentMethodType = "PICKUP";
+            IsPickupLocationModalVisible = true;
+        }
+        SetCreateMembershipBtnState();
+    }
+
+    private void ShowTagsModal() => IsTagsDialogVisible = true;
+
+    private void ShowSalesRepsModal() => IsSalesRepsModalVisible = true;
+
+    private void HideSalesRepsModal() => IsSalesRepsModalVisible = false;
+
+    private void ShowMembershipNoteModal(MembershipNoteModel note = null)
+    {
+        membershipNote = (note == null) ? new MembershipNoteModel() : note;
+        MembershipNoteModalVisible = true;
+    }
+
+    private void HideMembershipNoteModal()
+    {
+        membershipNote = new MembershipNoteModel();
+        MembershipNoteModalVisible = false;
+    }
+
+    private void SaveMembershipNote(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            if (membershipNote?.Id > 0)
+            {
+                membershipNoteList = membershipNoteList.Where(x => x.Id != membershipNote.Id).ToList();
+                membershipNoteList.Add(membershipNote);
+            }
+            else
+            {
+                membershipNoteList.Add(new MembershipNoteModel
+                {
+                    Note = membershipNote.Note,
+                    Id = membershipNoteList?.Count > 0 ? membershipNoteList.Max(x => x.Id) + 1 : 0
+                });
+            }
+            MembershipNoteModalVisible = false;
+        }
+    }
+
+    private void SaveTags() => IsTagsDialogVisible = false;
+    #endregion
+
+    #region Customer/Address
+    private void CloseCreateCustomerModal()
+    {
+        showPhoneControl = false;
+        IsCreateCustomerDialogVisible = false;
+        StateHasChanged();
+    }
+    //Add New Customer
+    private async Task HandleAddressSubmit()
+    {
+        if (string.IsNullOrEmpty(addressRequestModel.Phone))
+        {
+            toastService.ShowToast("Please enter phone number.", ToastLevel.Error);
+            return;
+        }
+        if (!String.IsNullOrEmpty(UserDob))
+        {
+            var dob = UserDobObj.GetMaskedValue();
+            try
+            {
+                var dateTime = DateTime.ParseExact(dob, "MM/dd/yyyy", CultureInfo.InvariantCulture);
+                addressRequestModel.DOB = dateTime;
+            }
+            catch (FormatException)
+            {
+                toastService.ShowToast("Please enter valid Date Of Birth.", ToastLevel.Error);
+                return;
+            }
+        }
+        SpinnerVisibility = true;
+        if (addressFormContext.Validate())
+        {
+            addressRequestModel.State = states.FirstOrDefault(x => x.StateCode == addressRequestModel.StateCode)?.State;
+            addressRequestModel.Country = countries.FirstOrDefault(x => x.CountryCode == addressRequestModel.CountryCode).Name;
+            addressRequestModel.Active = true;
+
+            if (EditableClubCustomerType == ClubCustomerType.GiftedTo)
+            {
+                if (giftToCustomerGuid.HasValue)
+                {
+                    addressRequestModel.UserGUID = giftToCustomerGuid.Value;
+                    var addUpdateUserAddressResponse = await _customerViewModel.AddUpdateCustomerAddress(JsonConvert.DeserializeObject<UserAddressRequestModel>(JsonConvert.SerializeObject(addressRequestModel)));
+                    if (addUpdateUserAddressResponse.success)
+                    {
+                        toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                    }
+                    else
+                    {
+                        toastService.ShowToast(addUpdateUserAddressResponse.error_info.description, ToastLevel.Error);
+                        SpinnerVisibility = false;
+                        return;
+                    }
+                }
+                else
+                {
+                    AddCustomerRequestModel addCustomerRequest = JsonConvert.DeserializeObject<AddCustomerRequestModel>(JsonConvert.SerializeObject(addressRequestModel));
+                    addCustomerRequest.BusinessId = currentMember.Id;
+                    addCustomerRequest.AddressPhone = addressRequestModel.Phone;
+                    var addCustomerResponse = await _customerViewModel.AddBusinessCustomer(addCustomerRequest);
+                    if (addCustomerResponse.success)
+                    {
+                        toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                    }
+                    else
+                    {
+                        toastService.ShowToast(addCustomerResponse.error_info.description, ToastLevel.Error);
+                        SpinnerVisibility = false;
+                        return;
+                    }
+                    giftToCustomerGuid = addCustomerResponse.data;
+                    var response = await _customerViewModel.GetCustomerAddressList(giftToCustomerGuid.Value);
+                    var address = response.data[0];
+                    if (addressRequestModel.IsDefaultBilling)
+                    {
+                        var setDefaultBillingAddressResponse = await _customerViewModel.UpdateCustomerDefaultBillingAddress(address.AddresGuid);
+                    }
+                    if (addressRequestModel.IsDefaultShipping)
+                    {
+                        var setDefaultShippingAddressResponse = await _customerViewModel.UpdateCustomerDefaultShippingAddress(address.AddresGuid);
+                    }
+                    ShowGiftedMembershipModal(); //After selecting the Gifted To selection, we should show Gifted Membership modal immediately.
+                }
+                var getCustomer = await _customerViewModel.GetBusinessCustomerByEmail(addressRequestModel.Email);
+                giftedCustomer = JsonConvert.DeserializeObject<CustomersViewModel>(JsonConvert.SerializeObject(getCustomer.data));
+                giftedToCustomerId = getCustomer.data.Id;
+                await ShowAddressesForCustomer(giftToCustomerGuid.Value, ClubCustomerType.GiftedTo);
+                giftedToCustomerSelected = true;
+                if (giftSignUpStep3Active)
+                    ActivateStep(4);
+            }
+            else
+            {
+                if (billToCustomerGuid.HasValue)
+                {
+                    addressRequestModel.UserGUID = billToCustomerGuid.Value;
+                    var addUpdateUserAddressResponse = await _customerViewModel.AddUpdateCustomerAddress(JsonConvert.DeserializeObject<UserAddressRequestModel>(JsonConvert.SerializeObject(addressRequestModel)));
+                    if (addUpdateUserAddressResponse.success)
+                    {
+                        toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                    }
+                    else
+                    {
+                        toastService.ShowToast(addUpdateUserAddressResponse.error_info.description, ToastLevel.Error);
+                        SpinnerVisibility = false;
+                        return;
+                    }
+                }
+                else
+                {
+                    AddCustomerRequestModel addCustomerRequest = JsonConvert.DeserializeObject<AddCustomerRequestModel>(JsonConvert.SerializeObject(addressRequestModel));
+                    addCustomerRequest.BusinessId = currentMember.Id;
+                    addCustomerRequest.AddressPhone = addressRequestModel.Phone;
+                    var addCustomerResponse = await _customerViewModel.AddBusinessCustomer(addCustomerRequest);
+                    if (addCustomerResponse.success)
+                    {
+                        toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                    }
+                    else
+                    {
+                        toastService.ShowToast(addCustomerResponse.error_info.description, ToastLevel.Error);
+                        SpinnerVisibility = false;
+                        return;
+                    }
+                    billToCustomerGuid = addCustomerResponse.data;
+                    var response = await _customerViewModel.GetCustomerAddressList(billToCustomerGuid.Value);
+                    var address = response.data[0];
+                    if (addressRequestModel.IsDefaultBilling)
+                    {
+                        var setDefaultBillingAddressResponse = await _customerViewModel.UpdateCustomerDefaultBillingAddress(address.AddresGuid);
+                    }
+                    if (addressRequestModel.IsDefaultShipping)
+                    {
+                        var setDefaultShippingAddressResponse = await _customerViewModel.UpdateCustomerDefaultShippingAddress(address.AddresGuid);
+                    }
+                }
+                var getCustomer = await _customerViewModel.GetBusinessCustomerByEmail(addressRequestModel.Email);
+                billingCustomer = JsonConvert.DeserializeObject<CustomersViewModel>(JsonConvert.SerializeObject(getCustomer.data));
+                billToCustomerId = getCustomer.data.Id;
+                await ShowAddressesForCustomer(billToCustomerGuid.Value);
+                billToCustomerSelected = true;
+                if (giftSignUpStep2Active)
+                    ActivateStep(3);
+            }
+            showPhoneControl = false;
+            IsCreateCustomerDialogVisible = false;
+            SpinnerVisibility = false;
+        }
+    }
+
+    private async Task FilterExistingCustomers(FilteringEventArgs args)
+    {
+        if (!string.IsNullOrWhiteSpace(args.Text) && args.Text.Length > 3)
+        {
+            SpinnerVisibility = true;
+            var searchCustomersResponse = await _customerViewModel.SearchBusinessCustomers(currentMember.Id, args.Text);
+            if (searchCustomersResponse.success)
+            {
+                searchCustomers = searchCustomersResponse.data;
+                customers = searchCustomers.Select(x => new CustomCustomerModel { Id = x.CustomerId, Name = $"{x.LastName}, {x.FirstName} ({x.Email})" }).ToList();
+            }
+            SpinnerVisibility = false;
+        }
+        else
+        {
+            searchCustomers = new List<CustomersViewModel>();
+            customers = new List<CustomCustomerModel>();
+        }
+    }
+
+    //Get User Address And Bind
+    private async Task ShowAddressesForCustomer(Guid userGuid, ClubCustomerType clubCustomerType = ClubCustomerType.BillTo)
+    {
+        var response = await _customerViewModel.GetCustomerAddressList(userGuid);
+        customerAddresses = response.data;
+
+        var defaultBillingAddress = customerAddresses.FirstOrDefault(x => x.IsDefaultBilling);
+        var defaultShippingAddress = customerAddresses.FirstOrDefault(x => x.IsDefaultShipping);
+        if (clubCustomerType == ClubCustomerType.GiftedTo)
+        {
+            if (defaultBillingAddress != null)
+            {
+                giftedToCustomer = JsonConvert.DeserializeObject<BillToCustomerModel>(JsonConvert.SerializeObject(defaultBillingAddress));
+                giftedToCustomer.Email = giftedCustomer.Email;
+                giftedToCustomer.UserId = giftedToCustomerId;
+                giftingAddress = JsonConvert.DeserializeObject<BillingAddressModel>(JsonConvert.SerializeObject(defaultBillingAddress));
+            }
+            else
+            {
+                giftedToCustomer = new BillToCustomerModel { FirstName = giftedCustomer.FirstName, LastName = giftedCustomer.LastName, Email = giftedCustomer.Email, PhoneFormatted = giftedCustomer.CellPhone, UserId = billToCustomerId };
+                giftingAddress = new BillingAddressModel();
+            }
+        }
+        else
+        {
+            if (defaultBillingAddress != null)
+            {
+                billToCustomer = JsonConvert.DeserializeObject<BillToCustomerModel>(JsonConvert.SerializeObject(defaultBillingAddress));
+                billToCustomer.Email = billingCustomer.Email;
+                billToCustomer.UserId = billToCustomerId;
+                billingAddress = JsonConvert.DeserializeObject<BillingAddressModel>(JsonConvert.SerializeObject(defaultBillingAddress));
+            }
+            else
+            {
+                billToCustomer = new BillToCustomerModel { FirstName = billingCustomer.FirstName, LastName = billingCustomer.LastName, Email = billingCustomer.Email, PhoneFormatted = billingCustomer.CellPhone, UserId = billToCustomerId };
+                billingAddress = new BillingAddressModel();
+            }
+            if (defaultShippingAddress != null)
+            {
+                shipToCustomer = JsonConvert.DeserializeObject<ShipToCustomerModel>(JsonConvert.SerializeObject(defaultShippingAddress));
+                shipToCustomer.Email = billingCustomer.Email;
+                shipToCustomer.UserId = billToCustomerId;
+                shippingAddress = JsonConvert.DeserializeObject<ShippingAddressModel>(JsonConvert.SerializeObject(defaultShippingAddress));
+            }
+            else
+            {
+                shippingAddress = new ShippingAddressModel();
+                shipToCustomer = new ShipToCustomerModel();
+            }
+        }
+        SetCreateMembershipBtnState();
+    }
+
+    private void SetCreateMembershipBtnState()
+    {
+        if ((clubDeliveryType == ClubDeliveryType.Ship && //Check if Ship To missing address information (if Ship to Customer is selected)
+            string.IsNullOrEmpty(shippingAddress.Address1)
+            && string.IsNullOrEmpty(shippingAddress.Address2)
+            && string.IsNullOrEmpty(shippingAddress.City)
+            && string.IsNullOrEmpty(shippingAddress.StateCode)
+            && string.IsNullOrEmpty(shippingAddress.ZipCode)
+            && string.IsNullOrEmpty(shippingAddress.Country))
+            || (string.IsNullOrEmpty(billingAddress.Address1) //Check if Bill To missing address information
+            && string.IsNullOrEmpty(billingAddress.Address2)
+            && string.IsNullOrEmpty(billingAddress.City)
+            && string.IsNullOrEmpty(billingAddress.StateCode)
+            && string.IsNullOrEmpty(billingAddress.ZipCode)
+            && string.IsNullOrEmpty(billingAddress.Country))
+            || (clubDeliveryType == ClubDeliveryType.Pickup //If Customer Pickup is selected, the Pickup Address would need to be selected
+            && string.IsNullOrEmpty(pickupLocationName))
+            || (IsGiftSignup
+            && string.IsNullOrEmpty(giftingAddress.Address1)  //Check if Gift To missing address information for gift sign up
+            && string.IsNullOrEmpty(giftingAddress.Address2)
+            && string.IsNullOrEmpty(giftingAddress.City)
+            && string.IsNullOrEmpty(giftingAddress.StateCode)
+            && string.IsNullOrEmpty(giftingAddress.ZipCode)
+            && string.IsNullOrEmpty(giftingAddress.Country))
+            || (IsGiftSignup && (selectedGiftShipment == null || selectedGiftShipment.NumberOfShipments == 0)))//If Number of shipment is not selected for gift signup
+        {
+            isCreateMembershipBtnDisable = true; //For all above conditions Create Membership Button will be disable
+        }
+        else
+        {
+            isCreateMembershipBtnDisable = false;
+        }
+    }
+
+    //Select User From Dropdown
+    private async Task OnExistingCustomerSelection(SelectEventArgs<CustomCustomerModel> args)
+    {
+        SpinnerVisibility = true;
+        if (args?.ItemData?.ClubCustomerType == ClubCustomerType.GiftedTo)
+        {
+            var selectedCustomer = searchCustomers.FirstOrDefault(x => x.CustomerId == args.ItemData.Id);
+            var customerExistenceResponse = await _customerViewModel.GetBusinessCustomerByEmail(selectedCustomer.Email);
+            giftedCustomer = JsonConvert.DeserializeObject<CustomersViewModel>(JsonConvert.SerializeObject(customerExistenceResponse.data));
+            giftedCustomer.CustomerId = selectedCustomer.CustomerId;
+            giftedToCustomerId = customerExistenceResponse.data.Id;
+            addressRequestModel.Email = giftedCustomer.Email;
+            await ShowAddressesForCustomer(giftedCustomer.CustomerGUID, ClubCustomerType.GiftedTo);
+            giftToCustomerGuid = giftedCustomer.CustomerGUID;
+            giftedToCustomerSelected = true;
+            if (!allStepsFollowed)//If we will change Is Gifted Membership from pop up (open on Gifted Membership click in right side)
+                ActivateStep(4);
+            ShowGiftedMembershipModal(); //After selecting the Gifted To selection, we should show Gifted Membership modal immediately.
+        }
+        else
+        {
+            Id = null;
+            clubSignUpAddResponse = null; //If we will select bill to customer
+            var selectedCustomer = searchCustomers.FirstOrDefault(x => x.CustomerId == args.ItemData.Id);
+            var customerExistenceResponse = await _customerViewModel.GetBusinessCustomerByEmail(selectedCustomer.Email);
+            billingCustomer = JsonConvert.DeserializeObject<CustomersViewModel>(JsonConvert.SerializeObject(customerExistenceResponse.data));
+            billingCustomer.CustomerId = selectedCustomer.CustomerId;
+            billToCustomerId = customerExistenceResponse.data.Id;
+            addressRequestModel.Email = billingCustomer.Email;
+            await ShowAddressesForCustomer(billingCustomer.CustomerGUID);
+            billToCustomerGuid = billingCustomer.CustomerGUID;
+            billToCustomerSelected = true;
+            giftedToCustomerSelected = false;
+            creditCard = new CreditCardRequestModel();
+            creditCard.CardHolderName = billingCustomer.FirstName + " " + billingCustomer.LastName;
+            //Create Club Sign Up
+            if (!Id.HasValue && (clubSignUpAddResponse == null || clubSignUpAddResponse?.Id <= 0))
+            {
+                var signUpResponse = await _clubViewModel.CreateClubSignUpAsync(new BusinessClubSignUpRequestModel
+                {
+                    BusinessClubId = clubDetail.Id,
+                    BusinessCustomerId = billingCustomer.CustomerId,
+                    CustomerName = billingCustomer.FirstName + " " + billingCustomer.LastName,
+                    BusinessTeamId = teamDetail?.Team ?? 0,
+                    SignupSource = (int)ClubSignupSource.OMS,
+                    Email = billingCustomer.Email,
+                    IsGiftSubscription = IsGiftSignup
+                });
+                if (!signUpResponse.success)
+                {
+                    toastService.ShowToast(signUpResponse.error_info.description, ToastLevel.Error);
+                }
+                else
+                {
+                    clubSignUpAddResponse = signUpResponse.data;
+                    Id = clubSignUpAddResponse.SignUpGUID;
+                    ActivateStep(3);
+                }
+            }
+        }
+        SpinnerVisibility = false;
+    }
+
+    private async Task EditAddress(Guid addressGuid)
+    {
+        SpinnerVisibility = true;
+        CloseAddressModal();
+        var customerExistenceResponse = await _customerViewModel.GetBusinessCustomerByEmail(addressRequestModel.Email);
+        var reqAddress = customerAddresses.FirstOrDefault(x => x.AddresGuid == addressGuid);
+        if (customerExistenceResponse.success)
+        {
+            if (EditableClubCustomerType == ClubCustomerType.GiftedTo)
+                giftToCustomerGuid = customerExistenceResponse.data.CustomerGUID;
+            else
+                billToCustomerGuid = customerExistenceResponse.data.CustomerGUID;
+
+            addressRequestModel = JsonConvert.DeserializeObject<AddressRequestModel>(JsonConvert.SerializeObject(customerExistenceResponse.data));
+            addressRequestModel.FirstName = reqAddress.FirstName;
+            addressRequestModel.LastName = reqAddress.LastName;
+            addressRequestModel.Company = reqAddress.Company;
+            addressRequestModel.Phone = reqAddress.PhoneFormatted;
+            addressRequestModel.PhoneType = reqAddress.PhoneType;
+            addressRequestModel.AddressGUID = addressGuid;
+            addressRequestModel.Address1 = reqAddress.Address1;
+            addressRequestModel.Address2 = reqAddress.Address2;
+            addressRequestModel.AddressPhone = customerExistenceResponse.data.AddressPhone;
+            addressRequestModel.AddressPhoneCountry = reqAddress.CountryCode;
+            addressRequestModel.WorkPhone = reqAddress.Phone;
+            addressRequestModel.WorkPhoneCountry = reqAddress.Phone;
+            addressRequestModel.City = reqAddress.City;
+            addressRequestModel.State = reqAddress.State;
+            addressRequestModel.StateCode = reqAddress.StateCode;
+            addressRequestModel.ZipCode = reqAddress.ZipCode;
+            addressRequestModel.IsDefaultBilling = reqAddress.IsDefaultBilling;
+            addressRequestModel.IsDefaultShipping = reqAddress.IsDefaultShipping;
+
+            if (reqAddress.DOB.HasValue)
+            {
+                UserDob = reqAddress.DOB.Value.ToString("MM/dd/yyyy");
+            }
+            else
+            {
+                UserDob = string.Empty;
+            }
+        }
+        SetCodes();
+        showPhoneControl = true;
+        isAddAddress = isAddCustomer = false;
+        IsCreateCustomerDialogVisible = true;
+        SpinnerVisibility = false;
+    }
+
+    private void SetCodes()
+    {
+        addressRequestModel.CountryCode = "US";
+        addressRequestModel.PhoneCountry = "US";
+        addressRequestModel.AddressPhoneCountry = "US";
+        addressRequestModel.WorkPhoneCountry = "US";
+    }
+
+    private async Task AddNewAddress()
+    {
+        CloseAddressModal();
+        SpinnerVisibility = true;
+        var customerExistenceResponse = await _customerViewModel.GetBusinessCustomerByEmail(addressRequestModel.Email);
+        if (customerExistenceResponse.success && customerExistenceResponse.data != null)
+        {
+            addressRequestModel = new AddressRequestModel
+            {
+                FirstName = customerExistenceResponse.data.FirstName,
+                LastName = customerExistenceResponse.data.LastName,
+                Company = customerExistenceResponse.data.Company,
+                Email = customerExistenceResponse.data.Email
+            };
+            try
+            {
+                UserDob = customerExistenceResponse.data.DOB.ToString("MM/dd/yyyy");
+            }
+            catch (FormatException)
+            {
+                UserDob = string.Empty;
+            }
+        }
+
+        SetCodes();
+        showPhoneControl = true;
+        isAddAddress = true;
+        isAddCustomer = false;
+        IsCreateCustomerDialogVisible = true;
+        SpinnerVisibility = false;
+    }
+
+    private void AddNewCustomer(ClubCustomerType clubCustomerType)
+    {
+        EditableClubCustomerType = clubCustomerType;
+        addressRequestModel = new AddressRequestModel();
+        SetCodes();
+        showPhoneControl = true;
+        isAddCustomer = true;
+        IsCreateCustomerDialogVisible = true;
+        if (clubCustomerType == ClubCustomerType.GiftedTo)
+            giftToCustomerGuid = null;
+        else
+            billToCustomerGuid = null;
+    }
+
+    private void ChangeShippingAddress(Guid addressGuid)
+    {
+        SpinnerVisibility = true;
+        var address = customerAddresses.FirstOrDefault(x => x.AddresGuid == addressGuid);
+        if (address != null)
+        {
+            shipToCustomer = new ShipToCustomerModel { FirstName = address.FirstName, LastName = address.LastName, Email = billingCustomer.Email, PhoneFormatted = address.PhoneFormatted, Phone = address.Phone, UserId = billToCustomerId };
+            shippingAddress = JsonConvert.DeserializeObject<ShippingAddressModel>(JsonConvert.SerializeObject(address));
+            toastService.ShowToast("Shipping address updated successfully.", ToastLevel.Success);
+        }
+        SpinnerVisibility = false;
+    }
+
+    private void ChangeBillingAddress(Guid addressGuid)
+    {
+        SpinnerVisibility = true;
+        var address = customerAddresses.FirstOrDefault(x => x.AddresGuid == addressGuid);
+        if (address != null)
+        {
+            billToCustomer = new BillToCustomerModel { FirstName = address.FirstName, LastName = address.LastName, Email = billingCustomer.Email, PhoneFormatted = address.PhoneFormatted, Phone = address.Phone, UserId = billToCustomerId };
+            billingAddress = JsonConvert.DeserializeObject<BillingAddressModel>(JsonConvert.SerializeObject(address));
+            toastService.ShowToast("Billing address updated successfully.", ToastLevel.Success);
+        }
+        SpinnerVisibility = false;
+    }
+
+    private void ChangeGiftingAddress(Guid addressGuid)
+    {
+        SpinnerVisibility = true;
+        var address = customerAddresses.FirstOrDefault(x => x.AddresGuid == addressGuid);
+        if (address != null)
+        {
+            giftedToCustomer = new BillToCustomerModel { FirstName = address.FirstName, LastName = address.LastName, Email = billingCustomer.Email, PhoneFormatted = address.PhoneFormatted, Phone = address.Phone, UserId = billToCustomerId };
+            giftingAddress = JsonConvert.DeserializeObject<BillingAddressModel>(JsonConvert.SerializeObject(address));
+            toastService.ShowToast("Gifting address updated successfully.", ToastLevel.Success);
+        }
+        SpinnerVisibility = false;
+    }
+
+    private async Task UpdateAddress(ClubCustomerType type)
+    {
+        IsEditCustomerConfimationModalVisible = false;
+        var defaultAddress = new UserAddressModel();
+        if (type == ClubCustomerType.BillTo)
+        {
+            defaultAddress = customerAddresses.FirstOrDefault(x => x.IsDefaultBilling);
+        }
+        else if (type == ClubCustomerType.ShipTo)
+        {
+            defaultAddress = customerAddresses.FirstOrDefault(x => x.IsDefaultShipping);
+        }
+
+        if (type == ClubCustomerType.GiftedTo || defaultAddress == null)
+        {
+            OpenAddressModal();
+            return;
+        }
+
+        await EditAddress(defaultAddress?.AddresGuid ?? Guid.NewGuid());
+    }
+
+    private ClubCustomerType? EditableClubCustomerType { get; set; }
+    public bool IsEditCustomerConfimationModalVisible { get; set; }
+    private void EditCustomer(ClubCustomerType customerType)
+    {
+        if (customerType == ClubCustomerType.BillTo || customerType == ClubCustomerType.GiftedTo)
+        {
+            EditableClubCustomerType = customerType;
+            IsEditCustomerConfimationModalVisible = true;
+        }
+        else
+        {
+            EditableClubCustomerType = null;
+            IsEditCustomerConfimationModalVisible = false;
+            OpenAddressModal();
+        }
+    }
+    private void ChangeCustomer()
+    {
+        IsEditCustomerConfimationModalVisible = false;
+        ActivateStep(EditableClubCustomerType == ClubCustomerType.GiftedTo ? 3 : 2);
+    }
+    private async Task ChangeAddress()
+    {
+        if (EditableClubCustomerType == ClubCustomerType.GiftedTo)
+            addressRequestModel = new AddressRequestModel { Email = giftedCustomer.Email, CountryCode = "US" };
+        else
+            addressRequestModel = new AddressRequestModel { Email = billingCustomer.Email, CountryCode = "US" };
+        var response = await _customerViewModel.GetCustomerAddressList((EditableClubCustomerType == ClubCustomerType.GiftedTo) ? giftToCustomerGuid.Value : billToCustomerGuid.Value);
+        customerAddresses = response.data;
+        IsEditCustomerConfimationModalVisible = false;
+        OpenAddressModal();
+    }
+    #endregion Customer/Address
+
+    #region CreditCard
+    CreditCardRequestModel creditCard = new CreditCardRequestModel();
+    TokenizedCard tokenizedCard = new TokenizedCard();
+    private bool creditCardAdded = false;
+    public bool IsAuthorizationFailedModalVisible { get; set; }
+    private void ShowAuthorizationFailedModal()
+    {
+        IsAuthorizationFailedModalVisible = true;
+    }
+
+    private void HideAuthorizationFailedModal()
+    {
+        IsAuthorizationFailedModalVisible = false;
+    }
+    string paymentProfileId = string.Empty;
+    private async Task SaveCreditCard(CreditCardRequestModel cc)
+    {
+        SpinnerVisibility = true;
+        //Get Payment Profile
+        var response = await _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.Payments, BusinessSettingsMetaKey.PaymentProfile);
+        paymentProfileId = response?.data?.MetaValue ?? string.Empty;
+        if (string.IsNullOrEmpty(paymentProfileId))
+        {
+            SpinnerVisibility = false;
+            toastService.ShowToast("The payment Profile is not set yet.", ToastLevel.Error);
+            return;
+        }
+        var tokenziedCardResponse = await _paymentViewModel.TokenzieCard(new TokenizeCardRequestModel
+        {
+            Cust_Name = billingCustomer.FirstName + " " + billingCustomer.LastName,
+            BusinessId = currentMember.Id,
+            BusinessPaymentProfileId = Convert.ToInt32(paymentProfileId),
+            Card_Token = string.Empty,
+            Number = creditCard.CreditCardNumber,
+            Card_Last_Four_Digits = creditCard.CreditCardNumber.Substring(creditCard.CreditCardNumber.Length - 4),
+            Card_Type = Helper.GetCardType(creditCard.CreditCardNumber),
+            Exp_Month = creditCard.ExpirationMonth,
+            Exp_Year = creditCard.ExpirationYear,
+            BusinessCustomerId = billingCustomer.CustomerId,
+            SaveCard = true,
+            Ignore_AVS_Error = true,
+            Cvv2 = creditCard.CVV,
+            IsDefault = true
+        });
+        SpinnerVisibility = false;
+        if (!tokenziedCardResponse.success || tokenziedCardResponse.data == null || string.IsNullOrEmpty(tokenziedCardResponse.data.Card_Token))
+        {
+            toastService.ShowToast(tokenziedCardResponse.data.ErrorMessage, ToastLevel.Error);
+            ShowAuthorizationFailedModal();
+            return;
+        }
+        else
+        {
+            tokenizedCard = tokenziedCardResponse.data;
+            toastService.ShowToast("Tokenize Successfully.", ToastLevel.Success);
+        }
+        creditCardAdded = true;
+        ActivateStep(-1);
+    }
+    private void ActivateAddPaymentStep()
+    {
+        ActivateStep(IsGiftSignup ? 4 : 3);
+    }
+    #endregion CreditCard
+
+    #region Club
+    private string selectedClubName = string.Empty;
+    private int defaultPickupLocationId = 0;
+    private int defaultShipMethodId = 0;
+    private string pickupLocationName = string.Empty;
+    private string defaultShippingCodeName = string.Empty;
+    ClubDetailFullModel clubDetail = new ClubDetailFullModel();
+    public bool IsGiftSignup { get; set; } = false; //It will true if user will select "Gift Sign-up" workflow in step 1
+    protected async Task SelectClub(SelectClubEventCallbackArgs args)
+    {
+        if (args != null)
+        {
+            IsGiftSignup = args.IsGiftSignup;
+            selectedGiftShipment.IsGiftedMembership = args.IsGiftSignup;
+            IsSignUpConfirmed = false;
+            ActivateStep(2);
+            searchCustomers = new List<CustomersViewModel>();
+            customers = new List<CustomCustomerModel>();
+            creditCard = new CreditCardRequestModel();
+            giftShipmentList = new List<DropdownBindingModel>();
+            membershipNoteList = new List<MembershipNoteModel>();
+            selectedClubSubscriptionTags = new string[] { };
+            salesRep = loggedInUser?.Id ?? 0;
+            selectedClubName = args.Club.ClubName;
+            var clubDetailsResponse = await _clubViewModel.GetClubDetailsAsync(args.Club.Id, args.Club.ClubGUID.ToString());
+            clubDetail = clubDetailsResponse?.data ?? new ClubDetailFullModel();
+            defaultPickupLocationId = clubDetail?.ClubPickupLocation?.FirstOrDefault()?.LocationId ?? 0;
+            pickupLocationName = inventoryLocations?.FirstOrDefault(x => x.Id == defaultPickupLocationId)?.LocationName ?? string.Empty;
+            defaultShipMethodId = clubDetail?.ClubDeliveryOption?.FirstOrDefault(x => x.IsDefault)?.ShipMethodId ?? 0;
+            defaultShippingCodeName = serviceCodes?.FirstOrDefault(x => x.Id == defaultShipMethodId)?.ServiceCodeName ?? string.Empty;
+            if (clubDetail?.OfferPerpetualGiftedMemberships ?? false)
+                giftShipmentList.Add(new DropdownBindingModel { Key = 9999, Value = "Never Expires" }); //For perpetual shipment count is “9999”
+            giftShipmentList.AddRange(clubDetail?.ClubGiftShipmentCount?.Select(x => new DropdownBindingModel
+            {
+                Key = x.ShipmentCount,
+                Value = Convert.ToString(x.ShipmentCount)
+            })?.ToList() ?? new List<DropdownBindingModel>());
+            clubDeliveryType = ClubDeliveryType.Ship;
+            fulfillmentMethodType = "SHIP TO";
+            IsSelectMembershipModalVisible = false;
+        }
+    }
+    #endregion Club
+
+    #region Membership Level
+    public bool IsSelectMembershipModalVisible { get; set; }
+    private void ShowSelectMembershipModal() => IsSelectMembershipModalVisible = true;
+    private void HideSelectMembershipModal() => IsSelectMembershipModalVisible = false;
+    #endregion Membership Level
+
+    #region Suspend Sign-up
+    private async Task SuspendSignup()
+    {
+        if (clubSignUpAddResponse?.Id > 0)
+        {
+            if (clubSignUpDetail == null)
+            {
+                var signUpDetailsResponse = await _clubViewModel.GetSignupById(clubSignUpAddResponse.Id);
+                clubSignUpDetail = signUpDetailsResponse?.data ?? null;
+            }
+            if (clubSignUpDetail != null)
+            {
+                var signUpUpdateResponse = await _clubViewModel.UpdateClubSignUpAsync(new UpdateClubSignUpRequestModel
+                {
+                    SignupSource = (int)ClubSignupSource.OMS,
+                    Status = (int)ClubSignupStatus.Suspended,
+                    IsGiftSubscription = IsGiftSignup,
+                    BusinessClubId = clubSignUpDetail.BusinessClubId,
+                    BusinessCustomerId = clubSignUpDetail.BusinessCustomerId,
+                    BusinessTeamId = clubSignUpDetail.BusinessTeamId,
+                    CustomerName = clubSignUpDetail.CustomerName,
+                    Email = clubSignUpDetail.Email,
+                    Id = clubSignUpDetail.Id
+                });
+                if (signUpUpdateResponse.success)
+                {
+                    await CreateSubscription();
+                    if (IsSignUpConfirmed)
+                    {
+                        toastService.ShowToast(Constants.SuspendMessage, ToastLevel.Success);
+                        await Task.Delay(1000);
+                        NavigationManager.NavigateTo("/clubs/member-sign-ups");
+                    }
+                }
+                else
+                {
+                    toastService.ShowToast(signUpUpdateResponse.error_info.description, ToastLevel.Error);
+                }
+            }
+        }
+    }
+    #endregion Suspend Sign-up
+
+    #region Sign-Up Confirmed
+    public bool IsSignUpConfirmedModalVisible { get; set; }
+    private void ShowSignUpConfirmedModal()
+    {
+        IsSignUpConfirmedModalVisible = true;
+    }
+    private void HideSignUpConfirmedModal()
+    {
+        IsSignUpConfirmedModalVisible = false;
+    }
+    public bool IsSignUpConfirmed { get; set; } = false;
+    private Guid subscriptionGUID;
+    private async Task CreateSubscription()
+    {
+        SpinnerVisibility = true;
+
+        BusinessClubSubscriptionRequestModel businessClubSubscription = new BusinessClubSubscriptionRequestModel()
+        {
+            ClubSignupId = clubSignUpAddResponse.Id,
+            BusinessTeamId = teamDetail?.Team ?? 0,
+            BillToAddressId = billingAddress.Id,
+            ShipToAddressId = IsGiftSignup ? giftingAddress.Id : shippingAddress.Id,
+            PickupLocation = defaultPickupLocationId,
+            DeliveryType = clubDeliveryType,
+            PreferredShippingOption = clubDetail?.ClubDeliveryOption?.FirstOrDefault(x => x.IsDefault)?.ShipMethodId ?? 0,
+            SignupSource = (int)ClubSignupSource.OMS,
+            MinShipments = clubDetail.MinShipments,
+            IsGiftSubscription = IsGiftSignup,
+            IsGiftOngoing = true,
+            GiftShipments = selectedGiftShipment.NumberOfShipments,
+            GiftMessage = string.Empty,
+            Signature = string.Empty,
+            BusinessCustomerId = IsGiftSignup ? giftedCustomer.Id : billingCustomer.Id,//If a gift Subscription then it should be Gifted To customer Id else bill to customer id
+            BusinessCustomerIdBilling = billingCustomer.Id,
+            SubscriptionTag = selectedClubSubscriptionTags?.ToList() ?? new List<string>()
+        };
+        businessClubSubscription.PaymentMethod = new List<PaymentMethodRequestModel> {
+        new PaymentMethodRequestModel
+        {
+            TokenSource = 0,
+            CardToken = tokenizedCard.Card_Token,
+            TokenSourceCustomerId = tokenizedCard.Cust_Id,
+            CardType = tokenizedCard.Card_Type,
+            CardExp = creditCard.ExpirationMonth +"/"+ creditCard.ExpirationYear,
+            CardLastFour = tokenizedCard.Last_Four_Digits,
+            BusinessPaymentProviderProfileId = string.IsNullOrEmpty(paymentProfileId) ? 0 : Convert.ToInt32(paymentProfileId)
+        }};
+        businessClubSubscription.SubscriptionNotes = membershipNoteList.OrderBy(x => x.Id).Select(x =>
+         new SubscriptionNotesRequestModel
+         {
+             Note = x.Note,
+             NoteType = (int)ClubSubscriptionNoteType.internalNote
+         }).ToList();
+        businessClubSubscription.SalesRep = new List<int> { salesRep };
+        businessClubSubscription.SubscriptionTag = selectedClubSubscriptionTags?.ToList() ?? new List<string>();
+        var subscriptionResponse = await _clubViewModel.CreateClubSubscriptionAsync(businessClubSubscription);
+        SpinnerVisibility = false;
+        if (subscriptionResponse.success)
+        {
+            subscriptionGUID = subscriptionResponse.data.SubscriptionGUID;
+            toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+            IsSignUpConfirmed = true;
+            StateHasChanged();
+            clubDetail.DateCreated = DateTime.UtcNow;
+            ShowSignUpConfirmedModal();
+        }
+        else
+        {
+            toastService.ShowToast(subscriptionResponse.error_info.description, ToastLevel.Error);
+        }
+    }
+    private async Task NewClubSignup()
+    {
+        HideSignUpConfirmedModal();
+        searchCustomers = new List<CustomersViewModel>();
+        customers = new List<CustomCustomerModel>();
+        creditCard = new CreditCardRequestModel();
+        giftShipmentList = new List<DropdownBindingModel>();
+        membershipNoteList = new List<MembershipNoteModel>();
+        selectedClubSubscriptionTags = new string[] { };
+        salesRep = teamUsers?.Where(x => x.UserId == (loggedInUser?.Id ?? 0))?.FirstOrDefault()?.TeamId ?? 0;
+        IsSignUpConfirmed = false;
+        fulfillmentMethodType = "SHIP TO";
+        ActivateStep(1);
+    }
+    #endregion Sign-Up Confirmed
+
+    #region Classes
+    public ClubDeliveryType DeliveryMethod { get; set; } = ClubDeliveryType.Ship;
+    BillToCustomerModel billToCustomer = new BillToCustomerModel();
+    BillToCustomerModel giftedToCustomer = new BillToCustomerModel();
+    public class BillToCustomerModel
+    {
+        public int UserId { get; set; } = 0;
+        public string Email { get; set; } = "";
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Phone { get; set; } = "";
+        public string PhoneFormatted { get; set; } = "";
+        public string PhoneType { get; set; } = "";
+    }
+    BillingAddressModel billingAddress = new BillingAddressModel();
+    BillingAddressModel giftingAddress = new BillingAddressModel();
+    public class BillingAddressModel
+    {
+        public int Id { get; set; }
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Company { get; set; } = "";
+        public string Address1 { get; set; } = "";
+        public string Address2 { get; set; } = "";
+        public string City { get; set; } = "";
+        public string State { get; set; } = "";
+        public string StateCode { get; set; } = "";
+        public string Country { get; set; } = "";
+        public string CountryCode { get; set; } = "";
+        public string ZipCode { get; set; } = "";
+        public string Phone { get; set; } = "";
+        public string PhoneFormatted { get; set; } = "";
+        public string PhoneType { get; set; } = "";
+        public string DOB { get; set; } = "";
+        public string GeoLatitude { get; set; } = "";
+        public string GeoLongitude { get; set; } = "";
+        public string Timezone { get; set; } = "";
+    }
+    ShipToCustomerModel shipToCustomer = new ShipToCustomerModel();
+    public class ShipToCustomerModel
+    {
+        public int UserId { get; set; } = 0;
+        public string Email { get; set; } = "";
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Phone { get; set; } = "";
+        public string PhoneFormatted { get; set; } = "";
+        public string PhoneType { get; set; } = "";
+    }
+    ShippingAddressModel shippingAddress = new ShippingAddressModel();
+    public class ShippingAddressModel
+    {
+        public int Id { get; set; }
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Company { get; set; } = "";
+        public string Address1 { get; set; } = "";
+        public string Address2 { get; set; } = "";
+        public string City { get; set; } = "";
+        public string State { get; set; } = "";
+        public string StateCode { get; set; } = "";
+        public string Country { get; set; } = "";
+        public string CountryCode { get; set; } = "";
+        public string ZipCode { get; set; } = "";
+        public string Phone { get; set; } = "";
+        public string PhoneFormatted { get; set; } = "";
+        public string PhoneType { get; set; } = "";
+        public string DOB { get; set; } = "";
+        public string GeoLatitude { get; set; } = "";
+        public string GeoLongitude { get; set; } = "";
+        public string Timezone { get; set; } = "";
+    }
+    public class AddressRequestModel
+    {
+        [Required(ErrorMessage = "Please enter email")]
+        [RegularExpression("^[a-z0-9_\\+-]+(\\.[a-z0-9_\\+-]+)*@[a-z0-9-]+(\\.[a-z0-9]+)*\\.([a-z]{2,4})$", ErrorMessage = "Please enter valid email address")]
+        public string Email { get; set; }
+        [Required(ErrorMessage = "Please enter first name")]
+        public string FirstName { get; set; }
+        [Required(ErrorMessage = "Please enter last name")]
+        public string LastName { get; set; }
+        public string Company { get; set; }
+        public DateTime? DOB { get; set; }
+        public Guid? AddressGUID { get; set; }
+        public Guid UserGUID { get; set; }
+        [Required(ErrorMessage = "Please enter address 1")]
+        public string Address1 { get; set; }
+        public string Address2 { get; set; }
+        [Required(ErrorMessage = "Please enter city")]
+        public string City { get; set; }
+        public string State { get; set; }
+        [Required(ErrorMessage = "Please select state")]
+        public string StateCode { get; set; }
+        public string Country { get; set; }
+        public string CountryCode { get; set; }
+        [Required(ErrorMessage = "Please enter zip code")]
+        public string ZipCode { get; set; }
+        public int AddressSource { get; set; }
+        public string GeoLatitude { get; set; }
+        public string GeoLongitude { get; set; }
+        public string Timezone { get; set; }
+        [Required(ErrorMessage = "Please enter phone")]
+        public string Phone { get; set; }
+        public string PhoneType { get; set; }
+        public string PhoneCountry { get; set; }
+        public string AddressPhone { get; set; }
+        public string AddressPhoneCountry { get; set; }
+        public string WorkPhone { get; set; }
+        public string WorkPhoneCountry { get; set; }
+        public bool IsDefaultBilling { get; set; }
+        public bool IsDefaultShipping { get; set; }
+        public bool Active { get; set; }
+    }
+    public class SalesRepresentative
+    {
+        public int TeamId { get; set; }
+        public string Name { get; set; }
+    }
+    public class SelectGiftShipment
+    {
+        public bool IsGiftedMembership { get; set; }
+
+        [ShouldBeGreaterThanAttribute(nameof(IsGiftedMembership), "True", 0, ErrorMessage = "Number of shipments required.")]
+        public int NumberOfShipments { get; set; }
+    }
+    #endregion Classes
+}
+
+<style>
+    #addNewCustomerBtn {
+        float: right;
+    }
+</style>
+

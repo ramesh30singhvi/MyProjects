@@ -1,0 +1,93 @@
+﻿@page "/settings/reservations"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<Feedback PageSection="PageSection.Reservations"></Feedback>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md-auto">
+                <h5 class="mb-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-calendar-star me-2"></span>Reservations </h5>
+            </div>
+            <div class="col-md-auto">
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+
+        <div class="row my-4">
+            <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="fa-regular fa-calendars fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/reservations/#!">Manage Experiences</a></h6>
+                        <p class="fs--2">Create &amp; manage your experiences.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="fa-regular fa-burger-soda fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/reservations/#!">Menus &amp; Modifiers</a></h6>
+                        <p class="fs--2">Create custom food &amp; beverage menus.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="fa-regular fa-fork-knife fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/reservations/#!">Food Prep</a></h6>
+                        <p class="fs--2">Assign your food prep stations.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="fa-regular fa-file-contract fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/reservations/policies">Reservation Policies</a></h6>
+                        <p class="fs--2">Create &amp; manage cancellation policies.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="fa-regular fa-hand-holding-usd fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/sales-channels/reservations/payments">Payments</a></h6>
+                        <p class="fs--2">Configure payment gateway for Reservations.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code
+{
+    private string title = "Reservation Settings | Synergy Admin Panel";
+
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+
+}

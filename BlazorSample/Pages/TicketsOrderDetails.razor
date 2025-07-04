@@ -1,0 +1,353 @@
+﻿@page "/orders/tickets/order-details"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+
+<div class="card shadow-none border mb-3">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="reports/tickets/ticket-sales-report" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="far fa-cart-shopping me-2"></span>Ticket Order - 167560</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="javascript:void(0)">Dashboard</a>
+                <a class="btn btn-sm btn-primary" href="javascript:void(0)">Resend Receipt</a>
+                <a class="btn btn-sm btn-primary" href="javascript:void(0)">Cancel Order</a>
+                <a class="btn btn-sm btn-primary" href="javascript:void(0)">Edit Order</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">       
+        <div class="row">
+            <div class="col-12">
+                <h5><span>2021 Napa Valley Passport</span><br></h5>
+                <p class="mb-1"><span>Friday, August 13, 2021 at 10:00 AM to Friday, December 31, 2021 at 5:00 PM</span></p>
+                <p class="mb-0"><a class="text-decoration-underline">Event Information</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-none border mb-3">
+    <div class="card-header bg-light btn-reveal-trigger d-flex flex-between-center">
+        <h6 class="mb-0">Order Summary</h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-6">
+                <div class="card shadow-none border mb-1">
+                    <div class="card-header bg-light btn-reveal-trigger d-flex flex-between-center">
+                        <h6 class="mb-0">Order Details</h6>
+                    </div>
+                    <div class="card-body p-1">
+                        <table class="table table-sm mb-0">
+                            <tbody>
+                                <tr>
+                                    <td><strong>Status</strong></td>
+                                    <td><span>Completed</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Order Number</strong></td>
+                                    <td>
+                                        <span>167560 <small class="text-muted">(Backoffice - jelliman@cellarpass.com)</small></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Order Date</strong></td>
+                                    <td><span>12/1/2021 2:01:54 PM</span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Order Total</strong></td>
+                                    <td>
+                                        <span>$0.00 <strong>/</strong> 2</span> Tickets
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Paid Amount</strong></td>
+                                    <td><span class="badge bg-success">Sale</span><span> $252.32 - <a href="javascript:void();">Visa 6667</a> <small class="text-muted">(11/30/2021 7:10 PM)</small></span></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Referral</strong></td>
+                                    <td><span></span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="card shadow-none border mb-1">
+                    <div class="card-header bg-light btn-reveal-trigger d-flex flex-between-center">
+                        <h6 class="mb-0">Customer Details</h6>
+                    </div>
+                    <div class="card-body p-1">
+                        <table class="table table-sm mb-0">
+                            <tbody>
+                                <tr>
+                                    <td><strong>Name</strong></td>
+                                    <td>
+                                        <span><a href="javascript:void();">Jonathan Elliman</a></span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Email</strong></td>
+                                    <td>
+                                        <span><a href="javascript:void();">jelliman@cellarpass.com</a></span>
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <td><strong>Phone</strong></td>
+                                    <td>
+                                        <span>+1 (415) 948-9657</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Address</strong></td>
+                                    <td>
+                                        <span>617 Landmark Court NE<br>,  98110 US</span>
+                                    </td>
+                                </tr>
+
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-none border mb-3">
+    <div class="card-header bg-light btn-reveal-trigger d-flex flex-between-center">
+        <h6 class="mb-0">Attendees</h6>
+        <a class="btn btn-primary btn-sm" href="javascript:void(0)">Edit Attendees</a>
+    </div>
+    <div class="card-body">
+        <div class="sf-grid mb-2">
+            <SfGrid DataSource="@AttendeesDataList" AllowPaging="false" Width="100%">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && AttendeesDataList.Count <= 0)
+                        {
+                            <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Tickets</h6>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn HeaderText="" TextAlign="TextAlign.Left" Width="40">
+                        <Template>
+                            <span class="badge bg-success">VALID</span>
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="Ticket Level" TextAlign="TextAlign.Left" Width="120">
+                        <Template>
+                            @{
+                                var ticketData = (context as AttendeesData);
+                                <p class="mb-0">@ticketData.TicketLevel</p>
+                                <span>@ticketData.StartDate - @ticketData.EndDate</span>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(AttendeesData.AttendeeFirst) HeaderText="Attendee First" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(AttendeesData.AttendeeLast) HeaderText="Attendee Last" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn HeaderText="Email Address" TextAlign="TextAlign.Left" Width="150">
+                        <Template>
+                            @{
+                                var ticketData = (context as AttendeesData);
+                                <a href="orders/tickets/order-details">@ticketData.EmailAddress</a>
+                            }
+                        </Template>
+                    </GridColumn> <GridColumn Field=@nameof(AttendeesData.DeliveryMethod) HeaderText="Delivery Method" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(AttendeesData.TicketPrice) HeaderText="Ticket Price" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(AttendeesData.ServiceFee) HeaderText="ServiceFee" TextAlign="TextAlign.Left" Width="70"></GridColumn>
+                    <GridColumn Field=@nameof(AttendeesData.Total) HeaderText="Total" TextAlign="TextAlign.Left" Width="70"></GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+        <div class="row">
+            <div class="col-6">
+                <div class="card shadow-none border mb-3">
+                    <div class="card-header bg-light btn-reveal-trigger d-flex flex-between-center">
+                        <h6 class="mb-0">Order Notes</h6>
+                        <a class="btn btn-primary btn-sm" href="javascript:void(0)">Add Note</a>
+                    </div>
+                    <div class="card-body">
+                        <p></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-2"></div>
+            <div class="col-4">
+                <table class="table table-sm table-borderless">
+                    <tbody>
+                        <tr>
+                            <td>Subtotal</td>
+                            <td class="float-end"><span>$0.00</span></td>
+                        </tr>
+                        <tr>
+                            <td>Service Fees</td>
+                            <td class="float-end"><span>$0.00</span></td>
+                        </tr>
+                        <tr>
+                            <td>Sales Tax</td>
+                            <td class="float-end"><span>$0.00</span></td>
+                        </tr>
+                        <tr class="border-3">
+                            <td><strong>Grand Total</strong></td>
+                            <td class="float-end"><strong><span>$0.00</span></strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-none border mb-3">
+    <div class="card-header bg-light btn-reveal-trigger d-flex flex-between-center">
+        <h6 class="mb-0">Payment History</h6>
+    </div>
+    <div class="card-body">
+        <div class="sf-grid mb-2">
+            <SfGrid DataSource="@PaymentHistoryList" AllowPaging="false" Width="100%">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && PaymentHistoryList.Count <= 0)
+                        {
+                            <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Payment History</h6>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn Field=@nameof(PaymentHistory.Type) HeaderText="Type" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(PaymentHistory.Amount) HeaderText="Amount" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(PaymentHistory.PaymentMethod) HeaderText="Payment Method" TextAlign="TextAlign.Left" Width="70"></GridColumn>
+                    <GridColumn Field=@nameof(PaymentHistory.Status) HeaderText="Status" TextAlign="TextAlign.Left" Width="70"></GridColumn>
+                    <GridColumn Field=@nameof(PaymentHistory.TransID) HeaderText="TransID" TextAlign="TextAlign.Left" Width="70"></GridColumn>
+                    <GridColumn Field=@nameof(PaymentHistory.Customer) HeaderText="Customer" TextAlign="TextAlign.Left" Width="70"></GridColumn>
+                    <GridColumn Field=@nameof(PaymentHistory.TransactionDate) HeaderText="Transaction Date" TextAlign="TextAlign.Left" Width="70"></GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-none border mb-3">
+    <div class="card-header bg-light btn-reveal-trigger d-flex flex-between-center">
+        <h6 class="mb-0">Email Activity</h6>
+    </div>
+    <div class="card-body">
+        <div class="sf-grid mb-2">
+            <SfGrid DataSource="@ActivityDataList" AllowPaging="false" Width="100%">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && ActivityDataList.Count <= 0)
+                        {
+                            <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Payment History</h6>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn Field=@nameof(ActivityData.ActivityDate) HeaderText="" TextAlign="TextAlign.Left" Width="60"></GridColumn>
+                    <GridColumn Field=@nameof(ActivityData.Status) HeaderText="" TextAlign="TextAlign.Left" Width="30"></GridColumn>
+                    <GridColumn HeaderText="" TextAlign="TextAlign.Left" Width="100">
+                        <Template>
+                            @{
+                                var activityData = (context as ActivityData);
+                                <button class="delete_icon">
+                                    <span class="far fa-paper-plane"></span>
+                                </button>
+                                @activityData.EmailAddress
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(ActivityData.Text) HeaderText="" TextAlign="TextAlign.Left" Width="50"></GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+</div>
+@code
+{
+
+        private string title = "Ticket Order | Synergy Commerce Admin Panel";
+
+        [Parameter]
+        public int Id { get; set; }
+
+        private Boolean isLoading = true;
+
+        public class AttendeesData
+        {
+            public string TicketLevel { get; set; }
+            public string StartDate { get; set; }
+            public string EndDate { get; set; }
+            public string AttendeeFirst { get; set; }
+            public string AttendeeLast { get; set; }
+            public string EmailAddress { get; set; }
+            public string DeliveryMethod { get; set; }
+            public string TicketPrice { get; set; }
+            public string ServiceFee { get; set; }
+            public string Total { get; set; }
+        }
+
+        public List<AttendeesData> AttendeesDataList = new List<AttendeesData>(){
+        new AttendeesData(){  TicketLevel= "VIP 3 Day", StartDate = "11/19/21", EndDate="11/21/21", AttendeeFirst= "Jonathan", AttendeeLast="Elliman", EmailAddress="jelliman@cellarpass.com",DeliveryMethod="Self-Print", TicketPrice="$0.00", ServiceFee="$0.00", Total="$0.00" },
+        new AttendeesData(){  TicketLevel= "VIP 3 Day", StartDate = "11/19/21", EndDate="11/21/21", AttendeeFirst= "Sarah", AttendeeLast="Elliman", EmailAddress="jelliman@cellarpass.com",DeliveryMethod="Self-Print", TicketPrice="$0.00", ServiceFee="$0.00", Total="$0.00" },
+    };
+
+
+        public class PaymentHistory
+        {
+            public string Type { get; set; }
+            public string Amount { get; set; }
+            public string PaymentMethod { get; set; }
+            public string Status { get; set; }
+            public string TransID { get; set; }
+            public string Customer { get; set; }
+            public string TransactionDate { get; set; }
+        }
+        public List<PaymentHistory> PaymentHistoryList = new List<PaymentHistory>() {
+         new PaymentHistory(){ Type="Sale", Amount="$252.32", PaymentMethod="Visa - 6667", Status="Approved", TransID="351reajd", Customer="Rachelle Servante", TransactionDate="11/30/2021 7:10:16 PM" }
+    };
+
+    public class ActivityData
+    {
+        public string ActivityDate { get; set; }
+        public string Status { get; set; }
+        public string EmailAddress { get; set; }
+        public string Text { get; set; }
+    }
+
+    public List<ActivityData> ActivityDataList = new List<ActivityData>(){
+        new ActivityData(){  ActivityDate= "12/1/2021 2:01 PM", Status = "created", EmailAddress="jelliman@cellarpass.com", Text= "", },
+        new ActivityData(){  ActivityDate= "12/1/2021 2:01:58 PM", Status = "Email", EmailAddress="Accepted (jelliman@cellarpass.com)", Text= "Ticket Sales Receipt", },
+    };
+}

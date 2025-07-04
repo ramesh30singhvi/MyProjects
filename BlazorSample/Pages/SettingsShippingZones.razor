@@ -1,0 +1,132 @@
+﻿@page "/settings/shipping-zones"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Syncfusion.Blazor
+@using Microsoft.Extensions.Configuration;
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject HttpClient _httpClient
+@inject ToastService toastService
+@inject IConfiguration _configuration
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject IShippingClassViewModel _shippingClassViewModel
+@inject IShippingZoneViewModel _shippingZoneViewModel
+@inject ILocalStorageService localStorage
+@inject ToastService toastService
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized Context="ShippingZones">
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="spinnerVisibility"></SfSpinner>
+        <div class="card">
+            <div class="card-header bg-light">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="settings/shipping" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-globe-americas me-2"></span>Shipping Zones</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-primary" href="/settings/shipping-zones-add">Add New</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="min-vh-75 sf-grid">
+                    <SfGrid DataSource="@shippingZones" AllowPaging="false" Width="100%">
+                        <GridTemplates>
+                            <EmptyRecordTemplate>
+                                @if (!spinnerVisibility && shippingZones.Count <= 0)
+                                {
+                                    <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                        <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Data</h6>
+                                    </div>
+                                }
+                            </EmptyRecordTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            @*<GridColumn Field=@nameof(ShippingZoneListModel.ZoneName) HeaderText="ZoneName" TextAlign="TextAlign.Left" Width="25" />*@
+                            <GridColumn HeaderText="ZoneName" TextAlign="TextAlign.Left" Width="25">
+                                <Template>
+                                    @{
+                                        var shippingZone = (context as ShippingZoneListModel);
+                                        <a href="settings/shipping-zones-edit/@shippingZone.IdGUID">@shippingZone.ZoneName</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(ShippingZoneListModel.CountryName) HeaderText="Country" TextAlign="TextAlign.Left" Width="25" />
+                            <GridColumn Field=@nameof(ShippingZoneListModel.StateNames) HeaderText="STATE / REGION" TextAlign="TextAlign.Left" Width="40" />
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Right" Width="10">
+                                <Template>
+                                    @{
+                                        var id = (context as ShippingZoneListModel).Id;
+                                        <button class="delete_icon" @onclick="()=>DeleteDialogOpen(id)">
+                                            <span class="far fa-trash-alt"></span>
+                                        </button>
+                                    }
+                                </Template>
+                            </GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+        </div>
+
+        @*Delete confimation dialog*@
+        <DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="DeleteShippingZone"></DeleteConfirmation>
+
+    </Authorized>
+</AuthorizeView>
+
+@code
+{
+    private string title = "Shipping Zones | Synergy Commerce Admin Panel";
+    private Boolean spinnerVisibility = false;
+    bool openDeleteDialog = false;
+    int idForDelete { get; set; }
+    private List<ShippingZoneListModel> shippingZones = new List<ShippingZoneListModel>();
+    private Member currentMember = new Member();
+
+    private void DialogClose() => openDeleteDialog = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        spinnerVisibility = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var getShippingZonesResponse = await _shippingZoneViewModel.GetShippingZones(currentMember.Id);
+        if (getShippingZonesResponse.success)
+        {
+            shippingZones = getShippingZonesResponse.data;
+        }
+        spinnerVisibility = false;
+    }
+
+    private void DeleteDialogOpen(int id)
+    {
+        idForDelete = id;
+        openDeleteDialog = true;
+    }
+
+    private async Task DeleteShippingZone()
+    {
+        spinnerVisibility = true;
+        openDeleteDialog = false;
+        var deleteShippingZoneResponse = await _shippingZoneViewModel.DeleteShippingZone(idForDelete, currentMember.Id);
+        if (deleteShippingZoneResponse.success)
+        {
+            shippingZones = deleteShippingZoneResponse.data;
+            toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(deleteShippingZoneResponse.error_info.description, ToastLevel.Error);
+        }
+        spinnerVisibility = false;
+    }
+
+}

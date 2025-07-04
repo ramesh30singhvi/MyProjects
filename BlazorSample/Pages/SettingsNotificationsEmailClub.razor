@@ -1,0 +1,137 @@
+﻿@page "/settings/notifications/email/club"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using Blazored.LocalStorage
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject IEmailNotificationViewModel _emailNotificationViewModel
+@inject ToastService _toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<EditForm Model="@clubEmailContent" Context="formContext">
+    <div class="card shadow-none border">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h5 class="mb-0"><a href="settings/notifications/email" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-gem me-2"></span>Club Email Notifications</h5>
+                </div>
+                <div class="col-md-auto">
+                    <a class="btn btn-primary" href="javascript:void(0)" @onclick="SaveContent">Save</a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="m-3">
+                <label for="inputPreviewEmail" class="form-label mb-0">Club Sign-up Message</label>
+                <p class="mb-2">This message is included with the club member sign-up confirmation email</p>
+                <InputTextArea @bind-Value="clubEmailContent.NewClubSignUp" rows="4" type="text" class="form-control" id="inputPreviewEmail" placeholder="Confirmation Message"></InputTextArea>
+            </div>
+            <div class="m-3">
+                <label for="inputPreviewEmail" class="form-label mb-0">Club Cancellation Message</label>
+                <p class="mb-2">This message is included with the club member cancellation email</p>
+                <InputTextArea @bind-Value="clubEmailContent.NewMemberCancel" rows="4" type="text" class="form-control" id="inputPreviewEmail" placeholder="Reminder Message"></InputTextArea>
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code
+{
+    private string title = "Club Email Notifications | Synergy Commerce Admin Panel";
+
+    private bool isLoading = false;
+    Member currentMember = new Member();
+    UserDetailViewModel currentUser = new UserDetailViewModel();
+    ClubEmailContent clubEmailContent = new ClubEmailContent();
+    List<EmailNotificationDetailModel> emailNotificationDetailModels = new List<EmailNotificationDetailModel>();
+    List<BusinessNotificationEmailModel> businessNotificationEmailModels = new List<BusinessNotificationEmailModel>();
+
+    List<NotificationsTypes> notificationTypes = new List<NotificationsTypes>{
+        NotificationsTypes.NewClubSignUp,
+        NotificationsTypes.NewMemberCancel
+};
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        currentUser = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+
+        //Get Email Notification Templates
+        var notificationDetailResponse = await _emailNotificationViewModel.GetEmailNotificationDetail(null, null, (int)EmailNotificationCategory.Club);
+        emailNotificationDetailModels = notificationDetailResponse?.data ?? new List<EmailNotificationDetailModel>();
+        //Get Business Email Notifications
+        await GetBusinessNotificationEmail();
+        isLoading = false;
+    }
+
+    private async Task GetBusinessNotificationEmail()
+    {
+        //Get Business Email Notifications
+        var businessEmailsResponse = await _emailNotificationViewModel.GetBusinessNotificationEmails(businessId: currentMember.Id, category: (int)EmailNotificationCategory.Club);
+        businessNotificationEmailModels = businessEmailsResponse?.data ?? new List<BusinessNotificationEmailModel>();
+        foreach (var type in notificationTypes)
+        {
+            var metaValue = businessNotificationEmailModels?.FirstOrDefault(x => x.NotificationType == (int)type)?.EmailContent ?? string.Empty;
+            Helper.SetPropertyValue(clubEmailContent, type.ToString(), metaValue);//Note: NotificationType and request model property name should be same
+        }
+    }
+
+    private async Task SaveContent()
+    {
+        if (emailNotificationDetailModels == null && emailNotificationDetailModels.Count == 0)
+        {
+            _toastService.ShowToast("Notification email template is not set for this category.", ToastLevel.Error);
+            return;
+        }
+        isLoading = true;
+        List<AddUpdateBusinessEmailRequestModel> requestModels = new List<AddUpdateBusinessEmailRequestModel>();
+        foreach (var type in notificationTypes)
+        {
+            var emailNotificationDetail = emailNotificationDetailModels?.FirstOrDefault(x => x.NotificationType == type) ?? null;
+            var businessNotificationEmail = businessNotificationEmailModels?.FirstOrDefault(x => x.NotificationType == (int)type) ?? null;
+            var emailRequestModel = new AddUpdateBusinessEmailRequestModel
+            {
+                Id = businessNotificationEmail?.Id ?? null,
+                BusinessId = currentMember.Id,
+                EmailSubject = businessNotificationEmail?.EmailSubject ?? emailNotificationDetail?.EmailSubject ?? string.Empty,
+                EmailContent = Helper.GetPropertyValue(clubEmailContent, type.ToString()).ToString(),
+                Category = (int)EmailNotificationCategory.Club,
+                NotificationType = (int)type,
+                FromEmail = businessNotificationEmail?.FromEmail ?? emailNotificationDetail?.FromEmail ?? "no-reply@notices.cellarpass.com",
+                FromName = businessNotificationEmail?.FromName ?? $"{currentUser.FirstName} {currentUser.LastName}",
+                OrderId = businessNotificationEmail?.OrderId ?? 0,
+                NotificationEmailId = businessNotificationEmail?.NotificationEmailId ?? emailNotificationDetail.Id,
+                NotificationEmailTemplateId = businessNotificationEmail?.NotificationEmailTemplateId ?? emailNotificationDetail.EmailTemplateId,
+            };
+            requestModels.Add(emailRequestModel);
+        }
+        var response = await _emailNotificationViewModel.AddUpdateBusinessNotificationEmail(requestModels);
+        if (response.success)
+        {
+            //Get Business Email Notifications
+            await GetBusinessNotificationEmail();
+            isLoading = false;
+            _toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            isLoading = false;
+            _toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+
+}

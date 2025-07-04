@@ -1,0 +1,101 @@
+﻿@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm @ref="AuthorizeNetForm" Model="@authorizeDotNet" Context="formContext" Class="row g-3">
+    <DataAnnotationsValidator />
+    <div class="card shadow-none border-dashed">
+        @*<div class="card-header border-bottom" hidden="@hide">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h5 class="mb-0"><a href="settings/integrated-partners" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-credit-card me-2"></span>Authorize.Net</h5>
+                </div>
+                <div class="col-md-auto">
+                    @if (!IsActivePaymentGateway)
+                    {
+                        <button class="btn btn-sm btn-outline-secondary me-2 disabled">Save</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-sm btn-primary" @onclick="@(() => SaveAuthorizeDotNet(formContext))">Save</button>
+                    }
+                </div>
+            </div>
+        </div>*@
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="inputAuthorizeDotNetAPILoginKey" class="form-label">API Login Key</label>
+                <InputText class="form-control" @bind-Value="@authorizeDotNet.APILoginKey" id="inputAuthorizeDotNetAPILoginKey"  type="text" placeholder="API Login Key"></InputText>
+                <ValidationMessage For="@(() => authorizeDotNet.APILoginKey)" />
+            </div>
+            <div class="mb-3">
+                <label for="inputAuthorizeDotNetTransactionKey" class="form-label">Transaction Key</label>
+                <InputText class="form-control" @bind-Value="@authorizeDotNet.TransactionKey" id="inputAuthorizeDotNetTransactionKey" type="text" placeholder="Transaction Key"></InputText>
+                <ValidationMessage For="@(() => authorizeDotNet.TransactionKey)" />
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    //[Parameter]
+    //public bool? hide { get; set; }
+    [Parameter]
+    public List<BusinessPaymentProviderProfileSettingsViewModel>? data { get; set; }
+    public EditForm AuthorizeNetForm { get; set; }
+    private string title = "Authorize.Net | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    private bool IsActivePaymentGateway { get; set; } = false;
+    Member currentMember = new Member();
+    AuthorizeDotNetRequestModel authorizeDotNet = new AuthorizeDotNetRequestModel();
+    List<string> authorizeDotNetMetaKeys = new List<string>(){
+        BusinessSettingsMetaKey.AuthorizeNetAPILoginKey,
+        BusinessSettingsMetaKey.AuthorizeNetTransactionKey
+    };
+
+    protected override void OnInitialized()
+    {
+        if(data != null && data.Any(x => x.MetaNamespace == BusinessSettingsMetaNamespace.AuthorizeNet))
+        {
+            authorizeDotNet = new AuthorizeDotNetRequestModel
+            {
+                APILoginKey = data.Where(x => x.MetaKey == BusinessSettingsMetaKey.AuthorizeNetAPILoginKey).FirstOrDefault().MetaValue,
+                TransactionKey = data.Where(x => x.MetaKey == BusinessSettingsMetaKey.AuthorizeNetTransactionKey).FirstOrDefault().MetaValue
+            };
+        }
+    }
+
+    public async Task SaveAuthorizeDotNet(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var businessSettings = await Helper.BusinessSettingsMapping(authorizeDotNet, currentMember.Id, BusinessSettingsMetaNamespace.AuthorizeNet, authorizeDotNetMetaKeys);
+            var response = await _settingsViewModel.CreateBusinessSettingListAsync(businessSettings);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+}

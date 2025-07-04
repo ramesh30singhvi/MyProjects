@@ -1,0 +1,170 @@
+﻿@page "/settings/notifications/email/rsvp"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+          <div class="card">
+                    <div class="card-header border-bottom">
+                        <div class="row justify-content-between">
+                            <div class="col-md-auto">
+                                <h5 class="mb-0"><a href="settings/notifications" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-flag me-2"></span>Email Notifications</h5>
+                            </div>
+                            <div class="col-md-auto"></div>
+                        </div>
+                    </div>
+
+                    <div class="card-body p-0">
+
+                        <div class="card rounded-bottom-0" id="rsvpEmailContent">
+
+                            <div class="card-header">
+                                <div class="row flex-between-center">
+                                    <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                                        <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-calendar-star me-2"></span>Reservations</h5>
+                                    </div>
+                                    <div class="col-auto col-sm-auto ms-auto text-end ps-0">
+                                        <button class="btn btn-outline-primary btn-sm" type="button">Add New</button>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <div class="card-body px-0 py-0">
+
+
+                                <div class="d-flex justify-content-between border-top px-card border-200">
+                                    <div class="py-3 ms-md-3 me-2">
+                                        <a href="settings/notifications/email/edit" class="h6">Events with Food (2)</a>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-2"><a href="#!"><span class="fa-regular fa-clone"></span></a></div>
+                                        <div class="dropdown font-sans-serif btn-reveal-trigger">
+                                            <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                            <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                <a class="dropdown-item" href="#!">History</a>
+                                                <div class="dropdown-divider"></div>
+                                                <a class="dropdown-item text-danger" href="#!">Delete</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between border-top px-card border-200">
+                                    <div class="py-3 ms-md-3 me-2">
+                                        <a href="settings/notifications/email/edit" class="h6">Exclusive Experiences (1)</a>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-2"><a href="#!"><span class="fa-regular fa-clone"></span></a></div>
+                                        <div class="dropdown font-sans-serif btn-reveal-trigger">
+                                            <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                            <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                <a class="dropdown-item" href="#!">History</a>
+                                                <div class="dropdown-divider"></div>
+                                                <a class="dropdown-item text-danger" href="#!">Delete</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between border-top px-card border-200">
+                                    <div class="py-3 ms-md-3 me-2">
+                                        <a href="settings/notifications/email/edit" class="h6">Club Member Events (1)</a>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-2"><a href="#!"><span class="fa-regular fa-clone"></span></a></div>
+                                        <div class="dropdown font-sans-serif btn-reveal-trigger">
+                                            <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                            <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                <a class="dropdown-item" href="#!">History</a>
+                                                <div class="dropdown-divider"></div>
+                                                <a class="dropdown-item text-danger" href="#!">Delete</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div class="card rounded-top-0" id="ticketEmailContent">
+
+                            <div class="card-header">
+                                <div class="row flex-between-center">
+                                    <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                                        <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-ticket me-2"></span>Ticketing</h5>
+                                    </div>
+                                    <div class="col-auto col-sm-auto ms-auto text-end ps-0">
+                                        <button class="btn btn-outline-primary btn-sm" type="button">Add New</button>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <div class="card-body px-0 py-0">
+
+
+                                <div class="d-flex justify-content-between border-top px-card border-200 todo-list-item">
+                                    <div class="py-3 ms-md-3 me-2">
+                                        <a href="settings/notifications/email/edit" class="h6">Outdoor Events (4)</a>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-2"><a href="#!"><span class="fa-regular fa-clone"></span></a></div>
+                                        <div class="dropdown font-sans-serif btn-reveal-trigger">
+                                            <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                            <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                <a class="dropdown-item" href="#!">History</a>
+                                                <div class="dropdown-divider"></div>
+                                                <a class="dropdown-item text-danger" href="#!">Delete</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between border-top px-card border-200 todo-list-item">
+                                    <div class="py-3 ms-md-3 me-2">
+                                        <a href="settings/notifications/email/edit" class="h6">Passport Events (1)</a>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-2"><a href="#!"><span class="fa-regular fa-clone"></span></a></div>
+                                        <div class="dropdown font-sans-serif btn-reveal-trigger">
+                                            <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                            <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                <a class="dropdown-item" href="#!">History</a>
+                                                <div class="dropdown-divider"></div>
+                                                <a class="dropdown-item text-danger" href="#!">Delete</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+
+</Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    
+    private string title = "Notifications | Synergy Commerce Admin Panel";
+
+    
+}

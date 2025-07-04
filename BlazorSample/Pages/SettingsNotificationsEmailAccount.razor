@@ -1,0 +1,54 @@
+﻿@page "/settings/notifications/email/account"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md-auto">
+                <h5 class="mb-0"><a href="settings/notifications/email" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-user me-2"></span>Account Email Notifications</h5>
+            </div>
+            <div class="col-md-auto"></div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        @*Using common component EmailNotificationsGrid to display notifications*@
+        <EmailNotificationsGrid EmailNotifications="EmailNotifications"></EmailNotificationsGrid>
+    </div>
+</div>
+
+@code
+{
+    private string title = "Account Email Notifications | Synergy Commerce Admin Panel";
+
+    List<EmailNotificationsModel> EmailNotifications = new List<EmailNotificationsModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        EmailNotifications = PlaceholderList;
+
+    }
+
+    public List<EmailNotificationsModel> PlaceholderList = new List<EmailNotificationsModel>()
+{
+    new EmailNotificationsModel(){ Id=1, EmailName = "Account Invitation", EmailSubject = "Complete your account sign-up", FromEmail = "email@email.com" },
+    new EmailNotificationsModel(){ Id=2, EmailName = "Account Confirmation", EmailSubject = "Thank for completing your account", FromEmail = "email@email.com" },
+    new EmailNotificationsModel(){ Id=3, EmailName = "Magic Link", EmailSubject = "Your Magic Link sign in", FromEmail = "email@email.com" },
+    new EmailNotificationsModel(){ Id=3, EmailName = "Reset Password", EmailSubject = "Reset your password", FromEmail = "" },
+     };
+
+}

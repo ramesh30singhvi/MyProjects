@@ -1,0 +1,94 @@
+﻿@page "/tickets/sell-tickets-event-list"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings/ticketing" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="far fa-cart-shopping me-2"></span>Sell Tickets</h5>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="sf-grid min-vh-75">
+            <SfGrid DataSource="@TicketList" AllowPaging="true" Width="100%" class="border-x-0">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && TicketList.Count <= 0)
+                        {
+                            <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Tickets</h6>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn HeaderText="Event Name" TextAlign="TextAlign.Left" Width="140">
+                        <Template>
+                            @{
+                                var ticketData = (context as TicketData);
+                                <a href="/reports/tickets/ticket-sales-report">@ticketData.EventName</a>
+                            }
+                        </Template>
+                    </GridColumn>                   
+                    <GridColumn Field=@nameof(TicketData.StartDate) HeaderText="Start Date" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(TicketData.EndDate) HeaderText="End date" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(TicketData.Capacity) HeaderText="Capacity" TextAlign="TextAlign.Left" Width="40"></GridColumn>
+                    <GridColumn Field=@nameof(TicketData.Venue) HeaderText="Venue" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+</div>
+
+@code
+{
+
+    private string title = "Event Manager | Synergy Commerce Admin Panel";
+
+    [Parameter]
+    public int Id { get; set; }
+
+    private bool SpinnerVisibility { get; set; } = false;
+    private Boolean isLoading = true;
+
+
+    public class TicketData
+    {
+        public string EventName { get; set; }
+        public string StartDate { get; set; }
+        public string EndDate { get; set; }
+        public string Capacity { get; set; }
+        public string Venue { get; set; }
+    }
+
+    public List<TicketData> TicketList = new List<TicketData>()
+{
+        new TicketData(){ EventName= "Chritsmas Celler Tour (Friday, December 3rd)", StartDate= "12/03/2021 6:00 PM", EndDate= "12/3/2021 7:00 PM",  Capacity="4/35",Venue="Messina Hof Winery & Resort" },
+        new TicketData(){ EventName= "Chritsmas Celler Tour (Friday, December 10th)", StartDate= "12/10/2021 6:00 PM", EndDate= "12/10/2021 7:00 PM",  Capacity="0/35",Venue="Messina Hof Winery & Resort" },
+        new TicketData(){ EventName= "Chritsmas Celler Tour (Friday, December 11th)", StartDate= "12/11/2021 6:00 PM", EndDate= "12/11/2021 7:00 PM",  Capacity="7/35",Venue="Messina Hof Winery & Resort" },
+        new TicketData(){ EventName= "Who Killed Santa? Murder Mystry Dinner", StartDate= "12/11/2021 7:00 PM", EndDate= "12/11/2021 10:00 PM",  Capacity="60/60",Venue="Messina Hof Winery & Resort" },
+        new TicketData(){ EventName= "Chritsmas Celler Tour (Friday, December 17th)", StartDate= "12/17/2021 6:00 PM", EndDate= "12/17/2021 7:00 PM",  Capacity="2/35",Venue="Messina Hof Winery & Resort" },
+ };
+
+
+
+}

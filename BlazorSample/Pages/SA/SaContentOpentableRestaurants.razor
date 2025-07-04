@@ -1,0 +1,71 @@
+﻿@page "/sa/opentable-restaurants"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Client.ViewModels
+@inject IBusinessViewModel _businessViewModel
+@attribute [Authorize]
+
+
+<AuthorizeView>
+    <Authorized>
+        <SfSpinner @bind-Visible="isLoading"></SfSpinner>
+        <Title Value="@title"></Title>
+
+        <div class="py-3">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-0"><a href="/sa/configuration" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a>OpenTable Restaurants</h5>
+                </div>
+            </div>
+            <hr />
+        </div>
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@PlaceholderList" AllowPaging="true" AllowFiltering="true" Width="100%">
+                <GridColumns>
+                    <GridColumn Field=@nameof(PlaceholderData.RId) HeaderText="RID" TextAlign="TextAlign.Left" Width="40"></GridColumn>
+                    <GridColumn Field=@nameof(PlaceholderData.CPId) HeaderText="CP Id" TextAlign="TextAlign.Left" Width="40"></GridColumn>
+                    <GridColumn Field=@nameof(PlaceholderData.BusinessName) HeaderText="Business Name" TextAlign="TextAlign.Left" Width="130"></GridColumn>
+                    <GridColumn Field=@nameof(PlaceholderData.City) HeaderText="City" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(PlaceholderData.State) HeaderText="State" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(PlaceholderData.ZipCode) HeaderText="Zip Code" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn AllowFiltering="false" HeaderText="" TextAlign="TextAlign.Center" Width="40">
+                        <Template Context="ItemTypeContext">
+                            @{
+                                <button class="delete_icon">
+                                    <span class="far fa-plus"></span>
+                                </button>
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+@code
+{
+    private string title = "OpenTable Restaurants | Synergy Commerce Admin Panel";
+    private bool isLoading = false;
+
+    public class PlaceholderData
+    {
+        public string RId { get; set; }
+        public string CPId { get; set; }
+        public string BusinessName { get; set; }
+        public string City { get; set; }
+        public string State { get; set; }
+        public string ZipCode { get; set; }
+    }
+
+    public List<PlaceholderData> PlaceholderList = new List<PlaceholderData>(){
+        new PlaceholderData(){ RId= "51568", CPId= "0", BusinessName = "' BAR VERDE", City= "New York", State= "NY", ZipCode= "10003"  },
+        new PlaceholderData(){ RId= "2314", CPId= "0", BusinessName = "'Cesca", City= "New York", State= "NY", ZipCode= "10024"  },
+        new PlaceholderData(){ RId= "1047742", CPId= "0", BusinessName = "'Olu Cafe", City= "Lahaina", State= "HI", ZipCode= "96761"  },
+        new PlaceholderData(){ RId= "72253", CPId= "0", BusinessName = "'Ulu Ocean Grill and Sushi Lounge", City= "Kaupulehu", State= "HI", ZipCode= "96740"  },
+        new PlaceholderData(){ RId= "255904", CPId= "0", BusinessName = "(716) Food and Sport", City= "Buffalo", State= "NY", ZipCode= "14203"  },
+        new PlaceholderData(){ RId= "1040677", CPId= "0", BusinessName = "(kol)", City= "Rapid City", State= "SD", ZipCode= "57701"  },
+        new PlaceholderData(){ RId= "1002841", CPId= "0", BusinessName = "+39 Italian Restaurant", City= "Ames", State= "IA", ZipCode= "50010-7110"  },
+        new PlaceholderData(){ RId= "24979", CPId= "0", BusinessName = ".Tarallucci e Vino Union Square", City= "New York", State= "NY", ZipCode= "10003"  },
+     };
+}

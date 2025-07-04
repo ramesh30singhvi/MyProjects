@@ -1,0 +1,169 @@
+﻿@page "/settings/integrated-partners/vinsuite/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm Model="@vinSuite" Context="formContext" Class="row g-3">
+    <DataAnnotationsValidator />
+    <div class="card">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h5 class="mb-0"><a href="marketplace/partner/@Id" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-plug me-2"></span>VinSuite</h5>
+                </div>
+                <div class="col-md-auto">
+                    <button @onclick="@(() => TestLogin(formContext))" class="btn btn-sm btn-outline-secondary me-2" hidden="@(SetTestLoginBtnVisibility())">Test Login</button>
+                    <button class="btn btn-sm btn-primary" @onclick="@(() => SaveVinSuite(formContext))">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="inputVinSuiteApiUsername" class="form-label">VinSuite API Username</label>
+                <InputText class="form-control" @bind-Value="vinSuite.APIUsername" id="inputVinSuiteApiUsername" type="text" placeholder="API Username"></InputText>
+                <ValidationMessage For="@(() => vinSuite.APIUsername)" />
+            </div>
+            <div class="mb-3">
+                <label for="inputVinSuiteApiPassword" class="form-label">VinSuite API Password</label>
+                <InputText class="form-control" @bind-Value="vinSuite.APIPassword" id="inputVinSuiteApiPassword" type="password" placeholder="API Password"></InputText>
+                <ValidationMessage For="@(() => vinSuite.APIPassword)" />
+            </div>
+            <div class="row mb-3 g-3">
+                <div class="col-12 col-lg-6">
+                    <label for="inputVinSuiteDirect" class="form-label">Sales Associate - Direct (WGT)</label>
+                    <InputText class="form-control" @bind-Value="vinSuite.SalesAssociateDirectWgt" id="inputVinSuiteDirect" type="text" placeholder="Direct (WGT) Sales Associate"></InputText>
+                    <ValidationMessage For="@(() => vinSuite.SalesAssociateDirectWgt)" />
+                </div>
+                <div class="col-12 col-lg-6">
+                    <label for="inputVinSuiteBackOffice" class="form-label">Sales Associate - Back Office</label>
+                    <InputText class="form-control" @bind-Value="vinSuite.SalesAssociateBackOffice" id="inputVinSuiteBackOffice" type="text" placeholder="Back Office Sales Associate"></InputText>
+                    <ValidationMessage For="@(() => vinSuite.SalesAssociateBackOffice)" />
+                </div>
+            </div>
+            <div class="row mb-3 g-3">
+                <div class="col-12 col-lg-6">
+                    <label for="inputVinSuiteAffiliate" class="form-label">Sales Associate - Affiliate</label>
+                    <InputText class="form-control" @bind-Value="vinSuite.SalesAssociateAffiliate" id="inputVinSuiteAffiliate" type="text" placeholder="Affiliate Sales Associate"></InputText>
+                    <ValidationMessage For="@(() => vinSuite.SalesAssociateAffiliate)" />
+                </div>
+                <div class="col-12 col-lg-6">
+                    <label for="inputVinSuiteConcierge" class="form-label">Sales Associate - Concierge</label>
+                    <InputText class="form-control" @bind-Value="vinSuite.SalesAssociateConcierge" id="inputVinSuiteConcierge" type="text" placeholder="Concierge Sales Associate"></InputText>
+                    <ValidationMessage For="@(() => vinSuite.SalesAssociateConcierge)" />
+                </div>
+            </div>
+            <div class="row mb-3 g-3">
+                <div class="col-12 col-lg-6">
+                    <label for="inputVinSuiteReferral" class="form-label">Sales Associate - Referral</label>
+                    <InputText class="form-control" @bind-Value="vinSuite.SalesAssociateReferral" id="inputVinSuiteReferral" type="text" placeholder="Referral Sales Associate"></InputText>
+                    <ValidationMessage For="@(() => vinSuite.SalesAssociateReferral)" />
+                </div>
+                <div class="col-12 col-lg-6">
+                    <label for="inputVinSuiteTablePro" class="form-label">Sales Associate - Table Pro</label>
+                    <InputText class="form-control" @bind-Value="vinSuite.SalesAssociateTablePro" id="inputVinSuiteTablePro" type="text" placeholder="Table Pro Sales Associate"></InputText>
+                    <ValidationMessage For="@(() => vinSuite.SalesAssociateTablePro)" />
+                </div>
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "VinSuite | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    Member currentMember = new Member();
+    VinSuiteRequestModel vinSuite = new VinSuiteRequestModel();
+    List<string> vinSuiteMetaKeys = new List<string>(){
+        BusinessSettingsMetaKey.VinSuiteAPIUsername,
+        BusinessSettingsMetaKey.VinSuiteAPIPassword,
+        BusinessSettingsMetaKey.VinSuiteSalesAssociateDirectWgt,
+        BusinessSettingsMetaKey.VinSuiteSalesAssociateBackOffice,
+        BusinessSettingsMetaKey.VinSuiteSalesAssociateAffiliate,
+        BusinessSettingsMetaKey.VinSuiteSalesAssociateConcierge,
+        BusinessSettingsMetaKey.VinSuiteSalesAssociateReferral,
+        BusinessSettingsMetaKey.VinSuiteSalesAssociateTablePro
+    };
+
+    protected bool SetTestLoginBtnVisibility()
+    {
+        if (!string.IsNullOrEmpty(vinSuite.APIUsername) &&
+            !string.IsNullOrEmpty(vinSuite.APIPassword))
+        {
+            return false;
+        }
+        else
+            return true;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get business settings for VinSuite
+        var response = await _settingsViewModel.GetBusinessSettingsListAsync(currentMember.Id, BusinessSettingsMetaNamespace.VinSuite);
+        foreach (var metaKey in vinSuiteMetaKeys)
+        {
+            var metaValue = response?.data?.Where(x => x.MetaKey == metaKey)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+            Helper.SetPropertyValue(vinSuite, metaKey, metaValue);//Note: meta key and request model property name should be same
+        }
+        SetTestLoginBtnVisibility();
+        SpinnerVisibility = false;
+    }
+    private async Task TestLogin(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var response = await _settingsViewModel.VinSuiteTestLogin(vinSuite.APIUsername, vinSuite.APIPassword);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.LoginSuccessful, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(string.IsNullOrEmpty(response.error_info.description) ? Constants.LoginFailed : response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    public async Task SaveVinSuite(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var businessSettings = await Helper.BusinessSettingsMapping(vinSuite, currentMember.Id, BusinessSettingsMetaNamespace.VinSuite, vinSuiteMetaKeys);
+            var response = await _settingsViewModel.CreateBusinessSettingListAsync(businessSettings);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+}

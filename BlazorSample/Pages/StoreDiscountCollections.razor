@@ -1,0 +1,347 @@
+﻿@page "/store/discount-collections"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@inject IDiscountViewModel _discountViewModel
+@using AutoMapper;
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject IMapper _mapper
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="store/discounts-promotions" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="far fa-tags me-2"></span>Discount Collections</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="javascript:void(0)" @onclick="@OpenDiscountModal">Add New</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@businessDiscountGroups" AllowPaging="true" Width="100%" class="border-x-0">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && businessDiscountGroups.Count <= 0)
+                        {
+                            <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Discount Collections</h6>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn HeaderText="Discount Collection" TextAlign="TextAlign.Left" Width="400px">
+                        <Template>
+                            @{
+                                var discountGroup = (context as BusinessDiscountGroupListModel);
+                                <a href="javascript:void(0)" @onclick="()=>GetDiscountGroupDetail(discountGroup.Id)">@(discountGroup.GroupName)</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field="@nameof(BusinessDiscountGroupListModel.DiscountCount)" HeaderText="Discount Count" TextAlign="TextAlign.Left" Width="200" />
+                    <GridColumn HeaderText="" Width="50px">
+                        <Template>
+                            @{
+                                var discountGroup = (context as BusinessDiscountGroupListModel);
+                                <a href="javascript:void(0)" @onclick="()=> DeleteDialogOpen(discountGroup.Id)"><span class="fa-regular fa-trash-can"></span></a>
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+    <div class="card-footer">
+    </div>
+</div>
+
+<EditForm Model="@businessDiscountGroupRequest" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog IsModal="true" Width="800px" ShowCloseIcon="true" @bind-Visible="DiscountModalVisibility">
+        <DialogTemplates>
+            <Header><h5 class="modal-title" id="modalLabel">Discount Collection</h5></Header>
+            <Content>
+                <div class="mb-3">
+                    <label class="form-label" for="inputIpAddress">Collection Name</label>
+                    <InputText @bind-Value="businessDiscountGroupRequest.GroupName" class="form-control" id="inputDiscountCollectionName" />
+                    <ValidationMessage For="@(() => businessDiscountGroupRequest.GroupName)" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="selReason">Discounts</label>
+                    <SfMultiSelect ShowSelectAll="true" AllowFiltering="true" Mode="VisualMode.CheckBox" @bind-Value="businessDiscountGroupRequest.BusinessDiscounts" TValue="List<int>" TItem="BusinessDiscountListModel" Placeholder="Select Discounts" DataSource="@businessDiscounts">
+                        <MultiSelectEvents TItem="BusinessDiscountListModel" TValue="List<int>" SelectedAll="@BusinessDiscountSelectedAll" Cleared="@BusinessDiscountCleared" OnValueRemove="@BusinessDiscountValueRemove" OnValueSelect="@BusinessDiscountValueSelect"></MultiSelectEvents>
+                        <MultiSelectFieldSettings Text="DiscountName" Value="Id"></MultiSelectFieldSettings>
+                    </SfMultiSelect>
+                    <ValidationMessage For="@(() => businessDiscountGroupRequest.BusinessDiscounts)" />
+                </div>
+                <div class="sf-grid">
+                    <SfGrid DataSource="@selectedDiscounts" AllowPaging="true" Width="100%">
+                        <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                        <GridPageSettings PageSize="50"></GridPageSettings>
+                        <GridTemplates>
+                            <EmptyRecordTemplate>
+                                @if (!isLoading && selectedDiscounts.Count <= 0)
+                                {
+                                    <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                        <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Discounts Selected</h6>
+                                    </div>
+                                }
+                            </EmptyRecordTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            <GridColumn Field="@nameof(BusinessDiscountData.DiscountName)" HeaderText="Discount" TextAlign="TextAlign.Left" Width="300px" />
+                            <GridColumn Field="@nameof(BusinessDiscountData.DiscountStart)" Type="ColumnType.Date" Format="M/d/yyyy h:mm tt" HeaderText="Start Date" TextAlign="TextAlign.Left" Width="200px" />
+                            <GridColumn Field="@nameof(BusinessDiscountData.DiscountEnd)" Type="ColumnType.Date" Format="M/d/yyyy h:mm tt" HeaderText="End Date" TextAlign="TextAlign.Left" Width="200px" />
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </Content>
+            <FooterTemplate>
+                <button type="button" class="btn btn-secondary" @onclick="@CloseDiscountModal">Close</button>
+                <button type="button" class="btn btn-primary" @onclick="@(()=>SaveDiscountGroup(formContext))">Save</button>
+            </FooterTemplate>
+        </DialogTemplates>
+        <DialogEvents Closed="@CloseDiscountModal"></DialogEvents>
+    </SfDialog>
+</EditForm>
+
+<DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="() => DeleteDiscountGroup(idForDelete)"></DeleteConfirmation>
+
+
+@code
+{
+    private string title = "Discount Collections | Synergy Admin Panel";
+    private Boolean isLoading = true;
+    private bool DiscountModalVisibility { get; set; } = false;
+    private Member currentMember;
+    public bool openDeleteDialog = false;
+    public int idForDelete = 0;
+    BusinessDiscountGroupRequestModel businessDiscountGroupRequest = new BusinessDiscountGroupRequestModel();
+    List<BusinessDiscountListModel> businessDiscounts = new List<BusinessDiscountListModel>();
+    List<BusinessDiscountGroupListModel> businessDiscountGroups = new List<BusinessDiscountGroupListModel>();
+    public class BusinessDiscountData
+    {
+        public int Id { get; set; }
+        public string DiscountName { get; set; }
+        public DateTime? DiscountStart { get; set; }
+        public DateTime? DiscountEnd { get; set; }
+    }
+    public ObservableCollection<BusinessDiscountData> selectedDiscounts = new ObservableCollection<BusinessDiscountData>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        await GetBusinessDiscountGroups();
+
+        //Get Business Discounts
+        var businessDiscountsResponse = await _discountViewModel.GetDiscounts(currentMember.Id, null, null, "Active", string.Empty);
+        if (businessDiscountsResponse.success)
+        {
+            businessDiscounts = businessDiscountsResponse.data;
+        }
+        StateHasChanged();
+    }
+
+    private async Task GetBusinessDiscountGroups()
+    {
+        isLoading = true;
+        var discountGroupsResponse = await _discountViewModel.GetDiscountGroups(currentMember.Id);
+        if (discountGroupsResponse.success)
+        {
+            businessDiscountGroups = discountGroupsResponse.data;
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void OpenDiscountModal()
+    {
+        this.DiscountModalVisibility = true;
+    }
+
+    private void CloseDiscountModal()
+    {
+        businessDiscountGroupRequest = new BusinessDiscountGroupRequestModel();
+        selectedDiscounts = new ObservableCollection<BusinessDiscountData>();
+        this.DiscountModalVisibility = false;
+    }
+
+    private void BusinessDiscountValueSelect(SelectEventArgs<BusinessDiscountListModel> args)
+    {
+        if (args.ItemData != null)
+        {
+            BusinessDiscountData businessDiscountData = new BusinessDiscountData
+            {
+                Id = args.ItemData.Id,
+                DiscountName = args.ItemData.DiscountName,
+                DiscountStart = args.ItemData.DateTimeStart,
+                DiscountEnd = args.ItemData.DateTimeEnd
+            };
+
+            if (selectedDiscounts != null && selectedDiscounts.Count > 0)
+            {
+                selectedDiscounts.Add(businessDiscountData);
+            }
+            else
+            {
+                selectedDiscounts = new ObservableCollection<BusinessDiscountData>();
+                selectedDiscounts.Add(businessDiscountData);
+                StateHasChanged();
+            }
+        }
+        StateHasChanged();
+    }
+
+    private void BusinessDiscountValueRemove(RemoveEventArgs<BusinessDiscountListModel> args)
+    {
+        if (args.ItemData != null)
+        {
+            var discount = selectedDiscounts.FirstOrDefault(x => x.Id == args.ItemData.Id);
+            if (discount != null)
+            {
+                selectedDiscounts.Remove(discount);
+            }
+        }
+        StateHasChanged();
+    }
+
+    private void BusinessDiscountCleared(MouseEventArgs args)
+    {
+        selectedDiscounts = new ObservableCollection<BusinessDiscountData>();
+    }
+
+    private void BusinessDiscountSelectedAll(SelectAllEventArgs<BusinessDiscountListModel> args)
+    {
+        if (args.IsChecked && args.ItemData != null && args.ItemData.ToList().Count > 0)
+        {
+            foreach (var discount in args.ItemData)
+            {
+                var discountExist = selectedDiscounts.Any(x => x.Id == discount.Id);
+                if (!discountExist)
+                {
+                    BusinessDiscountData businessDiscountData = new BusinessDiscountData
+                    {
+                        Id = discount.Id,
+                        DiscountName = discount.DiscountName,
+                        DiscountStart = discount.DateTimeStart,
+                        DiscountEnd = discount.DateTimeEnd
+                    };
+
+                    if (selectedDiscounts != null && selectedDiscounts.Count > 0)
+                    {
+                        selectedDiscounts.Add(businessDiscountData);
+                    }
+                    else
+                    {
+                        selectedDiscounts = new ObservableCollection<BusinessDiscountData>();
+                        selectedDiscounts.Add(businessDiscountData);
+                        StateHasChanged();
+                    }
+                }
+            }
+        }
+        StateHasChanged();
+    }
+
+    private async Task SaveDiscountGroup(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            isLoading = true;
+            businessDiscountGroupRequest.BusinessId = currentMember.Id;
+            var response = await _discountViewModel.AddUpdateDiscountGroup(businessDiscountGroupRequest);
+            isLoading = false;
+            if (response.success)
+            {
+                if (businessDiscountGroupRequest.Id == 0)
+                {
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                }
+                else
+                {
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                }
+                CloseDiscountModal();
+                await GetBusinessDiscountGroups();
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    private async Task GetDiscountGroupDetail(int discountGroupId)
+    {
+        isLoading = true;
+        var discountGroupDetailResponse = await _discountViewModel.GetDiscountGroupDetail(discountGroupId);
+        if (discountGroupDetailResponse.success && discountGroupDetailResponse.data != null)
+        {
+            businessDiscountGroupRequest = _mapper.Map<BusinessDiscountGroupRequestModel>(discountGroupDetailResponse.data);
+            if (businessDiscountGroupRequest.BusinessDiscounts != null && businessDiscountGroupRequest.BusinessDiscounts.Count > 0)
+            {
+                foreach (var discount in businessDiscountGroupRequest.BusinessDiscounts)
+                {
+                    var discountData = businessDiscounts.FirstOrDefault(x => x.Id == discount);
+                    if (discountData != null)
+                    {
+                        BusinessDiscountData businessDiscountData = new BusinessDiscountData
+                        {
+                            Id = discountData.Id,
+                            DiscountName = discountData.DiscountName,
+                            DiscountStart = discountData.DateTimeStart,
+                            DiscountEnd = discountData.DateTimeEnd
+                        };
+                        selectedDiscounts.Add(businessDiscountData);
+                    }
+                }
+            }
+            OpenDiscountModal();
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void DeleteDialogOpen(int id)
+    {
+        openDeleteDialog = true;
+        idForDelete = id;
+    }
+
+    private async Task DialogClose()
+    {
+        openDeleteDialog = false;
+    }
+
+    private async Task DeleteDiscountGroup(int id)
+    {
+        var discountGroupDeleteResponse = await _discountViewModel.DeleteDiscountGroup(id);
+        if (discountGroupDeleteResponse.success)
+        {
+            toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+            openDeleteDialog = false;
+            await GetBusinessDiscountGroups();
+        }
+        else
+        {
+            toastService.ShowToast(Constants.InternalServerError, ToastLevel.Error);
+        }
+    }
+
+}
+

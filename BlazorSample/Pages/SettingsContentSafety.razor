@@ -1,0 +1,147 @@
+﻿@page "/settings/content/safety"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ToastService toastService
+@inject ISafetyPledgeViewModel _safetyPledgeViewModel
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        <div class="card mb-3">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-desktop me-2"></span>CellarPass Safety Pledge</h5>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-sm btn-primary" @onclick="@(() => SaveSafetyPledge())">Save</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <form>
+                    <div class="row mb-4">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label"> Agree to Safety Pledge</label>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="chkAgreeToSafetyPledge" @bind="AgreeToSafetyPledge">
+                                    <label class="form-check-label" for="chkAgreeToSafetyPledge">
+                                        Agree
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">Safety Badge Color</label>
+                            <div class="mb-3">
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input bg-white form-control-lg" type="radio" id="inlineCheckbox2" name="chkbadgecolor" @onchange="SelectBadgeColor" value="0" checked="@(SafetyBadgeColor == (int)SafetyBadgeColorType.WhiteBadge)">
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input bg-warning form-control-lg" type="radio" id="inlineCheckbox2" name="chkbadgecolor" @onchange="SelectBadgeColor" value="1" checked="@(SafetyBadgeColor == (int)SafetyBadgeColorType.OrangeBadge)">
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input bg-success form-control-lg" type="radio" id="inlineCheckbox3" name="chkbadgecolor" @onchange="SelectBadgeColor" value="2" checked="@(SafetyBadgeColor == (int)SafetyBadgeColorType.GreenBadge)">
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input bg-danger form-control-lg" type="radio" id="inlineCheckbox4" name="chkbadgecolor" @onchange="SelectBadgeColor" value="3" checked="@(SafetyBadgeColor == (int)SafetyBadgeColorType.RedBadge)">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card border shadow-none mb-3">
+                        <div class="card-header border-bottom">
+                            <span class="far fa-shield-virus me-2"></span>CellarPass Safety Pledge
+                        </div>
+                        <div class="card-body">
+                            <h3>CellarPass Visitor Safety Pledge</h3><p>The safety of employees and visitors remain our company’s top priority. As the coronavirus disease 2019 (COVID-19) outbreak continues to evolve and spreads globally, we are monitoring the situation closely and will periodically update company guidance based on current recommendations from the&nbsp;<a href="https://www.cdc.gov/coronavirus/2019-nCoV/index.html" target="_blank">Centers for Disease Control and Prevention</a>&nbsp;and the&nbsp;<a href="https://www.who.int/health-topics/coronavirus#tab=tab_1" target="_blank">World Health Organization</a>.<br></p><p>To help slow the spread of COVID-19 and reduce the potential risk of exposure to our guests, we have asked our destination partners to commit to the Cellarpass Safety Pledge. The Visitor Safety Pledge program was designed to make it easy for our guests to quickly identify our destination partners who have pledge to follow a consistent set of guidelines. Those that have committed to our pledge will display our Visitor Safety Pledge badge on their CellarPass business listing page.</p> <p><span>In order for our destination partners to receive the CellarPass Visitor Safety badge, they agree and continue to follow the industry’s recommend guidelines:</span></p> <p><span><strong>Employee Guidelines</strong></span></p> <ul><li><span>Provide for daily wellness screens of employees following city, county, state, and EEOC guidance on primary symptom checks for COVID-19.</span></li><li><span>Reinforce that meticulous hand hygiene (frequent and proper handwashing) is of utmost importance for all employees.</span></li><li><span>Require employees to maintain a six-foot distance from other employees and customers.</span></li><li><span>Ensure employees wear gloves as required by sanitization instructions when performing cleaning, sanitizing, or disinfecting activities.</span></li><li><span>Follow appropriate privacy requirements when wellness checks are conducted.</span></li><li><span>Sanitize customer-contact surfaces at tables before and after each tasting, including seats, tables, menus, and all other touch points.</span></li><li><span>Frequently sanitize all common areas and touch points, including payment devices.</span></li></ul> <p><span><strong>Distancing &amp; Sanitization Measures</strong></span></p> <ul><li><span>Require that all tasting room visits are conducted by-appointment only.</span></li><li><span>Adhere to requirements for hours of operations set forth by county ordinances.</span></li><li><span>Limit parties to six people or fewer.</span></li><li><span>Ensure that all employees and customers wear face coverings consistent with individual county requirements.</span></li><li><span>Inform customers at time of reservation that face coverings will be required until seated, then again after tasting concludes through their departure according to county requirements.</span></li><li><span>Configure seating to comply with physical distancing requirements ensuring tables remain at least six feet apart.</span></li><li><span>Place visual cues and signage to ensure customers maintain a six-foot distance.</span></li></ul>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private string title = "Safety Pledge | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    private int SafetyBadgeColor { get; set; }
+    private bool AgreeToSafetyPledge { get; set; } = false;
+    Member currentMember = new Member();
+
+    /// <summary>
+    /// SafetyBadgeColorType Enum
+    /// </summary>
+    /// <param name="args"></param>
+    private void SelectBadgeColor(ChangeEventArgs args)
+    {
+        SafetyBadgeColor = Convert.ToInt32(args.Value);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get business settings for SafetyPledge
+        var response = await _safetyPledgeViewModel.GetSafetyPledgeSettingListAsync(currentMember.Id, BusinessSettingsMetaNamespace.SafetyPledge);
+        SafetyBadgeColor = Convert.ToInt32(response?.data?.Where(x => x.MetaKey == BusinessSettingsMetaKey.SafetyBadgeColor)?.FirstOrDefault()?.MetaValue ?? "0");
+        AgreeToSafetyPledge = Convert.ToBoolean(response?.data?.Where(x => x.MetaKey == BusinessSettingsMetaKey.AgreeToSafetyPledge)?.FirstOrDefault()?.MetaValue ?? "false");
+
+        SpinnerVisibility = false;
+    }
+
+    public async Task SaveSafetyPledge()
+    {
+        SpinnerVisibility = true;
+        var businessSettings = new List<BusinessSettingsRequestModel>();
+        businessSettings.Add(new BusinessSettingsRequestModel
+        {
+            BusinessId = currentMember.Id,
+            MetaNamespace = BusinessSettingsMetaNamespace.SafetyPledge,
+            Title = string.Empty,
+            Description = string.Empty,
+            MetaKey = BusinessSettingsMetaKey.SafetyBadgeColor,
+            MetaValue = Convert.ToString(SafetyBadgeColor),
+            ValueType = Convert.ToInt32(ValueTypeEnum.Integer)
+        });
+        businessSettings.Add(new BusinessSettingsRequestModel
+        {
+            BusinessId = currentMember.Id,
+            MetaNamespace = BusinessSettingsMetaNamespace.SafetyPledge,
+            Title = string.Empty,
+            Description = string.Empty,
+            MetaKey = BusinessSettingsMetaKey.AgreeToSafetyPledge,
+            MetaValue = Convert.ToString(AgreeToSafetyPledge),
+            ValueType = Convert.ToInt32(ValueTypeEnum.Boolean)
+        });
+        var response = await _safetyPledgeViewModel.AddUpdateSafetyPledgeSettingAsync(businessSettings);
+        SpinnerVisibility = false;
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+}

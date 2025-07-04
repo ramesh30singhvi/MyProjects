@@ -1,0 +1,91 @@
+﻿@page "/settings/sales-channels/ticketing/payments"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject IPaymentProfileViewModel _paymentProfileViewModel
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<EditForm Model="@ticketingPaymentProfileRequest" Context="formContext" Class="row g-3">
+    <DataAnnotationsValidator />
+    <div class="card shadow-none border">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-3 mb-md-0"><a href="settings/ticketing" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-hand-holding-dollar me-2"></span>Ticketing Payments</h5>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-sm btn-primary" @onclick="@(() => SaveTicketingPaymentProfileSettings(formContext))">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="mb-3 col-6 col-md-3">
+                <label class="form-label" for="selPaymentProfile">Payment Profile</label>
+                <SfDropDownList TValue="int" @bind-Value="ticketingPaymentProfileRequest.TicketingPaymentProfile" TItem="PaymentProfileViewModel" Placeholder="Select Payment Profile" AllowFiltering="true" DataSource="@paymentProfiles">
+                    <DropDownListFieldSettings Text="PaymentProfileName" Value="Id"></DropDownListFieldSettings>
+                </SfDropDownList>
+                <ValidationMessage For="@(() => ticketingPaymentProfileRequest.TicketingPaymentProfile)" />
+            </div>
+        </div>
+    </div>
+</EditForm>
+@code
+{
+    private string title = "Ticketing Payments | Synergy Commerce Admin Panel";
+    private bool isLoading = false;
+    Member currentMember = new Member();
+    List<PaymentProfileViewModel> paymentProfiles = new List<PaymentProfileViewModel>();
+    TicketingPaymentProfileRequestModel ticketingPaymentProfileRequest = new TicketingPaymentProfileRequestModel();
+    List<string> ticketingPaymentProfileMetaKeys = new List<string>(){
+        BusinessSettingsMetaKey.TicketingPaymentProfile
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        //Get CurrentMember
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get all Payment Profiles
+        var paymentProfilesResponse = await _paymentProfileViewModel.GetPaymentProfilesAsync(currentMember.Id);
+        if (paymentProfilesResponse.success)
+        {
+            paymentProfiles = paymentProfilesResponse.data;
+        }
+
+        //Get business settings for Ticketing Payment Profile
+        var response = await _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.Payments, BusinessSettingsMetaKey.TicketingPaymentProfile);
+        var metaValue = response?.data?.MetaValue ?? string.Empty;
+        Helper.SetPropertyValue(ticketingPaymentProfileRequest, BusinessSettingsMetaKey.TicketingPaymentProfile, metaValue);//Note: meta key and request model property name should be same
+        isLoading = false;
+    }
+
+    private async Task SaveTicketingPaymentProfileSettings(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            isLoading = true;
+            var businessSettings = await Helper.BusinessSettingsMapping(ticketingPaymentProfileRequest, currentMember.Id, BusinessSettingsMetaNamespace.Payments, ticketingPaymentProfileMetaKeys);
+            var response = await _settingsViewModel.CreateBusinessSettingAsync(businessSettings.FirstOrDefault());
+            isLoading = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+}

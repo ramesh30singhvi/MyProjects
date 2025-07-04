@@ -1,0 +1,182 @@
+﻿@page "/ticketing/fee-calculator"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@inject ILocalStorageService localStorage
+@inject HttpClient _httpClient
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+
+<div class="card shadow-none border">
+
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings/ticketing" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-calculator me-2"></span>Ticketing Fee Calculator </h5>
+            </div>
+            <div class="col-auto">
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+
+        <div class="row">
+            <div class="col-md-6">
+                <h5>Calculate your potential earnings</h5>
+                <p>Fees based on our Professional pan and include Synergy Payment Processing.</p>
+                <div class="row mb-3">
+                    <div class="col-5">
+                        <label for="inputTicketPrice" class="form-label">Ticket Price</label>
+                        <input id="inputTicketPrice" type="text" class="form-control" placeholder="$">
+                    </div>
+                    <div class="col-2 d-flex justify-content-center align-items-end">
+                        <span class="fa-solid fa-x mb-2"></span>
+                    </div>
+                    <div class="col-5">
+                        <label for="inputTicketsSold" class="form-label">Tickets Sold</label>
+                        <input id="inputTicketsSold" type="text" class="form-control" placeholder="">
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label for="selFeeHandling" class="form-label">Fee Handling</label>
+                        <select id="selFeeHandling" class="form-select">
+                            <option value="1">Pass fees (service) to attendees</option>
+                            <option value="2">Pass fees (service + CC processing) to attendees</option>
+                            <option value="3">Absorb fees</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label for="selSynergyPlan" class="form-label">Synergy Plan</label>
+                        <select id="selSynergyPlan" class="form-select">
+                            <option value="1">Pro Plan</option>
+                            <option value="2">Super Plan</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 text-center pt-4">
+                <h5>Your estimated payout</h5>
+                <div class="my-4">
+                    <h2 class="display-3 text-success">$400.00<span class="text-muted fs-1 align-top">*</span></h2>
+                </div>
+                <div class="my-4">
+                    <h6>Attendee pays</h6>
+                    <a href="#modalFees" data-bs-toggle="modal">$10.00</a>
+                </div>
+                <div class="my-4">
+                    <button class="btn btn-outline-primary">Create Event</button>
+                </div>
+                <p class="fs--1">*Does not include any applicable local and state taxes</p>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="modalFees" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Fees</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body px-4">
+      
+        <table class="table table-sm table-borderless text-900 fs--1">
+            <tbody>
+                <tr>
+                    <th class="fw-bold mb-2">Cost to buyer</th>
+                    <td></td>
+                </tr>
+                <tr>
+                    <th class="">Ticket price</th>
+                    <td class="text-end">$20.00 </td>
+                </tr>
+                <tr>
+                    <th>Service fee</th>
+                    <td class="text-end">$2.29</td>
+                </tr>
+                <tr>
+                    <th>Processing fee</th>
+                    <td class="text-end">$0.56</td>
+                </tr>
+                <tr class="border-top">
+                    <th>Total</th>
+                    <td class="text-end">$22.85</td>
+                </tr>
+                <tr>
+                    <th class="fw-bold my-2">Your payout</th>
+                    <td></td>
+                </tr>
+                <tr>
+                    <th>Ticket revenue</th>
+                    <td class="text-end">$20.00</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <hr />
+
+        <table class="table table-sm table-borderless text-900 fs--1">
+            <tbody>
+                <tr>
+                    <th class="fw-bold mb-2">Cost to buyer</th>
+                    <td></td>
+                </tr>
+                <tr>
+                    <th class="">Total</th>
+                    <td class="text-end">$20.00 </td>
+                </tr>
+                <tr>
+                    <th class="fw-bold my-2">Your payout</th>
+                    <td></td>
+                </tr>
+                <tr>
+                    <th class="">Ticket price</th>
+                    <td class="text-end">$20.00 </td>
+                </tr>
+                <tr>
+                    <th>Service fee</th>
+                    <td class="text-end">-$2.29</td>
+                </tr>
+               <tr>
+                    <th>Service fee</th>
+                    <td class="text-end">-0.56</td>
+                </tr>
+                <tr class="border-top">
+                    <th>Ticket revenue</th>
+                    <td class="text-end">$17.15</td>
+                </tr>
+            </tbody>
+        </table>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+@code
+{
+    private string title = "Ticketing Fee Calculator | Synergy Commerce";
+
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+
+
+}

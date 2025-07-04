@@ -1,0 +1,44 @@
+﻿@using CellarPassAppAdmin.Shared.Models.RequestModel
+
+<SfGrid @ref="ClubShippingOptionsGrid" DataSource="@ClubShippingOptionList" AllowSorting="true" Width="100%" class="shippingOption">
+    <GridColumns>
+        <GridColumn Field=@nameof(ClubShippingOption.ServiceName) HeaderText="Options" TextAlign="TextAlign.Left" Width="40" />
+        <GridColumn Field=@nameof(ClubShippingOption.ServiceCode) HeaderText="Carrier Code" TextAlign="TextAlign.Left" Width="40" />
+        <GridColumn HeaderText="Default" TextAlign="TextAlign.Left" Width="20">
+            <Template Context="clubShippingOptionContext">
+                @{
+                    var clubShippingOptionModel = (clubShippingOptionContext as ClubShippingOption);
+                    <input class="form-check-input" aria-label="Default Method" type="radio" name="radioDefaultOption" id="radioDefaultOption" @onchange="@(() => SetDefaultShippingOption.InvokeAsync(clubShippingOptionModel))" checked="@(clubShippingOptionModel.IsDefault)">
+                }
+            </Template>
+        </GridColumn>
+        <GridColumn HeaderText="" TextAlign="TextAlign.Right" Width="10">
+            <Template Context="clubShippingOptionContext">
+                @{
+                    var clubShippingOptionModel = (clubShippingOptionContext as ClubShippingOption);
+                    <button type="button" class="delete_icon" @onclick="@(()=>RemoveShippingOption.InvokeAsync(clubShippingOptionModel))">
+                        <span class="far fa-trash-alt"></span>
+                    </button>
+                }
+            </Template>
+        </GridColumn>
+    </GridColumns>
+</SfGrid>
+
+@code {
+    SfGrid<ClubShippingOption> ClubShippingOptionsGrid;
+
+    [Parameter]
+    public List<ClubShippingOption> ClubShippingOptionList { get; set; }
+
+    [Parameter]
+    public EventCallback<ClubShippingOption> SetDefaultShippingOption { get; set; }
+
+    [Parameter]
+    public EventCallback<ClubShippingOption> RemoveShippingOption { get; set; }
+
+    public void RefreshGrid()
+    {
+        ClubShippingOptionsGrid.Refresh();
+    }
+}

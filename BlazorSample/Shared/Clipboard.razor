@@ -1,0 +1,28 @@
+﻿@inject ClipboardService ClipboardService
+
+<button class="btn@(UseLargeButton ? "" : " btn-sm") btn-outline-secondary" type="button" id="btnCopyPurchaseURL" @onclick="CopyToClipboard">
+    <SfTooltip OffsetY="-10">
+        <TooltipTemplates><Content>Copy</Content></TooltipTemplates>
+        <span class="far fa-copy"></span>
+    </SfTooltip>
+</button>
+
+@code {
+    [Parameter]
+    public string Content { get; set; }
+
+    [Parameter]
+    public bool UseLargeButton { get; set; }
+
+    private async Task CopyToClipboard()
+    {
+        try
+        {
+            await ClipboardService.WriteTextAsync(Content);
+        }
+        catch
+        {
+           // Console.WriteLine("Cannot write text to clipboard");
+        }
+    }
+}

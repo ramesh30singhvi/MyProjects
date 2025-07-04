@@ -1,0 +1,171 @@
+﻿@inherits LayoutComponentBase
+@layout AdminLayout
+@using CellarPassAppAdmin.Shared.Services
+@inject IUserService _userService;
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Web
+@using Syncfusion.Blazor.Navigations
+@inject IMemberViewModel _memberViewModel
+@inject ILocalStorageService localStorage
+@inject NavigationManager _navigationManager
+
+<main class="main" id="main-authorized">
+
+    <AuthorizeView>
+        <Authorized>
+
+            <div class="container-fluid vh-100 d-flex flex-column">
+                <div class="row">
+                    <div class="col py-4 bg-white border-bottom d-flex justify-content-between">
+                        <h1 class="h4 mb-0"><a href="" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><i class="fa-solid fa-mask me-2"></i>Super Admin</h1>
+                        <a href="javascript:void(0)" @onclick="@OpenBusinessQuickSelectModal"  class="btn btn-falcon-default btn-sm px-2 me-3" title="Busines Quick Actions"><span class="far fa-building"></span></a>
+                    </div>
+                </div>
+                <div class="row flex-grow-1">
+                    <div class="col-12 col-md-2 p-0 bg-100 border-end">
+                        <div class="list-group">
+                            <a href="#" class="list-group-item list-group-item-action py-3 @(menuDashboardActive ? "bg-white" : "bg-100")" aria-current="true">
+                                <div class="d-flex align-items-center">
+                                    <span class="fa-regular fa-gauge fa-fw fa-xl me-4"></span>
+                                    <div class="flex-1 position-relative">
+                                        <h5 class="mb-0">Dashboard</h5>
+                                    </div>
+                                </div>
+                            </a>
+                            <a href="sa/business" class="list-group-item list-group-item-action py-3  @(menuBusinessActive ? "bg-white" : "bg-100")" aria-current="true">
+                                <div class="d-flex align-items-center">
+                                    <span class="fa-regular fa-building fa-fw fa-xl me-4"></span>
+                                    <div class="flex-1 position-relative">
+                                        <h5 class="mb-0">Business</h5>
+                                    </div>
+                                </div>
+                            </a>
+                            <a href="sa/content" class="list-group-item list-group-item-action py-3  @(menuContentActive ? "bg-white" : "bg-100")" aria-current="true">
+                                <div class="d-flex align-items-center">
+                                    <span class="fa-regular fa-display fa-fw fa-xl me-4"></span>
+                                    <div class="flex-1 position-relative">
+                                        <h5 class="mb-0">Content</h5>
+                                    </div>
+                                </div>
+                            </a>
+                            <a href="sa/configuration" class="list-group-item list-group-item-action py-3  @(menuConfigActive ? "bg-white" : "bg-100")" aria-current="true">
+                                <div class="d-flex align-items-center">
+                                    <span class="fa-regular fa-gears fa-fw fa-xl me-4"></span>
+                                    <div class="flex-1 position-relative">
+                                        <h5 class="mb-0">Configuration</h5>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-10 px-4 bg-white">
+
+                            @Body
+
+                    </div>
+                </div>
+            </div>
+
+            <SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="ModalBusinessQuickSelectVisible">
+                <DialogTemplates>
+                    <Header><h5 class="modal-title" id="modalLabel"><span class="fa-regular fa-bolt-lightning me-2"></span>Quick Select</h5></Header>
+                    <Content>
+                        <div class="mb-3">
+                            <label class="form-label" for="sfBusinessCombo">Business</label>
+                            <SfComboBox ID="sfBusinessCombo" TValue="string" TItem="PlaceholderBusiness" PopupHeight="230px" Placeholder="Select a business" DataSource="@listBusinesses">
+                                <ComboBoxEvents TValue="string" TItem="PlaceholderBusiness"></ComboBoxEvents>
+                                <ComboBoxFieldSettings Text="BusinessName" Value="ID"></ComboBoxFieldSettings>
+                            </SfComboBox>
+                        </div>
+                        <div class="row my-4">
+                            <div class="col-3">
+                                <button class="btn btn-falcon-default p-2"><span class="fa-regular fa-building fa-2x"></span><h6 class="mb-0">Account</h6></button>
+                            </div>
+                            <div class="col-3">
+                                <button class="btn btn-falcon-default p-2"><span class="fa-regular fa-file-invoice-dollar fa-2x"></span><h6 class="mb-0">Invoice</h6></button>
+                            </div>
+                        </div>
+
+                    </Content>
+                </DialogTemplates>
+            </SfDialog>
+
+        </Authorized>
+    </AuthorizeView>
+    <Toast></Toast>
+
+</main>
+
+@code
+{
+    private bool menuDashboardActive = false;
+    private bool menuBusinessActive = false;
+    private bool menuContentActive = false;
+    private bool menuConfigActive = false;
+
+    private bool ModalBusinessQuickSelectVisible { get; set; } = false;
+
+    private void OpenBusinessQuickSelectModal()
+    {
+        this.ModalBusinessQuickSelectVisible = true;
+    }
+    private void CloseBusinessQuickSelecteModal()
+    {
+        this.ModalBusinessQuickSelectVisible = false;
+    }
+
+    protected override void OnInitialized()
+    {
+        menuChange();
+
+    }
+
+    private void menuChange()
+    {
+
+        menuDashboardActive = false;
+        menuBusinessActive = false;
+        menuContentActive = false;
+        menuConfigActive = false;
+
+        var uri = _navigationManager.ToAbsoluteUri(_navigationManager.Uri).ToString().ToLower();
+
+
+        if (uri.Contains("/sa/dashboard"))
+        {
+            menuDashboardActive = true;
+        }
+        else if (uri.Contains("/sa/business"))
+        {
+            menuBusinessActive = true;
+        }
+        else if (uri.Contains("/sa/content"))
+        {
+            menuContentActive = true;
+        }
+        else if (uri.Contains("/sa/configuration"))
+        {
+            menuConfigActive = true;
+        }
+
+    }
+
+    public class PlaceholderBusiness
+    {
+        public string ID { get; set; }
+        public string BusinessName { get; set; }
+    }
+    public List<PlaceholderBusiness> listBusinesses = new List<PlaceholderBusiness>()
+    {
+        new PlaceholderBusiness(){ ID= "394", BusinessName= "Del Dotto Napa Historic Winery & Tasting Room" },
+        new PlaceholderBusiness(){ ID= "26", BusinessName= "Encore Winery" },
+        new PlaceholderBusiness(){ ID= "43", BusinessName= "Charter Oak Winery" },
+        new PlaceholderBusiness(){ ID= "321", BusinessName= "Jessup Cellars" }
+
+    };
+}

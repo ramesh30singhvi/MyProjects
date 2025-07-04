@@ -1,0 +1,94 @@
+﻿@inherits LayoutComponentBase
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Client.Models
+@using Microsoft.Extensions.Options;
+@using CellarPassAppAdmin.Shared.Enums
+@inject IOptions<SynergyAppSettings> _synergyAppSettings
+@inject ISaContentViewModel _saContentViewModel
+
+<div class="container-fluid">
+
+    <div class="row min-vh-100 bg-100">
+
+        <div class="col-12 col-lg-6 px-lg-0 pt-5 d-flex align-items-center mx-auto bg-white">
+
+            <div class="row justify-content-center g-0 w-100">
+                <div class="col-12">
+                    <div class="mb-5 text-center">
+                        <img src="@(_synergyAppSettings.Value.SynergyCDNBaseUrl)images/branding/synergy-adminlogo-gray.svg" alt="Synergy Commerce Logo" width="200" />
+                    </div>
+
+                    <div class="d-flex justify-content-center">
+
+                        <div class="m-4 w-100 w-lg-75">
+
+                            @Body
+
+                        </div>
+
+                    </div>
+
+                    <div class="d-none d-lg-block">
+                        <div class="mt-7 position-absolute w-50 bottom-0 mb-5 text-center">
+                            <h6>Request Support</h6>
+                            <p class="mb-1"><a href="tel:(855) 423-4448">(855) 423-4448</a></p>
+                            <p>24/7/365</p>
+                        </div>
+                        <div class="position-absolute bottom-0 w-50 text-center mb-2 fs--1">
+                            &copy;@DateTime.Now.Year Synergy Commerce. All Rights Reserved. <img class="mx-2" src="@(_synergyAppSettings.Value.SynergyCDNBaseUrl)images/branding/synergy-logomark-color.svg" alt="Synergy Logo" width="25" /><a href="javascript:void(0)" @onclick="() => DisplaySiteContentDialog(CPContentType.SiteContentBlock, ContentBlocks.TermsAndConditions)">Terms and Conditions</a> | <a href="javascript:void(0)" @onclick="() => DisplaySiteContentDialog(CPContentType.SiteContentBlock, ContentBlocks.PrivacyPolicyPlatform)">Privacy Policy</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+        <div class="col-12 col-lg-6 px-lg-0 d-flex align-items-center mx-auto" style="background-image: url(@(_synergyAppSettings.Value.SynergyCDNBaseUrl)admin/images/synergy-login-bg.webp); background-position: 50% 20%;background-size:cover;">
+            <div class="row justify-content-center g-0 w-100">
+                <div class="col-lg-9 col-xl-8 py-5 mb-4 mb-lg-0">
+                    <div class="card">
+                        <div class="card-body p-4">
+                            @((MarkupString)adminLoginMessage)
+                        </div>
+                    </div>
+                    <div class="d-block d-lg-none">
+                        <div class="mt-7 text-center">
+                            <h6>Request Support</h6>
+                            <p class="mb-1"><a href="tel:(855) 423-4448">(855) 423-4448</a></p>
+                            <p>24/7/365</p>
+                        </div>
+                        <div class="position-absolute bottom-0 mb-0 p-2 fs--1 text-white">
+                            &copy;@DateTime.Now.Year Synergy Commerce. All Rights Reserved.<img class="mx-2" src="@(_synergyAppSettings.Value.SynergyCDNBaseUrl)images/branding/synergy-logomark-color.svg" alt="Synergy Logo" width="25" /><a href="javascript:void(0)" class="text-white" @onclick="() => DisplaySiteContentDialog(CPContentType.SiteContentBlock, ContentBlocks.TermsAndConditions)">Terms and Conditions</a> | <a href="javascript:void(0)" class="text-white" @onclick="() => DisplaySiteContentDialog(CPContentType.SiteContentBlock, ContentBlocks.PrivacyPolicyPlatform)">Privacy Policy</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+<SiteContentModal @ref="SiteContentModal" OnDialogClose="CloseSiteContentDialog" OpenSiteContentDialog="OpenSiteContentDialog"></SiteContentModal>
+
+@code {
+
+    private string adminLoginMessage = string.Empty;
+    private bool OpenSiteContentDialog { get; set; }
+    private SiteContentModal SiteContentModal;
+    protected override async Task OnInitializedAsync()
+    {
+        //Get Content for Admin Login Message
+        var response = await _saContentViewModel.GetAdminLoginPageContentAsync();
+        adminLoginMessage = response ?? string.Empty;
+    }
+
+    private void CloseSiteContentDialog()
+    {
+        this.OpenSiteContentDialog = false;
+    }
+
+    private async Task DisplaySiteContentDialog(CPContentType cPContentType, ContentBlocks contentBlocks)
+    {
+        await SiteContentModal.DisplaySiteContent(contentBlocks, cPContentType);
+        this.OpenSiteContentDialog = true;
+    }
+}

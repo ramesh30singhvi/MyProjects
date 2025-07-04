@@ -1,0 +1,220 @@
+﻿@page "/people/vendors/edit/{Id:guid}"
+@page "/people/vendors/create"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Enums;
+@using CellarPassAppAdmin.Client.ViewModels;
+@using CellarPassAppAdmin.Shared.Models;
+@using CellarPassAppAdmin.Shared.Entities.v4;
+@using CellarPassAppAdmin.Shared.Models.RequestModel;
+@using CellarPassAppAdmin.Shared.Models.ViewModel;
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head;
+@inject IVendorViewModel _vendorViewModel
+@inject ICountryViewModel _countryViewModel
+@inject IStateViewModel _stateViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject NavigationManager _navigationManager
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card shadow-none border">
+    <EditForm Model="@request" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-3 mb-md-0"><a href="people/vendors" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-industry-alt me-2"></span>@(Id != null ? "Edit" : "Add") Vendor</h5>
+                </div>
+                <div class="col-auto">
+                    @if (isSaving)
+                    {
+                        <Loader />
+                    }
+                    <button class="btn btn-sm btn-primary" type="submit" hidden="@(isSaving)">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-12">
+                    <label class="form-label" for="inputVendorCompany">Company</label>
+                    <InputText id="inputVendorCompany" class="form-control" @bind-Value="request.VendorCompany" placeholder="Company Name"></InputText>
+                    <ValidationMessage For="@(() => request.VendorCompany)" />
+                </div>
+                <div class="col-12">
+                    <div class="border-dashed-bottom mt-4 mb-3"></div>
+
+                    <AddressControl countries="@countries" states="@states" @bind-address1="@request.Address1" @bind-address2="@request.Address2" @bind-selectedCountry="@request.CountryCode" @bind-stateCode="@request.StateCode" @bind-city="@request.City" @bind-zipCode="@request.ZipCode" SelectedCompanyName="GetCompanyName" @ref="address" SelectedNewAddress="AddressChanged" />
+
+                    <div class="border-dashed-bottom my-3"></div>
+
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label" for="inputVendorName">First Name</label>
+                    <input id="inputVendorName" class="form-control" @bind-value="request.FirstName" type="text" placeholder="First Name" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label" for="inputVendorContact">Last Name</label>
+                    <input id="inputVendorContact" class="form-control" type="text" @bind-value="request.LastName" placeholder="Last Name" />
+                </div>
+                <div class="col-12">
+                    @if (!string.IsNullOrEmpty(request.PhoneCountry))
+                    {
+                        <div class="mb-3">
+                            <PhoneNumber PhoneCountry="@request.PhoneCountry" @bind-phone="@request.Phone" @ref="phone" />
+                        </div>
+                    }
+                </div>
+                <div class="col-12 mb-3">
+                    <label class="form-label" for="inputVendorContact">Contact Email</label>
+                    <input id="inputVendorContact" class="form-control" type="email" @bind-value="request.Email" placeholder="Email Address" />
+                    <ValidationMessage For="@(() => request.Email)" />
+                </div>
+            </div>
+        </div>
+    </EditForm>
+</div>
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private Boolean isLoading;
+    private Boolean isSaving;
+    private string title = "Edit Vendor | Synergy Commerce Admin Panel";
+    private Member currentMember;
+    private BusinessVendor vendor = new BusinessVendor();
+    private List<CpCountry> countries = new List<CpCountry>();
+    private List<CpState> states = new List<CpState>();
+    private BusinessVendorRequestModel request = new BusinessVendorRequestModel();
+    private AddressControl address;
+    private PhoneNumber phone;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        CountryResponse res = await _countryViewModel.GetCountries();
+        if (res.success)
+        {
+            countries = res.data;
+        }
+
+        StateResponse stateResponse = await _stateViewModel.GetStates();
+        if (stateResponse.success)
+        {
+            states = stateResponse.data;
+        }
+        if (Id != null)
+        {
+            BusinessVendorResponse result = await _vendorViewModel.GetBusinessVendorById(Id.Value);
+            if (result.success)
+            {
+                vendor = result.data;
+                request.VendorId = vendor.VendorId;
+                request.VendorGuid = vendor.VendorGuid;
+                request.BusinessId = vendor.BusinessId;
+                request.FirstName = vendor.FirstName;
+                request.LastName = vendor.LastName;
+                request.IsActive = vendor.IsActive;
+                request.VendorCompany = vendor.VendorCompany;
+                request.Email = vendor.Email;
+                request.Address1 = vendor.Address1;
+                request.Address2 = vendor.Address2;
+                request.City = vendor.City;
+                request.StateCode = vendor.StateCode;
+                request.CountryCode = vendor.CountryCode;
+                request.ZipCode = vendor.ZipCode;
+                request.Phone = vendor.PhoneFormatted;
+                if (!string.IsNullOrEmpty(vendor.Phone))
+                {
+                    string[] splittedPhone = vendor.Phone.Split("| ");
+                    if (splittedPhone.Length > 1)
+                    {
+                        request.PhoneCountry = splittedPhone[1].Trim();
+                    }
+                    else
+                    {
+                        request.PhoneCountry = "US";
+                    }
+                }
+
+                if (string.IsNullOrEmpty(request.PhoneCountry))
+                {
+                    request.PhoneCountry = "US";
+                }
+            }
+        }
+        else
+        {
+            title = "Add Vendor | Synergy Commerce Admin Panel";
+            request.CountryCode = "US";
+            request.StateCode = "";
+            request.PhoneCountry = "US";
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async void SaveVendor()
+    {
+        isSaving = true;
+        request.BusinessId = currentMember.Id;
+        request.PhoneCountry = phone.phoneCountry;
+        request.Phone = phone.phone;
+        if (!string.IsNullOrEmpty(request.CountryCode))
+        {
+            request.Country = countries.FirstOrDefault(x => x.CountryCode == request.CountryCode).Name;
+        }
+        if (!string.IsNullOrEmpty(request.StateCode))
+        {
+            request.State = states.FirstOrDefault(x => x.StateCode == request.StateCode).State;
+        }
+        var result = await _vendorViewModel.AddUpdateBusinessVendor(request);
+        if (result.success)
+        {
+            isSaving = false;
+            if (Id == null)
+            {
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                _navigationManager.NavigateTo("/people/vendors");
+            }
+            else
+            {
+                request.Phone = result.data.PhoneFormatted;
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            }
+        }
+        else
+        {
+            isSaving = false;
+            toastService.ShowToast(result.error_info.description, ToastLevel.Error);
+        }
+        StateHasChanged();
+    }
+
+    private void HandleValidSubmit(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SaveVendor();
+        }
+    }
+
+    private void GetCompanyName(string companyName)
+    {
+        request.VendorCompany = companyName;
+        StateHasChanged();
+    }
+
+    private void AddressChanged(bool isAddressChanged)
+    {
+        if (isAddressChanged)
+        {
+            request.Address2 = "";
+        }
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,118 @@
+﻿@page "/sa/business/business-accounts"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Client.ViewModels
+@inject IBusinessViewModel _businessViewModel
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <SfSpinner @bind-Visible="isLoading"></SfSpinner>
+        <Title Value="@title"></Title>
+
+        <div class="py-3">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-0"><a href="/sa/business" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-building me-2"></span>Business Accounts</h5>
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-sm btn-primary">Add Business</button>
+                </div>
+            </div>
+            <hr />
+        </div>
+
+        <SfGrid DataSource="@businessAccounts" AllowPaging="false" Width="100%">
+            <GridColumns>
+                <GridColumn HeaderText="Account Name" TextAlign="TextAlign.Left" Width="200">
+                    <Template Context="AccountContext">
+                        @{
+                            var Account = (AccountContext as BusinessSelectModel);
+                            <a class="btn btn-link text-800 fs--1" href="sa/business/business-accounts/@Account.BusinessGuid">@Account.BusinessName</a>
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="Address" Type="ColumnType.String" TextAlign="TextAlign.Left" Width="300">
+                    <Template Context="AccountContext">
+                        @{
+                            var Account = (AccountContext as BusinessSelectModel);
+                            @(Account.FullAddress)
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="" TextAlign="TextAlign.Right" Width="50">
+                    <Template Context="AccountContext">
+                        @{
+                            var Account = (AccountContext as BusinessSelectModel);
+                            <button class="delete_icon" @onclick="()=>DeleteDialogOpen(Account.Id)">
+                                <span class="far fa-trash-alt"></span>
+                            </button>
+                        }
+                    </Template>
+                </GridColumn>
+            </GridColumns>
+        </SfGrid>
+
+
+        @*Delete confimation dialog*@
+        <DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="DeleteBusinessAccount"></DeleteConfirmation>
+    </Authorized>
+</AuthorizeView>
+
+@code
+{
+
+    bool openDeleteDialog = false;
+    private string title = "Business Accounts | Synergy Commerce Admin Panel";
+    private List<BusinessSelectModel> businessAccounts = new List<BusinessSelectModel>();
+    int idForDelete = 0;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        businessAccounts = await _businessViewModel.GetBusinessList();
+        if (businessAccounts != null && businessAccounts.Count > 0)
+        {
+
+            foreach (var item in businessAccounts)
+            {
+                if (!string.IsNullOrEmpty(item.Address1))
+                {
+                    item.FullAddress = item.Address1;
+                }
+                if (!string.IsNullOrEmpty(item.Address2))
+                {
+                    item.FullAddress += ", " + item.Address2;
+                }
+                if (!string.IsNullOrEmpty(item.City))
+                {
+                    item.FullAddress += ", " + item.City;
+                }
+                if (!string.IsNullOrEmpty(item.StateCode))
+                {
+                    item.FullAddress += ", " + item.StateCode;
+                }
+                if (!string.IsNullOrEmpty(item.ZipCode))
+                {
+                    item.FullAddress += " " + item.ZipCode;
+                }
+            }
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+
+    private void DialogClose() => openDeleteDialog = false;
+
+    private void DeleteDialogOpen(int id)
+    {
+        openDeleteDialog = true;
+        idForDelete = id;
+    }
+
+    private async Task DeleteBusinessAccount()
+    {
+    }
+}

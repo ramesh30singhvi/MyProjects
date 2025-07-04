@@ -1,0 +1,416 @@
+﻿@page "/sa/business/integrated-partners-edit/{Id:guid}"
+@page "/sa/business/integrated-partners-create"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Enums;
+@using CellarPassAppAdmin.Client.ViewModels;
+@using CellarPassAppAdmin.Shared.Models;
+@using CellarPassAppAdmin.Shared.Entities.v4;
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA;
+@using CellarPassAppAdmin.Shared.Models.ViewModel;
+@using CellarPassAppAdmin.Client.ViewModels.SA;
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head;
+@inject ICountryViewModel _countryViewModel
+@inject IStateViewModel _stateViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject NavigationManager _navigationManager
+@inject ToastService toastService
+@inject ISaIntegrationPartnerViewModel _saIntegrationPartnerViewModel
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="spinnerVisibility"></SfSpinner>
+
+    <EditForm Model="@integrationPartner" Context="formContext">
+        <DataAnnotationsValidator />
+
+        <div class="py-3">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-3 mb-md-0"><a href="sa/business/integrated-partners" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-plug me-2"></span>@(Id != null ? "Edit" : "Add") Integrated Partner</h5>
+                </div>
+                <div class="col-auto">
+                    @if (Id != null)
+                    {
+                        <a href="marketplace/partner/@Id" class="btn btn-sm btn-outline-secondary me-2">Preview</a>
+                    }
+                    @if (isSaving)
+                    {
+                        <Loader />
+                    }
+                    <button class="btn btn-sm btn-primary" @onclick="@(() => SaveIntegratedPartner(formContext))" hidden="@(isSaving)">Save</button>
+                </div>
+            </div>
+            <hr />
+        </div>
+        <div class="row">
+            <div class="col-md-9">
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <label class="form-label" for="inputCompany">Company</label>
+                        <InputText id="inputCompany" class="form-control" @bind-Value="integrationPartner.Company" placeholder="Company Name"></InputText>
+                        <ValidationMessage For="@(() => integrationPartner.Company)" />
+                    </div>
+                    <div class="col-12 mb-3 sf-ddl">
+                        <AddressControl countries="@countries" states="@states" @bind-address1="@integrationPartner.Address1" @bind-address2="@integrationPartner.Address2" @bind-selectedCountry="@integrationPartner.CountryCode" @bind-stateCode="@integrationPartner.StateCode" @bind-city="@integrationPartner.City" @bind-zipCode="@integrationPartner.ZipCode" SelectedCompanyName="GetCompanyName" @ref="address" SelectedNewAddress="AddressChanged" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="inputFirstName">First Name</label>
+                        <InputText id="inputFirstName" class="form-control" @bind-Value="integrationPartner.FirstName" type="text" placeholder="First Name"></InputText>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="inputLastName">Last Name</label>
+                        <InputText id="inputLastName" class="form-control" type="text" @bind-Value="integrationPartner.LastName" placeholder="Last Name"></InputText>
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label" for="inputEmailAddress">Email Address</label>
+                        <input id="inputEmailAddress" class="form-control" type="email" @bind-value="integrationPartner.Email" placeholder="Email Address" />
+                        <ValidationMessage For="@(() => integrationPartner.Email)" />
+                    </div>
+                    <div class="col-12 sf-ddl">
+                        @if (!string.IsNullOrEmpty(integrationPartner.PhoneCountry))
+                        {
+                            <div class="mb-3">
+                                <PhoneNumber phoneCountry="@integrationPartner.PhoneCountry" @bind-phone="@integrationPartner.Phone" @ref="phone" />
+                            </div>
+                        }
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label" for="inputAppName">App Name</label>
+                        <InputText id="inputAppName" class="form-control" @bind-Value="integrationPartner.AppName" placeholder="App Name"></InputText>
+                        <ValidationMessage For="@(() => integrationPartner.AppName)" />
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label" for="inputIntro">Intro Description</label>
+                            <MessageInstruction @ref="messageInstruction" MaxTextCount="100" RowsCount="2" MessageText="@integrationPartner.IntroDesc"></MessageInstruction>
+                            @*<ValidationMessage For="@(() => integrationPartner.IntroDesc)" />*@
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputLong">Long Description</label>
+                        <MessageInstruction @ref="messageInstruction2" MaxTextCount="512" RowsCount="4" MessageText="@integrationPartner.LongDesc"></MessageInstruction>
+                            @*<ValidationMessage For="@(() => integrationPartner.LongDesc)" />*@
+                        </div>
+                        <div class="mb-3 sf-ddl">
+                            <label class="form-label" for="inputIntro">Highlights</label>
+                            <SfMultiSelect @bind-Value="highlights" TValue="string[]" TItem="Highlight" Placeholder="Select or Enter Highlights" DataSource="@highlightList" AllowCustomValue="true" Mode="@VisualMode.Box">
+                                <MultiSelectFieldSettings Text="Name" Value="Code"></MultiSelectFieldSettings>
+                            </SfMultiSelect>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label" for="inputCompanyLogoURL">Company Logo URL</label>
+                            <InputText id="inputCompanyLogoURL" class="form-control" @bind-Value="integrationPartner.ImageURL" type="text" placeholder="Company Logo URL"></InputText>
+                            <ValidationMessage For="@(() => integrationPartner.ImageURL)" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputPrivacyPolicyURL">Privacy Policy URL</label>
+                            <InputText id="inputPrivacyPolicyURL" class="form-control" @bind-Value="integrationPartner.PrivacyPolicyURL" type="text" placeholder="Privacy Policy URL"></InputText>
+                            <ValidationMessage For="@(() => integrationPartner.PrivacyPolicyURL)" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputTermsofUseURL">Terms of Use URL</label>
+                            <InputText id="inputTermsofUseURL" class="form-control" @bind-Value="integrationPartner.TermsOfUseURL" type="text" placeholder="Terms of Use URL"></InputText>
+                            <ValidationMessage For="@(() => integrationPartner.TermsOfUseURL)" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputCustomerSupportURL">Customer Support URL</label>
+                            <InputText id="inputCustomerSupportURL" class="form-control" @bind-Value="integrationPartner.SupportURL" type="text" placeholder="Customer Support URL"></InputText>
+                            <ValidationMessage For="@(() => integrationPartner.SupportURL)" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputPricingInfoURL">Pricing & Info URL</label>
+                            <InputText id="inputPricingInfoURL" class="form-control" @bind-Value="integrationPartner.PricingInfoURL" type="text" placeholder="Pricing & Info URL"></InputText>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputUserGuideURL">User Guide URL</label>
+                            <InputText id="inputUserGuideURL" class="form-control" @bind-Value="integrationPartner.UserGuideURL" type="text" placeholder="User Guide URL"></InputText>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputScreenshot1URL">Screenshot 1 URL</label>
+                            <InputText id="inputScreenshot1URL" class="form-control" @bind-Value="Screenshot1URL" type="text" placeholder="Screenshot 1 URL"></InputText>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputScreenshot2URL">Screenshot 2 URL</label>
+                            <InputText id="inputScreenshot2URL" class="form-control" @bind-Value="Screenshot2URL" type="text" placeholder="Screenshot 2 URL"></InputText>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputScreenshot3URL">Screenshot 3 URL</label>
+                            <InputText id="inputScreenshot3URL" class="form-control" @bind-Value="Screenshot3URL" type="text" placeholder="Screenshot 3 URL"></InputText>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <input class="form-check-input" type="checkbox" id="chkActive" @bind="integrationPartner.Active">
+                        <label class="form-label" for="chkActive">Active</label>
+                    </div>
+                    <div class="col-12 mb-3">
+                        <input class="form-check-input" type="checkbox" id="chkFeaturedPartner" @bind="integrationPartner.IsFeaturedPartner">
+                        <label class="form-label" for="chkFeaturedPartner">Featured Partner</label>
+                    </div>
+                    <div class="col-12 mb-3 sf-ddl">
+                        <label class="form-label" for="inputPartnershipStatus">Partnership Status</label>
+                        <SfDropDownList id=sfItemType TValue="int" TItem="DropdownBindingModel" AllowFiltering="true" DataSource="@partnershipStatusList" @bind-Value="integrationPartner.PartnerStatus">
+                            <DropDownListEvents TItem="DropdownBindingModel" TValue="int"></DropDownListEvents>
+                            <DropDownListFieldSettings Text="Value" Value="Key"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => integrationPartner.PartnerStatus)" />
+                    </div>
+                    @if (Id != null)
+                    {
+                        <div class="col-12 mb-3">
+                            <label class="form-label" for="inputPartnerID">Partner ID</label>
+                            <input id="inputPartnerID" class="form-control" value="@Id" type="text" readonly />
+                        </div>
+                    }
+                    <div class="col-12 mb-3 sf-ddl">
+                        <label class="form-label" for="inputCategories">Categories</label>
+                        <SfMultiSelect @bind-Value="categories" TValue="int[]" TItem="IntegrationCategory" Mode="@VisualMode.Default" Placeholder="Select One or More Categories" DataSource="@integrationCategories">
+                            <MultiSelectFieldSettings Text="CategoryName" Value="Id"></MultiSelectFieldSettings>
+                            <MultiSelectEvents TItem="IntegrationCategory" TValue="int[]" ValueChange="@(() => CategoryChangeHandler(formContext))"></MultiSelectEvents>
+                        </SfMultiSelect>
+                        <ValidationMessage For="@(() => integrationPartner.IntegrationPartnerCategories)" />
+                    </div>
+                    <div class="col-12 mb-3 sf-ddl">
+                        <label class="form-label" for="inputPartnershipDate">Partnership Date</label>
+                        <SfDatePicker Max="DateTime.MaxValue" @bind-Value="integrationPartner.ParnterStartDate">
+                            <DatePickerEvents TValue="DateTime?"></DatePickerEvents>
+                        </SfDatePicker>
+                        <ValidationMessage For="@(() => integrationPartner.ParnterStartDate)" />
+                    </div>
+                    <div class="col-12 mb-3 sf-ddl">
+                        <label class="form-label" for="inputCertificationStatus">Certification Status</label>
+                        <SfDropDownList id=sfItemType TValue="int" TItem="DropdownBindingModel" AllowFiltering="true" DataSource="@certificationStatusList" @bind-Value="integrationPartner.CertificationStatus">
+                            <DropDownListEvents TItem="DropdownBindingModel" TValue="int"></DropDownListEvents>
+                            <DropDownListFieldSettings Text="Value" Value="Key"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => integrationPartner.CertificationStatus)" />
+                    </div>
+                    <div class="col-12 mb-3 sf-ddl">
+                        <label class="form-label" for="inputCertificationDate">Certification Date</label>
+                        <SfDatePicker Max="DateTime.MaxValue" @bind-Value="integrationPartner.CertificationDate">
+                            <DatePickerEvents TValue="DateTime?"></DatePickerEvents>
+                        </SfDatePicker>
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label" for="inputPartnerVersion">Partner Version</label>
+                        <InputText id="inputPartnerVersion" class="form-control" @bind-Value="integrationPartner.PartnerVersion" placeholder="Partner Version"></InputText>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private Boolean spinnerVisibility;
+    private Boolean isSaving;
+    private string title = "Edit Integrated Partner | Synergy Commerce Admin Panel";
+    private Member currentMember;
+    private List<CpCountry> countries = new List<CpCountry>();
+    private List<CpState> states = new List<CpState>();
+    private IntegrationPartnerRequestModel integrationPartner = new IntegrationPartnerRequestModel();
+    private AddressControl address;
+    private PhoneNumber phone;
+    private int longDescriptionCount = 512;
+    private int introDescriptionCount = 100;
+    public string Screenshot1URL { get; set; }
+    public string Screenshot2URL { get; set; }
+    public string Screenshot3URL { get; set; }
+    int[] categories = new int[] { };
+    List<IntegrationCategory> integrationCategories = new List<IntegrationCategory>();
+    string[] highlights = new string[] { };
+
+    public MessageInstruction messageInstruction;
+    public MessageInstruction messageInstruction2;
+
+    public class Highlight
+    {
+        public string Name { get; set; }
+        public string Code { get; set; }
+    }
+    List<Highlight> highlightList = new List<Highlight>();
+
+    List<DropdownBindingModel> partnershipStatusList = Enum.GetValues(typeof(PartnershipStatus))
+                                        .Cast<PartnershipStatus>()
+                                        .Select(t => new DropdownBindingModel
+                                        {
+                                            Key = (int)t,
+                                            Value = t.ToString()
+                                        }).ToList();
+
+    List<DropdownBindingModel> certificationStatusList = Enum.GetValues(typeof(CertificationStatus))
+                                            .Cast<CertificationStatus>()
+                                            .Select(t => new DropdownBindingModel
+                                            {
+                                                Key = (int)t,
+                                                Value = t.ToString()
+                                            }).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        spinnerVisibility = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var countryResponse = await _countryViewModel.GetCountries();
+        countries = countryResponse?.data ?? new List<CpCountry>();
+        var stateResponse = await _stateViewModel.GetStates();
+        states = stateResponse?.data ?? new List<CpState>();
+        var integrationCategoryResponse = await _saIntegrationPartnerViewModel.GetIntegrationCategoryListAsync();
+        integrationCategories = integrationCategoryResponse?.data ?? new List<IntegrationCategory>();
+        if (Id != null)
+        {
+            var partnerDetail = await _saIntegrationPartnerViewModel.GetIntegrationPartnerDetail(Id.Value);
+            if (partnerDetail.success && partnerDetail?.data != null)
+            {
+                integrationPartner = partnerDetail.data;
+                categories = integrationPartner.IntegrationPartnerCategories?.Select(x => x.IntegrationCategoryId)?.ToArray() ?? new int[] { };
+                Screenshot1URL = integrationPartner.IntegrationPartnerScreenshots.Count > 0 ? integrationPartner.IntegrationPartnerScreenshots[0].ImageName : string.Empty;
+                Screenshot2URL = integrationPartner.IntegrationPartnerScreenshots.Count > 1 ? integrationPartner.IntegrationPartnerScreenshots[1].ImageName : string.Empty;
+                Screenshot3URL = integrationPartner.IntegrationPartnerScreenshots.Count > 2 ? integrationPartner.IntegrationPartnerScreenshots[2].ImageName : string.Empty;
+                highlights = integrationPartner.IntegrationPartnerHighlights?.Select(x => x.Highlight)?.ToArray() ?? new string[] { };
+                if (!string.IsNullOrEmpty(partnerDetail.data.Phone))
+                {
+                    string[] splittedPhone = partnerDetail.data.Phone.Split("| ");
+                    if (splittedPhone.Length > 1)
+                    {
+                        integrationPartner.PhoneCountry = splittedPhone[1].Trim();
+                    }
+                    else
+                    {
+                        integrationPartner.PhoneCountry = "US";
+                    }
+                }
+                integrationPartner.Phone = partnerDetail.data.PhoneFormatted;
+                if (string.IsNullOrEmpty(integrationPartner.PhoneCountry))
+                    integrationPartner.PhoneCountry = "US";
+                if (!string.IsNullOrEmpty(integrationPartner.LongDesc) && integrationPartner.LongDesc.Count() > 0)
+                {
+                    longDescriptionCount = 512 - integrationPartner.LongDesc.Count();
+                }
+                if (!string.IsNullOrEmpty(integrationPartner.IntroDesc) && integrationPartner.IntroDesc.Count() > 0)
+                {
+                    introDescriptionCount = 100 - integrationPartner.IntroDesc.Count();
+                }
+            }
+        }
+        else
+        {
+            title = "Add Integrated Partner | Synergy Commerce Admin Panel";
+            integrationPartner.CountryCode = "US";
+            integrationPartner.StateCode = string.Empty;
+            integrationPartner.PhoneCountry = "US";
+            integrationPartner.Active = true;
+        }
+        spinnerVisibility = false;
+        StateHasChanged();
+    }
+
+    private void CategoryChangeHandler(EditContext editContext)
+    {
+        integrationPartner.IntegrationPartnerCategories = categories?.Select(x =>
+             new IntegrationPartnerCategoryModel
+             {
+                 IntegrationCategoryId = x
+             })?.ToList() ?? null;
+        editContext.Validate();
+    }
+
+    private async Task SaveIntegratedPartner(EditContext editContext)
+    {
+        integrationPartner.PhoneCountry = phone.phoneCountry;
+        integrationPartner.Phone = phone.phone;
+        //if (editContext.Validate())
+        //{
+            isSaving = true;
+            spinnerVisibility = true;
+            integrationPartner.IntroDesc = messageInstruction.MessageText + "";
+            integrationPartner.LongDesc = messageInstruction2.MessageText + "";
+
+            integrationPartner.BenefitDesc = string.Empty;
+            integrationPartner.IconURL = string.Empty;
+            integrationPartner.PricingPlanId = string.Empty;
+            integrationPartner.ConfigurationURL = string.Empty;
+            if (!string.IsNullOrEmpty(integrationPartner.CountryCode))
+            {
+                integrationPartner.Country = countries.FirstOrDefault(x => x.CountryCode == integrationPartner.CountryCode).Name;
+            }
+            if (!string.IsNullOrEmpty(integrationPartner.StateCode))
+            {
+                integrationPartner.State = states.FirstOrDefault(x => x.StateCode == integrationPartner.StateCode).State;
+            }
+
+            integrationPartner.IntegrationPartnerHighlights = highlights?.Select(x =>
+            new IntegrationPartnerHighlight
+            {
+                Highlight = x
+            })?.ToList() ?? new List<IntegrationPartnerHighlight>();
+
+            var integrationPartnerScreenshot = new List<IntegrationPartnerScreenshot>();
+            if (!string.IsNullOrEmpty(Screenshot1URL))
+                integrationPartnerScreenshot.Add(new IntegrationPartnerScreenshot { ImageName = Screenshot1URL });
+            if (!string.IsNullOrEmpty(Screenshot2URL))
+                integrationPartnerScreenshot.Add(new IntegrationPartnerScreenshot { ImageName = Screenshot2URL });
+            if (!string.IsNullOrEmpty(Screenshot3URL))
+                integrationPartnerScreenshot.Add(new IntegrationPartnerScreenshot { ImageName = Screenshot3URL });
+            integrationPartner.IntegrationPartnerScreenshots = integrationPartnerScreenshot;
+            var result = await _saIntegrationPartnerViewModel.AddUpdateIntegrationPartner(integrationPartner);
+            if (result.success)
+            {
+                isSaving = false;
+                if (Id == null)
+                {
+                    Id = result.data.PartnerGUID;
+                    integrationPartner.Id = result.data.Id;
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                }
+                else
+                {
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                }
+            }
+            else
+            {
+                isSaving = false;
+                toastService.ShowToast(result.error_info.description, ToastLevel.Error);
+            }
+            spinnerVisibility = false;
+            StateHasChanged();
+        //}
+    }
+
+    private void GetCompanyName(string companyName)
+    {
+        integrationPartner.Company = companyName;
+        StateHasChanged();
+    }
+
+    private void AddressChanged(bool isAddressChanged)
+    {
+        if (isAddressChanged)
+        {
+            integrationPartner.Address2 = string.Empty;
+        }
+        StateHasChanged();
+    }
+    private void GetLongDescriptionCount(ChangeEventArgs eventArgs)
+    {
+        var value = eventArgs.Value.ToString().Count();
+        longDescriptionCount = 512 - value;
+        StateHasChanged();
+    }
+    private void GetIntroDescriptionCount(ChangeEventArgs eventArgs)
+    {
+        var value = eventArgs.Value.ToString().Count();
+        introDescriptionCount = 100 - value;
+        StateHasChanged();
+    }
+}

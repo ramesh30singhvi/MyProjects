@@ -1,0 +1,83 @@
+﻿@page "/sa/business/subscription-plans"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="py-3">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-0"><a href="sa/business" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-clipboard-list me-2"></span>Subscription Plans</h5>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-sm btn-primary" href="#!">Add New</a>
+                </div>
+            </div>
+            <hr />
+        </div>
+
+        <div class="table-responsive scrollbar">
+            <table class="table fs--1 mb-0">
+                <thead class="bg-200 text-900">
+                    <tr>
+                        <th class="pe-1 align-middle white-space-nowrap"></th>
+                        <th class="pe-1 align-middle white-space-nowrap">Plan Name</th>
+                        <th class="pe-1 align-middle white-space-nowrap">Plan Description</th>
+                        <th class="pe-1 align-middle white-space-nowrap">Display Order</th>
+                        <th class="pe-1 align-middle white-space-nowrap">Active</th>
+                        <th class="pe-1 align-middle white-space-nowrap"></th>
+                    </tr>
+                </thead>
+                <tbody class="" id="table-locations-body">
+                    <tr>
+                        <td class="align-middle white-space-nowrap"><a href="sa/business/subscription-plans/edit"><span class="far fa-pencil-alt"></span></a></td>
+                        <td class="align-middle white-space-nowrap">Starter</td>
+                        <td class="align-middle white-space-nowrap">This is an optional plan description.</td>
+                        <td class="align-middle white-space-nowrap">1</td>
+                        <td class="align-middle white-space-nowrap"><span class="fas fa-check"></span></td>
+                        <td class="align-middle white-space-nowrap"><a href="#!"><span class="far fa-trash-alt"></span></a></td>
+                    </tr>
+                    <tr>
+                        <td class="align-middle white-space-nowrap"><a href="sa/business/subscription-plans/edit"><span class="far fa-pencil-alt"></span></a></td>
+                        <td class="align-middle white-space-nowrap">Professional</td>
+                        <td class="align-middle white-space-nowrap">This is an optional plan description.</td>
+                        <td class="align-middle white-space-nowrap">2</td>
+                        <td class="align-middle white-space-nowrap"><span class="fas fa-check"></span></td>
+                        <td class="align-middle white-space-nowrap"><a href="#!"><span class="far fa-trash-alt"></span></a></td>
+                    </tr>
+                    <tr>
+                        <td class="align-middle white-space-nowrap"><a href="sa/business/subscription-plan/edit"><span class="far fa-pencil-alt"></span></a></td>
+                        <td class="align-middle white-space-nowrap">TablePro</td>
+                        <td class="align-middle white-space-nowrap">This is an optional plan description.</td>
+                        <td class="align-middle white-space-nowrap">3</td>
+                        <td class="align-middle white-space-nowrap"><span class="fas fa-check"></span></td>
+                        <td class="align-middle white-space-nowrap"><a href="#!"><span class="far fa-trash-alt"></span></a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private string title = "Subscription Plans | Synergy Commerce Super Admin  Panel";
+
+
+}

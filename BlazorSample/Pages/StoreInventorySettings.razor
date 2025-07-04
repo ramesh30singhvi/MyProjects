@@ -1,0 +1,407 @@
+﻿@page "/store/inventory-settings"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Helpers
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components
+@using System.Threading
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Entities.v4
+@inject ToastService toastService
+@inject ICPSettingViewModel _cPSettingViewModel
+@inject IInventoryViewModel _inventoryViewModel
+@inject ISettingsViewModel _settingsViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="store/inventory" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-gear me-2"></span>Inventory Settings</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" @onclick="SaveInventorySettings" href="javascript:void(0)">Save</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="border-bottom p-3">
+
+            <div class="my-3">
+                <h5 class="mb-3">Deplete Inventory</h5>
+                <div class="ps-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="flexRadioDefault" @onclick="() => setting.DepleteInventoryWhenOrderIsPaid = false" id="radioInvPaid" checked="@(!setting.DepleteInventoryWhenOrderIsPaid)">
+                        <label class="form-check-label" for="radioinvUnpaid">
+                            When Order is Unpaid
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="flexRadioDefault" @onclick="() => setting.DepleteInventoryWhenOrderIsPaid = true" id="radioinvUnpaid" checked="@(setting.DepleteInventoryWhenOrderIsPaid)">
+                        <label class="form-check-label" for="radioInvPaid">
+                            When Order is Paid in Full
+                        </label>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0">Return Reasons</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-primary" href="javascript:void(0)" @onclick="() => OpenModal(Guid.Empty)">Add Reason</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body pt-0">
+                <div class="min-vh-75 sf-grid">
+                    <SfGrid @ref="ReasonGrid" DataSource="@returnReasons" Width="100%">
+                        <GridPageSettings PageSize="10"></GridPageSettings>
+                        <GridEditSettings AllowAdding="true" AllowDeleting="true"></GridEditSettings>
+                        <GridTemplates>
+                            <EmptyRecordTemplate>
+                                @if (!isLoading && returnReasons.Count <= 0)
+                                {
+                                    <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                        <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Reason Available</h6>
+                                        <button type="button" class="btn btn-outline-primary">Get Started</button>
+                                    </div>
+                                }
+                            </EmptyRecordTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            <GridColumn Field="@nameof(ReturnReasonModel.IdGUID)" Width="0" IsPrimaryKey="true"></GridColumn>
+                            <GridColumn HeaderText="Reason" TextAlign="TextAlign.Left" Width="80">
+                                <Template>
+                                    @{
+                                        var reason = (context as ReturnReasonModel);
+                                        <a href="javascript:void();" @onclick="() => OpenModal(reason.IdGUID)">@reason.ReasonName</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="RETURN TO INVENTORY?" TextAlign="TextAlign.Left" Width="180">
+                                <Template>
+                                    @{
+                                        var returnToInv = (context as ReturnReasonModel).ReturnToInventory;
+                                        if (returnToInv)
+                                        {
+                                            @("YES")
+                                        }
+                                        else
+                                        {
+                                            @("NO")
+                                        }
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Center" Width="40">
+                                <Template>
+                                    @{
+                                        var deleteReason = (context as ReturnReasonModel).IdGUID;
+                                        <button class="delete_icon" @onclick="()=>DeleteDialogOpen(deleteReason)">
+                                            <span class="far fa-trash-alt"></span>
+                                        </button>
+                                    }
+                                </Template>
+                            </GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@*Delete confimation dialog*@
+<DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="DeleteClass"></DeleteConfirmation>
+
+<SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="ModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Add Return Reason</h5></Header>
+        <Content>
+            <EditForm Model="addReason" @ref="addReasonForm" Context="formContext">
+                <DataAnnotationsValidator />
+                <div class="mb-3">
+                    <label class="form-label" for="selPositions">Reason</label>
+                    <select @bind="@addReason.ReturnReason" @bind:event="onchange" class="form-select fs--1">
+                        @foreach (var reason in returnReasonsDropDownList)
+                        {
+                            <option value="@reason.Key">@reason.Value</option>
+                        }
+                        <option value="0">Create New</option>
+                    </select>
+                </div>
+                @if (addReason.ReturnReason == 0)
+                {
+                    <div class="mb-3">
+                        <label class="form-label" for="inputCreateNew">Create New</label>
+                        <InputText @bind-Value="addReason.NewReasonName" id="inputCreateNew" class="form-control" type="text" />
+                        <ValidationMessage For="@(() => addReason.NewReasonName)" />
+                    </div>
+                }
+                <div class="mb-3">
+                    <label for="chkReturnToInventory" class="form-label">Return To Inventory?</label><input @bind="@addReason.ReturnToInventory" @bind:event="onchange" class="form-check-input mx-2" type="checkbox" id="chkReturnToInventory" />
+                </div>
+            </EditForm>
+
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="@CloseModal">Close</button>
+            <button type="button" @onclick="SaveReason" class="btn btn-primary">Save</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+    private string title = "Inventory Settings | Synergy Admin Panel";
+    private Boolean isLoading = false;
+    bool openDeleteDialog = false;
+    private int returnReason;
+    private bool ModalVisibility { get; set; } = false;
+    private List<ReturnReasonModel> returnReasons = new List<ReturnReasonModel>();
+    private AddReasonModel addReason = new AddReasonModel();
+    SfGrid<ReturnReasonModel> ReasonGrid;
+    EditForm addReasonForm;
+    Guid DeleteGUID { get; set; }
+    private Member currentMember = new Member();
+    BusinessSettings inventorySettings = new BusinessSettings();
+    BusinessInventorySettingModel setting = new BusinessInventorySettingModel() { DepleteInventoryWhenOrderIsPaid = true };
+    List<DropdownBindingModel> returnReasonsDropDownList = new List<DropdownBindingModel>();
+
+    public class BusinessInventorySettingModel
+    {
+        public int Id { get; set; }
+        public bool DepleteInventoryWhenOrderIsPaid { get; set; }
+    }
+
+    public class AddReasonModel
+    {
+        public Guid IdGUID { get; set; }
+        public int ReturnReason { get; set; }
+        [RequiredIf(nameof(ReturnReason), 0, ErrorMessage = "Please enter the Reason.")]
+        public string NewReasonName { get; set; }
+        public bool ReturnToInventory { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        await GetInventorySettings();
+        isLoading = false;
+    }
+
+    private async Task GetInventorySettings()
+    {
+        var inventorySettingsResponse = await _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.InventorySettings, BusinessSettingsMetaKey.DepleteInventoryWhenOrderIsPaid);
+        if (inventorySettingsResponse.success)
+        {
+            setting.Id = inventorySettingsResponse.data.Id;
+            setting.DepleteInventoryWhenOrderIsPaid = Convert.ToBoolean(Convert.ToInt32(inventorySettingsResponse.data.MetaValue));
+        }
+
+        var getBusinessReturnReasons = await _inventoryViewModel.GetBusinessReturnReasons(currentMember.Id);
+        if (getBusinessReturnReasons.success)
+        {
+            returnReasons = getBusinessReturnReasons.data;
+            foreach (var reason in returnReasons)
+            {
+                reason.IdGUID = Guid.NewGuid();
+            }
+        }
+    }
+
+    private void DialogClose() => openDeleteDialog = false;
+
+    private void DeleteDialogOpen(Guid IdGUID)
+    {
+        DeleteGUID = IdGUID;
+        openDeleteDialog = true;
+    }
+
+    private async Task DeleteClass()
+    {
+        isLoading = true;
+        returnReasons.RemoveAll(x => x.IdGUID == DeleteGUID);
+        ReasonGrid.Refresh();
+        toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+        openDeleteDialog = false;
+        isLoading = false;
+    }
+
+    private async Task OpenModal(Guid IdGUID)
+    {
+        if (returnReasonsDropDownList.Count <= 0)
+        {
+            var getReturnReasons = await _cPSettingViewModel.GetCPSettingListAsync(CPSettingMetaNamespace.ReturnRefundReason);
+            if (getReturnReasons.success && getReturnReasons.data != null)
+            {
+                var returnRefundReasons = getReturnReasons?.data?.Where(x => x.MetaKey == CPSettingMetaKey.ReturnRefundReason)?.ToList();
+                if (returnRefundReasons != null && returnRefundReasons.Count > 0)
+                {
+                    foreach (var item in returnRefundReasons)
+                    {
+                        returnReasonsDropDownList.Add(new DropdownBindingModel{ Key = item.Id, Value = item.MetaValue});
+                    }
+                }
+            }
+        }
+        if (IdGUID == Guid.Empty)
+        {
+            addReason = new AddReasonModel();
+        }
+        else
+        {
+            var reqReason = returnReasons.Where(x => x.IdGUID == IdGUID).FirstOrDefault();
+            if (reqReason != null)
+            {
+                addReason = new AddReasonModel
+                {
+                    IdGUID = reqReason.IdGUID,
+                    NewReasonName = reqReason.ReasonName,
+                    ReturnToInventory = reqReason.ReturnToInventory
+                };
+                var existingCheck = returnReasonsDropDownList.Where(x => x.Value == reqReason.ReasonName).FirstOrDefault();
+                if (existingCheck != null)
+                {
+                    addReason.ReturnReason = existingCheck.Key;
+                }
+                else
+                {
+                    addReason.ReturnReason = 0;
+                }
+            }
+
+        }
+        this.ModalVisibility = true;
+    }
+    private void CloseModal()
+    {
+        this.ModalVisibility = false;
+    }
+
+    private bool CheckExistingRecord(ReturnReasonModel check)
+    {
+        if ((addReason.IdGUID != Guid.Empty && addReason.IdGUID != check.IdGUID) || (addReason.IdGUID == Guid.Empty))
+        {
+            toastService.ShowToast("Reason already entered", ToastLevel.Error);
+            return false;
+        }
+        return true;
+    }
+
+    private void SaveReason()
+    {
+        addReasonForm.EditContext.Validate();
+        if (addReasonForm.EditContext.Validate())
+        {
+            if (addReason.ReturnReason == 0)
+            {
+                if (returnReasonsDropDownList.Any(x => x.Value.ToLower().Contains(addReason.NewReasonName.ToLower())))
+                {
+                    toastService.ShowToast("Please select the reason from available reasons", ToastLevel.Error);
+                    return;
+                }
+                var check = returnReasons.Where(x => x.ReasonName.ToLower() == addReason.NewReasonName).FirstOrDefault();
+                if (check != null)
+                {
+                    if (!CheckExistingRecord(check))
+                        return;
+                }
+            }
+            else
+            {
+                var reasonName = returnReasonsDropDownList.Where(x => x.Key == addReason.ReturnReason).FirstOrDefault().Value;
+                var check = returnReasons.Where(x => x.ReasonName == reasonName).FirstOrDefault();
+                if (check != null)
+                {
+                    if (!CheckExistingRecord(check))
+                        return;
+                }
+            }
+
+            if (addReason.IdGUID == Guid.Empty)
+            {
+                var request = new ReturnReasonModel();
+                if (addReason.ReturnReason == 0)
+                {
+                    request.ReasonName = addReason.NewReasonName;
+                }
+                else
+                {
+                    request.ReasonName = returnReasonsDropDownList.Where(x => x.Key == addReason.ReturnReason).FirstOrDefault().Value;
+                }
+                request.IdGUID = Guid.NewGuid();
+                request.ReturnToInventory = addReason.ReturnToInventory;
+                returnReasons.Add(request);
+            }
+            else
+            {
+                foreach (var reason in returnReasons)
+                {
+                    if (reason.IdGUID == addReason.IdGUID)
+                    {
+                        reason.ReasonName = (addReason.ReturnReason == 0) ? addReason.NewReasonName : returnReasonsDropDownList.Where(x => x.Key == addReason.ReturnReason).FirstOrDefault().Value;
+                        reason.ReturnToInventory = addReason.ReturnToInventory;
+                    }
+                }
+            }
+            ReasonGrid.Refresh();
+            StateHasChanged();
+            ModalVisibility = false;
+        }
+    }
+    private async Task SaveInventorySettings()
+    {
+        isLoading = true;
+        BusinessSettingsRequestModel request = new BusinessSettingsRequestModel()
+        {
+            BusinessId = currentMember.Id,
+            Id = inventorySettings.Id,
+            MetaNamespace = BusinessSettingsMetaNamespace.InventorySettings,
+            MetaKey = BusinessSettingsMetaKey.DepleteInventoryWhenOrderIsPaid,
+            MetaValue = Convert.ToInt32(setting.DepleteInventoryWhenOrderIsPaid).ToString(),
+            Title = String.Empty,
+            Description = String.Empty,
+            ValueType = (int)ValueTypeEnum.Boolean
+        };
+        var requestList = new List<BusinessSettingsRequestModel>();
+        requestList.Add(request);
+        var addBusinessSettingsResponse = await _settingsViewModel.CreateBusinessSettingListAsync(requestList);
+
+        var AddUpdateBusinessReturnReasons = new BusinessInventoryAddUpdateRequestModel
+        {
+            BusinessId = currentMember.Id,
+            ReturnReasons = returnReasons
+        };
+
+        var addUpdateReturnReasonsResponse = await _inventoryViewModel.AddUpdateBusinessInventorySettings(AddUpdateBusinessReturnReasons);
+        if (addUpdateReturnReasonsResponse.success)
+        {
+            await GetInventorySettings();
+            toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(addUpdateReturnReasonsResponse.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+
+    }
+}

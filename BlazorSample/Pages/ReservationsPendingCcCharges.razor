@@ -1,0 +1,103 @@
+﻿@page  "/reservations/pending-cc-charges"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col">
+                <h5 class="mb-0"><span class="fa-regular fa-credit-card me-2"></span>Pending Credit Card Charges Report</h5>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-sm btn-primary">Charge</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0 pt-4">
+        <div class="sf-grid min-vh-75">
+            <SfGrid DataSource="@PlaceholderDataList" AllowPaging="false" Width="100%">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && PlaceholderDataList.Count <= 0)
+                        {
+                            <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Orders</h6>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn Type="ColumnType.CheckBox" TextAlign="TextAlign.Center" Width="30"></GridColumn>
+                    <GridColumn HeaderText="" TextAlign="TextAlign.Left" Width="35">
+                        <Template>
+                            <span class="badge bg-warning rounded-pill">n</span>
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="" TextAlign="TextAlign.Left" Width="35">
+                        <Template>
+                            <span class="badge bg-info rounded-pill">$</span>
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(PlaceholderData.Status) HeaderText="Status" TextAlign="TextAlign.Left" Width="80" />
+                    <GridColumn Field=@nameof(PlaceholderData.EventDate) HeaderText="Event Date" TextAlign="TextAlign.Left" Width="70" />
+                    <GridColumn Field=@nameof(PlaceholderData.Time) HeaderText="Time" TextAlign="TextAlign.Left" Width="60" />
+                    <GridColumn Field=@nameof(PlaceholderData.Confirm) HeaderText="Confirm#" TextAlign="TextAlign.Left" Width="80" />
+                    <GridColumn Field=@nameof(PlaceholderData.Guests) HeaderText="Guests" TextAlign="TextAlign.Left" Width="60" />
+                    <GridColumn Field=@nameof(PlaceholderData.GuestName) HeaderText="Guest Name" TextAlign="TextAlign.Left" Width="100" />
+                    <GridColumn Field=@nameof(PlaceholderData.Orders) HeaderText="Orders" TextAlign="TextAlign.Left" Width="60" />
+                    <GridColumn Field=@nameof(PlaceholderData.BalanceDue) HeaderText="Balance Due" TextAlign="TextAlign.Left" Width="80" />
+                    <GridColumn Field=@nameof(PlaceholderData.DepositPolicy) HeaderText="Deposit Policy" TextAlign="TextAlign.Left" Width="200" />
+
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+</div>
+
+@code
+{
+
+    private string title = "Pending Credit Card Charges Report | Synergy Commerce Admin Panel";
+
+    private Boolean isLoading = true;
+
+
+    public class PlaceholderData
+    {
+        public string Status { get; set; }
+        public string EventDate { get; set; }
+        public string Time { get; set; }
+        public string Confirm { get; set; }
+        public string Guests { get; set; }
+        public string GuestName { get; set; }
+        public string Orders { get; set; }
+        public string BalanceDue { get; set; }
+        public string DepositPolicy { get; set; }
+    }
+
+    public List<PlaceholderData> PlaceholderDataList = new List<PlaceholderData>(){
+        new PlaceholderData(){ Status= "Unprocessed", EventDate = "11/19/2021", Time= "11:00 AM", Confirm= "COXOHMBX", Guests = "3", GuestName = "Abrue, Lori", Orders= "$387.30", BalanceDue = "$387.30", DepositPolicy="Fee(s) Charged on Morning of Arrival" },
+        new PlaceholderData(){ Status= "Unprocessed", EventDate = "11/19/2021", Time= "2:00 PM", Confirm= "VJMUSWLW", Guests = "6", GuestName = "Crockett, Tim", Orders= "$775.00", BalanceDue = "$775.00", DepositPolicy="Fee(s) Charged on Morning of Arrival" },
+        new PlaceholderData(){ Status= "Unprocessed", EventDate = "11/19/2021", Time= "11:00 AM", Confirm= "CWPJKWL", Guests = "2", GuestName = "Casados, Jula", Orders= "$258.60", BalanceDue = "$258.60", DepositPolicy="Fee(s) Charged on Morning of Arrival" },
+        new PlaceholderData(){ Status= "Unprocessed", EventDate = "11/19/2021", Time= "10:00 AM", Confirm= "HWGCPIFP", Guests = "2", GuestName = "Cabran, Kristinia", Orders= "$258.60", BalanceDue = "$258.60", DepositPolicy="Fee(s) Charged on Morning of Arrival" },
+        new PlaceholderData(){ Status= "Unprocessed", EventDate = "11/19/2021", Time= "0:00 AM", Confirm= "MPXUFGVB", Guests = "4", GuestName = "Bell, Michael", Orders= "$517.80", BalanceDue = "$517.80", DepositPolicy="Fee(s) Charged on Morning of Arrival"},
+    };
+
+}

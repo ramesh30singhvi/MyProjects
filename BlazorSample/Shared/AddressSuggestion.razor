@@ -1,0 +1,64 @@
+﻿<SfDialog IsModal="true" Width="400px" ShowCloseIcon="true" @bind-Visible="OpenAddressValidationDialog">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Address Validation</h5> </Header>
+        <Content>
+            <div class="card shadow-none border my-2">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Original Address</h6>
+                    <p>
+                        50 California, Suite 1500<br />
+                        San Francisco, CA 94111
+                    </p>
+
+                    <button class="btn btn-sm btn-outline-primary" @onclick="UseOriginalAddress">Use this Address</button>
+                </div>
+            </div>
+            <div class="card shadow-none border my-2">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Suggested Address</h6>
+                    <p>
+                        50 California Street, Suite 1500<br />
+                        San Francisco, CA 94111
+                    </p>
+
+                    <button class="btn btn-sm btn-outline-primary" @onclick="UseSuggestedAddress">Use Suggested Address</button>
+                </div>
+            </div>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="DialogClose">Cancel</button>
+        </FooterTemplate>
+    </DialogTemplates>
+    <DialogEvents Closed="@DialogClose"></DialogEvents>
+    <DialogAnimationSettings Effect="@DialogEffect.Zoom"></DialogAnimationSettings>
+</SfDialog>
+
+
+@code {
+    [Parameter]
+    public bool OpenAddressValidationDialog { get; set; }
+
+    [Parameter]
+    public EventCallback OnDialogClose { get; set; }
+
+    protected async Task DialogClose()
+    {
+        await OnDialogClose.InvokeAsync();
+    }
+
+    [Parameter]
+    public EventCallback OnUseSuggestedAddress { get; set; }
+
+    protected async Task UseSuggestedAddress()
+    {
+        await OnUseSuggestedAddress.InvokeAsync();
+    }
+
+    [Parameter]
+    public EventCallback OnUseOriginalAddress { get; set; }
+
+    protected async Task UseOriginalAddress()
+    {
+        await OnUseOriginalAddress.InvokeAsync();
+    }
+}

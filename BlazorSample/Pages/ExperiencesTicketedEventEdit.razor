@@ -1,0 +1,292 @@
+﻿@page "/experiences/ticketed-event-add"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.Blazor.Maps
+@using System.Threading
+@using System.Collections.ObjectModel
+@using System.ComponentModel.DataAnnotations
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ITicketingPlanViewModel _ticketingPlanViewModel
+@inject ILocalStorageService localStorage
+@inject ToastService _toastService
+@inject IJSRuntime JSRuntime
+@inject ITicketingEventViewModel _ticketingEventViewModel
+@attribute [Authorize]
+
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <EditForm Model="@ticketedEvent" Context="formContext">
+            <DataAnnotationsValidator />
+            <div class="pt-3 pb-1">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md mb-2 mb-md-0">
+                        <h5 class="mb-0"><a href="experiences/ticketed-events" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-ticket me-2"></span>Ticketed Event</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-primary" href="javascript:void(0);">Preview</a>
+                    </div>
+                </div>
+                <hr />
+            </div>
+
+            <form class="pb-4">
+                <div class="ps-0 ps-md-2">
+                    <span class="fst-normal d-block mb-2 text-black">Basic Event Info</span>
+                    <div class="row flex-column">
+                        <div class="col-md-6 mb-3">
+                            <label for="inputPlanName" class="form-label">Event Name</label>
+                            <input type="text" id="inputEventName" class="form-control" placeholder="Event Name" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="inputEventOrganizer" class="form-label">Event Organizer</label>
+                            <select class="form-select fs--1" id="inputEventOrganizer">
+                                <option selected>Encore Winery</option>
+                                <option>Test</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <PhoneNumber phoneCountry="@ticketedEvent.PhoneCountry" @bind-phone="@ticketedEvent.OrganizerPhone" label="Organizer Phone" @ref="phone" />
+                        </div>
+                        <div class="col-md-4">
+                            <label for="inputOrganizerEmail" class="form-label">Organizer Email</label>
+                            <InputText type="text" id="inputOrganizerEmail" @bind-Value="@ticketedEvent.Email" class="form-control" placeholder="Organizer Email" />
+                            <ValidationMessage For="@(() => ticketedEvent.Email)" />
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-4 mb-3 sf-ddl">
+                            <label for="inputEventType1" class="form-label">Event Type1</label>
+                            <SfDropDownList ID="inputEventType1" @bind-Value="ticketedEvent.EventType1" TValue="int" TItem="EventCategoriesModel" Placeholder="Select Type" AllowFiltering="true" DataSource="@eventType1Categories">
+                                <DropDownListFieldSettings Text="Name" Value="Id"></DropDownListFieldSettings>
+                                <DropDownListEvents ValueChange="()=>OnEventType1DropdownChange()" TItem="EventCategoriesModel" TValue="int"></DropDownListEvents>
+                            </SfDropDownList>
+                        </div>
+                        <div class="col-md-4 mb-3 sf-ddl">
+                            <label for="inputEventType2" class="form-label">Event Type2</label>
+                            <SfDropDownList ID="inputEventType2" @bind-Value="ticketedEvent.EventType2" TValue="int" TItem="EventCategoriesModel" Placeholder="Select Type" AllowFiltering="true" DataSource="@eventType2Categories">
+                                <DropDownListFieldSettings Text="Name" Value="Id"></DropDownListFieldSettings>
+                                <DropDownListEvents ValueChange="()=>OnEventType2DropdownChange()" TItem="EventCategoriesModel" TValue="int"></DropDownListEvents>
+                            </SfDropDownList>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-8 mb-3">
+                            <label for="inputEventType2" class="form-label">Event Tags</label>
+                            <SfMultiSelect Id="tags-multiselect" @bind-Value="@tags" TValue="List<string>" TItem="TagModel" Placeholder="Event Tags" AllowCustomValue=true DataSource="@tagList">
+                                <MultiSelectFieldSettings Text="Value" Value="Value"></MultiSelectFieldSettings>
+                            </SfMultiSelect>
+                        </div>
+                    </div>
+                    <span class="fst-normal d-block mb-2 text-black">Location</span>
+                    <div class="row g-3">
+                        <div class="col-md-8 mb-3">
+                            <label for="inputAttendanceMode" class="form-label">Attendance Mode</label><br />
+                            <a href="javascript:void(0);" @onclick="()=> ChangeAttendanceMode(AttendanceMode.Physical)" class="btn btn-sm @(attendanceMode == AttendanceMode.Physical ? "btn-primary" : "btn-outline-secondary")">Physical</a>
+                            <a href="javascript:void(0);" @onclick="()=> ChangeAttendanceMode(AttendanceMode.OnlineEvent)" class="btn btn-sm @(attendanceMode == AttendanceMode.OnlineEvent ? "btn-primary" : "btn-outline-secondary")">Online Event</a>
+                            <a href="javascript:void(0);" @onclick="()=> ChangeAttendanceMode(AttendanceMode.Hybrid)" class="btn btn-sm @(attendanceMode == AttendanceMode.Hybrid ? "btn-primary" : "btn-outline-secondary")">Hybrid</a>
+                        </div>
+                        <div class="col-md-6 mt-0 mb-2">
+                            <label class="form-label" for="inputAddress1">Venue</label>
+                            @*<input id="inputAddress1" class="form-control" @bind-value="ticketedEvent.Venue" @onfocus="@GeoLocate" type="text" placeholder="Venue">*@
+                            @*<input type="text" id="txtAutocomplete" class="form-control mb-2" placeholder="Venue" @onfocus="AddressAutocomplete" />
+                                <SfMaps @ref="map" Format="N0" UseGroupingSeparator="true">
+                                    <MapsZoomSettings ZoomFactor="5" Enable="true" />
+                                    <MapsCenterPosition Latitude="32.42" Longitude="-99.75"></MapsCenterPosition>
+                                    <MapsLayers>
+                                        <MapsLayer ShapeData='new { dataOptions = "https://cdn.syncfusion.com/maps/map-data/world-map.json" }' LayerType="ShapeLayerType.Google" TValue="string">
+                                            <MapsShapeSettings Fill="#C3E6ED" />
+                                            <MapsMarkerSettings>
+                                                <MapsMarker Visible="true" DataSource="markerDataSource" Height="25" Width="15" TValue="City">
+                                                    <MapsMarkerTooltipSettings Visible="true" ValuePath="Name"></MapsMarkerTooltipSettings>
+                                                </MapsMarker>
+                                            </MapsMarkerSettings>
+                                        </MapsLayer>
+                                    </MapsLayers>
+                                </SfMaps>*@
+                            <input id="venue-input" class="form-control mb-2" type="text" placeholder="Search for a venue or address">
+                            <div class="bg-white p-2">
+                                <div id="google-map" style="height: 450px; width: 100%;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="inputStartDate" class="form-label">Address 2 (Optional)</label>
+                            <input id="inputAddress2" class="form-control" type="text" placeholder="Address 2">
+                        </div>
+                    </div>
+                    <span class="fst-normal d-block mb-2 text-black">Date & Time</span>
+                    <div class="row g-3">
+                        <div class="col-md-3 mb-3">
+                            <label for="inputStartDate" class="form-label">Start Date</label>
+                            <SfDatePicker id="inputStartDate" TValue="DateTime?" Placeholder="Select Start Date"></SfDatePicker>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="inputStartTime" class="form-label">Start Time</label>
+                            <SfTimePicker id="inputStartTime" TValue="DateTime?" Placeholder="Select Start Time"></SfTimePicker>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-3 mb-3">
+                            <label for="inputEndDate" class="form-label">End Date</label>
+                            <SfDatePicker id="inputEndDate" TValue="DateTime?" Placeholder="Select End Date"></SfDatePicker>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="inputEndTime" class="form-label">End Time</label>
+                            <SfTimePicker id="inputEndTime" TValue="DateTime?" Placeholder="Select End Time"></SfTimePicker>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <input class="form-check-input" type="checkbox" id="chkDisplayStartTime">
+                            <label class="form-check-label" for="chkDisplayStartTime">
+                                Display Start Time
+                            </label>
+                        </div>
+                        <div class="col-md-3">
+                            <input class="form-check-input" type="checkbox" id="chkDisplayEndTime">
+                            <label class="form-check-label" for="chkDisplayEndTime">
+                                Display End Time
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </EditForm>
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    private string title = "Ticketed Event Editor | Synergy Commerce";
+    private bool isLoading = false;
+    private string phoneCountry = "US";
+    private string organizerPhone = "";
+    private PhoneNumber phone;
+    private List<string> tags = new List<string>();
+    private List<TagModel> tagList = new List<TagModel>();
+    List<EventCategoriesModel> eventCategories = new List<EventCategoriesModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var eventCategoriesResponse = await _ticketingEventViewModel.GetEventCategories();
+        eventCategories = eventCategoriesResponse?.data ?? new List<EventCategoriesModel>();
+
+        eventType1Categories = eventCategories;
+        eventType2Categories = eventCategories;
+    }
+
+    TicketedEventModel ticketedEvent = new TicketedEventModel
+    {
+        OrganizerPhone = "",
+        PhoneCountry = "US"
+    };
+    public class TicketedEventModel
+    {
+        [RegularExpression("^[a-z0-9_\\+-]+(\\.[a-z0-9_\\+-]+)*@[a-z0-9-]+(\\.[a-z0-9]+)*\\.([a-z]{2,4})$", ErrorMessage = "Please enter valid email address")]
+        [Required(ErrorMessage = "Please enter email")]
+        public string Email { get; set; }
+        public string OrganizerPhone { get; set; }
+        public string PhoneCountry { get; set; }
+        public string Venue { get; set; }
+        public int EventType1 { get; set; }
+        public int EventType2 { get; set; }
+    }
+
+    public class TagModel
+    {
+        public int Id { get; set; }
+        public string Value { get; set; }
+    }
+
+    //Attendance Mode
+    private enum AttendanceMode
+    {
+        Physical = 0,
+        OnlineEvent = 1,
+        Hybrid = 2
+    }
+    private AttendanceMode attendanceMode = AttendanceMode.Physical;
+    private async Task ChangeAttendanceMode(AttendanceMode mode)
+    {
+        attendanceMode = mode;
+        StateHasChanged();
+    }
+
+    #region Map
+    SfMaps map;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            //To Load Google Map
+            await JSRuntime.InvokeVoidAsync("initialize", null);
+        }
+    }
+
+    public class City
+    {
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+        public string Name { get; set; }
+    };
+    private ObservableCollection<City> markerDataSource = new ObservableCollection<City>();
+    //private async Task GeoLocate()
+    //{
+    //    var address = await JSRuntime.InvokeAsync<AddressModel>("initAutocomplete");
+    //    if (address != null && !string.IsNullOrEmpty(address.GeoLatitude) && !string.IsNullOrEmpty(address.GeoLongitude))
+    //    {
+    //        ticketedEvent.Venue = address.Address1;
+    //        ObservableCollection<City> markerDataSource = new ObservableCollection<City>() {
+    //            new City{ Latitude = Convert.ToDouble(address.GeoLatitude), Longitude = Convert.ToDouble(address.GeoLongitude) }
+    //        };
+    //    }
+    //    StateHasChanged();
+    //}
+
+    string previousAddress = "";
+    private async Task AddressAutocomplete()
+    {
+        var address = await JSRuntime.InvokeAsync<AddressModel>("addressAutocomplete");
+        if (address != null && !string.IsNullOrEmpty(address.GeoLatitude) && !string.IsNullOrEmpty(address.GeoLongitude))
+        {
+            previousAddress = address.Address1;
+            //ticketedEvent.Venue = address.Address1;
+            markerDataSource = new ObservableCollection<City>();
+            markerDataSource.Add(new City { Name = address.Address1, Latitude = Convert.ToDouble(address.GeoLatitude), Longitude = Convert.ToDouble(address.GeoLongitude) });
+            map.Refresh();
+        }
+        //StateHasChanged();
+    }
+    #endregion
+
+    #region Category
+    List<EventCategoriesModel> eventType1Categories = new List<EventCategoriesModel>();
+    List<EventCategoriesModel> eventType2Categories = new List<EventCategoriesModel>();
+    private void OnEventType1DropdownChange()
+    {
+        eventType2Categories = eventCategories.Where(x => x.Id != ticketedEvent.EventType1).ToList();
+    }
+    private void OnEventType2DropdownChange()
+    {
+        eventType1Categories = eventCategories.Where(x => x.Id != ticketedEvent.EventType2).ToList();
+    }
+
+    #endregion
+
+}

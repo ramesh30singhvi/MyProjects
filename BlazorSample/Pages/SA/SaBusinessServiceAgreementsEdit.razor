@@ -1,0 +1,136 @@
+﻿@page "/sa/business/service-agreements-edit/{Id:guid}"
+@page "/sa/business/service-agreements-create"
+@layout SaLayout
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Models.ViewModel.SA
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums;
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA;
+@using Syncfusion.Blazor.RichTextEditor
+@inject ISaContentViewModel _saContentViewModel
+@inject ToastService toastService
+@inject NavigationManager NavigationManager
+@inject IServiceAgreementsViewModel _serviceAgreementsViewModel
+@attribute [Authorize]
+
+<style>
+    .no_content.e-richtexteditor .e-rte-content .e-content {
+        min-height: 250px;
+    }
+
+    .e-richtexteditor .e-rte-srctextarea {
+        height: calc(100vh - 370px);
+    }
+
+    main#main-authorized .vh-100 {
+        height: calc(100vh - 70px) !important;
+    }
+</style>
+
+<AuthorizeView>
+    <Authorized Context="ServiceAgreementAddUpdate">
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        <EditForm Model="@ServiceAgreement" OnValidSubmit="@SaveServiceAgreement">
+            <div class="py-3">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto mb-4 mb-md-0"><h5><a href="sa/business/service-agreements" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><i class="fa-regular fa-file-signature me-2"></i>@(Id != null ? "Edit" : "Add") Agreement</h5></div>
+                    <div class="col-md-auto">
+                        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                    </div>
+                </div>
+                <hr />
+            </div>
+            <div class="row pb-3 mb-4 border-bottom">
+                <div class="col-md-1">
+                    <label class="form-label"> </label>
+                    <div class="form-check">
+                        <div class="d-flex">
+                            <SfCheckBox @bind-Checked="ServiceAgreement.Active"></SfCheckBox>
+                            <label class="form-check-label" for="card-checkbox">Active</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label for="inputAgreementDisplayName" class="form-label">Agreement Display Name</label>
+                    <InputText @bind-Value="ServiceAgreement.AgreementName" class="form-control" id="inputAgreementDisplayName" placeholder="Title" />
+                </div>
+                <div class="col-md-3">
+                    <label for="inputAgreementTechnicalName" class="form-label">Agreement Technical Name</label>
+                    <InputText @bind-Value="ServiceAgreement.InternalName" class="form-control" id="inputSubTitle" placeholder="SubTitle" />
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col col-9">
+                    <label class="form-label">Service Agreement</label>
+                    <SfRichTextEditor @bind-Value="ServiceAgreement.AgreementText" CssClass="no_content">
+                        <RichTextEditorToolbarSettings Items="@SfRichTextEditorHelper.Tools" Type="ToolbarType.MultiRow"></RichTextEditorToolbarSettings>
+                        <RichTextEditorFormat Items="@SfRichTextEditorHelper.FormatItems" />
+                    </SfRichTextEditor>
+                </div>
+                <div class="col col-3">
+                    <label class="form-label">Replacement Tags</label>
+                    <div class="dropdown-open">
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="javascript:void();">[[BillingPlanName]]</a></li>
+                            <li><a class="dropdown-item" href="javascript:void();">[[ContactFirstName]]</a></li>
+                            <li><a class="dropdown-item" href="javascript:void();">[[ContactLastName]]</a></li>
+                            <li><a class="dropdown-item" href="javascript:void();">[[ContactPhone]]</a></li>
+                            <li><a class="dropdown-item" href="javascript:void();">[[BusinessEmail]]</a></li>
+                            <li><a class="dropdown-item" href="javascript:void();">[[ContactEmail]]</a></li>
+                            <li><a class="dropdown-item" href="javascript:void();">[[ActivationDate]]</a></li>
+                            <li><a class="dropdown-item" href="javascript:void();">[[MonthlyFee]]</a></li>
+                            <li><a class="dropdown-item" href="javascript:void();">[[TransactionType]]</a></li>
+                            <li><a class="dropdown-item" href="javascript:void();">[[WgtFee]]</a></li>
+                            <li><a class="dropdown-item" href="javascript:void();">[[AffFee]]</a></li>
+                            <li><a class="dropdown-item" href="javascript:void();">[[ConFee]]</a></li>
+                            <li><a class="dropdown-item" href="javascript:void();">[[RefFee]]</a></li>
+                            <li><a class="dropdown-item" href="javascript:void();">[[MobFee]]</a></li>
+                            <li><a class="dropdown-item" href="javascript:void();">[[BoFee]]</a></li>
+                            <li><a class="dropdown-item" href="javascript:void();">[[AddOns]]</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </EditForm>
+    </Authorized>
+</AuthorizeView>
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "Edit Agreement | Synergy Commerce Super Admin  Panel";
+    private bool SpinnerVisibility { get; set; } = true;
+    private ServiceAgreementModel ServiceAgreement = new ServiceAgreementModel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id == null)
+        {
+            title = "Add Agreement | Synergy Commerce Admin Panel";
+        }
+        else
+        {
+            var response = await _serviceAgreementsViewModel.GetServiceAgreement(Id.Value);
+            if (response.success)
+            {
+                ServiceAgreement = response.data;
+            }
+        }
+        SpinnerVisibility = false;
+    }
+
+    private async Task SaveServiceAgreement()
+    {
+        SpinnerVisibility = true;
+        var response = await _serviceAgreementsViewModel.CreateServiceAgreement(ServiceAgreement);
+        if (response.success)
+        {
+            ServiceAgreement = response.data;
+        }
+        SpinnerVisibility = false;
+        toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+        NavigationManager.NavigateTo(string.Format("/sa/business/service-agreements-edit/{0}", ServiceAgreement.IdGUID));
+    }
+}

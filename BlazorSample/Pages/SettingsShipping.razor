@@ -1,0 +1,216 @@
+﻿@page "/settings/shipping"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using CellarPassAppAdmin.Shared.Enums 
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <Feedback DisplayWordOur="true" PageSection="PageSection.ShippingServices"></Feedback>
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-truck me-2"></span>Shipping</h5>
+                    </div>
+                    <div class="col-md-auto"></div>
+                </div>
+            </div>
+            <div class="card-body">
+
+                <div class="row my-4">
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-shipping-fast fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/shipping-rates">Shipping Rates</a></h6>
+                                <p class="fs--2">Define available shipping rates.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-boxes fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/shipping-classes">Shipping Classes</a></h6>
+                                <p class="fs--2">Create & manage how items are grouped for shipping.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-globe-americas fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/shipping-zones">Shipping Zones</a></h6>
+                                <p class="fs--2">To restrictions to where products can be shipped to.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-box-open fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="javascript:void();">Packages</a></h6>
+                                <p class="fs--2">Set standard package sizes used to ship orders.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-shipping-fast fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="javascript:void();" @onclick="() => OpenFulfillmentPartnersModal()">Shipping Partners</a></h6>
+                                <p class="fs--2">Integrated external shipping carrier accounts & fulfillment services.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 mb-3">
+                        <div class="d-flex position-relative mb-2">
+                            <span class="far fa-shipping-timed fa-2x fa-fw me-2"></span>
+                            <div class="flex-1">
+                                <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/preferred-shipping-options">Preferred Shipping Methods</a></h6>
+                                <p class="fs--2">View preferred shipping methods offered.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </Authorized>
+</AuthorizeView>
+
+<SfDialog IsModal="true" Width="800px" ShowCloseIcon="true" @bind-Visible="FulfillmentPartnersModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Fulfillment Partners</h5></Header>
+        <Content>
+            <div class="">
+                <div class="row my-4">
+                    <div class="col-sm-6 col-md-4 col-lg-4 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body d-flex align-items-center py-2">
+                                <img src="https://cdn.cellarpass.com/static/images/partners/fedex_logo.png" class="rounded float-start me-2" alt="FedEx" width="50">
+                                <div>
+                                    <span class="fs--2 text-400">Shipping</span>
+                                    <a href="marketplace/partner/227421bc-0e6f-4174-b7c4-d07c3c56b2e8" class="stretched-link"><h5>FedEx</h5></a>
+                                    <p class="card-text fs--2">
+                                        We’re driven to create breakthrough solutions for our customers and to find ways to work smarter.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="card-footer text-center">
+                                <button class="btn btn-sm btn-primary">Configure</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 col-lg-4 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body d-flex align-items-center py-2">
+                                <img src="https://cdn.cellarpass.com/static/images/partners/shipcompliant_logo.png" class="rounded float-start me-2" alt="ShipCompliant" width="50">
+                                <div>
+                                    <span class="fs--2 text-400">Shipping</span>
+                                    <a href="marketplace/partner/acb85689-4f16-4bde-a28c-93b7e9da221b" class="stretched-link"><h5>ShipCompliant</h5></a>
+                                    <p class="card-text fs--2">Complete, continuous, connected solutions for tax </p>
+                                </div>
+                            </div>
+                            <div class="card-footer text-center">
+                                <button class="btn btn-sm btn-primary">Configure</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 col-lg-4 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body d-flex align-items-center py-2">
+                                <img src="https://cdn.cellarpass.com/static/images/partners/shippo-logo.png" class="rounded float-start me-2" alt="Shippo" width="50">
+                                <div>
+                                    <span class="fs--2 text-400">Shipping</span>
+                                    <a href="marketplace/partner/2a18ea6e-6f97-4d5e-8c31-46ff5f165681" class="stretched-link"><h5>Shippo</h5></a>
+                                    <p class="card-text fs--2">Quickly and seamlessly create labels for your pack</p>
+                                </div>
+                            </div>
+                            <div class="card-footer text-center">
+                                <button class="btn btn-sm btn-primary">Configure</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 col-lg-4 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body d-flex align-items-center py-2">
+                                <img src="https://cdn.cellarpass.com/static/images/partners/shipstation_logo.png" class="rounded float-start me-2" alt="ShipStation" width="50">
+                                <div>
+                                    <span class="fs--2 text-400">Shipping</span>
+                                    <a href="marketplace/partner/1c71d6ab-4bf8-45d0-8018-801f3db3b29e" class="stretched-link"><h5>ShipStation</h5></a>
+                                    <p class="card-text fs--2">A Better Way to Ship</p>
+                                </div>
+                            </div>
+                            <div class="card-footer text-center">
+                                <button class="btn btn-sm btn-primary">Configure</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 col-lg-4 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body d-flex align-items-center py-2">
+                                <img src="https://cdn.cellarpass.com/static/images/partners/ups-logo.png" class="rounded float-start me-2" alt="UPS" width="50">
+                                <div>
+                                    <span class="fs--2 text-400">Shipping</span>
+                                    <a href="marketplace/partner/2dcb2239-8fc5-4247-beae-a4eb17f56278" class="stretched-link"><h5>UPS</h5></a>
+                                    <p class="card-text fs--2">You can take your package to a UPS Access Point® location, or call us to schedule a pickup</p>
+                                </div>
+                            </div>
+                            <div class="card-footer text-center">
+                                <button class="btn btn-sm btn-primary">Configure</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 col-lg-4 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body d-flex align-items-center py-2">
+                                <img src="https://cdn.cellarpass.com/static/images/partners/usps-logo.png" class="rounded float-start me-2" alt="USPS" width="50">
+                                <div>
+                                    <span class="fs--2 text-400">Shipping</span>
+                                    <a href="marketplace/partner/d14573d9-35ab-4f92-9e9f-74a483283e45" class="stretched-link"><h5>USPS</h5></a>
+                                    <p class="card-text fs--2">Delivering for America</p>
+                                </div>
+                            </div>
+                            <div class="card-footer text-center">
+                                <button class="btn btn-sm btn-primary">Configure</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+    bool isDisabledModalVisible = false;
+
+    private string title = "Shipping | Synergy Commerce Admin Panel";
+    private bool FulfillmentPartnersModalVisibility { get; set; } = false;
+
+    private async Task OpenFulfillmentPartnersModal()
+    {
+        FulfillmentPartnersModalVisibility = true;
+    }
+    private void CloseFulfillmentPartnersModal()
+    {
+        FulfillmentPartnersModalVisibility = false;
+    }
+
+}

@@ -1,0 +1,121 @@
+﻿@page "/settings/pos/cash-drawer-edit/{Id:guid}"
+@page "/settings/pos/cash-drawer-create"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Enums
+@using Syncfusion.Blazor.Spinner
+@using AutoMapper;
+@inject NavigationManager _navigationManager
+@inject IPOSCashDrawerViewModel _pOSCashDrawerViewModel
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ToastService toastService
+@inject IMapper _mapper
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm Model="@cashDrawer" Context="formContext">
+    <DataAnnotationsValidator />
+    <div class="card mb-3">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-3 mb-md-0"><a href="settings/pos/cash-drawers" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-money-bill-alt me-2"></span>@(Id != null ? "Edit" : "Add") Drawer</h5>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-sm btn-primary" type="button" @onclick="@(() => SavePOSCashDrawer(formContext))">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-1"></div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label" for="inputDrawerName">Drawer Name</label>
+                    <InputText id="inputDrawerName" @bind-Value="cashDrawer.DrawerName" class="form-control" type="text" placeholder="Drawer Name" />
+                    <ValidationMessage For="@(() => cashDrawer.DrawerName)" />
+                </div>
+                <div class="col-md-7"></div>
+                <div class="col-md-1"></div>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label" for="inputDrawerModel">Drawer Model</label>
+                    <SfDropDownList @bind-Value="cashDrawer.DrawerModel_Id" id=inputDrawerModel TValue="int" TItem="CPCashDrawerModel" Placeholder="Select Drawer Model" DataSource="@cPCashDrawerModels" required>
+                        <DropDownListFieldSettings Text="Model" Value="Id"></DropDownListFieldSettings>
+                    </SfDropDownList>
+                    <ValidationMessage For="@(() => cashDrawer.DrawerModel_Id)" />
+                </div>
+            </div>
+        </div>
+    </div>
+    <ValidationSummary Model="@cashDrawer" />
+</EditForm>
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private bool SpinnerVisibility { get; set; } = false;
+    private Boolean isLoading;
+    private string title = "Edit Drawer | Synergy Commerce Admin Panel";
+    private bool isUseDetailedDrawerCount = true;
+    private Member currentMember = new Member();
+    POSCashDrawerModel cashDrawer = new POSCashDrawerModel();
+    private List<CPCashDrawerModel> cPCashDrawerModels = new List<CPCashDrawerModel>();
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        isLoading = true;
+        if (Id == null)
+        {
+            title = "Add Drawer | Synergy Commerce Admin Panel";
+        }
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get POS cash Drawer Details During Edit
+        if (Id != null)
+        {
+            var drawerResponse = await _pOSCashDrawerViewModel.GetPOSCashDrawerDetails(0, Id.ToString());
+            if (drawerResponse.success)
+            {
+                cashDrawer = drawerResponse.data;
+            }
+        }
+
+        var cPCashDrawerModelsResponse = await _pOSCashDrawerViewModel.GetCPCashDrawerModels();
+        if (cPCashDrawerModelsResponse.success)
+        {
+            cPCashDrawerModels = cPCashDrawerModelsResponse.data;
+        }
+        isLoading = false;
+        SpinnerVisibility = false;
+        StateHasChanged();
+    }
+
+    protected async Task SavePOSCashDrawer(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            cashDrawer.Business_Id = currentMember.Id;
+            var response = await _pOSCashDrawerViewModel.AddUpdatePOSCashDrawer(cashDrawer);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                if (Id == null)
+                {
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                }
+                else
+                {
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                }
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+}

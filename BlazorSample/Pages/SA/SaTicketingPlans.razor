@@ -1,0 +1,156 @@
+﻿@page "/sa/business/ticketing-plans"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ITicketingPlanViewModel _ticketingPlanViewModel
+@inject ILocalStorageService localStorage
+@inject ToastService _toastService
+@attribute [Authorize]
+
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="py-3">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-0"><a href="sa/business" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-ticket me-2"></span>Ticketing Plans</h5>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-sm btn-primary" href="/sa/business/ticketing-plan/add">Add New</a>
+                </div>
+            </div>
+            <hr />
+        </div>
+
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@ticketingPlans" Width="100%" AllowPaging="true">
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates Context="iContext">
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && ticketingPlans.Count <= 0)
+                        {
+                            <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Ticket Order</h6>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn Field=@nameof(TicketingPlanModel.Active) HeaderText="Active" TextAlign="TextAlign.Center" Width="35">
+                        <Template Context="iContext">
+                            @{
+                                var ticketingPlan = (iContext as TicketingPlanModel);
+                            }
+                            @if (ticketingPlan.Active)
+                            {
+                                <span class="checked_box">
+                                    <span class="far fa-check-square"></span>
+                                    ✓
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="unchecked_box">
+                                    <span class="empty-check"></span>
+                                </span>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="Plan Name" TextAlign="TextAlign.Left" Width="50">
+                        <Template Context="iContext">
+                            @{
+                                var ticketingPlan = (iContext as TicketingPlanModel);
+                                <a href="/sa/business/ticketing-plan/edit/@ticketingPlan.IdGuid">@(ticketingPlan.Name)</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(TicketingPlanModel.PerTicketFee) Format="c2" HeaderText="Per Ticket Fee" TextAlign="TextAlign.Left" Width="40" />
+                    <GridColumn Field=@nameof(TicketingPlanModel.AddOnFee) Format="c2" HeaderText="Add-On Fee" TextAlign="TextAlign.Left" Width="40" />
+                    <GridColumn Field=@nameof(TicketingPlanModel.ServiceFee) Format="p2" HeaderText="Service Fee" TextAlign="TextAlign.Left" Width="40" />
+                    <GridColumn Field=@nameof(TicketingPlanModel.VisaProcessingFee) Format="p2" HeaderText="Visa Processing Fee" TextAlign="TextAlign.Left" Width="40" />
+                    <GridColumn Field=@nameof(TicketingPlanModel.MasterCardProcessingFee) Format="p2" HeaderText="MC Processing Fee" TextAlign="TextAlign.Left" Width="40" />
+                    <GridColumn Field=@nameof(TicketingPlanModel.AmexProcessingFee) Format="p2" HeaderText="Amex Processing Fee" TextAlign="TextAlign.Left" Width="40" />
+                    <GridColumn Field=@nameof(TicketingPlanModel.DiscoverProcessingFee) Format="p2" HeaderText="Discover Processing Fee" TextAlign="TextAlign.Left" Width="30" />
+                    <GridColumn Field=@nameof(TicketingPlanModel.MaxFee) Format="c2" HeaderText="Max Tix Fee" TextAlign="TextAlign.Left" Width="30" />
+                    <GridColumn Field=@nameof(TicketingPlanModel.Description) HeaderText="Description" TextAlign="TextAlign.Left" Width="50" />
+                    <GridColumn HeaderText="" TextAlign="TextAlign.Right" Width="30">
+                        <Template Context="iContext">
+                            @{
+                                var ticketingPlan = (iContext as TicketingPlanModel);
+                                <div class="font-sans-serif position-static d-inline-block">
+                                    <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                    <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                        <a class="dropdown-item text-danger" href="javascript:void(0)" @onclick="()=> DeleteTrigger(ticketingPlan.IdGuid)">Delete</a>
+                                    </div>
+                                </div>
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </Authorized>
+</AuthorizeView>
+<DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="()=>DeleteConfirmed(idForDelete)"></DeleteConfirmation>
+
+@code
+{
+    private string title = "Ticketing Plans | Synergy Commerce Super Admin Panel";
+    private bool isLoading = false;
+    List<TicketingPlanModel> ticketingPlans = new List<TicketingPlanModel>();
+    bool openDeleteDialog = false;
+    DeleteConfirmation DeleteConfirmation;
+    private Guid idForDelete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        //Get Ticketing Plan List
+        await GetTicketingPlans();
+        isLoading = false;
+    }
+
+    private async Task GetTicketingPlans()
+    {
+        //Get Ticketing Plan List
+        var ticketingPlanListResponse = await _ticketingPlanViewModel.GetTicketingPlanList();
+        ticketingPlans = ticketingPlanListResponse?.data ?? new List<TicketingPlanModel>();
+    }
+
+    private void DialogClose() => openDeleteDialog = false;
+
+    private void DeleteTrigger(Guid Id)
+    {
+        openDeleteDialog = true;
+        idForDelete = Id;
+    }
+
+    private async Task DeleteConfirmed(Guid Id)
+    {
+        openDeleteDialog = false;
+        isLoading = true;
+        var response = await _ticketingPlanViewModel.DeleteTicketingPlan(Id);
+        isLoading = false;
+        if (response.success)
+        {
+            await GetTicketingPlans();
+            _toastService.ShowToast(Constants.DeleteMessage, ToastLevel.Success);
+        }
+        else
+        {
+            _toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+}

@@ -1,0 +1,1476 @@
+﻿@page "/sa/business/business-accounts/{Id:guid}"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@inject IBusinessViewModel _businessViewModel
+@inject IBusinessPropertyViewModel _businessPropertyViewModel
+@inject IUserViewModel _userViewModel
+@inject ISettingsViewModel _settingsViewModel
+@inject ICountryViewModel _countryViewModel
+@inject IStateViewModel _stateViewModel
+@inject ISaIntegrationPartnerViewModel _saIntegrationPartnerViewModel
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ToastService toastService
+@inject IMessageViewModel MessageViewModel
+@attribute [Authorize]
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+
+<Title Value="@title"></Title>
+
+<div class="py-3">
+    <div class="row justify-content-between">
+        <div class="col-md-auto mb-4 mb-md-0"><h5><a href="sa/business/business-accounts" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><i class="fa-regular fa-building me-2"></i>Encore Winery</h5></div>
+        <div class="col-md-auto">
+            <button class="btn btn-sm btn-success">Launched</button>
+        </div>
+    </div>
+    <hr />
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+        <div class="card h-100 shadow-none bg-light">
+            <div class="card-body">
+                <div class="row flex-between-center">
+                    <div class="col d-md-flex d-lg-block flex-between-center">
+                        <h6 class="fs--2 text-600 text-uppercase mb-1">Status</h6>
+                        <h5 class="fs-0 text-900 mb-0 me-2">Active <span class="fs--1 text-600">(@business.CreatedDate.ToString("MM/dd/yyyy"))</span></h5>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-link p-0"><span class="fa-regular fa-pencil fa-sm"></span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card h-100 shadow-none bg-light">
+            <div class="card-body">
+                <div class="row flex-between-center">
+                    <div class="col d-md-flex d-lg-block flex-between-center">
+                        <h6 class="fs--2 text-600 text-uppercase mb-1">Subscription</h6>
+                        <h5 class="fs-0 text-900 mb-0 me-2">@business.SubscriptionName</h5>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-link p-0"><span class="fa-regular fa-pencil fa-sm"></span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card h-100 shadow-none bg-light">
+            <div class="card-body">
+                <div class="row flex-between-center">
+                    <div class="col d-md-flex d-lg-block flex-between-center">
+                        <h6 class="fs--2 text-600 text-uppercase mb-1">RSVP Plan</h6>
+                        <h5 class="fs-0 text-900 mb-0 me-2">@business.RsvpPlan</h5>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-link p-0"><span class="fa-regular fa-pencil fa-sm"></span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card h-100 shadow-none bg-light">
+            <div class="card-body">
+                <div class="row flex-between-center">
+                    <div class="col d-md-flex d-lg-block flex-between-center">
+                        <h6 class="fs--2 text-600 text-uppercase mb-1">Ticketing Plan</h6>
+                        <h5 class="fs-0 text-900 mb-0 me-2">@business.TicketingPlan</h5>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-link p-0"><span class="fa-regular fa-pencil fa-sm"></span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+        <div class="card h-100 shadow-none bg-light">
+            <div class="card-body">
+                <div class="row flex-between-center">
+                    <div class="col d-md-flex d-lg-block flex-between-center">
+                        <h6 class="fs--2 text-600 text-uppercase mb-1">Account Manager</h6>
+                        <h5 class="fs-0 text-900 mb-0 me-2">@business.AccountManager</h5>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-link p-0"><span class="fa-regular fa-pencil fa-sm"></span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card h-100 shadow-none bg-light">
+            <div class="card-body">
+                <div class="row flex-between-center">
+                    <div class="col d-md-flex d-lg-block flex-between-center">
+                        <h6 class="fs--2 text-600 text-uppercase mb-1">Last Invoice <span class="badge badge-sm bg-success ms-2">Paid</span></h6>
+                        <h5 class="fs-0 text-900 mb-0 me-2">2021-12345 <span class="fs--1 text-600">($199.00)</span></h5>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-link p-0"><span class="fa-regular fa-eye fa-sm"></span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card h-100 shadow-none bg-light">
+            <div class="card-body">
+                <div class="row flex-between-center">
+                    <div class="col d-md-flex d-lg-block flex-between-center">
+                        <h6 class="fs--2 text-600 text-uppercase mb-1">Point of Sale Plan</h6>
+                        <h5 class="fs-0 text-900 mb-0 me-2">POS Advanced</h5>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-link p-0"><span class="fa-regular fa-pencil fa-sm"></span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card h-100 shadow-none bg-light">
+            <div class="card-body">
+                <div class="row flex-between-center">
+                    <div class="col d-md-flex d-lg-block flex-between-center">
+                        <h6 class="fs--2 text-600 text-uppercase mb-1">Loyalty Points Plan</h6>
+                        <h5 class="fs-0 text-900 mb-0 me-2">Inactive</h5>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-link p-0"><span class="fa-regular fa-pencil fa-sm"></span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-none border">
+    <EditForm Model="@business">
+        <div class="card-header bg-light">
+            <ul class="nav nav-tabs card-header-tabs">
+                <li class="nav-item"><a class="nav-link active text-uppercase" id="account-tab" data-bs-toggle="tab" href="#tab-account" role="tab" aria-controls="tab-account" aria-selected="true">Account</a></li>
+                <li class="nav-item"><a class="nav-link text-uppercase" id="integrations-tab" data-bs-toggle="tab" href="#tab-integrations" role="tab" aria-controls="tab-integrations" aria-selected="false">Integrations</a></li>
+                <li class="nav-item"><a class="nav-link text-uppercase" id="billing-tab" data-bs-toggle="tab" href="#tab-billing" role="tab" aria-controls="tab-billing" aria-selected="false">Billing &amp; Subscriptions</a></li>
+                <li class="nav-item"><a class="nav-link text-uppercase" id="notes-tab" data-bs-toggle="tab" href="#tab-notes" role="tab" aria-controls="tab-notes" aria-selected="false">Notes</a></li>
+                <li class="nav-item"><a class="nav-link text-uppercase" id="logs-tab" data-bs-toggle="tab" href="#tab-logs" role="tab" aria-controls="tab-logs" aria-selected="false">Logs</a></li>
+                <li class="nav-item"><a class="nav-link text-uppercase" id="journey-tab" data-bs-toggle="tab" href="#tab-journey" role="tab" aria-controls="tab-journey" aria-selected="false">Journey</a></li>
+            </ul>
+        </div>
+        <div class="card-body p-0">
+            <div class="tab-content  p-3" id="tabContent">
+                <div class="tab-pane p-2 fade show active" id="tab-account" role="tabpanel" aria-labelledby="account-tab">
+
+                    <div class="card shadow-none border">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-12 col-md-4">
+                                    <div class="mb-4">
+                                        <h6 class="text-400 text-uppercase">Business Name</h6>
+                                        <SfInPlaceEditor @bind-Value="@business.BusinessName" TValue="string" Type="Syncfusion.Blazor.InPlaceEditor.InputType.Text" SubmitOnEnter="true">
+                                            <EditorComponent>
+                                                <SfTextBox @bind-Value="@business.BusinessName" Placeholder="Enter Business Name"></SfTextBox>
+                                            </EditorComponent>
+                                            <InPlaceEditorEvents TValue="string" OnActionSuccess="UpdateBusinessName"></InPlaceEditorEvents>
+                                        </SfInPlaceEditor>
+                                    </div>
+                                    <div class="mb-4">
+                                        <h6 class="text-400 text-uppercase">Account Owner</h6>
+                                        <SfInPlaceEditor Mode="RenderMode.Popup" @bind-Value="@business.AccountOwner" TValue="string">
+                                            <EditorComponent>
+                                                <SfDropDownList @bind-Value="@selectedAccountOwner" TValue="int" TItem="UserDetailViewModel" DataSource="@users">
+                                                    <DropDownListEvents TItem="UserDetailViewModel" TValue="int" ValueChange="@selectAccountOwner"></DropDownListEvents>
+                                                    <DropDownListFieldSettings Value="Id" Text="UserFullName"></DropDownListFieldSettings>
+                                                </SfDropDownList>
+                                            </EditorComponent>
+                                            <InPlaceEditorEvents TValue="string" BeginEdit="editAccountOwner" OnActionSuccess="UpdateBusinessAccountOwner"></InPlaceEditorEvents>
+                                        </SfInPlaceEditor>
+                                    </div>
+                                    <div class="mb-4">
+                                        <h6 class="text-400 text-uppercase">Contact</h6>
+                                        <SfInPlaceEditor @bind-Value="@business.PhoneFormatted" TValue="string" Type="Syncfusion.Blazor.InPlaceEditor.InputType.Text" SubmitOnEnter="true">
+                                            <EditorComponent>
+                                                <PhoneNumber PhoneCountry="@phoneCountry" @bind-phone="@business.PhoneFormatted" @ref="phone" />
+                                            </EditorComponent>
+                                            <InPlaceEditorEvents TValue="string" OnActionSuccess="UpdateBusinessPhone"></InPlaceEditorEvents>
+                                        </SfInPlaceEditor>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <div class="mb-4 fs--1">
+                                        <h6 class="text-400 text-uppercase">Billing Address <a href="javascript:void();" @onclick="@editBusinessAddress" class="btn btn-link p-0"><span class="fa-regular fa-pencil fa-xs ps-2"></span></a></h6>
+                                        <address class="mx-2">
+                                            @business.Address1<br />
+                                            @business.Address2<br />
+                                            @business.City, @business.StateCode @business.ZipCode
+                                        </address>
+                                    </div>
+                                    <div class="mb-4">
+                                        <h6 class="text-400 text-uppercase">Website</h6>
+                                        @*<p>https://www.cellarpass.com</p>*@
+                                        <SfInPlaceEditor @bind-Value="@business.WebsiteURL" TValue="string" Type="Syncfusion.Blazor.InPlaceEditor.InputType.Text" SubmitOnEnter="true">
+                                            <EditorComponent>
+                                                <SfTextBox @bind-Value="@business.WebsiteURL" Placeholder="Enter Website URL"></SfTextBox>
+                                            </EditorComponent>
+                                            <InPlaceEditorEvents TValue="string" OnActionSuccess="UpdateWebsiteURL"></InPlaceEditorEvents>
+                                        </SfInPlaceEditor>
+                                    </div>
+                                    <div class="mb-4">
+                                        <h6 class="text-400 text-uppercase">Weather Feed <a href="javascript:void();" class="p-0 mx-2 btn btn-link" @onclick="ShowWeatherFeedAddressModal"><span class="fa-regular fa-pencil fa-xs ps-2"></span></a></h6>
+                                        <p class="mx-2">@business.WeatherFeedAddress</p>
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <div class="mb-4">
+                                        <h6 class="text-400 text-uppercase">Timezone</h6>
+                                        <p class="mx-2">@business.Timezone</p>
+                                    </div>
+                                    <div class="mb-4">
+                                        <h6 class="text-400 text-uppercase">Currency</h6>
+                                        <p class="mx-2">@business.Currency</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @if (businessProfiles != null && businessProfiles.Count > 0)
+                    {
+                        <div class="row py-4">
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <h6 class="text-400 text-uppercase">Business Profiles</h6>
+                                </div>
+                                <div class="table-responsive fs--1">
+                                    <table class="table table-bordered">
+                                        <tbody>
+                                            @foreach (var item in businessProfiles)
+                                            {
+                                                <tr>
+                                                    <td><a href="settings/business-profiles/@item.PropertyGuid">@item.PropertyName</a></td>
+                                                    <td>@item.Address</td>
+                                                    <td>
+                                                        <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                        <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                            <a class="dropdown-item" href="settings/content/business-page/@item.PropertyGuid">Content</a>
+                                                            <a class="dropdown-item" href="settings/business-profiles/@item.PropertyGuid">Settings</a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+
+                </div>
+                <div class="tab-pane p-2 fade" id="tab-journey" role="tabpanel" aria-labelledby="journey-tab">
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="mb-3">
+                                <h6 class="text-400 text-uppercase">Account Journey</h6>
+                            </div>
+                            <div class="card shadow-none border">
+                                <div class="card-body">
+                                    <div class="row g-3 timeline timeline-primary timeline-past pb-card">
+                                        <div class="col-auto ps-4 ms-2">
+                                            <div class="ps-2">
+                                                <div class="icon-item icon-item-sm rounded-circle bg-200 shadow-none"><span class="fa-solid fa-circle-1 text-primary"></span></div>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="row gx-0 border-bottom pb-card">
+                                                <div class="col">
+                                                    <h6 class="text-800 mb-1">Sign-up Initiated</h6>
+                                                    <p class="fs--1 text-600 mb-0">Initiated by jelliman@cellarpass.com</p>
+                                                </div>
+                                                <div class="col-auto">
+                                                    <p class="fs--2 text-500 mb-0">6/1/2009 10:40 AM PST</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row g-3 timeline timeline-primary timeline-past pb-card">
+                                        <div class="col-auto ps-4 ms-2">
+                                            <div class="ps-2">
+                                                <div class="icon-item icon-item-sm rounded-circle bg-200 shadow-none"><span class="fa-solid fa-circle-2 text-primary"></span></div>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="row gx-0 border-bottom pb-card">
+                                                <div class="col">
+                                                    <h6 class="text-800 mb-1">Sign-up Complete</h6>
+                                                    <p class="fs--1 text-600 mb-0">Some text here</p>
+                                                </div>
+                                                <div class="col-auto">
+                                                    <p class="fs--2 text-500 mb-0">6/1/2009 11:00 AM PST</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row g-3 timeline timeline-primary pb-card">
+                                        <div class="col-auto ps-4 ms-2">
+                                            <div class="ps-2">
+                                                <div class="icon-item icon-item-sm rounded-circle bg-200 shadow-none"><span class="fa-solid fa-circle-3 text-primary"></span></div>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="row gx-0 border-bottom pb-card">
+                                                <div class="col">
+                                                    <h6 class="text-800 mb-1">Training Scheduled</h6>
+                                                    <p class="fs--1 text-600 mb-0">Scheduled by </p>
+                                                </div>
+                                                <div class="col-auto">
+                                                    <p class="fs--2 text-500 mb-0"></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row g-3 timeline timeline-primary pb-card">
+                                        <div class="col-auto ps-4 ms-2">
+                                            <div class="ps-2">
+                                                <div class="icon-item icon-item-sm rounded-circle bg-200 shadow-none"><span class="fa-solid fa-circle-4 text-primary"></span></div>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="row gx-0 border-bottom pb-card">
+                                                <div class="col">
+                                                    <h6 class="text-800 mb-1">Training Complete</h6>
+                                                    <p class="fs--1 text-600 mb-0"> </p>
+                                                </div>
+                                                <div class="col-auto">
+                                                    <p class="fs--2 text-500 mb-0"></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+                <div class="tab-pane fade" id="tab-integrations" role="tabpanel" aria-labelledby="integrations-tab">
+                    <EditForm Model="integrationRequest" Context="integrationSettingsContext">
+                        <DataAnnotationsValidator></DataAnnotationsValidator>
+                        <div class="row justify-content-between align-items-center border-bottom pb-3 mb-3">
+                            <div class="col-6">
+                                <h6 class="text-400 text-uppercase mb-0">Integrations</h6>
+                            </div>
+                            <div class="col-6 text-end">
+                                <button class="btn btn-sm btn-primary" @onclick="(() => saveIntegrationSettings(integrationSettingsContext))">Save</button>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12 col-md-6">
+                                <div class="mb-3">
+                                    <label for="selWebSync" class="form-label">eCommerce</label>
+                                    <select id="selWebSync" class="form-select" @bind="@integrationRequest.WebSync" aria-label="Web Sync">
+                                        @foreach (var item in webSyncOptions)
+                                        {
+                                            <option value="@item.SettingValue">@item.SettingName</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="mb-3">
+                                    <label for="selClubService" class="form-label">Club Service</label>
+                                    <select id="selClubService" class="form-select" @bind="@integrationRequest.ClubService" aria-label="Club Services">
+                                        @foreach (var item in clubServiceOptions)
+                                        {
+                                            <option value="@item.SettingValue">@item.SettingName</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12 col-md-6">
+                                <div class="mb-3">
+                                    <label for="selTaxService" class="form-label">Tax Service</label>
+                                    <select id="selTaxService" class="form-select" @bind="@integrationRequest.TaxService" aria-label="Tax Services">
+                                        @foreach (var item in taxServiceOptions)
+                                        {
+                                            <option value="@item.SettingValue">@item.SettingName</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="mb-3">
+                                    <label for="selComplianceService" class="form-label">Compliance Service</label>
+                                    <select id="selComplianceService" class="form-select" @bind="@integrationRequest.ComplianceService" aria-label="Compliance Services">
+                                        @foreach (var item in complianceServiceOptions)
+                                        {
+                                            <option value="@item.SettingValue">@item.SettingName</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12 col-md-6">
+
+                                <div class="mb-3">
+                                    <label for="selSyncReservations" class="form-label">Sync Reservations (By Event Date)</label>
+                                    <select id="selSyncReservations" class="form-select" @bind="@integrationRequest.SyncReservations" aria-label="Sync Start Time">
+                                        @foreach (var item in syncReservations)
+                                        {
+                                            <option value="@item.SettingValue">@item.SettingName</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="mb-6" hidden="@(!integrationRequest.ReservationsService.ToLower().Equals(synergyCommerceIntegrationPartnerGUID.ToLower()))"></div>
+                                <div class="mb-3">
+                                    <label for="selUpsertOrderDate" class="form-label">Upsert Order Date as</label>
+                                    <select id="selUpsertOrderDate" class="form-select" @bind="@integrationRequest.UpsertOrderDate" aria-label="Upsert Order Date">
+                                        @foreach (var item in upsertOrderDates)
+                                        {
+                                            <option value="@item.SettingValue">@item.SettingName</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="mb-3">
+                                    <label for="reservationsServiceMapping" class="form-label">Reservations Service</label>
+                                    <select id="reservationsServiceMapping" class="form-select" @bind="@integrationRequest.ReservationsService" aria-label="Reservations Service">
+                                        <option value="">None</option>
+                                        @foreach (var item in reservationsServiceOptions)
+                                        {
+                                            <option value="@item.SettingValue">@item.SettingName</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="mb-3" hidden="@(!integrationRequest.ReservationsService.ToLower().Equals(synergyCommerceIntegrationPartnerGUID.ToLower()))">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" @bind-value="@integrationRequest.EnableRSVPsOnTix" checked="@integrationRequest.EnableRSVPsOnTix" id="chkEnableRsvpOnTix">
+                                        <label class="form-check-label" for="chkEnableRsvpOnTix">
+                                            Enable RSVPs on Tix
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="selUpsertShipDate" class="form-label">Upsert Ship Date as</label>
+                                    <select id="selUpsertShipDate" class="form-select" @bind="@integrationRequest.UpsertShipDate" aria-label="Upsert Ship Date as">
+                                        @foreach (var item in upsertShipDates)
+                                        {
+                                            <option value="@item.SettingValue">@item.SettingName</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12 col-md-6">
+                                <div class="mb-3">
+                                    <label for="selSyncStartTime" class="form-label">Sync Start Time (All Times Pacific)</label>
+                                    <select id="selSyncStartTime" class="form-select" @bind="@integrationRequest.SyncStartTime" aria-label="Sync Start Time">
+                                        @foreach (var item in syncStartTimeOptions)
+                                        {
+                                            <option value="@item.SettingValue">@item.SettingName</option>
+                                        }
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="SMSServiceProvider" class="form-label">SMS Service Provider</label>
+                                    <select id="SMSServiceProvider" class="form-select" @bind="@integrationRequest.SMSServiceProvider" aria-label="SMS Service Provider">
+                                        @foreach (var item in sMSServiceProviders)
+                                        {
+                                            <option value="@item.SettingValue">@item.SettingName</option>
+                                        }
+                                    </select>
+                                </div>
+                                @if (integrationRequest.SMSServiceProvider == ((int)SMSServiceProviderType.Twilio).ToString())
+                                {
+                                    <div class="mb-3">
+                                        <label for="twilioSMSNumber" class="form-label">Twilio SMS Number</label>
+                                        @*<InputText id="twilioSMSNumber" class="form-control" @bind-Value="@integrationRequest.TwilioSMSNumber"></InputText>*@
+                                        <SfMaskedTextBox ID="twilioSMSNumber" Mask="@_defaultTwilioSMSMask" PromptChar="@promptCharacter" @bind-Value="@integrationRequest.TwilioSMSNumber" CssClass="form-control form-control-sm" Placeholder="Twilio SMS Number"></SfMaskedTextBox>
+                                        <ValidationMessage For="@(() => integrationRequest.TwilioSMSNumber)" />
+                                    </div>
+                                }
+
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="mb-3">
+                                    <label for="selSalesChannelMapping" class="form-label">Sales Channel Mapping</label>
+                                    <select id="selSalesChannelMapping" class="form-select" @bind="@integrationRequest.SalesChannelMapping" aria-label="Sales Channel Mapping">
+                                        @foreach (var item in salesChannelMappings)
+                                        {
+                                            <option value="@item.SettingValue">@item.SettingName</option>
+                                        }
+                                    </select>
+                                </div>
+                                @if (integrationRequest.ReservationsService.ToLower().Equals(synergyCommerceIntegrationPartnerGUID.ToLower()))
+                                {
+                                    <div class="mb-3">
+                                        <label for="selInventoryMode" class="form-label">Inventory Mode</label>
+                                        <select id="selInventoryMode" class="form-select" @bind="@integrationRequest.InventoryMode" aria-label="Inventory Mode">
+                                            @foreach (var item in inventoryModes)
+                                            {
+                                                <option value="@item.SettingValue">@item.SettingName</option>
+                                            }
+                                        </select>
+                                    </div>
+                                }
+                                <div class="mb-3">
+                                    <label for="tripAdvisorId" class="form-label">Trip Advisor Id</label>
+                                    <InputText id="tripAdvisorId" class="form-control" @bind-Value="@integrationRequest.TripAdvisorId"></InputText>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <h6>Payment Gateways</h6>
+                            <hr />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12 col-md-6">
+                                <div class="mb-3">
+                                    <label for="selGatewayRsvp" class="form-label">Reservations</label>
+                                    <select id="selGatewayRsvp" class="form-select" @bind="@integrationRequest.ReservationsPaymentGateway" aria-label="Reservation Gateway">
+                                        <option value="0">None</option>
+                                        @foreach (var item in reservationsPaymentGateways)
+                                        {
+                                            <option value="@item.SettingValue">@item.SettingName</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="mb-3">
+                                    <label for="selGatewayTicketing" class="form-label">Ticketing</label>
+                                    <select id="selGatewayTicketing" class="form-select" @bind="@integrationRequest.TicketingPaymentGateway" aria-label="Ticketing Gateway">
+                                        <option value="0">None</option>
+                                        @foreach (var item in paymentGateways)
+                                        {
+                                            <option value="@item.IntegrationPartnerId">@item.AppName</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="mb-3">
+                                    <label for="selPreAuthorize" class="form-label">Pre-Authorize (Reservations)</label>
+                                    <select id="selPreAuthorize" class="form-select" @bind="@integrationRequest.PreAuthorizeReservation" aria-label="Pre-Authorize">
+                                        @foreach (var item in preAuthorizeReservations)
+                                        {
+                                            <option value="@item.SettingValue">@item.SettingName</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="mb-3">
+                                    <label for="selGatewayRsvp" class="form-label">Web</label>
+                                    <select id="selGatewayRsvp" class="form-select" @bind="@integrationRequest.WebPaymentGateway" aria-label="Web Gateway">
+                                        <option value="0">None</option>
+                                        @foreach (var item in paymentGateways)
+                                        {
+                                            <option value="@item.IntegrationPartnerId">@item.AppName</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="mb-3">
+                                    <label for="selGatewayTicketing" class="form-label">Point of Sale</label>
+                                    <select id="selGatewayTicketing" class="form-select" @bind="@integrationRequest.POSPaymentGateway" aria-label="POS Gateway">
+                                        <option value="0">None</option>
+                                        @foreach (var item in paymentGateways)
+                                        {
+                                            <option value="@item.IntegrationPartnerId">@item.AppName</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <div class="mb-3">
+                                    <label for="selGatewayRsvp" class="form-label">Club</label>
+                                    <select id="selGatewayRsvp" class="form-select" @bind="@integrationRequest.ClubPaymentGateway" aria-label="Club Gateway">
+                                        <option value="0">None</option>
+                                        @foreach (var item in paymentGateways)
+                                        {
+                                            <option value="@item.IntegrationPartnerId">@item.AppName</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </EditForm>
+
+                </div>
+                <div class="tab-pane fade" id="tab-billing" role="tabpanel" aria-labelledby="billing-tab">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card shadow-none border">
+                                <div class="card-header d-flex flex-between-center border-bottom py-2">
+                                    <h6 class="mb-0 text-uppercase text-400">Payment Method</h6><a class="py-1 fs--1 font-sans-serif" href="#!">View History</a>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row justify-content-between">
+                                        <div class="col-md-auto">
+                                            <h6 class="mb-3 mb-md-0"><span class="fa-regular fa-credit-card me-2"></span>Visa *1729 Exp: 04/2021</h6>
+                                        </div>
+                                        <div class="col-md-auto">
+                                            <a class="btn btn-sm btn-outline-primary border-300 me-2" href="#!">Change</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row py-4">
+                        <div class="col-12">
+                            <div class="card shadow-none border">
+                                <div class="card-header d-flex flex-between-center border-bottom py-3">
+                                    <h6 class="mb-0 text-uppercase text-400">Invoices</h6>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="p-4">
+                                        <div class="row">
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label" for="inputInvoiceDateRanch">Date Range</label>
+                                                <SfDateRangePicker TValue="DateTime?" Placeholder="Choose a Range">
+                                                    <DateRangePickerPresets>
+                                                        <DateRangePickerPreset Label="Year to Date" Start="@YtdStart" End="@YtdEnd"></DateRangePickerPreset>
+                                                        <DateRangePickerPreset Label="This Month" Start="@MonthStart" End="@MonthEnd"></DateRangePickerPreset>
+                                                        <DateRangePickerPreset Label="Last Month" Start="@LastMonthStart" End="@LastMonthEnd"></DateRangePickerPreset>
+                                                        <DateRangePickerPreset Label="Last Year" Start="@LastYearStart" End="@LastYearEnd"></DateRangePickerPreset>
+                                                    </DateRangePickerPresets>
+                                                </SfDateRangePicker>
+                                            </div>
+                                            <div class="col-12 col-md-6">
+                                                <label class="form-label" for="inputGroupSearch">Search</label>
+                                                <div class="input-group mb-3">
+                                                    <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                                                    <input type="text" class="form-control" placeholder="Search Invoices" aria-label="Search Invoices" aria-describedby="inputGroupSearch" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <SfGrid DataSource="@InvoicePlaceholderList" AllowPaging="false" Width="100%" class="border-0">
+                                        <GridColumns>
+                                            <GridColumn HeaderText="Invoice" TextAlign="TextAlign.Left" Width="120">
+                                                <Template Context="invoiceContext">
+                                                    @{
+                                                        var invoice = (invoiceContext as InvoicePlaceholder);
+                                                        <a class="btn btn-link text-800 fs--1" href="settings/business-invoices/@invoice.InvoiceGuid">@invoice.InvoiceNumber</a>
+                                                    }
+                                                </Template>
+                                            </GridColumn>
+                                            <GridColumn HeaderText="Invoice Date" Type="ColumnType.String" TextAlign="TextAlign.Left" Width="100">
+                                                <Template Context="invoiceContext">
+                                                    @{
+                                                        var invoice = (invoiceContext as InvoicePlaceholder);
+                                                        @(invoice.InvoiceDate)
+                                                    }
+                                                </Template>
+                                            </GridColumn>
+                                            <GridColumn HeaderText="Company Name" TextAlign="TextAlign.Left" Width="200">
+                                                <Template Context="invoiceContext">
+                                                    @{
+                                                        var invoice = (invoiceContext as InvoicePlaceholder);
+                                                        @(invoice.CompanyName)
+                                                    }
+                                                </Template>
+                                            </GridColumn>
+                                            <GridColumn HeaderText="Amount" TextAlign="TextAlign.Left" Width="100">
+                                                <Template Context="invoiceContext">
+                                                    @{
+                                                        var invoice = (invoiceContext as InvoicePlaceholder);
+                                                        @(invoice.Amount)
+                                                    }
+                                                </Template>
+                                            </GridColumn>
+                                            <GridColumn HeaderText="Amount Due" TextAlign="TextAlign.Left" Width="100">
+                                                <Template Context="invoiceContext">
+                                                    @{
+                                                        var invoice = (invoiceContext as InvoicePlaceholder);
+                                                        @(invoice.AmountDue)
+                                                    }
+                                                </Template>
+                                            </GridColumn>
+                                            <GridColumn HeaderText="Status" TextAlign="TextAlign.Center" Width="70">
+                                                <Template Context="invoiceContext">
+                                                    @{
+                                                        var invoice = (invoiceContext as InvoicePlaceholder);
+                                                        <span class="badge @(invoice.InvoiceStatus == "Paid" ? "bg-success":"bg-secondary")">@(invoice.InvoiceStatus)</span>
+                                                    }
+                                                </Template>
+                                            </GridColumn>
+                                            <GridColumn HeaderText="Billing Period" TextAlign="TextAlign.Left" Width="125">
+                                                <Template Context="invoiceContext">
+                                                    @{
+                                                        var invoice = (invoiceContext as InvoicePlaceholder);
+                                                        @(invoice.BillingPeriod)
+                                                    }
+                                                </Template>
+                                            </GridColumn>
+                                        </GridColumns>
+                                    </SfGrid>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="tab-notes" role="tabpanel" aria-labelledby="notes-tab">
+                    <div class="row justify-content-between align-items-center border-bottom pb-3 mb-3">
+                        <div class="col-6">
+                            <h6 class="text-400 text-uppercase mb-0">Account Notes</h6>
+                        </div>
+                        <div class="col-6 text-end">
+                            <button class="btn btn-sm btn-outline-primary" @onclick="()=>OpenAddEditDialog(null)">Add Note</button>
+                        </div>
+                    </div>
+                    @foreach (var item in businessNotes)
+                    {
+                        <div class="d-flex @marginClass">
+                            <span class="fa-regular fa-message-lines fa-flip-horizontal"></span>
+                            <div class="flex-1 ms-2 fs--1 ">
+                                <div class="hover-actions-trigger">
+                                    <p class="mb-1 bg-100 rounded-3 p-2 =">@item.Note</p>
+                                    <div class="hover-actions top-50 end-0 translate-middle-y"><a href="javascript:void();" @onclick="()=>DeleteDialogOpen(item.Id)" class="btn btn-falcon-default btn-sm me-1" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Delete"><span class="fas fa-trash-alt"></span></a><a href="javascript:void();" @onclick="()=>OpenAddEditDialog(item)" class="btn btn-falcon-default btn-sm me-1" type="button" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Edit"><span class="fas fa-edit"></span></a></div>
+                                </div>
+                                <div class="px-2"><span class="fs--2 text-600">@item.CreatedDate.ToString("MM/dd/yyyy hh:mm tt") @item.Timezone</span> - @item.FirstName @item.LastName</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="tab-pane fade" id="tab-logs" role="tabpanel" aria-labelledby="logs-tab">
+
+                    <div class="row justify-content-between align-items-center border-bottom pb-3 mb-3">
+                        <div class="col-6">
+                            <h6 class="text-400 text-uppercase mb-0">Logs</h6>
+                        </div>
+                        <div class="col-6 text-end">
+                        </div>
+                    </div>
+                    <div>
+
+                        <SfGrid DataSource="@LogPlaceholderList" AllowPaging="false" Width="100%" class="border-0">
+                            <GridColumns>
+                                <GridColumn HeaderText="Activity" TextAlign="TextAlign.Left" Width="100">
+                                    <Template Context="logContext">
+                                        @{
+                                            var log = (logContext as LogPlaceHolderData);
+                                            <div class="icon-item icon-item-sm rounded-circle bg-200 shadow-none"><span class="text-primary fa-solid fa-@log.LogIcon"></span></div>
+                                        }
+                                    </Template>
+                                </GridColumn>
+                                <GridColumn HeaderText="Description" TextAlign="TextAlign.Left" Width="400">
+                                    <Template Context="logContext">
+                                        @{
+                                            var log = (logContext as LogPlaceHolderData);
+                                            @log.LogDesc
+                                        }
+                                    </Template>
+                                </GridColumn>
+                                <GridColumn HeaderText="Date" TextAlign="TextAlign.Left" Width="100">
+                                    <Template Context="logContext">
+                                        @{
+                                            var log = (logContext as LogPlaceHolderData);
+                                            @log.LogDate
+                                        }
+                                    </Template>
+                                </GridColumn>
+                            </GridColumns>
+                        </SfGrid>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+</div>
+
+@*Delete confimation dialog*@
+<DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="() => DeleteBusinessNote(businessNoteId)"></DeleteConfirmation>
+
+
+<div class="modal @ModalClass" tabindex="-1" role="dialog" style="display:@ModalDisplay">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="staticBackdropLabel">@(businessNoteRequestModel.Id == 0 ? "Add" : "Update") Note</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" @onclick="()=>CloseAddEditDialog()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="@businessNoteRequestModel" OnValidSubmit="HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label" for="inputNote">Note</label>
+                            <textarea id="inputNote" class="form-control" @bind="@businessNoteRequestModel.Note" placeholder="Business Note" rows="4"></textarea>
+                            <ValidationMessage For="@(() => businessNoteRequestModel.Note)" />
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @onclick="()=>CloseAddEditDialog()">Close</button>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="modal @AddressModalClass" tabindex="-1" role="dialog" style="display:@AddressModalDisplay">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="staticBackdropLabel">Update Address</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" @onclick="()=>CloseAddressDialog()" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="@businessAddressRequestModel">
+                    <div class="row g-3">
+                        <AddressControl countries="@countries" states="@states" @bind-address1="@businessAddressRequestModel.Address1" @bind-address2="@businessAddressRequestModel.Address2" @bind-selectedCountry="@businessAddressRequestModel.CountryCode" @bind-stateCode="@businessAddressRequestModel.StateCode" @bind-city="@businessAddressRequestModel.City" @bind-zipCode="@businessAddressRequestModel.ZipCode" />
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @onclick="()=>CloseAddressDialog()">Close</button>
+                            <button type="submit" @onclick="@(() => UpdateBusinessAddress())" class="btn btn-primary">Save</button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<SfDialog Width="500px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@IsWeatherFeedAddressModalVisible">
+    <DialogEvents OnOverlayClick="() => IsWeatherFeedAddressModalVisible = false">
+    </DialogEvents>
+    <DialogTemplates>
+        <Header>
+            @((Id != Guid.Empty)?"Update":"Save") Weather Feed
+        </Header>
+        <Content>
+            <div class="row">
+                <div class="mb-3 col-9">
+                    <input class="form-control" placeholder="zip-code" @onchange="@HandleWeatherFeedInput" maxlength="5" value="@weatherFeed.WeatherFeedZipCode" /><br />
+                    @if (!string.IsNullOrWhiteSpace(weatherFeed.WeatherFeedAddress))
+                    {
+                        <label>Address: @weatherFeed.WeatherFeedAddress</label>
+                    }
+                </div>
+                <div class="col-3 p-0">
+                    <button class="btn btn-primary mx-4" disabled="@((string.IsNullOrWhiteSpace(weatherFeed.WeatherFeedZipCode) || weatherFeed.WeatherFeedZipCode.Length < 5))" @onclick="@SearchWeatherFeed" type="button">Search</button>
+                </div>
+            </div>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="() => IsWeatherFeedAddressModalVisible = false" data-bs-dismiss="modal">Close</button>
+            <button type="button" @onclick="SaveWeatherFeed" disabled="@((string.IsNullOrWhiteSpace(weatherFeed.WeatherFeedZipCode) || weatherFeed.WeatherFeedZipCode.Length < 5) || string.IsNullOrWhiteSpace(weatherFeed.WeatherFeedAddress))" class="btn btn-primary">@((Id != Guid.Empty)?"Update":"Save")</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+@if (ShowBackdrop)
+{
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code
+{
+
+    [Parameter]
+    public Guid Id { get; set; }
+    public string fullAddress = "";
+    private bool isLoading = true;
+    private string title = "Business Account | Synergy Commerce Admin Panel";
+    public string ModalDisplay = "none;";
+    public string AddressModalDisplay = "none;";
+    public string ModalClass = "";
+    public string AddressModalClass = "";
+    public bool ShowBackdrop = false;
+    private string marginClass;
+    private bool openDeleteDialog = false;
+    private List<CpCountry> countries = new List<CpCountry>();
+    private List<CpState> states = new List<CpState>();
+    List<InvoicePlaceholder> InvoicePlaceholderList = new List<InvoicePlaceholder>();
+    List<LogPlaceHolderData> LogPlaceholderList = new List<LogPlaceHolderData>();
+    BusinessDetailModel business = new BusinessDetailModel();
+    List<BusinessPropertyModel> businessProfiles = new List<BusinessPropertyModel>();
+    private Member currentMember = new Member();
+    private List<UserDetailViewModel> users = new List<UserDetailViewModel>();
+    private List<BusinessConfigurationOptionModel> configurationOptions = new List<BusinessConfigurationOptionModel>();
+    private BusinessAddressRequestModel businessAddressRequestModel = new BusinessAddressRequestModel();
+    private int selectedAccountOwner;
+    private string accountOwnerName;
+    private int businessNoteId = 0;
+    private PhoneNumber phone;
+    private string phoneCountry;
+    WeatherFeedAddressModel weatherFeed = new WeatherFeedAddressModel();
+    private List<BusinessNotesModel> businessNotes = new List<BusinessNotesModel>();
+    private BusinessNoteRequestModel businessNoteRequestModel = new BusinessNoteRequestModel();
+    private List<BusinessConfigurationOptionModel> webSyncOptions = new List<BusinessConfigurationOptionModel>();
+    private List<BusinessConfigurationOptionModel> clubServiceOptions = new List<BusinessConfigurationOptionModel>();
+    private List<BusinessConfigurationOptionModel> taxServiceOptions = new List<BusinessConfigurationOptionModel>();
+    private List<BusinessConfigurationOptionModel> complianceServiceOptions = new List<BusinessConfigurationOptionModel>();
+    private List<BusinessConfigurationOptionModel> syncStartTimeOptions = new List<BusinessConfigurationOptionModel>();
+    private List<BusinessConfigurationOptionModel> reservationsPaymentGateways = new List<BusinessConfigurationOptionModel>();
+    private List<BusinessConfigurationOptionModel> inventoryModes = new List<BusinessConfigurationOptionModel>();
+    private List<BusinessConfigurationOptionModel> preAuthorizeReservations = new List<BusinessConfigurationOptionModel>();
+    private List<BusinessConfigurationOptionModel> salesChannelMappings = new List<BusinessConfigurationOptionModel>();
+    private List<BusinessConfigurationOptionModel> upsertOrderDates = new List<BusinessConfigurationOptionModel>();
+    private List<BusinessConfigurationOptionModel> upsertShipDates = new List<BusinessConfigurationOptionModel>();
+    private List<BusinessConfigurationOptionModel> syncReservations = new List<BusinessConfigurationOptionModel>();
+    private List<BusinessConfigurationOptionModel> reservationsServiceOptions = new List<BusinessConfigurationOptionModel>();
+    private BusinessAccountIntegrationRequestModel integrationRequest = new BusinessAccountIntegrationRequestModel();
+    private List<IntegrationPartnerCategoryDetailModel> paymentGateways = new List<IntegrationPartnerCategoryDetailModel>();
+    private List<BusinessConfigurationOptionModel> sMSServiceProviders = new List<BusinessConfigurationOptionModel>();
+    List<string> integrationSettingsMetaKeys = new List<string>(){
+    BusinessSettingsMetaKey.EnableGateway,
+    BusinessSettingsMetaKey.EnableRSVPsOnTix,
+    BusinessSettingsMetaKey.InventoryMode,
+    BusinessSettingsMetaKey.PreAuthorizeReservation,
+    BusinessSettingsMetaKey.WebSync,
+    BusinessSettingsMetaKey.ClubService,
+    BusinessSettingsMetaKey.TaxService,
+    BusinessSettingsMetaKey.ComplianceService,
+    BusinessSettingsMetaKey.UpsertOrderDate,
+    BusinessSettingsMetaKey.UpsertShipDate,
+    BusinessSettingsMetaKey.SyncStartTime,
+    BusinessSettingsMetaKey.SalesChannelMapping,
+    BusinessSettingsMetaKey.SyncReservations,
+    BusinessSettingsMetaKey.ReservationsPaymentGateway,
+    BusinessSettingsMetaKey.TicketingPaymentGateway,
+    BusinessSettingsMetaKey.WebPaymentGateway,
+    BusinessSettingsMetaKey.POSPaymentGateway,
+    BusinessSettingsMetaKey.ClubPaymentGateway,
+    BusinessSettingsMetaKey.ReservationsService,
+    BusinessSettingsMetaKey.SMSServiceProvider,
+    BusinessSettingsMetaKey.TwilioSMSNumber,
+    BusinessSettingsMetaKey.TripAdvisorId
+    };
+    private bool IsWeatherFeedAddressModalVisible { get; set; }
+    const string _clubManagement = "Club Management";
+    string synergyCommerceIntegrationPartnerGUID = "";
+    const string _defaultTwilioSMSMask = "([0-9][0-9][0-9]) [0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]";
+    private char promptCharacter = 'X';
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var getIntegrationPartnersResponse = await _saIntegrationPartnerViewModel.GetIntegrationPartnerCategoryListAsync(true);
+        if (getIntegrationPartnersResponse.success)
+        {
+            var integrationPartnersPaymentsCateg = getIntegrationPartnersResponse.data.Where(x => x.IntegrationCategoryId == (int)IntegrationCategoryType.Payments).ToList();
+            if (integrationPartnersPaymentsCateg != null && integrationPartnersPaymentsCateg.Any())
+            {
+                paymentGateways = integrationPartnersPaymentsCateg[0].IntegrationPartners;
+            }
+
+            var integrationPartnersCommerceCateg = getIntegrationPartnersResponse.data.Where(x => x.IntegrationCategoryId == (int)IntegrationCategoryType.Commerce_ERP).ToList();
+            if (integrationPartnersCommerceCateg != null && integrationPartnersCommerceCateg.Any())
+            {
+                var reqClubPartners = integrationPartnersCommerceCateg[0].IntegrationPartners;
+                if (reqClubPartners != null && reqClubPartners.Any())
+                {
+                    var synergyCommercePartner = reqClubPartners.FirstOrDefault(x => x.AppName == _clubManagement);
+                    if (synergyCommercePartner != null)
+                    {
+                        synergyCommerceIntegrationPartnerGUID = synergyCommercePartner.PartnerGUID.ToString();
+                    }
+                }
+            }
+        }
+        BusinessDetailResponse response = await _businessViewModel.GetBusinessDetail(Id, 0);
+        if (response.success)
+        {
+            business = response.data;
+            selectedAccountOwner = business.AccountOwnerId;
+            if (!string.IsNullOrEmpty(business.Phone))
+            {
+                string[] splittedPhone = business.Phone.Split("| ");
+                if (splittedPhone.Length > 1)
+                {
+                    phoneCountry = splittedPhone[1].Trim();
+                }
+                else
+                {
+                    phoneCountry = "US";
+                }
+            }
+        }
+
+        var result = await _businessPropertyViewModel.GetBusinessProperties(business.Id);
+        if (result != null)
+        {
+            businessProfiles = result;
+        }
+
+        var businessConfigurationOptionsResponse = await _businessViewModel.GetBusinessConfigurationOptions();
+        if (businessConfigurationOptionsResponse.success)
+        {
+            configurationOptions = businessConfigurationOptionsResponse.data;
+            if (configurationOptions != null && configurationOptions.Count > 0)
+            {
+                webSyncOptions = configurationOptions.Where(x => x.SettingNamespace == BusinessConfigurationNamespace.WebSync).ToList();
+                clubServiceOptions = configurationOptions.Where(x => x.SettingNamespace == BusinessConfigurationNamespace.ClubService).ToList();
+                taxServiceOptions = configurationOptions.Where(x => x.SettingNamespace == BusinessConfigurationNamespace.TaxService).ToList();
+                complianceServiceOptions = configurationOptions.Where(x => x.SettingNamespace == BusinessConfigurationNamespace.ComplianceService).ToList();
+                syncStartTimeOptions = configurationOptions.Where(x => x.SettingNamespace == BusinessConfigurationNamespace.SyncStartTime).ToList();
+                reservationsPaymentGateways = configurationOptions.Where(x => x.SettingNamespace == BusinessConfigurationNamespace.ReservationPaymentGateway).ToList();
+                inventoryModes = configurationOptions.Where(x => x.SettingNamespace == BusinessConfigurationNamespace.InventoryMode).ToList();
+                preAuthorizeReservations = configurationOptions.Where(x => x.SettingNamespace == BusinessConfigurationNamespace.PreAuthorizeReservations).ToList();
+                salesChannelMappings = configurationOptions.Where(x => x.SettingNamespace == BusinessConfigurationNamespace.SalesChannelMapping).ToList();
+                upsertOrderDates = configurationOptions.Where(x => x.SettingNamespace == BusinessConfigurationNamespace.UpsertOrderDate).ToList();
+                upsertShipDates = configurationOptions.Where(x => x.SettingNamespace == BusinessConfigurationNamespace.UpsertShipDate).ToList();
+                syncReservations = configurationOptions.Where(x => x.SettingNamespace == BusinessConfigurationNamespace.SyncReservations).ToList();
+                reservationsServiceOptions = configurationOptions.Where(x => x.SettingNamespace == BusinessConfigurationNamespace.ReservationsService).ToList();
+                sMSServiceProviders = configurationOptions.Where(x => x.SettingNamespace == BusinessConfigurationNamespace.SMSServiceProvider).ToList();
+            }
+        }
+
+        var settingListResponse = await _settingsViewModel.GetBusinessSettingsListAsync(business.Id, BusinessSettingsMetaNamespace.BusinessAccount);
+        foreach (var metaKey in integrationSettingsMetaKeys)
+        {
+            var metaValue = settingListResponse?.data?.Where(x => x.MetaKey == metaKey)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+            Helper.SetPropertyValue(integrationRequest, metaKey, metaValue);//Note: meta key and request model property name should be same
+        }
+
+        var businessNotesResponse = await _businessViewModel.GetBusinessNotes(business.Id);
+        if (businessNotesResponse.success)
+        {
+            businessNotes = businessNotesResponse.data;
+            if (businessNotes.Count > 0)
+            {
+                marginClass = "mt-3";
+            }
+        }
+
+        InvoicePlaceholderList = invoiceList;
+        LogPlaceholderList = logList;
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task editAccountOwner()
+    {
+        if (users.Count <= 0)
+        {
+            UserListResponse userResponse = await _userViewModel.GetUsers();
+            if (userResponse.success)
+            {
+                users = userResponse.data;
+            }
+        }
+    }
+
+    private void selectAccountOwner(ChangeEventArgs<int, UserDetailViewModel> args)
+    {
+        var accountOnwer = users.FirstOrDefault(x => x.Id == Convert.ToInt32(args.Value));
+        if (accountOnwer != null)
+        {
+            business.AccountOwner = accountOnwer.UserFullName;
+        }
+        StateHasChanged();
+    }
+
+    private async Task saveIntegrationSettings(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            isLoading = true;
+            var businessSettings = await Helper.BusinessSettingsMapping(integrationRequest, currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount, integrationSettingsMetaKeys);
+            var response = await _settingsViewModel.CreateBusinessSettingListAsync(businessSettings);
+            isLoading = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+                var isSynergyEnabled = integrationRequest.ReservationsService.ToLower().Equals(synergyCommerceIntegrationPartnerGUID.ToLower());
+                Helper.NotifyReservationsForSynergyChanged(isSynergyEnabled);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    public void OpenAddEditDialog(BusinessNotesModel model)
+    {
+        businessNoteRequestModel = new BusinessNoteRequestModel();
+        businessNoteRequestModel.BusinessId = business.Id;
+        if (model != null)
+        {
+            businessNoteRequestModel.Id = model.Id;
+            businessNoteRequestModel.Note = model.Note;
+        }
+        ModalDisplay = "block;";
+        ModalClass = "Show";
+        ShowBackdrop = true;
+        StateHasChanged();
+    }
+
+    public void CloseAddEditDialog()
+    {
+        ModalDisplay = "none";
+        ModalClass = "";
+        ShowBackdrop = false;
+        StateHasChanged();
+    }
+
+    private void DeleteDialogOpen(int id)
+    {
+        openDeleteDialog = true;
+        businessNoteId = id;
+    }
+
+    private void DialogClose() => openDeleteDialog = false;
+
+    public async Task SaveBusinessNote()
+    {
+        isLoading = true;
+        var response = await _businessViewModel.AddUpdateBusinessNote(businessNoteRequestModel);
+        CloseAddEditDialog();
+        if (response.success)
+        {
+            var businessNotesResponse = await _businessViewModel.GetBusinessNotes(business.Id);
+            if (businessNotesResponse.success)
+            {
+                businessNotes = businessNotesResponse.data;
+                if (businessNotes.Count > 1)
+                {
+                    marginClass = "mt-3";
+                }
+            }
+            isLoading = false;
+            if (businessNoteRequestModel.Id == 0)
+            {
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            }
+        }
+        else
+        {
+            isLoading = false;
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        StateHasChanged();
+    }
+
+    public async Task DeleteBusinessNote(int id)
+    {
+        openDeleteDialog = false;
+        isLoading = true;
+        var response = await _businessViewModel.DeleteBusinessNote(business.Id, id);
+        if (response.success)
+        {
+            businessNotes = response.data;
+            if (businessNotes.Count > 1)
+            {
+                marginClass = "mt-3";
+            }
+
+            isLoading = false;
+            toastService.ShowToast(Constants.DeleteMessage, ToastLevel.Success);
+        }
+        else
+        {
+            isLoading = false;
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        StateHasChanged();
+    }
+
+    private async void HandleValidSubmit(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            await SaveBusinessNote();
+        }
+    }
+
+    private async void editBusinessAddress()
+    {
+        if (countries.Count <= 0)
+        {
+            CountryResponse res = await _countryViewModel.GetCountries();
+            if (res.success)
+            {
+                countries = res.data;
+            }
+        }
+
+        if (states.Count <= 0)
+        {
+            StateResponse stateResponse = await _stateViewModel.GetStates();
+            if (stateResponse.success)
+            {
+                states = stateResponse.data;
+            }
+        }
+
+        businessAddressRequestModel = new BusinessAddressRequestModel()
+        {
+            Id = business.AddressId,
+            Address1 = business.Address1,
+            Address2 = business.Address2,
+            City = business.City,
+            StateCode = business.StateCode,
+            CountryCode = business.CountryCode,
+            ZipCode = business.ZipCode
+        };
+
+        AddressModalDisplay = "flex;";
+        AddressModalClass = "Show";
+        ShowBackdrop = true;
+        StateHasChanged();
+    }
+
+    public void CloseAddressDialog()
+    {
+        AddressModalDisplay = "none";
+        AddressModalClass = "";
+        ShowBackdrop = false;
+        StateHasChanged();
+    }
+
+    public async void UpdateBusinessName(Syncfusion.Blazor.InPlaceEditor.ActionEventArgs<string> args)
+    {
+        var response = await _businessViewModel.UpdateBusinessName(business.Id, args.Value.ToString());
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+    public async void UpdateWebsiteURL(Syncfusion.Blazor.InPlaceEditor.ActionEventArgs<string> args)
+    {
+        var response = await _businessViewModel.UpdateBusinessWebsiteURL(new BusinessWebsiteURLRequestModel { Id = business.Id, WebsiteURL = args.Value.ToString() });
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+
+    public async void UpdateBusinessAccountOwner(Syncfusion.Blazor.InPlaceEditor.ActionEventArgs<string> args)
+    {
+        var response = await _businessViewModel.UpdateAccountOwner(business.Id, selectedAccountOwner);
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+
+    public async void UpdateBusinessPhone(Syncfusion.Blazor.InPlaceEditor.ActionEventArgs<string> args)
+    {
+        BusinessPhoneRequestModel request = new BusinessPhoneRequestModel()
+        {
+            Id = business.Id,
+            BusinessPhone = phone.phone,
+            BusinessPhoneCountry = phone.phoneCountry
+        };
+        var response = await _businessViewModel.UpdateBusinessPhone(request);
+        if (response.success)
+        {
+            business.Phone = response.data;
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        StateHasChanged();
+    }
+
+    public async void UpdateBusinessAddress()
+    {
+        isLoading = true;
+        businessAddressRequestModel.Country = countries.FirstOrDefault(x => x.CountryCode == businessAddressRequestModel.CountryCode).Name;
+        businessAddressRequestModel.State = states.FirstOrDefault(x => x.StateCode == businessAddressRequestModel.StateCode).State;
+        var response = await _businessViewModel.UpdateBusinessAddress(businessAddressRequestModel);
+        if (response.success)
+        {
+            business.Address1 = businessAddressRequestModel.Address1;
+            business.Address2 = businessAddressRequestModel.Address2;
+            business.City = businessAddressRequestModel.City;
+            business.StateCode = businessAddressRequestModel.StateCode;
+            business.CountryCode = businessAddressRequestModel.CountryCode;
+            business.ZipCode = businessAddressRequestModel.ZipCode;
+            AddressModalDisplay = "none";
+            AddressModalClass = "";
+            ShowBackdrop = false;
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    public class LogPlaceHolderData
+    {
+        public string ID { get; set; }
+        public int LogType { get; set; }
+        public string LogIcon { get; set; }
+        public string LogDesc { get; set; }
+        public string LogDate { get; set; }
+    }
+
+    public List<LogPlaceHolderData> logList = new List<LogPlaceHolderData>()
+{
+       new LogPlaceHolderData(){ ID= "1", LogType= 1, LogIcon= "paper-plane", LogDesc= "Verify Subscription Email 'Sent' to someemail@email.com", LogDate= "10/1/2021 10:00 AM PST" },
+       new LogPlaceHolderData(){ ID= "2", LogType= 1, LogIcon= "mailbox", LogDesc= "Verify Subscription Email 'Delievered' to someemail@email.com", LogDate= "10/1/2021 10:01 AM PST" },
+       new LogPlaceHolderData(){ ID= "3", LogType= 1, LogIcon= "envelope-open", LogDesc= "Verify Subscription Email 'Opened' to someemail@email.com", LogDate= "10/1/2021 11:20 AM PST" },
+       new LogPlaceHolderData(){ ID= "4", LogType= 1, LogIcon= "user-tie", LogDesc= "someemail@email.com accessed Admin", LogDate= "10/1/2021 11:40 AM PST" }
+    };
+
+    public class InvoicePlaceholder
+    {
+        public int Id { get; set; }
+        public string InvoiceGuid { get; set; }
+        public string InvoiceNumber { get; set; }
+        public string InvoiceDate { get; set; }
+        public string CompanyName { get; set; }
+        public string Amount { get; set; }
+        public string AmountDue { get; set; }
+        public string InvoiceStatus { get; set; }
+        public string BillingPeriod { get; set; }
+    }
+
+    public List<InvoicePlaceholder> invoiceList = new List<InvoicePlaceholder>()
+{
+       new InvoicePlaceholder(){ Id=1, InvoiceGuid="123456-5ddd-47ca-a90f-ef32529772d1", InvoiceNumber = "2021-123456", InvoiceDate= "10/1/2021", CompanyName = "Encore Winery", Amount = "$199.00", AmountDue = "$199.00", InvoiceStatus = "Unpaid", BillingPeriod = "9/1/2021 - 9/30/2021"  },
+       new InvoicePlaceholder(){ Id=2, InvoiceGuid="123456-670b-4849-990f-a6738e149e0e", InvoiceNumber = "2021-123000", InvoiceDate= "9/1/2021", CompanyName = "Encore Winery", Amount = "$199.00", AmountDue = "$0.00", InvoiceStatus = "Paid", BillingPeriod = "8/1/2021 - 8/31/2021"  },
+    };
+
+    public class WeatherFeedAddressModel
+    {
+        public string WeatherFeedZipCode { get; set; }
+        public string WeatherFeedAddress { get; set; }
+        public string WeatherFeedLat { get; set; }
+        public string WeatherFeedLong { get; set; }
+    }
+
+    private DateTime LastMonth { get; set; }
+    private DateTime YtdStart { get; set; }
+    private DateTime YtdEnd { get; set; }
+    private DateTime MonthStart { get; set; }
+    private DateTime MonthEnd { get; set; }
+    private DateTime LastMonthStart { get; set; }
+    private DateTime LastMonthEnd { get; set; }
+    private DateTime LastYearStart { get; set; }
+    private DateTime LastYearEnd { get; set; }
+    private int Days { get; set; }
+    protected override void OnInitialized()
+    {
+        Days = (int)DateTime.Now.DayOfWeek;
+        LastMonth = DateTime.Now.AddMonths(-1);
+        YtdStart = new DateTime(DateTime.Now.Year, 1, 1);
+        YtdEnd = DateTime.Now;
+        MonthStart = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+        MonthEnd = MonthStart.AddMonths(1).AddDays(-1);
+        LastMonthStart = new DateTime(LastMonth.Year, LastMonth.Month, 1);
+        LastMonthEnd = LastMonthStart.AddMonths(1).AddDays(-1);
+        LastYearStart = new DateTime(DateTime.Now.Year - 1, 1, 1);
+        LastYearEnd = new DateTime(DateTime.Now.Year - 1, 12, 31);
+    }
+
+    #region Weather Feed
+    private void ShowWeatherFeedAddressModal()
+    {
+        //weatherFeedZipCode = business.WeatherFeedZipCode;
+        //weatherFeedAddress = business.WeatherFeedAddress;
+        weatherFeed = new WeatherFeedAddressModel()
+        {
+            WeatherFeedZipCode = business.WeatherFeedZipCode,
+            WeatherFeedAddress = business.WeatherFeedAddress,
+            WeatherFeedLat = business.WeatherFeedLat,
+            WeatherFeedLong = business.WeatherFeedLong
+        };
+        IsWeatherFeedAddressModalVisible = true;
+    }
+
+    private async Task SearchWeatherFeed()
+    {
+        isLoading = true;
+        var addressResponse = await _businessViewModel.GetAddressByZipCode(weatherFeed.WeatherFeedZipCode);
+        if (addressResponse.success)
+        {
+            // weatherFeedAddress = addressResponse.data.City + ", " + addressResponse.data.State;
+            weatherFeed.WeatherFeedAddress = addressResponse.data.City + ", " + addressResponse.data.State;
+            weatherFeed.WeatherFeedLat = addressResponse.data.GeoLatitude;
+            weatherFeed.WeatherFeedLong = addressResponse.data.GeoLongitude;
+        }
+        isLoading = false;
+    }
+
+
+    private void HandleWeatherFeedInput(ChangeEventArgs args)
+    {
+        weatherFeed = new WeatherFeedAddressModel();
+        weatherFeed.WeatherFeedZipCode = args?.Value?.ToString() ?? "";
+    }
+
+    private async Task SaveWeatherFeed()
+    {
+        isLoading = true;
+        BusinessWeatherFeedRequestModel weatherFeedRequest = new BusinessWeatherFeedRequestModel
+        {
+            Id = business.BusinessWeatherFeedId,
+            WeatherFeedZipCode = weatherFeed.WeatherFeedZipCode,
+            WeatherFeedAddress = weatherFeed.WeatherFeedAddress,
+            WeatherFeedLatitude = weatherFeed.WeatherFeedLat,
+            WeatherFeedLongitude = weatherFeed.WeatherFeedLong
+        };
+        var updateWeatherFeedResponse = await _businessViewModel.UpdateBusinessWeatherFeed(weatherFeedRequest);
+        if (updateWeatherFeedResponse.success)
+        {
+            business.WeatherFeedZipCode = weatherFeed.WeatherFeedZipCode;
+            business.WeatherFeedAddress = weatherFeed.WeatherFeedAddress;
+            business.WeatherFeedLat = weatherFeed.WeatherFeedLat;
+            business.WeatherFeedLong = weatherFeed.WeatherFeedLong;
+            IsWeatherFeedAddressModalVisible = false;
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(updateWeatherFeedResponse.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+    }
+    #endregion Weather Feed
+}

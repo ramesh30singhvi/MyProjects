@@ -1,0 +1,29 @@
+﻿<div>
+    
+    <InputTextArea class="form-control" @bind-Value="@MessageText" @oninput="GetEmailInstructionsCount" type="text" maxlength="@MaxTextCount" rows="@RowsCount"></InputTextArea>
+    <label class="form-label">(@(mailInstructionsRemainingCount) Remaining)</label>
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        mailInstructionsRemainingCount = MaxTextCount;
+        mailInstructionsRemainingCount = (mailInstructionsRemainingCount - MessageText?.Length) ?? MaxTextCount;
+    }
+
+    [Parameter]
+    public string MessageText { get; set; }
+    private int mailInstructionsRemainingCount = 1000;
+
+    [Parameter]
+    public int MaxTextCount { get; set; }
+    [Parameter]
+    public int RowsCount { get; set; }
+
+    private void GetEmailInstructionsCount(ChangeEventArgs eventArgs)
+    {
+        mailInstructionsRemainingCount = MaxTextCount - eventArgs.Value.ToString().Count();
+        StateHasChanged();
+    }
+
+}

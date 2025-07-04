@@ -1,0 +1,98 @@
+﻿@page "/orders/inventory"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card">
+    <div class="card-header bg-light">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="/store/orders" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-box-open me-2"></span>Inventory</h5>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <ul class="nav nav-tabs mt-4 text-uppercase">
+            <li class="nav-item"><a class="nav-link active" id="All-tab" data-bs-toggle="tab" href="#tab-All" role="tab" aria-controls="tab-All" aria-selected="false">All</a></li>
+            <li class="nav-item"><a class="nav-link" id="InStock-tab" data-bs-toggle="tab" href="#tab-InStock" role="tab" aria-controls="tab-InStock" aria-selected="false">In Stock</a></li>
+            <li class="nav-item"><a class="nav-link" id="OutofStock-tab" data-bs-toggle="tab" href="#tab-OutofStock" role="tab" aria-controls="tab-OutofStock" aria-selected="true">Out of Stock</a></li>
+            <li class="nav-item"><a class="nav-link" id="Backordered-tab" data-bs-toggle="tab" href="#tab-Backordered" role="tab" aria-controls="tab-Backordered" aria-selected="true">Backordered</a></li>
+        </ul>
+        <div class="tab-content border-x border-bottom p-3 mb-2" id="productTabContent">
+            <div class="tab-pane fade show active" id="tab-All" role="tabpanel" aria-labelledby="All-tab">
+                <div class="mt-2">
+                    <div class="row mb-3">
+                        <div class="col-12 col-md-12">
+                            <label class="form-label" for="inputAddressSearch">Product Search</label>
+                            <div class="input-group mb-3">
+                                <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                                <input type="text" class="form-control" placeholder="Search" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="min-vh-75 sf-grid">
+                    <SfGrid DataSource="@inventory" AllowPaging="true" Width="100%">
+                        <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                        <GridPageSettings PageSize="50"></GridPageSettings>
+                        <GridTemplates>
+                            <EmptyRecordTemplate>
+                                @if (!isLoading && inventory.Count <= 0)
+                                {
+                                    <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                        <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Inventory Available</h6>
+                                        <button type="button" class="btn btn-outline-primary">Get Started</button>
+                                    </div>
+                                }
+                            </EmptyRecordTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            <GridColumn Field=@nameof(InventoryModel.Product) HeaderText="Product" TextAlign="TextAlign.Left" Width="60" />
+                            <GridColumn Field=@nameof(InventoryModel.Sku) HeaderText="Sku" TextAlign="TextAlign.Left" Width="40" />
+                            <GridColumn Field=@nameof(InventoryModel.Inv1) HeaderText="[[INV#1]] / LOW" TextAlign="TextAlign.Left" Width="40" />
+                            <GridColumn Field=@nameof(InventoryModel.Inv2) HeaderText="[[INV#2]] / LOW" TextAlign="TextAlign.Left" Width="40" />
+                            <GridColumn Field=@nameof(InventoryModel.Inv3) HeaderText="[[INV#3]] / LOW" TextAlign="TextAlign.Left" Width="40" />
+                            <GridColumn Field=@nameof(InventoryModel.LowNotice) HeaderText="LOW NOTICE" TextAlign="TextAlign.Left" Width="40" />
+                            <GridColumn Field=@nameof(InventoryModel.Mode) HeaderText="Mode" TextAlign="TextAlign.Left" Width="40" />
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="tab-InStock" role="tabpanel" aria-labelledby="InStock-tab"></div>
+            <div class="tab-pane fade" id="tab-OutofStock" role="tabpanel" aria-labelledby="OutofStock-tab"></div>
+            <div class="tab-pane fade" id="tab-Backordered" role="tabpanel" aria-labelledby="Backordered-tab"></div>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    private string title = "Product Returns Dashboard | Synergy Commerce Admin Panel";
+    private Boolean isLoading = false;
+    private class InventoryModel
+    {
+        public string Product { get; set; }
+        public string Sku { get; set; }
+        public string Inv1 { get; set; }
+        public string Inv2 { get; set; }
+        public string Inv3 { get; set; }
+        public string LowNotice { get; set; }
+        public string Mode { get; set; }
+    }
+    private List<InventoryModel> inventory = new List<InventoryModel>() {
+        new InventoryModel(){ Product= "2018 Cabernet Sauvignon", Sku= "ASF662616", Inv1="466 / 10", Inv2="0 / 10", Inv3="12 / 10", LowNotice="YES", Mode="DO NOT SELL" },
+        new InventoryModel(){ Product= "2018 Cabernet Sauvignon", Sku= "ASF663254", Inv1="1200 / 10", Inv2="0 / 10", Inv3="403 / 10", LowNotice="NO", Mode="ALLOW B/O" },
+        new InventoryModel(){ Product= "2019 Zinfandel", Sku= "ASF6616161", Inv1="453 / 10", Inv2="0 / 10", Inv3="641 / 10", LowNotice="NO", Mode="ALLOW B/O" },
+    };
+}

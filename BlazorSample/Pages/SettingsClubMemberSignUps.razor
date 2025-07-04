@@ -1,0 +1,299 @@
+﻿@page  "/clubs/member-sign-ups"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.XlsIO;
+@using System.Data;
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject IClubViewModel _clubViewModel
+@inject IUserViewModel _userViewModel
+@inject IJSRuntime jsRuntime
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="spinnerVisibility"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-12 col-sm-6 mb-3 mb-sm-0">
+                <h5 class="mb-0"><a href="/settings/club-management" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="fa-regular fa-users-medical me-2"></span>Sign Ups</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-outline-primary me-2" @onclick="ExportClubSignUps" href="javascript:void();">Export</a>
+                <a class="btn btn-sm btn-primary" href="/club/club-member-signup">Add Member</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <ul class="nav nav-tabs mt-2 text-uppercase">
+            <li class="nav-item"><a class="nav-link active" id="Complete-tab" @onclick="@(()=>OnTabClick(ClubSignupStatus.Complete))" data-bs-toggle="tab" href="#tab-All" role="tab" aria-controls="tab-Complete" aria-selected="true">Complete</a></li>
+            <li class="nav-item"><a class="nav-link" id="Incomplete-tab" @onclick="@(()=>OnTabClick(ClubSignupStatus.Incomplete))" data-bs-toggle="tab" href="#tab-All" role="tab" aria-controls="tab-Incomplete" aria-selected="false">Incomplete</a></li>
+            <li class="nav-item"><a class="nav-link" id="Suspended-tab" @onclick="@(()=>OnTabClick(ClubSignupStatus.Suspended))" data-bs-toggle="tab" href="#tab-All" role="tab" aria-controls="tab-Suspended" aria-selected="false">Suspended</a></li>
+            <li class="nav-item"><a class="nav-link" id="Waitlist-tab" @onclick="@(()=>OnTabClick(ClubSignupStatus.Waitlist))" data-bs-toggle="tab" href="#tab-All" role="tab" aria-controls="tab-Waitlist" aria-selected="false">Waitlist</a></li>
+        </ul>
+        <div class="tab-content p-3 mb-2" id="productTabContent">
+            <div class="tab-pane fade show active" id="tab-All" role="tabpanel" aria-labelledby="All-tab">
+                <form>
+                    <div class="px-2">
+                        <div class="row my-3">
+                            <div class="col-12 col-md-12">
+                                <label class="form-label" for="inputGroupSearch">Search</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                                    <input type="text" @bind-value="searchText" @oninput="(EventArgs) => {SearchClubSignUp(EventArgs.Value.ToString());}" class="form-control" placeholder="Search Customers" aria-label="Search Customers">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                <div class="sf-grid min-vh-75">
+                    <SfGrid DataSource="@clubSignUpLists" AllowPaging="true" Width="100%" class="border-x-0">
+                        <GridTemplates>
+                            <EmptyRecordTemplate>
+                                @if (!spinnerVisibility && clubSignUpLists.Count <= 0)
+                                {
+                                    <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                        <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Data</h6>
+                                    </div>
+                                }
+                            </EmptyRecordTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            <GridColumn HeaderText="Sign-Up Date" TextAlign="TextAlign.Left" Width="50">
+                                <Template>
+                                    @{
+                                        var clubContext = (context as ClubSignUpListModel);
+                                        var signUpDate = clubContext.SignUpDate.Value.AddMinutes(loggedInUser.OffsetMinutes);
+                                        @signUpDate
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="Customer" TextAlign="TextAlign.Left" Width="50">
+                                <Template>
+                                    @{
+                                        var clubContext = (context as ClubSignUpListModel);
+                                        <a href="people/customers/@clubContext.CustomerGUID.ToString()">@clubContext.CustomerName</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(ClubSignUpListModel.ClubName) HeaderText="Club Name" TextAlign="TextAlign.Left" Width="50" />
+                            <GridColumn Field=@nameof(ClubSignUpListModel.SalesREP) HeaderText="Sales Rep" TextAlign="TextAlign.Left" Width="40" />
+                            <GridColumn Field=@nameof(ClubSignUpListModel.SignupSourceTypeText) HeaderText="Source" TextAlign="TextAlign.Left" Width="30" />
+                            <GridColumn HeaderText="Status" TextAlign="TextAlign.Left" Width="40">
+                                <Template>
+                                    @{
+                                        var pholder = (context as ClubSignUpListModel);
+                                        @if (pholder.ClubSignupStatusText == EnumHelper.GetDescription(ClubSignupStatus.Waitlist))
+                                        {
+                                            <a href="/settings/manage-club-add">@pholder.Status</a>
+                                        }
+                                        else if (pholder.ClubSignupStatusText == EnumHelper.GetDescription(ClubSignupStatus.Incomplete)
+                                            || pholder.ClubSignupStatusText == EnumHelper.GetDescription(ClubSignupStatus.Suspended))
+                                        {
+
+                                            @if (pholder.ClubSignupStatusText == EnumHelper.GetDescription(ClubSignupStatus.Incomplete))
+                                            {
+                                                <a href="/club/club-member-signup/@((int)ClubSignupStatus.Incomplete)/@pholder.SignUpGUID">@pholder.Status</a>
+                                            }
+                                            else if (pholder.ClubSignupStatusText == EnumHelper.GetDescription(ClubSignupStatus.Suspended))
+                                            {
+                                                <a href="/club/club-member-signup/@((int)ClubSignupStatus.Suspended)/@pholder.SubscriptionGUID">@pholder.Status</a>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            @pholder.Status
+                                        }
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(ClubSignUpListModel.IsGiftSubscription) HeaderText="Gift?" TextAlign="TextAlign.Left" Width="30" />
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    private string title = "Sign Ups | Synergy Commerce Admin Panel";
+    private bool spinnerVisibility = false;
+    Member currentMember = new Member();
+    List<ClubSignUpListModel> clubSignUpLists = new List<ClubSignUpListModel>();
+    UserDetailModel loggedInUser = new UserDetailModel();
+    private string searchText = "";
+    private int signUpStatus = (int)ClubSignupStatus.Complete;
+    private List<ExportClubMemberListModel> exportClubMembers = new List<ExportClubMemberListModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        spinnerVisibility = true;
+
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        //Get Current User
+        var getUserData = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+        var userByEmail = await _userViewModel.GetUserByEmail(getUserData.Email);
+        if (userByEmail.success)
+            loggedInUser = userByEmail.data;
+
+        //Get Club SignUp
+        await SearchClubSignUp(string.Empty);
+
+        spinnerVisibility = false;
+    }
+
+    private async Task SearchClubSignUp(string searchValue)
+    {
+        var signUpListResponse = await _clubViewModel.GetClubSignUpListAsync(currentMember.Id, signUpStatus, searchValue);
+        clubSignUpLists = signUpListResponse?.data ?? new List<ClubSignUpListModel>();
+        StateHasChanged();
+    }
+
+    private async Task OnTabClick(ClubSignupStatus status)
+    {
+        signUpStatus = (int)status;
+        //Get Club SignUp
+        await SearchClubSignUp(searchText);
+    }
+
+    private async Task ExportClubSignUps()
+    {
+        spinnerVisibility = true;
+        var exportClubMembersResponse = await _clubViewModel.ExportClubMembers(currentMember.Id, signUpStatus, searchText);
+        if (exportClubMembersResponse.success)
+        {
+            exportClubMembers = exportClubMembersResponse.data;
+            //Create an instance of ExcelEngine.
+            using (ExcelEngine excelEngine = new ExcelEngine())
+            {
+                IApplication application = excelEngine.Excel;
+                application.DefaultVersion = ExcelVersion.Xlsx;
+
+                //Create a workbook.
+                IWorkbook workbook = application.Workbooks.Create(1);
+                IWorksheet worksheet = workbook.Worksheets[0];
+
+                DataTable table = BindDataTable();
+
+                //Export data from DataTable to Excel worksheet.
+                worksheet.ImportDataTable(table, true, 1, 1);
+
+                worksheet.UsedRange.AutofitColumns();
+                IStyle headerStyle = workbook.Styles.Add("HeaderStyle");
+                headerStyle.Font.Bold = true;
+                worksheet.SetDefaultRowStyle(1, headerStyle);
+                worksheet.UsedRange.HorizontalAlignment = ExcelHAlign.HAlignLeft;
+
+                //Save the document as a stream.
+                using (MemoryStream stream = new MemoryStream())
+                {
+                    //Save the created Excel document to MemoryStream.
+                    workbook.SaveAs(stream);
+                    await jsRuntime.InvokeAsync<object>(
+                           "fileSaveAs",
+                            "Club_Members.xlsx",
+                           Convert.ToBase64String(stream.ToArray()));
+                }
+            }
+        }
+        else
+        {
+            toastService.ShowToast(exportClubMembersResponse.error_info.extra_info, ToastLevel.Error);
+        }
+        spinnerVisibility = false;
+        StateHasChanged();
+    }
+
+    private DataTable BindDataTable()
+    {
+        DataTable clubMembers = new DataTable();
+
+        clubMembers.Columns.Add("Club Name");
+        clubMembers.Columns.Add("Membership Status");
+        clubMembers.Columns.Add("Club Join Date");
+        clubMembers.Columns.Add("Club Cancel Date");
+        clubMembers.Columns.Add("Is Gift?");
+        clubMembers.Columns.Add("Gifted Shipments");
+        clubMembers.Columns.Add("Bill First Name");
+        clubMembers.Columns.Add("Bill Last Name");
+        clubMembers.Columns.Add("Bill Email");
+        clubMembers.Columns.Add("Bill UserID");
+        clubMembers.Columns.Add("Customer Since");
+        clubMembers.Columns.Add("Customer Type");
+        clubMembers.Columns.Add("Bill Company");
+        clubMembers.Columns.Add("Bill Country");
+        clubMembers.Columns.Add("Bill Address 1");
+        clubMembers.Columns.Add("Bill Address 2");
+        clubMembers.Columns.Add("Bill City");
+        clubMembers.Columns.Add("Bill State");
+        clubMembers.Columns.Add("Bill Zip Code");
+        clubMembers.Columns.Add("Bill DOB");
+        clubMembers.Columns.Add("Bill Home Phone");
+        clubMembers.Columns.Add("Bill Mobile Phone");
+        clubMembers.Columns.Add("Bill Method");
+        clubMembers.Columns.Add("Credit Card");
+        clubMembers.Columns.Add("CC Expiration");
+        clubMembers.Columns.Add("Fulfillment Method");
+        clubMembers.Columns.Add("Ship First Name");
+        clubMembers.Columns.Add("Ship Last Name");
+        clubMembers.Columns.Add("Ship Email");
+        clubMembers.Columns.Add("Ship UserID");
+        clubMembers.Columns.Add("Ship Customer Since");
+        clubMembers.Columns.Add("Ship Customer Type");
+        clubMembers.Columns.Add("Ship Company");
+        clubMembers.Columns.Add("Ship Country");
+        clubMembers.Columns.Add("Ship Address 1");
+        clubMembers.Columns.Add("Ship Address 2");
+        clubMembers.Columns.Add("Ship City");
+        clubMembers.Columns.Add("Ship State");
+        clubMembers.Columns.Add("Ship Zip Code");
+        clubMembers.Columns.Add("Ship DOB");
+        clubMembers.Columns.Add("Ship Home Phone");
+        clubMembers.Columns.Add("Ship Mobile Phone");
+        clubMembers.Columns.Add("Meta Tags");
+        clubMembers.Columns.Add("Membership Notes");
+        clubMembers.Columns.Add("Sales Rep");
+
+        foreach (var clubMember in exportClubMembers)
+        {
+            var subscriptionTags = clubMember.SubscriptionTags.Select(x => x.TagValue).ToList();
+            var subscriptionNotes = clubMember.SubscriptionNotes.Select(x => x.Note).ToList();
+            var businessCustomerTypes = clubMember.BusinessCustomerTypes.Select(x => x.CustomerType).ToList();
+            var businessCustomerBillingTypes = clubMember.BusinessCustomerBillingTypes.Select(x => x.CustomerType).ToList();
+
+            clubMembers.Rows.Add(clubMember.ClubName, GetMembershipStatus(clubMember.ClubSubscription), Helper.FormatDateValue(clubMember.ClubSubscription?.DateJoined ?? null), Helper.FormatDateValue(clubMember.ClubSubscription?.DateCancelled ?? null), clubMember.IsGiftSubscription ? "Yes" : "No", clubMember.ClubSubscription != null ? clubMember.ClubSubscription.GiftShipments : string.Empty,
+                Helper.GetStringValue(clubMember.BillToAddress?.FirstName ?? null), Helper.GetStringValue(clubMember.BillToAddress?.LastName ?? null), Helper.GetStringValue(clubMember.BusinessCustomerBilling?.Email ?? null), Helper.GetStringValue(clubMember.BusinessCustomerBilling?.CustomerGUID.ToString() ?? null),
+                Helper.FormatDateValue(clubMember.BusinessCustomerBilling?.CreatedDate ?? null), Helper.GetCommaSeparatedStringFromList(businessCustomerBillingTypes), Helper.GetStringValue(clubMember.BillToAddress?.Company ?? null), Helper.GetStringValue(clubMember.BillToAddress?.Country ?? null), Helper.GetStringValue(clubMember.BillToAddress?.Address1 ?? null), Helper.GetStringValue(clubMember.BillToAddress?.Address2 ?? null), Helper.GetStringValue(clubMember.BillToAddress?.City ?? null),
+                Helper.GetStringValue(clubMember.BillToAddress?.State ?? null), Helper.GetStringValue(clubMember.BillToAddress?.ZipCode ?? null), Helper.FormatDateValue(clubMember.BillToAddress?.DOB ?? null), Helper.GetStringValue(clubMember.BillToAddress?.PhoneFormatted ?? null), Helper.GetStringValue(clubMember.BusinessCustomerBilling?.CellPhone ?? null), clubMember.SubscriptionPayment != null ? "Credit Card" : string.Empty, GetCreditCardInformation(clubMember.SubscriptionPayment), Helper.GetStringValue(clubMember.SubscriptionPayment?.CardExp ?? null), Helper.GetStringValue(clubMember.PreferredShippingOption?.ServiceCodeName ?? null), Helper.GetStringValue(clubMember.ShipToAddress?.FirstName ?? null), Helper.GetStringValue(clubMember.ShipToAddress?.LastName ?? null), Helper.GetStringValue(clubMember.BusinessCustomer?.Email ?? null),
+                Helper.GetStringValue(clubMember.BusinessCustomer?.CustomerGUID.ToString() ?? null), Helper.FormatDateValue(clubMember.BusinessCustomer?.CreatedDate ?? null), Helper.GetCommaSeparatedStringFromList(businessCustomerTypes), Helper.GetStringValue(clubMember.ShipToAddress?.Company ?? null), Helper.GetStringValue(clubMember.ShipToAddress?.Country ?? null), Helper.GetStringValue(clubMember.ShipToAddress?.Address1 ?? null), Helper.GetStringValue(clubMember.ShipToAddress?.Address2 ?? null),
+                Helper.GetStringValue(clubMember.ShipToAddress?.City ?? null), Helper.GetStringValue(clubMember.ShipToAddress?.State ?? null), Helper.GetStringValue(clubMember.ShipToAddress?.ZipCode ?? null), Helper.FormatDateValue(clubMember.ShipToAddress?.DOB ?? null), Helper.GetStringValue(clubMember.ShipToAddress?.PhoneFormatted ?? null), Helper.GetStringValue(clubMember.BusinessCustomer?.CellPhone ?? null) , Helper.GetCommaSeparatedStringFromList(subscriptionTags),
+                Helper.GetCommaSeparatedStringFromList(subscriptionNotes), clubMember.SalesREP);
+        }
+        return clubMembers;
+    }
+
+    private string GetMembershipStatus(ClubSubscriptions clubSubscription)
+    {
+        if (clubSubscription == null)
+            return string.Empty;
+        return clubSubscription.DateCancelled != null ? "Cancelled" : "Active";
+    }
+
+    private string GetCreditCardInformation(SubscriptionPaymentModel subscriptionPayment)
+    {
+        return subscriptionPayment != null ? subscriptionPayment.CardType + "-" + subscriptionPayment.CardLastFour : string.Empty;
+    }
+
+}

@@ -1,0 +1,113 @@
+﻿@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm @ref="BrainTreeForm" Model="@brainTree" Context="formContext" Class="row g-3">
+    <DataAnnotationsValidator />
+    <div class="card shadow-none border-dashed">
+        @*<div class="card-header border-bottom" hidden="@hide">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h5 class="mb-0"><a href="settings/integrated-partners" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-credit-card me-2"></span>BrainTree</h5>
+                </div>
+                <div class="col-md-auto">
+                    @if (!IsActivePaymentGateway)
+                    {
+                        <button class="btn btn-sm btn-outline-secondary me-2 disabled">Save</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-sm btn-primary" @onclick="@(() => SaveBrainTree(formContext))">Save</button>
+                    }
+                </div>
+            </div>
+        </div>*@
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="inputBrainTreeMerchantId" class="form-label">Merchant ID</label>
+                <InputText class="form-control" @bind-Value="@brainTree.MerchantId" id="inputBrainTreeMerchantId" type="text" placeholder="Merchant ID"></InputText>
+                <ValidationMessage For="@(() => brainTree.MerchantId)" />
+            </div>
+            <div class="mb-3">
+                <label for="inputBrainTreePublicKey" class="form-label">Public Key</label>
+                <InputText class="form-control" @bind-Value="@brainTree.PublicKey" id="inputBrainTreePublicKey" type="text" placeholder="Public Key"></InputText>
+                <ValidationMessage For="@(() => brainTree.PublicKey)" />
+            </div>
+            <div class="mb-3">
+                <label for="inputBrainTreePrivateKey" class="form-label">Private Key</label>
+                <InputText class="form-control" @bind-Value="brainTree.PrivateKey" id="inputBrainTreePrivateKey" type="text" placeholder="Private Key"></InputText>
+                <ValidationMessage For="@(() => brainTree.PrivateKey)" />
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter]
+    public bool? hide { get; set; }
+    [Parameter]
+    public List<BusinessPaymentProviderProfileSettingsViewModel>? data { get; set; }
+    private string title = "BrainTree | Synergy Commerce Admin Panel";
+    public EditForm BrainTreeForm { get; set; }
+    private bool SpinnerVisibility { get; set; } = false;
+    private bool IsActivePaymentGateway { get; set; } = false;
+    Member currentMember = new Member();
+    BrainTreeRequestModel brainTree = new BrainTreeRequestModel();
+    List<string> brainTreeMetaKeys = new List<string>(){
+        BusinessSettingsMetaKey.BrainTreeMerchantId,
+        BusinessSettingsMetaKey.BrainTreePrivateKey,
+        BusinessSettingsMetaKey.BrainTreePublicKey
+    };
+
+    protected override void OnInitialized()
+    {
+        SpinnerVisibility = true;
+
+        if (data != null && data.Any(x => x.MetaNamespace == BusinessSettingsMetaNamespace.BrainTree))
+        {
+            brainTree = new BrainTreeRequestModel
+            {
+                MerchantId = data.Where(x => x.MetaKey == BusinessSettingsMetaKey.BrainTreeMerchantId).FirstOrDefault().MetaValue,
+                PublicKey = data.Where(x => x.MetaKey == BusinessSettingsMetaKey.BrainTreePublicKey).FirstOrDefault().MetaValue,
+                 PrivateKey = data.Where(x => x.MetaKey == BusinessSettingsMetaKey.BrainTreePrivateKey).FirstOrDefault().MetaValue,
+            };
+        }
+
+        SpinnerVisibility = false;
+
+    }
+
+    public async Task SaveBrainTree(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var businessSettings = await Helper.BusinessSettingsMapping(brainTree, currentMember.Id, BusinessSettingsMetaNamespace.BrainTree, brainTreeMetaKeys);
+            var response = await _settingsViewModel.CreateBusinessSettingListAsync(businessSettings);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+}

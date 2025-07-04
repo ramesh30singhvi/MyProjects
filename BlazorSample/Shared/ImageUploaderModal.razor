@@ -1,0 +1,126 @@
+﻿@inject IJSRuntime JSRuntime;
+
+@if (showModal)
+{
+	<div class="modal fade show" tabindex="-1" role="dialog" style="display: block;">
+	 <div class="modal-dialog modal-lg" role="document">
+	  <div class="modal-content">
+	   <div class="modal-header">
+		<h5 class="modal-title">@title</h5>
+		<button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="() => CloseModal()">
+		 <span aria-hidden="true">&times;</span>
+		</button>
+	   </div>
+	   <div class="modal-body">
+					@if (parsing)
+					{
+			<center>
+			 <h2>@prompt</h2>
+			</center>
+					}
+		<div class="mb-3" hidden="@(file != null)">
+		 <div class="row d-flex align-items-center">
+		  <div class="col-md">
+		   <div class="dz-message dropzone-area d-flex position-relative p-3">
+			<div class="text-center">
+			 <span class="far fa-cloud-upload-alt me-2"></span>@title<p class="mb-0 fs--1 text-400">Upload a @(MaxCropedWidth)x@(MaxCropedHeight) jpg image with <br>a maximum size of 400KB</p>
+			 <span class="fs--1">Drag and drop your files here or click to open file loading dialogue...</span>
+			</div>
+			<InputFile id="inputDrop" OnChange="OnInputFileChange" class="opacity-0 w-100 h-100 position-absolute" />
+		   </div>
+		  </div>
+		 </div>
+		</div>
+		<div hidden="@(file == null)">
+		 <Cropper MaxCropedHeight="@MaxCropedHeight" MaxCropedWidth="@MaxCropedWidth"
+							 @ref="cropper"
+							 AspectRatio="proportion"
+							 RequireAspectRatio="bool.Parse(enableProportion)"
+							 InputId="inputDrop"
+							 ImageFile="file"
+							 @bind-Ratio="ratio"
+							 imgContainerHeight="@ImgContainerHeight"
+							 CropperHeight="@(CropperHeight != 0 ? CropperHeight : MaxCropedHeight)"
+							 InitCropHeight="@(CropperHeight != 0 ? CropperHeight : MaxCropedHeight)"
+							 InitCropWidth="@(InitCropWidth != 0 ? InitCropWidth : MaxCropedWidth)"
+							 AnimeGifEnable="true">
+		 </Cropper>
+		</div>
+
+	   </div>
+	   <div class="modal-footer" hidden="@(file == null)">
+		<button type="button" class="btn btn-primary" @onclick="DoneCrop">Done</button>
+					@if (cropper != null)
+					{
+			<input type="range" min="@(cropper.MinRatio * 100)" max="@(cropper.MaxRatio * 100)" value="@(ratio * 100)" @oninput="OnRatioChange" />
+					}
+	   </div>
+	  </div>
+	 </div>
+	</div>
+}
+
+@code {
+	public IBrowserFile file { get; set; }
+	Cropper cropper;
+	string imgUrl = "";
+	string prompt = "Uploading Image...";
+	public bool parsing = false;
+	string enableProportion = "false";
+	double proportion = 1d;
+	double ratio = 1;
+	public Boolean showModal;
+	public string title;
+	public double MaxCropedHeight;
+	public double MaxCropedWidth;
+	public double ImgContainerHeight = 400;
+	public double CropperHeight = 480;
+	public double InitCropWidth = 0;
+
+	[Parameter]
+	public EventCallback<string> Cropped { get; set; }
+
+	void OnRatioChange(ChangeEventArgs args)
+	{
+		ratio = int.Parse(args.Value.ToString()) / 100.0;
+	}
+	protected override void OnInitialized()
+	{
+		StateHasChanged();
+	}
+
+	private void OnInputFileChange(InputFileChangeEventArgs args)
+	{
+		file = args.File;
+		StateHasChanged();
+	}
+
+	[JSInvokable]
+	public async Task DoneCrop()
+	{
+		var args = await cropper.GetCropedResult();
+		file = null;
+		showModal = false;
+		parsing = true;
+		StateHasChanged();
+		await Task.Delay(10);// a hack, otherwise prompt won't show
+		await JSRuntime.InvokeVoidAsync("console.log", "converted!");
+		imgUrl = await args.GetBase64Async();
+		args.Dispose();
+		parsing = false;
+		await Cropped.InvokeAsync(imgUrl);
+	}
+
+	public void OpenModal()
+	{
+		showModal = true;
+		StateHasChanged();
+	}
+
+	private void CloseModal()
+	{
+		showModal = false;
+		file = null;
+		StateHasChanged();
+	}
+}

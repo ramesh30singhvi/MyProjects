@@ -1,0 +1,494 @@
+﻿@page "/settings/pos/licenses"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Syncfusion.Blazor.Spinner
+@using Syncfusion.Blazor
+@using Microsoft.Extensions.Configuration;
+@inject ILocalStorageService localStorage
+@inject HttpClient _httpClient
+@inject IBusinessViewModel  _businessViewModel
+@inject IPOSLicenseViewModel _posLicenseViewModel
+@inject IConfiguration _configuration
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ToastService toastService
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        <div class="card shadow-none border">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="settings/pos" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-key me-2"></span>POS Licenses</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-primary" href="javascript:void(0)" @onclick="AddItem">Add License</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body vh-75 p-0">
+                <SfGrid ID="Grid" @ref="Grid" TValue="POSLicenceViewModel" DataSource="posLicenses" AllowFiltering="false" Width="100%" Height="100%">
+                    <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" Mode="EditMode.Dialog"></GridEditSettings>
+                    <GridEvents RowSelected="RowSelectHandler" TValue="POSLicenceViewModel"></GridEvents>
+
+                    <SfDataManager Url="@_gridDataUrl" Adaptor="Adaptors.WebApiAdaptor"></SfDataManager>
+                    <GridColumns>
+                        <GridColumn HeaderText="Registered" Width="120">
+                            <Template Context="licenseContext">
+                                @{
+                                    var license = (licenseContext as POSLicenceViewModel);
+                                    if (license.KeyRegisteredDate.HasValue)
+                                    {
+                                        <span>Yes</span>
+                                    }
+                                    else
+                                    {
+                                        <span>No</span>
+                                    }
+                                }
+                            </Template>
+                        </GridColumn>
+                        <GridColumn Field=@nameof(POSLicenceViewModel.LicenseKey) HeaderText="License Key" Format="C2" TextAlign="TextAlign.Center " Width="300">
+                            <Template Context="licenseContext">
+                                @{
+                                    var license = (licenseContext as POSLicenceViewModel);
+                                    var arr = license.LicenseKey.Split('-');
+                                    if (arr.Length > 4)
+                                    {
+                                        var licenseKey = string.Format("{0}-****-{1}", arr[0], arr[4]);
+                                        <span>@licenseKey</span>
+                                    }
+                                }
+                            </Template>
+                        </GridColumn>
+                        <GridColumn Field=@nameof(POSLicenceViewModel.KeyRegisteredDate) HeaderText="Activation Date" Format="d" Type="ColumnType.Date" TextAlign="TextAlign.Center" Width="160"></GridColumn>
+                        <GridColumn Field=@nameof(POSLicenceViewModel.DeviceName) HeaderText="Friendly Name" Width="250" TextAlign="TextAlign.Left ">
+                            <Template Context="licenseContext">
+                                @{
+                                    var license = (licenseContext as POSLicenceViewModel);
+                                    <a href="javascript:void();" @onclick="OpenDetailsOfDialog">@license.DeviceName</a>
+                                }
+                            </Template>
+                        </GridColumn>
+                        <GridColumn Field=@nameof(POSLicenceViewModel.DeviceId) HeaderText="DeviceID" Width="300" TextAlign="TextAlign.Center"></GridColumn>  
+                        <GridColumn Field=@nameof(POSLicenceViewModel.KeyExpirationDate) HeaderText="Expiration Date" Format="d" Type="ColumnType.Date" TextAlign="TextAlign.Center" Width="160"></GridColumn>
+                        <GridColumn Field=@nameof(POSLicenceViewModel.KeyVerifiedDate) HeaderText="Last Verified" Format="d" Type="ColumnType.Date" TextAlign="TextAlign.Center" Width="160"></GridColumn>
+                        <GridColumn HeaderText="" TextAlign="TextAlign.Right">
+                            <Template Context="licenseContext">
+                                <div class="dropdown font-sans-serif position-static d-inline-block">
+                                    <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                    <div class="dropdown-menu dropdown-menu-end border py-2 z-1090" aria-labelledby="dropdown0">
+                                        @{
+                                            var license = (licenseContext as POSLicenceViewModel);
+
+                                            <a class="dropdown-item" href="" @onclick="ActivateLicenseKey" @onclick:preventDefault>Activate License</a>
+                                            <a class="dropdown-item" href="" @onclick="OpenDialog" @onclick:preventDefault>Edit License</a>
+                                            if (!string.IsNullOrWhiteSpace(license.DeviceId))
+                                            {
+                                                <a class="dropdown-item text-danger" href="" @onclick="() => isResetLicenseConfirmationModalVisible = true" @onclick:preventDefault>Reset License</a>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </Template>
+                        </GridColumn>
+                    </GridColumns>
+                </SfGrid>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 offset-md-4">
+                <SfDialog Width="500px" IsModal="true" @bind-Visible="@IsDialogVisible">
+                    <DialogEvents OnOverlayClick="@OnOverlayclick">
+                    </DialogEvents>
+                    <DialogTemplates>
+                        <Header> Add / Edit POS License </Header>
+                        <Content>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <input class="form-control d-none" @bind="@(SelectedItem.Id)" type="number" disabled />
+
+                                    @if (!string.IsNullOrEmpty(SelectedItem.DeviceId))
+                                    {
+                                        <div class="form-row mb-3">
+                                            <div class="form-group">
+                                                <label for="deviceedit">Device ID</label>
+                                                <input class="form-control disabled" readonly @bind="@(SelectedItem.DeviceId)" type="text" />
+                                            </div>
+                                        </div>
+                                    }
+
+                                    <div class="form-row mb-3">
+                                        <div class="form-group">
+                                            <label for="licenseedit">Device Friendly Name</label>
+                                            <input class="form-control" @bind="@(SelectedItem.DeviceName)" type="text" />
+                                        </div>
+                                    </div>
+
+                                    <div class="form-row mb-3">
+                                        <div class="form-group">
+                                            <label for="licenseedit">License Key</label>
+                                            <input class="form-control disabled" readonly @bind="@(SelectedItem.LicenseKey)" type="text" />
+                                        </div>
+                                    </div>
+
+                                    <div class="form-row mb-3">
+                                        <div class="form-group">
+                                            <label for="expirationedit">Key Expiration</label>
+                                            <SfDatePicker TValue="DateTime?" @bind-Value="@SelectedItem.KeyExpirationDate"></SfDatePicker>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-row mb-3">
+                                        <div class="form-group">
+                                            <label for="invoiceedit">Invoice ID</label>
+                                            <input class="form-control" @bind="@(SelectedItem.InvoiceID)" type="number" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </Content>
+                    </DialogTemplates>
+                    <DialogButtons>
+                        <DialogButton Content="Cancel" OnClick="@CloseDialog" />
+                        <DialogButton Content="Save" IsPrimary="true" OnClick="@Save" />
+                    </DialogButtons>
+                </SfDialog>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 offset-md-4">
+                <SfDialog CssClass="syncfusion-dialog-size syncfusion-dialog-size-sm" IsModal="true" @bind-Visible="@IsDeviceDialogVisible">
+                    <DialogEvents OnOverlayClick="@OnOverlayclick">
+                    </DialogEvents>
+                    <DialogTemplates>
+                        <Header> Device Info </Header>
+                        <Content>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="form-row mb-3">
+                                        <div class="form-group">
+                                            <label for="licenseedit">Device ID</label>
+                                            <input class="form-control" @bind="@(SelectedItem.DeviceId)" type="text" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </Content>
+                    </DialogTemplates>
+                    <DialogButtons>
+                        <DialogButton Content="Cancel" OnClick="@CloseDialog" />
+                        <DialogButton Content="Save" IsPrimary="true" OnClick="@ActivateLicenseKey" />
+                    </DialogButtons>
+                </SfDialog>
+            </div>
+        </div>
+
+
+        <SfDialog Width="600px" IsModal="true" @bind-Visible="@IsDetailsOfDialogVisible">
+            <DialogEvents OnOverlayClick="@OnOverlayclick">
+            </DialogEvents>
+            <DialogTemplates>
+                <Header> POS License Details </Header>
+                <Content>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-row mb-3">
+                                <div class="form-group">
+                                    <label for="licenseedit">Device Friendly Name</label>
+                                    <input class="form-control" @bind="@(SelectedItem.DeviceName)" type="text" />
+                                </div>
+                            </div>
+                            <div class="form-row mb-3">
+                                <div class="form-group">
+                                    <label for="deviceedit">Device ID</label>
+                                    <input class="form-control disabled" readonly @bind="@(SelectedItem.DeviceId)" type="text" />
+                                </div>
+                            </div>
+                            <div class="form-row mb-3">
+                                <div class="form-group">
+                                    <label for="deviceedit">POS Profile</label>
+                                    <input class="form-control disabled" readonly @bind="@(SelectedItem.PosProfileName)" type="text" />
+                                </div>
+                            </div>
+                            <div class="form-row mb-3">
+                                <div class="form-group">
+                                    <label for="licenseedit">License Key</label>
+                                    <input class="form-control disabled" readonly @bind="@(SelectedItem.LicenseKey)" type="text" />
+                                </div>
+                            </div>
+                            <div class="form-row mb-3">
+                                <div class="form-group">
+                                    <label for="deviceedit">Activation Date</label>
+                                    <SfDatePicker TValue="DateTime?" @bind-Value="@SelectedItem.KeyRegisteredDate"></SfDatePicker>
+                                </div>
+                            </div>
+                            <div class="form-row mb-3">
+                                <div class="form-group">
+                                    <label for="expirationedit">Expiration Date</label>
+                                    <SfDatePicker TValue="DateTime?" @bind-Value="@SelectedItem.KeyExpirationDate"></SfDatePicker>
+                                </div>
+                            </div>
+                            <div class="form-row mb-3">
+                                <div class="form-group">
+                                    <label>Last Verified</label>
+                                    <SfDateTimePicker  TValue="DateTime?" @bind-Value="@SelectedItem.KeyVerifiedDate"></SfDateTimePicker>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </Content>
+            </DialogTemplates>
+            <DialogButtons>
+                <DialogButton Content="Cancel" OnClick="@CloseDetailsOfDialog" />
+                <DialogButton Content="Save" IsPrimary="true" OnClick="@Save" />
+            </DialogButtons>
+        </SfDialog>
+
+        <SfDialog Width="400px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@isResetLicenseConfirmationModalVisible">
+            <DialogEvents OnOverlayClick="() => isResetLicenseConfirmationModalVisible = false">
+            </DialogEvents>
+            <DialogTemplates>
+                <Header>Reset License?</Header>
+                <Content>
+                    <p class="mb-3">You have selected to reset the license.</p>
+                    <p class="mb-3">Are you sure?</p>
+                </Content>
+            </DialogTemplates>
+            <DialogButtons>
+                <DialogButton Content="Cancel" OnClick="() => isResetLicenseConfirmationModalVisible = false" />
+                <DialogButton Content="Proceed" OnClick="@ResetLicense" IsPrimary="true" />
+            </DialogButtons>
+        </SfDialog>
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+
+    private string title = "POS Licenses";
+    private string _gridDataUrl;
+
+    SfGrid<POSLicenceViewModel> Grid;
+    private bool SpinnerVisibility { get; set; } = false;
+    private List<BusinessSelectModel> businesses = new List<BusinessSelectModel>();
+    private POSLicenceViewModel SelectedLicense = new POSLicenceViewModel();
+    private POSLicenceViewModel SelectedItem = new POSLicenceViewModel();
+    private double rowindex = 0;
+    private bool IsDialogVisible = false;
+    private bool IsDetailsOfDialogVisible = false;
+    private Member currentMember = new Member();
+    private bool IsDeviceDialogVisible = false;
+    private bool isResetLicenseConfirmationModalVisible = false;
+    List<POSLicenceViewModel> posLicenses = new List<POSLicenceViewModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        var getPOSLicenses = await _posLicenseViewModel.GetPosLicenseKeys(currentMember.Id);
+        if (getPOSLicenses.success)
+        {
+            posLicenses = getPOSLicenses.data;
+        }
+
+        businesses = await _businessViewModel.GetBusinessList();
+        await base.OnInitializedAsync();
+        SpinnerVisibility = false;
+    }
+
+    public void RowSelectHandler(RowSelectEventArgs<POSLicenceViewModel> args)
+    {
+        SelectedItem = args.Data;
+        SelectedItem = new POSLicenceViewModel
+        {
+            BusinessId = args.Data.BusinessId,
+            DeviceId = args.Data.DeviceId,
+            DeviceName = args.Data.DeviceName,
+            Id = args.Data.Id,
+            InvoiceID = args.Data.InvoiceID,
+            KeyExpirationDate = args.Data.KeyExpirationDate,
+            KeyProvisionDate = args.Data.KeyProvisionDate,
+            KeyRegisteredDate = args.Data.KeyRegisteredDate,
+            KeyVerifiedDate = args.Data.KeyVerifiedDate,
+            LicenseKey = args.Data.LicenseKey,
+            LicenseStatus = args.Data.LicenseStatus,
+            PosProfileId = args.Data.PosProfileId,
+            PosProfileName = args.Data.PosProfileName
+        };
+        rowindex = args.RowIndex;
+    }
+
+    public void AddItem()
+    {
+        SelectedItem = new POSLicenceViewModel { LicenseKey = Guid.NewGuid().ToString(), BusinessId = currentMember.Id };
+        rowindex = 0;
+        IsDialogVisible = true;
+    }
+
+    private void OpenDialog()
+    {
+        IsDialogVisible = true;
+    }
+    private void OpenDetailsOfDialog()
+    {
+        IsDetailsOfDialogVisible = true;
+    }
+    private void CloseDetailsOfDialog()
+    {
+        IsDetailsOfDialogVisible = false;
+    }
+
+    public async Task Save()
+    {
+        SpinnerVisibility = true;
+        var request = new POSLicenceAddRequest
+        {
+            BusinessId = SelectedItem.BusinessId,
+            DeviceId = SelectedItem.DeviceId,
+            InvoiceID = SelectedItem.InvoiceID,
+            KeyExpirationDate = SelectedItem.KeyExpirationDate,
+            LicenseKey = SelectedItem.LicenseKey,
+            DeviceName = SelectedItem.DeviceName
+        };
+        if (SelectedItem.Id > 0)
+        {
+            Grid.Refresh();
+            var response = await _posLicenseViewModel.UpdatePosLicenceKey(SelectedItem.Id, request);
+            IsDialogVisible = false;
+            if (response.success == false)
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+            else
+            {
+                ResetGridData(response.data);
+                //await Grid.UpdateRowAsync(rowindex, response.data);
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            }
+        }
+        else
+        {
+            var response = await _posLicenseViewModel.AddPosLicenceKey(request);
+            IsDialogVisible = false;
+
+            if (response.success == false)
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+            else
+            {
+                posLicenses.Insert(0, response.data);
+                Grid.Refresh();
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+            }
+        }
+        SpinnerVisibility = false;
+    }
+
+    public async Task ActivateLicenseKey()
+    {
+        if (string.IsNullOrEmpty(SelectedItem.DeviceId))
+        {
+            IsDeviceDialogVisible = true;
+            return;
+        }
+
+        IsDeviceDialogVisible = false;
+
+        SpinnerVisibility = true;
+        var request = new POSLicenceActivateRequest
+        {
+            BusinessId = SelectedItem.BusinessId,
+            DeviceId = SelectedItem.DeviceId,
+            LicenseKey = SelectedItem.LicenseKey
+        };
+
+        var response = await _posLicenseViewModel.ActivatePosLicenceKey(SelectedItem.Id, request);
+        SpinnerVisibility = false;
+
+        if (response.success == false)
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        else
+        {
+            ResetGridData(response.data);
+            toastService.ShowToast(Constants.LicenseActivateMessage, ToastLevel.Success);
+        }
+    }
+
+    public async Task EditRow(int id)
+    {
+        await Grid.StartEditAsync();
+    }
+
+    private void OnOverlayclick(MouseEventArgs arg)
+    {
+        IsDialogVisible = false;
+        IsDeviceDialogVisible = false;
+    }
+
+    private void CloseDialog(MouseEventArgs arg)
+    {
+        IsDialogVisible = false;
+        IsDeviceDialogVisible = false;
+    }
+
+    private void ResetGridData(POSLicenceViewModel data)
+    {
+        foreach (var license in posLicenses)
+        {
+            if (license.Id == SelectedItem.Id)
+            {
+                license.DeviceId = data.DeviceId;
+                license.DeviceName = data.DeviceName;
+                license.InvoiceID = data.InvoiceID;
+                license.KeyExpirationDate = data.KeyExpirationDate;
+                license.KeyProvisionDate = data.KeyProvisionDate;
+                license.KeyRegisteredDate = data.KeyRegisteredDate;
+                license.KeyVerifiedDate = data.KeyVerifiedDate;
+                license.LicenseKey = data.LicenseKey;
+                license.LicenseStatus = data.LicenseStatus;
+                license.PosProfileId = data.PosProfileId;
+                license.PosProfileName = data.PosProfileName;
+            }
+        }
+        Grid.Refresh();
+    }
+
+    private async Task ResetLicense()
+    {
+        SpinnerVisibility = true;
+        var resetRequest = new POSLicenceResetRequest()
+        {
+            BusinessId = currentMember.Id,
+            DeviceId = SelectedItem.DeviceId,
+            Id = SelectedItem.Id
+        };
+        var resetLicenseKeyResponse = await _posLicenseViewModel.ResetPosLicenceKey(resetRequest);
+        if (resetLicenseKeyResponse.success)
+        {
+            ResetGridData(resetLicenseKeyResponse.data);
+            toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+            isResetLicenseConfirmationModalVisible = false;
+        }
+        else
+        {
+            toastService.ShowToast(resetLicenseKeyResponse.error_info.description, ToastLevel.Error);
+        }
+        SpinnerVisibility = false;
+    }
+}

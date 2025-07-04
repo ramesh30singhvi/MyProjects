@@ -1,0 +1,49 @@
+﻿@page "/sa/supplier-payment-gateway"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Client.ViewModels
+@inject IBusinessViewModel _businessViewModel
+@attribute [Authorize]
+
+
+<AuthorizeView>
+    <Authorized>
+        <SfSpinner @bind-Visible="isLoading"></SfSpinner>
+        <Title Value="@title"></Title>
+
+        <div class="py-3">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-0"><a href="/sa/configuration" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a>Supplier Payment Gateway</h5>
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-sm btn-primary">Save</button>
+                </div>
+            </div>
+            <hr />
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6 mb-3">
+                <label for="inputMerchantID" class="form-label">Merchant ID</label>
+                <input type="text" class="form-control" id="inputAccountSID" value="q852ds44mf5v2h69">
+            </div>
+            <div class="col-md-6 mb-3"></div>
+            <div class="col-md-6 mb-3">
+                <label for="inputPublicKey" class="form-label">Public Key</label>
+                <input type="text" class="form-control" id="inputTransactionKey" value="3kjxnjjhnpz6rhxj">
+            </div>
+            <div class="col-md-6 mb-3"></div>
+            <div class="col-md-6 mb-3">
+                <label for="inputPrivate Key" class="form-label">Private Key</label>
+                <input type="text" class="form-control" id="inputTransactionKey" value="052d75857a8b0ccde981eb8b31e71a8c">
+            </div>
+        </div>
+</Authorized>
+</AuthorizeView>
+
+@code
+{
+    private string title = "Supplier Payment Gateway | Synergy Commerce Admin Panel";
+    private bool isLoading = false;
+
+}

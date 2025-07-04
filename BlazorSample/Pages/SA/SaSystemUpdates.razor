@@ -1,0 +1,130 @@
+﻿@page "/sa/content/system-updates"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Syncfusion.Blazor.Spinner
+@using Syncfusion.Blazor
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ISystemUpdatesViewModel _systemUpdatesViewModel
+@inject ILocalStorageService localStorage
+@inject ToastService toastService
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+
+        <div class="py-3">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-0"><a href="sa/content" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-bullhorn me-2"></span>System Updates</h5>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-sm btn-primary" href="/sa/content/system-update-edit">Add Article</a>
+                </div>
+            </div>
+            <hr />
+        </div> 
+
+        <div class="sf-grid vh-75 ">
+            <SfGrid ID="Grid" @ref="Grid" TValue="SystemUpdatesListModel" DataSource="@systemUpdates" AllowPaging="true" AllowFiltering="false" Width="100%">
+                <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" Mode="EditMode.Dialog"></GridEditSettings>
+
+                <GridPageSettings PageSize="10"></GridPageSettings>
+                <GridColumns>
+                    <GridColumn HeaderText="Article" TextAlign="TextAlign.Left" Width="300">
+                        <Template Context="UpdateContext">
+                            @{
+                                var update = (UpdateContext as SystemUpdatesListModel);
+                                <a class="btn btn-link text-800 fs--1" href="/sa/content/system-update-edit/@update.IdGUID">@update.Article</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(SystemUpdatesListModel.ArticlePublishDate) HeaderText="Published" Format="d" Type="ColumnType.Date" TextAlign="TextAlign.Left" Width="140"></GridColumn>
+                    <GridColumn Field=@nameof(SystemUpdatesListModel.ArticlePublishedBy) HeaderText="Published By" TextAlign="TextAlign.Left"></GridColumn>
+                    <GridColumn Field=@nameof(SystemUpdatesListModel.ArticleModifiedDate) HeaderText="Modified" Format="d" Type="ColumnType.Date" TextAlign="TextAlign.Left" Width="140"></GridColumn>
+                    <GridColumn Field=@nameof(SystemUpdatesListModel.ArticleModifiedBy) HeaderText="Modified By" TextAlign="TextAlign.Left"></GridColumn>
+                    <GridColumn HeaderText="Link" TextAlign="TextAlign.Center" Width="300">
+                        <Template Context="UpdateContext">
+                            @{
+                                var update = (UpdateContext as SystemUpdatesListModel);
+                                <a class="btn btn-link text-800 fs--1" target="_blank" href="@update.ArticleURL">@update.ArticleURL</a>
+                            }
+                        </Template>
+                    </GridColumn>
+
+                    <GridColumn HeaderText="" TextAlign="TextAlign.Right" Width="100">
+                        <Template Context="systemUpdateContext">
+                            <div class="dropdown font-sans-serif position-static d-inline-block">
+                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                <div class="dropdown-menu dropdown-menu-end border py-2 z-1090" aria-labelledby="dropdown0">
+                                    @{
+                                        var update = (systemUpdateContext as SystemUpdatesListModel);
+                                        <a class="dropdown-item" href="javascript:void(0)" @onclick="()=> deleteSystemUpdate(update.Id)">Delete</a>
+                                    }
+                                </div>
+                            </div>
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+
+    </Authorized>
+</AuthorizeView>
+
+<DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="()=>DeleteSystemUpdate(idForDelete)"></DeleteConfirmation>
+
+@code
+{
+    private string title = "System Updates | Synergy Commerce Super Admin  Panel";
+    public bool SpinnerVisibility = true;
+    SfGrid<SystemUpdatesListModel> Grid;
+    bool openDeleteDialog = false;
+    private double rowindex = 0;
+    List<SystemUpdatesListModel> systemUpdates { get; set; }
+    DeleteConfirmation DeleteConfirmation;
+    private int idForDelete = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var response = await _systemUpdatesViewModel.GetSystemUpdates();
+        if (response.success)
+        {
+            systemUpdates = response.data;
+        }
+        SpinnerVisibility = false;
+    }
+
+    private void DialogClose() => openDeleteDialog = false;
+
+    private async Task DeleteSystemUpdate(int Id)
+    {
+        openDeleteDialog = false;
+        SpinnerVisibility = true;
+        var response = await _systemUpdatesViewModel.DeleteSystemUpdate(Id);
+        if (response.success)
+        {
+            systemUpdates = response.data;
+        }
+        SpinnerVisibility = false;
+        toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+    }
+
+    private void deleteSystemUpdate(int Id)
+    {
+        openDeleteDialog = true;
+        idForDelete = Id;
+    }
+
+}

@@ -1,0 +1,74 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Synergy Commerce Admin</title>
+    <base href="/" />
+    <!--<link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />-->
+    <link href="css/sf-cp-bootstrap4.min.css" rel="stylesheet" />
+    <link href="css/theme.min.css" rel="stylesheet" />
+    <link href="css/user.min.css" rel="stylesheet" />
+    <link href="css/app.css" rel="stylesheet" />
+    <link href="css/flag-icon.min.css" rel="stylesheet" />
+    <link href="js/cropperjs/dist/cropper.css" rel="stylesheet" />
+    <!--<link href="CellarPassAppAdmin.Client.styles.css" rel="stylesheet" />-->
+    <link href="manifest.json" rel="manifest" />
+    <link rel="shortcut icon" href="favicon.ico">
+    <link href="_content/Syncfusion.Blazor.Themes/bootstrap4.css" rel="stylesheet" />
+    <!--<script src="_content/Microsoft.AspNetCore.Components.Web.Extensions/headManager.js"></script>-->
+    <script src="_content/Chronos.Blazor.Cropper/CropHelper.js"></script>
+    <script src="js/autocomplete/GoogleAddressAutocomplete.js"></script>
+    <script src="js/autocomplete/GoogleMapLocation.js"></script>
+    <script type="text/javascript">
+        function initMap() {
+            
+        }
+    </script>
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDKGd8SyV0GhpzD-onvM0ItLpzq5GhCFfA&libraries=places&callback=initMap"></script>
+    <script src="js/cropperjs/dist/cropper.js"></script>
+    <script src="js/imageCropper.js"></script>
+    <script src="js/reCAPTCHA.js"></script>
+    <script src="https://www.google.com/recaptcha/api.js"></script>
+    <script src="js/printPreview.js"></script>
+
+</head>
+
+<body>
+    <div id="app">
+        <main class="main" id="main-loading">
+            <div class="container-fluid">
+                <div class="row min-vh-100 flex-center g-0">
+                    <div class="col-lg-8 col-xxl-5 py-3 position-relative">
+                        <div class="h-100 text-center">
+                            <img class="mb-2" src="https://cdn.synergycommerce.io/images/branding/synergy-adminlogo-gray.svg" alt="Synergy Logo" width="200">
+                            <div class="my-4 text-center">
+                                <div class="spinner-border text-primary mb-2" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <h5>Loading</h5>
+                                <!--<div class="spinner-grow spinner-grow-sm me-2" role="status">
+                                    <span class="sr-only">Loading...</span>
+                                </div><span class="display-6">Loading....</span>-->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script src="js/bootstrap/bootstrap.bundle.min.js"></script>
+
+    <script src="js/fontawesome/all.min.js"></script>
+
+</body>
+
+</html>

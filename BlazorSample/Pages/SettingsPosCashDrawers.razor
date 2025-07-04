@@ -1,0 +1,128 @@
+﻿@page "/settings/pos/cash-drawers"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject IPOSCashDrawerViewModel _pOSCashDrawerViewModel
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings/pos" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-money-bill-alt me-2"></span>Cash Drawers</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="/settings/pos/cash-drawer-create">Add Drawer</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="theme-wizard border-bottom p-3">
+            <ul class="nav justify-content-between nav-wizard">
+                <li class="nav-item">
+                    <a class="nav-link active fw-semi-bold" href="#bootstrap-wizard-tab1" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-1"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Click Add Drawer</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab2" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-2"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Enter Unique Name</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab3" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-3"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Configure Settings</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab4" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-4"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Save</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab5" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-5"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Test Drawer</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@drawers" AllowPaging="true" Width="100%" class="border-x-0">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && drawers.Count <= 0)
+                        {
+                            <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Drawers Available</h6>
+                                <a class="btn btn-outline-primary" href="/settings/pos/cash-drawer-create">Get Started</a>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn HeaderText="Drawer Name" TextAlign="TextAlign.Left" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="150px">
+                        <Template>
+                            @{
+                                var drawer = (context as POSCashDrawerListModel);
+                                <a href="/settings/pos/cash-drawer-edit/@($"{drawer.IdGUID}")">@($"{drawer.DrawerName}")</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="Device ID" TextAlign="TextAlign.Center" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="100px">
+                        <Template>
+                            @{
+                                var drawer = (context as POSCashDrawerListModel);
+                                if (drawer.POS_Device_Id != null)
+                                {
+                                    <span>@drawer.POS_Device_Id</span>
+                                }
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+    <div class="card-footer">
+    </div>
+</div>
+
+@code
+{
+    private bool SpinnerVisibility { get; set; } = false;
+    private string title = "Cash Drawers | Synergy Commerce Admin Panel";
+    private Boolean isLoading = false;
+    private Member currentMember = new Member();
+
+    private List<POSCashDrawerListModel> drawers = new List<POSCashDrawerListModel>();
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        var drawersResponse = await _pOSCashDrawerViewModel.GetPOSCashDrawers(currentMember.Id);
+        if (drawersResponse.success)
+        {
+            drawers = drawersResponse.data;
+        }
+        isLoading = false;
+        SpinnerVisibility = false;
+        StateHasChanged();
+    }
+
+}

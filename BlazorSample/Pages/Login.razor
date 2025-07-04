@@ -1,0 +1,177 @@
+﻿@page "/login"
+@layout LoginLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.WebUtilities
+@using CellarPassAppAdmin.Client.Models
+@using Microsoft.Extensions.Options;
+@using CellarPassAppAdmin.Shared.Enums 
+@using CellarPassAppAdmin.Shared.Models.RequestModel;
+@inject ILoginViewModel _loginViewModel
+@inject IAlternateTemporaryLoginViewModel _alternateTemporaryLoginViewModel;
+@inject IOptions<SynergyAppSettings> _synergyAppSettings
+@inject ToastService toastService
+@inject NavigationManager _navigationManager
+
+
+@if (showLogin)
+{
+
+    <h3>Log in</h3>
+    <p class="text-danger">@errMsg</p>
+    <form>
+        <div class="mb-3">
+            <label class="form-label" for="card-email">Email Address</label>
+            <input type="text" @bind="_loginViewModel.EmailAddress" class="form-control" placeholder="name@address.com">
+        </div>
+        <div>
+            <div class="d-flex">
+                <label class="form-label" for="card-password">Password</label>
+                <a class="fs--1 ms-auto" href="forgot-password">Forgot Password?</a>
+            </div>
+            <div class="d-flex">
+                <input type="@(displayPassword ? "text" : "password")" @bind="_loginViewModel.Password" class="form-control" placeholder="Enter your password">
+                @{
+                    if (displayPassword)
+                    {
+                        <button id="togglePassword" type="button" @onclick="HandlePasswordVisibility">
+                            <span class="far opacity-50 fa-fw fa-eye" @onclick="HandlePasswordVisibility"></span>
+                        </button>
+                    }
+                    else
+                    {
+                        <button id="togglePassword" type="button" @onclick="HandlePasswordVisibility">
+                            <span class="far opacity-50 fa-fw fa-eye-slash" @onclick="HandlePasswordVisibility"></span>
+                        </button>
+                    }
+                }
+            </div>
+        </div>
+        <div class="d-grid">
+            <button type="button" id="signInBtn" class="btn btn-primary btn-block pt-2 pb-2 my-4 mb-0" @onclick="LoginUser">Sign In</button>
+        </div>
+
+        <div class="hr-sect mt-3"><span id="orLine" class="px-3 pb-1 mb-1">or</span></div>
+
+        <div class="d-grid">
+            <button type="button" @onclick="DisplaySendAlternativeLoginLinkModal" class="btn btn-outline-secondary btn-block pt-2 pb-2 mt-3 mb-0">Email me a login link</button>
+        </div>
+
+        <div class="text-center mt-2">
+            <p>Don't have an account yet? <a href="https://www.cellarpass.com/getstarted">Sign up.</a></p>
+        </div>
+    </form>
+
+}
+else
+{
+    <div class="my-3 text-center">
+
+        <div class="spinner-grow spinner-grow-sm me-2" role="status">
+            <span class="sr-only">Loading...</span>
+        </div><span class="display-6">Authorizing....</span>
+
+    </div>
+}
+
+
+<SfDialog ID="alternateLoginLinkDialog" Width="750px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@displaySendAlternativeLoginLinkModal">
+    <DialogEvents OnOverlayClick="() => displaySendAlternativeLoginLinkModal = false">
+    </DialogEvents>
+    <DialogTemplates>
+        <Content>
+            <EditForm Model="alternativeLoginEmail" OnValidSubmit="SendAlternativeLoginLink">
+                <DataAnnotationsValidator />
+                <div class="row me-4 mx-4 text-center">
+                    <div class="col-12">
+                        <img src="@(_synergyAppSettings.Value.SynergyCDNBaseUrl)images/branding/synergy-adminlogo-gray.svg" alt="Synergy Commerce Logo" width="200" />
+                        <h3 class="mt-3">Enter the email address we should send your login link</h3>
+                        <p>For your security, the link expires in 15 minutes.</p>
+                        <div class="me-4 mx-4">
+                            <div class="form-floating mb-3">
+                                <InputText @bind-Value="alternativeLoginEmail.EmailAddress" class="form-control" id="floatingInput" placeholder="Email address" />
+                                <label for="floatingInput">Email address</label>
+                            </div>
+                            <ValidationMessage For="@(() => alternativeLoginEmail.EmailAddress)" />
+                        </div>
+                        <button type="submit" class="btn mb-5 btn-outline-primary mt-4">Send login link</button><br />
+                        <div class="mb-3">
+                            <a href="javascript:void();" @onclick="() => displaySendAlternativeLoginLinkModal = false">Back to LogIn</a>
+                        </div>
+                    </div>
+                </div>
+            </EditForm>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+<Toast></Toast>
+
+@code {
+    private string returnUrl = string.Empty;
+    private bool showLogin = true;
+    private string errMsg = string.Empty;
+    private string adminLoginMessage = string.Empty;
+    private bool displayPassword { get; set; }
+    private bool displaySendAlternativeLoginLinkModal { get; set; }
+    AlternateTemporaryLoginRequestModel alternativeLoginEmail = new AlternateTemporaryLoginRequestModel();
+
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+
+    public async Task LoginUser()
+    {
+        errMsg = "";
+        showLogin = false;
+        var uri = _navigationManager.ToAbsoluteUri(_navigationManager.Uri);
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("returnUrl", out var param))
+        {
+            returnUrl = param.First();
+        }
+        LoginResultResponse response = await _loginViewModel.LoginUser();
+        if (!response.success)
+        {
+            errMsg = response.error_info.description;
+            showLogin = true;
+        }
+        else
+        {
+            if (string.IsNullOrEmpty(returnUrl))
+            {
+                _navigationManager.NavigateTo("/");
+            }
+            else
+            {
+                _navigationManager.NavigateTo(returnUrl);
+            }
+        }
+    }
+
+    private void HandlePasswordVisibility()
+    {
+        displayPassword = !displayPassword;
+        StateHasChanged();
+    }
+
+    private void DisplaySendAlternativeLoginLinkModal()
+    {
+        alternativeLoginEmail = new AlternateTemporaryLoginRequestModel();
+        displaySendAlternativeLoginLinkModal = true;
+    }
+
+    private async Task SendAlternativeLoginLink()
+    {
+        var sendAlternateLoginLinkResponse = await _alternateTemporaryLoginViewModel.SendAlternateTemporaryLoginLink(alternativeLoginEmail);
+        if (!sendAlternateLoginLinkResponse.success)
+        {
+            toastService.ShowToast(sendAlternateLoginLinkResponse.error_info.description, ToastLevel.Error);
+        }
+        else
+        {
+            toastService.ShowToast("Login link sent successfully.", ToastLevel.Success);
+            displaySendAlternativeLoginLinkModal = false;
+        }
+    }
+}

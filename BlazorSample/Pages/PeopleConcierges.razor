@@ -1,0 +1,152 @@
+﻿@page "/business/hospitality-network"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Enums
+@using Syncfusion.XlsIO;
+@using System.Data;
+@using EnumsNET;
+@inject IConciergeViewModel _conciergeViewModel
+@inject IJSRuntime jsRuntime
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5>
+                <span class="far fa-user-tie me-2"></span>Hospitality Network
+            </h5>
+            <div class="p-0">
+                <a class="btn btn-sm btn-outline-primary me-2" @onclick="ExportConcierges" href="javascript:void();">Export</a>
+                <a class="btn btn-sm btn-primary" href="/people/concierges/create">Add Concierge</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body min-vh-50 p-0 sf-grid">
+        <SfGrid DataSource="@concierges" EnableVirtualization="true">
+            <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+            <GridColumns>
+                <GridColumn HeaderText="Company" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })">
+                    <Template>
+                        @{
+                            var company = (context as ConciergeModel).ConciergeCompany;
+                            var conciergeGuid = (context as ConciergeModel).ConciergeGuid;
+                            <a href="people/concierges/edit/@($"{conciergeGuid}")">@($"{company}")</a>
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="Name" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })">
+                    <Template>
+                        @{
+                            var firstName = (context as ConciergeModel).FirstName;
+                            var lastName = (context as ConciergeModel).LastName;
+                            @(Helper.ToTitleCase($"{firstName} {lastName}"))
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="Phone" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })">
+                    <Template>
+                        @{
+                            var phone = (context as ConciergeModel).BusinessPhoneFormatted;
+                            phone = !string.IsNullOrEmpty(phone) ? phone : "Not Available";
+                            @($"{phone}")
+                        }
+                    </Template>
+                </GridColumn>
+            </GridColumns>
+        </SfGrid>
+    </div>
+    <div class="card-footer">
+    </div>
+</div>
+
+
+
+@code
+{
+    private string title = "Concierges | Synergy Commerce Admin Panel";
+    private Boolean isLoading;
+    private List<ConciergeModel> concierges = new List<ConciergeModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        ConciergeListResponse result = await _conciergeViewModel.GetCPConcierges();
+        if (result.success)
+        {
+            concierges = result.data;
+        }
+        isLoading = false;
+    }
+
+    private async Task ExportConcierges()
+    {
+        isLoading = true;
+        //Create an instance of ExcelEngine.
+        using (ExcelEngine excelEngine = new ExcelEngine())
+        {
+            IApplication application = excelEngine.Excel;
+            application.DefaultVersion = ExcelVersion.Xlsx;
+
+            //Create a workbook.
+            IWorkbook workbook = application.Workbooks.Create(1);
+            IWorksheet worksheet = workbook.Worksheets[0];
+
+            DataTable table = BindDataTable();
+
+            //Export data from DataTable to Excel worksheet.
+            worksheet.ImportDataTable(table, true, 1, 1);
+
+            worksheet.UsedRange.AutofitColumns();
+            IStyle headerStyle = workbook.Styles.Add("HeaderStyle");
+            headerStyle.Font.Bold = true;
+            worksheet.SetDefaultRowStyle(1, headerStyle);
+            worksheet.UsedRange.HorizontalAlignment = ExcelHAlign.HAlignLeft;
+
+            //Save the document as a stream.
+            using (MemoryStream stream = new MemoryStream())
+            {
+                //Save the created Excel document to MemoryStream.
+                workbook.SaveAs(stream);
+                await jsRuntime.InvokeAsync<object>(
+                       "fileSaveAs",
+                        "Concierges.xlsx",
+                       Convert.ToBase64String(stream.ToArray()));
+            }
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private DataTable BindDataTable()
+    {
+        DataTable conciergesDataTable = new DataTable();
+
+        conciergesDataTable.Columns.Add("Company");
+        conciergesDataTable.Columns.Add("First Name");
+        conciergesDataTable.Columns.Add("Last Name");
+        conciergesDataTable.Columns.Add("Title");
+        conciergesDataTable.Columns.Add("Country");
+        conciergesDataTable.Columns.Add("Address 1");
+        conciergesDataTable.Columns.Add("Address 2");
+        conciergesDataTable.Columns.Add("City");
+        conciergesDataTable.Columns.Add("State");
+        conciergesDataTable.Columns.Add("Zip Code");
+        conciergesDataTable.Columns.Add("Work Phone");
+        conciergesDataTable.Columns.Add("Mobile Phone");
+        conciergesDataTable.Columns.Add("Email");
+        conciergesDataTable.Columns.Add("Concierge Type");
+
+        foreach (var concierge in concierges)
+        {
+            conciergesDataTable.Rows.Add(concierge.ConciergeCompany, concierge.FirstName, concierge.LastName, concierge.Title, concierge.Country, concierge.Address1, concierge.Address2, concierge.City
+            , concierge.State, concierge.ZipCode, !string.IsNullOrEmpty(concierge.BusinessPhoneFormatted) ? concierge.BusinessPhoneFormatted : "Not Available", !string.IsNullOrEmpty(concierge.PhoneFormatted) ?
+            concierge.PhoneFormatted : "Not Available", concierge.Email, ((ConciergeType)concierge.ConciergeType).AsString(EnumFormat.Description));
+        }
+        return conciergesDataTable;
+    }
+}

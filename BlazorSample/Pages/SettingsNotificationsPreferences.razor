@@ -1,0 +1,476 @@
+﻿@page "/settings/notifications/preferences"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using Blazored.LocalStorage
+@using Newtonsoft.Json
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject ITeamViewModel _teamViewModel
+@inject ISettingsViewModel _settingsViewModel
+@inject ISaIntegrationPartnerViewModel _saIntegrationPartnerViewModel
+@inject INotificationPreferencesViewModel _notificationPreferencesViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ToastService toastService
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized Context="NotificationPreferencesEdit">
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="loading"></SfSpinner>
+        <div class="card shadow-none border">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="settings/notifications" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-flag me-2"></span>Notification Preferences</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-primary" href="javascript:void();" @onclick="SaveNotificationPrefernces">Save</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+
+                <EditForm Model="@notificationPreferences" @ref="notificationPreferencesForm" Context="formContext">
+                    <DataAnnotationsValidator />
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="inputDefaultFromEmail" class="form-label">Default From Email</label>
+                            <InputText id="inputDefaultFromEmail" @bind-Value="@notificationPreferences.DefaultFromEmail" type="email" class="form-control" />
+                            <ValidationMessage For="() => notificationPreferences.DefaultFromEmail" />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="inputDefaultFromName" class="form-label">Default From Name</label>
+                            <InputText id="inputDefaultFromName" @bind-Value="@notificationPreferences.DefaultFromName" class="form-control" />
+                            <ValidationMessage For="() => notificationPreferences.DefaultFromName" />
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="sfcpButtonColor" class="form-label">Button Color</label>
+                            <div class="d-block">
+                                <SfColorPicker @bind-Value="notificationPreferences.ButtonColor"></SfColorPicker>
+                            </div>
+                            @*<SfColorPicker ID="sfcpButtonColor" Mode="Syncfusion.Blazor.Inputs.ColorPickerMode.Palette" CssClass="square-palette d-block" ModeSwitcher="false" Inline="true" ShowButtons="false" Columns="8" PresetColors="@squarePaletteColors"></SfColorPicker>*@
+                        </div>
+                        <div class="col-md-6">
+                            <label for="selFontFamily" class="form-label">Font Family</label>
+                            <select id="selFontFamily" class="form-select" @bind="notificationPreferences.FontFamily">
+                                <option value="Arial">Arial</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="2">...</option>
+                                <option value="3">...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <hr />
+                    <label class="form-label mb-3">Notified Users</label>
+                    <div class="row">
+                        <div class="mb-3 col-6 col-md-4">
+                            <label class="form-label" for="inputNewWebOrder">New Web Order</label>
+                            <SfMultiSelect CssClass="" @bind-Value="notificationPreferencesMember.NewWebOrder" MaximumSelectionLength="maxSelectionMembers" Placeholder="Select Team Member(s)" TValue="int[]" TItem="DropdownBindingModel" OnFocus="HandleMaxSelectionForWebOrder" DataSource="@teamMembers" AllowFiltering="true" Mode="VisualMode.Box">
+                                <MultiSelectFieldSettings Text="Value" Value="Key"></MultiSelectFieldSettings>
+                            </SfMultiSelect>
+                        </div>
+                        <div class="mb-3 col-6 col-md-4">
+                            @if (isClubServiceEnabledForSynergyCommerce)
+                            {
+                                <label class="form-label" for="inputNewClubOrder">New Club Order</label>
+                                <SfMultiSelect @bind-Value="notificationPreferencesMember.NewClubOrder" MaximumSelectionLength="maxSelectionMembers" Placeholder="Select Team Member(s)" TValue="int[]" TItem="DropdownBindingModel" OnFocus="HandleMaxSelectionForClubOrder" DataSource="@teamMembers" AllowFiltering="true" Mode="VisualMode.Box">
+                                    <MultiSelectFieldSettings Text="Value" Value="Key"></MultiSelectFieldSettings>
+                                </SfMultiSelect>
+                            }
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="mb-3 col-6 col-md-4">
+                            <label class="form-label" for="inputNewPOSOrder">New POS Order</label>
+                            <SfMultiSelect @bind-Value="notificationPreferencesMember.NewPOSOrder" MaximumSelectionLength="maxSelectionMembers" Placeholder="Select Team Member(s)" TValue="int[]" TItem="DropdownBindingModel" OnFocus="HandleMaxSelectionForPOSOrder" DataSource="@teamMembers" AllowFiltering="true" Mode="VisualMode.Box">
+                                <MultiSelectFieldSettings Text="Value" Value="Key"></MultiSelectFieldSettings>
+                            </SfMultiSelect>
+                        </div>
+                        <div class="mb-3 col-6 col-md-4">
+                            @if (isClubServiceEnabledForSynergyCommerce)
+                            {
+                                <label class="form-label" for="inputNewClubMemberSignup">New Club Member Signup</label>
+                                <SfDropDownList TValue="int" TItem="DropdownBindingModel" Placeholder="Select Team Member" @bind-Value="notificationPreferencesMember.NewClubSignUp" DataSource="teamMembers">
+                                    <DropDownListFieldSettings Value="Key" Text="Value"></DropDownListFieldSettings>
+                                </SfDropDownList>
+                            }
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="mb-3 col-6 col-md-4">
+                            <label class="form-label" for="chkOfferPrivateBookingRequests"></label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkOfferPrivateBookingRequests" @bind="@notificationPreferences.OfferPrivateBookingRequests" @bind:event="onchange">
+                                <label class="form-check-label" for="chkOfferPrivateBookingRequests">
+                                    Offer Private Booking Requests
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3 col-6 col-md-4">
+                            @if (isClubServiceEnabledForSynergyCommerce)
+                            {
+                                <label class="form-label" for="inputClubMemberCancel">Club Member Cancel</label>
+                                <SfDropDownList TValue="int" TItem="DropdownBindingModel" Placeholder="Select Team Member" @bind-Value="notificationPreferencesMember.NewMemberCancel" DataSource="teamMembers">
+                                    <DropDownListFieldSettings Value="Key" Text="Value"></DropDownListFieldSettings>
+                                </SfDropDownList>
+                            }
+                        </div>
+                    </div>
+                    @{
+                        if (isReservationsServiceEnabledForSynergyCommerce)
+                        {
+                            <div class="row">
+                                <div class="mb-3 col-6 col-md-4">
+                                    <label class="form-label" for="inputNewReservation">New Reservation</label>
+                                    <SfDropDownList TValue="int" TItem="DropdownBindingModel" Placeholder="Select Team Member" @bind-Value="notificationPreferencesMember.NewReservation" DataSource="teamMembers">
+                                        <DropDownListFieldSettings Value="Key" Text="Value"></DropDownListFieldSettings>
+                                    </SfDropDownList>
+                                </div>
+                                <div class="mb-3 col-6 col-md-4">
+                                    <label class="form-label" for="inputPrivateBookingNotificationEmail">Private Booking Request</label>
+                                    <SfDropDownList TValue="int" TItem="DropdownBindingModel" Placeholder="Select Team Member" @bind-Value="notificationPreferencesMember.NewBookingRequest" DataSource="teamMembers">
+                                        <DropDownListFieldSettings Value="Key" Text="Value"></DropDownListFieldSettings>
+                                    </SfDropDownList>
+                                </div>
+                            </div>
+                        }
+                    }
+                    <div class="row">
+                        <div class="mb-3 col-6 col-md-4">
+                            <label class="form-label" for="inputNewTicketOrder">New Ticket Order</label>
+                            <SfDropDownList TValue="int" TItem="DropdownBindingModel" Placeholder="Select Team Member" @bind-Value="notificationPreferencesMember.NewTicketOrder" DataSource="teamMembers">
+                                <DropDownListFieldSettings Value="Key" Text="Value"></DropDownListFieldSettings>
+                            </SfDropDownList>
+                        </div>
+                        <div class="mb-3 col-6 col-md-4">
+                            <label class="form-label" for="selectTeamMembers">New Team Member</label>
+                            <SfMultiSelect @bind-Value="notificationPreferencesMember.NewUserInvite" MaximumSelectionLength="maxSelectionMembers" Placeholder="Select Team Member(s)" TValue="int[]" TItem="TeamMemberModel" OnFocus="HandleMaxSelectionForNewTeamMember" DataSource="@adminTeamMembers" AllowFiltering="true" Mode="VisualMode.Box">
+                                <MultiSelectFieldSettings Text="Name" Value="TeamMemberId"></MultiSelectFieldSettings>
+                            </SfMultiSelect>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    bool isDisabledModalVisible = false;
+    private bool loading = false;
+    private string title = "Notification Prerferences | Synergy Commerce Admin Panel";
+    const string _clubManagement = "Club Management";
+    private Member currentMember = new Member();
+    List<TeamMemberModel> adminTeamMembers = new List<TeamMemberModel>();
+    List<DropdownBindingModel> teamMembers = new List<DropdownBindingModel>();
+    public NotificationPreferencesRequestModel notificationPreferences = new NotificationPreferencesRequestModel();
+    List<BusinessSettings> settings = new List<BusinessSettings>();
+    private bool isClubServiceEnabledForSynergyCommerce { get; set; }
+    private bool isWebServiceEnabledForSynergyCommerce { get; set; }
+    private bool isReservationsServiceEnabledForSynergyCommerce { get; set; }
+    private int maxSelectionMembers = 3;
+    EditForm notificationPreferencesForm;
+
+    private Dictionary<string, string[]> squarePaletteColors = new Dictionary<string, string[]>() { { "Custom", new string[] { "#b80000", "#db3e00", "#fccb00", "#008b02", "#006b76", "#1273de", "#004dcf", "#5300eb" } } };
+
+    List<BusinessNotificationMemberModel> notificationMembersList = new List<BusinessNotificationMemberModel>();
+    NotificationPreferencesMemberModel notificationPreferencesMember = new NotificationPreferencesMemberModel();
+    List<string> notificationPreferencesMetaKeys = new List<string>()
+{
+        BusinessSettingsMetaKey.DefaultFromEmail,
+        BusinessSettingsMetaKey.DefaultFromName,
+        BusinessSettingsMetaKey.ButtonColor,
+        BusinessSettingsMetaKey.FontFamily,
+        BusinessSettingsMetaKey.SendRSVPReminders,
+        BusinessSettingsMetaKey.SendReviewInvites,
+        BusinessSettingsMetaKey.SendAbandonedCartNotices,
+        BusinessSettingsMetaKey.SendTIXReminders,
+        BusinessSettingsMetaKey.SendTIXReviewInvites,
+        BusinessSettingsMetaKey.OfferPrivateBookingRequests
+};
+
+    List<NotificationsTypes> notificationTypes = new List<NotificationsTypes>()
+{
+        NotificationsTypes.NewUserInvite,
+        NotificationsTypes.NewWebOrder,
+        NotificationsTypes.NewPOSOrder,
+        NotificationsTypes.NewClubOrder,
+        NotificationsTypes.NewClubSignUp,
+        NotificationsTypes.NewMemberCancel,
+        NotificationsTypes.NewReservation,
+        NotificationsTypes.NewTicketOrder,
+        NotificationsTypes.NewBookingRequest
+    };
+
+    [Parameter]
+    public int Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        loading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        await GetTeamMembers();
+        await GetNotificationPreferenceSettings();
+
+        // Getting the Business Account Settings to Hide/Display User related modules
+        var getBusinessAccountSettings = await _settingsViewModel.GetBusinessSettingsListAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount);
+
+        if (getBusinessAccountSettings.success)
+        {
+            var clubServiceSetting = getBusinessAccountSettings.data.Where(x => x.MetaKey == BusinessSettingsMetaKey.ClubService).FirstOrDefault()?.MetaValue ?? String.Empty;
+            var webServiceSetting = getBusinessAccountSettings.data.Where(x => x.MetaKey == BusinessSettingsMetaKey.WebSync).FirstOrDefault()?.MetaValue ?? String.Empty;
+            var reservationsServiceSetting = getBusinessAccountSettings.data.Where(x => x.MetaKey == BusinessSettingsMetaKey.ReservationsService).FirstOrDefault()?.MetaValue ?? String.Empty;
+
+            if (!string.IsNullOrEmpty(clubServiceSetting) || !string.IsNullOrEmpty(webServiceSetting) || !string.IsNullOrEmpty(reservationsServiceSetting))
+            {
+                var getIntegrationPartnersResponse = await _saIntegrationPartnerViewModel.GetIntegrationPartnerListAsync();
+                if (getIntegrationPartnersResponse.success)
+                {
+                    var synergyCommerceIntegrationPartner = getIntegrationPartnersResponse.data.Where(x => x.AppName.Equals(_clubManagement)).FirstOrDefault();
+                    if (synergyCommerceIntegrationPartner != null && !string.IsNullOrWhiteSpace(synergyCommerceIntegrationPartner.PartnerGUID.ToString()))
+                    {
+                        isClubServiceEnabledForSynergyCommerce = synergyCommerceIntegrationPartner.PartnerGUID.ToString().ToLower().Equals(clubServiceSetting.ToLower());
+                        isWebServiceEnabledForSynergyCommerce = synergyCommerceIntegrationPartner.PartnerGUID.ToString().ToLower().Equals(webServiceSetting.ToLower());
+                        isReservationsServiceEnabledForSynergyCommerce = synergyCommerceIntegrationPartner.PartnerGUID.ToString().ToLower().Equals(reservationsServiceSetting.ToLower());
+                    }
+                }
+            }
+        }
+
+        loading = false;
+    }
+
+    private async Task GetNotificationPreferenceSettings()
+    {
+        var settingListResponse = await _settingsViewModel.GetBusinessSettingsListAsync(currentMember.Id, BusinessSettingsMetaNamespace.EmailPreferences);
+        if (settingListResponse.success)
+        {
+            settings = settingListResponse?.data ?? new List<BusinessSettings>();
+        }
+        foreach (var metaKey in notificationPreferencesMetaKeys)
+        {
+            var metaValue = settings.Where(x => x.MetaKey == metaKey)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+            Helper.SetPropertyValue(notificationPreferences, metaKey, metaValue);
+        }
+    }
+
+    private async Task GetTeamMembers()
+    {
+        var getTeamMembersByRole = await _teamViewModel.GetBusinessTeamByRole(currentMember.Id, (int)UserRole.Administrator);
+        if (getTeamMembersByRole.success)
+        {
+            adminTeamMembers = getTeamMembersByRole.data;
+        }
+
+        var getTeamMembers = await _teamViewModel.GetBusinessTeams(currentMember.Id);
+        if (getTeamMembers.success)
+        {
+            foreach (var teamMember in getTeamMembers.data.OrderBy(x => x.FirstName))
+            {
+                teamMembers.Add(new DropdownBindingModel { Key = teamMember.UserId, Value = $"{teamMember.FirstName} {teamMember.LastName} ({teamMember.Email})" });
+            }
+        }
+
+        var getNotificationMembers = await _notificationPreferencesViewModel.GetBusinessNotificationMembers(currentMember.Id);
+        if (getNotificationMembers.success)
+        {
+            notificationMembersList = getNotificationMembers.data;
+            BindNotificationMembers();
+        }
+    }
+
+    private void BindNotificationMembers()
+    {
+        foreach (var notificationType in notificationTypes)
+        {
+            switch (notificationType)
+            {
+                case (NotificationsTypes.NewUserInvite):
+                    notificationPreferencesMember.NewUserInvite = notificationMembersList.Where(x => x.NotificationType == (int)notificationType)?.Select(x => x.BusinessTeamId).ToArray();
+                    break;
+                case (NotificationsTypes.NewWebOrder):
+                    notificationPreferencesMember.NewWebOrder = notificationMembersList.Where(x => x.NotificationType == (int)notificationType)?.Select(x => x.BusinessTeamId).ToArray();
+                    break;
+                case (NotificationsTypes.NewPOSOrder):
+                    notificationPreferencesMember.NewPOSOrder = notificationMembersList.Where(x => x.NotificationType == (int)notificationType)?.Select(x => x.BusinessTeamId).ToArray();
+                    break;
+                case (NotificationsTypes.NewClubOrder):
+                    notificationPreferencesMember.NewClubOrder = notificationMembersList.Where(x => x.NotificationType == (int)notificationType)?.Select(x => x.BusinessTeamId).ToArray();
+                    break;
+                default:
+                    var metaValue = notificationMembersList.Where(x => x.NotificationType == (int)notificationType)?.FirstOrDefault()?.BusinessTeamId ?? 0;
+                    Helper.SetPropertyValue(notificationPreferencesMember, notificationType.ToString(), metaValue.ToString());
+                    break;
+            }
+        }
+    }
+
+    private async Task SaveNotificationPrefernces()
+    {
+        var validatedResult = notificationPreferencesForm.EditContext.Validate();
+        if (validatedResult)
+        {
+            loading = true;
+            var request = new List<BusinessSettingsRequestModel>();
+            foreach (var key in notificationPreferencesMetaKeys)
+            {
+
+                var getVal = Helper.GetPropertyValue(notificationPreferences, key);
+                var checkExistingSetting = settings.Where(x => x.MetaKey == key).FirstOrDefault();
+                if (checkExistingSetting != null)
+                {
+                    checkExistingSetting.MetaValue = getVal?.ToString();
+                    var setting = JsonConvert.DeserializeObject<BusinessSettingsRequestModel>(JsonConvert.SerializeObject(checkExistingSetting));
+                    request.Add(setting);
+                }
+                else
+                {
+                    var requestSetting = new BusinessSettingsRequestModel
+                    {
+                        BusinessId = currentMember.Id,
+                        MetaNamespace = BusinessSettingsMetaNamespace.EmailPreferences,
+                        MetaKey = key,
+                        MetaValue = getVal?.ToString(),
+                        Title = string.Empty,
+                        ValueType = (int)Helper.GetPropertyDataType(notificationPreferences, key),
+                        Description = string.Empty
+                    };
+                    request.Add(requestSetting);
+                }
+            }
+
+            var notificationMembers = new List<BusinessNotificationMemberModel>();
+            foreach (var notificationType in notificationTypes)
+            {
+                if (notificationType == NotificationsTypes.NewUserInvite || notificationType == NotificationsTypes.NewPOSOrder || notificationType == NotificationsTypes.NewClubOrder || notificationType == NotificationsTypes.NewWebOrder)
+                {
+                    var checkExistingNotifications = notificationMembersList.Where(x => x.NotificationType == (int)notificationType).ToList();
+                    int[] selectedAdmins = new int[] { };
+                    switch (notificationType)
+                    {
+                        case (NotificationsTypes.NewUserInvite):
+                            selectedAdmins = notificationPreferencesMember.NewUserInvite;
+                            break;
+                        case (NotificationsTypes.NewWebOrder):
+                            selectedAdmins = notificationPreferencesMember.NewWebOrder;
+                            break;
+                        case (NotificationsTypes.NewPOSOrder):
+                            selectedAdmins = notificationPreferencesMember.NewPOSOrder;
+                            break;
+                        case (NotificationsTypes.NewClubOrder):
+                            selectedAdmins = notificationPreferencesMember.NewClubOrder;
+                            break;
+                    }
+                    if (selectedAdmins != null)
+                    {
+                        int count = 0;
+                        foreach (var userInviteNotification in selectedAdmins)
+                        {
+                            if (checkExistingNotifications != null && (checkExistingNotifications.Count() > count))
+                            {
+                                var existingNotification = checkExistingNotifications[count];
+                                existingNotification.BusinessTeamId = userInviteNotification;
+                                notificationMembers.Add(existingNotification);
+                            }
+                            else
+                            {
+                                var requestMemberNotification = new BusinessNotificationMemberModel
+                                {
+                                    BusinessId = currentMember.Id,
+                                    BusinessTeamId = userInviteNotification,
+                                    NotificationType = (int)notificationType
+                                };
+                                notificationMembers.Add(requestMemberNotification);
+                            }
+                            count++;
+                        }
+                    }
+                }
+                else
+                {
+                    var val = (int)Helper.GetPropertyValue(notificationPreferencesMember, notificationType.ToString());
+                    var checkExistingNotification = notificationMembersList.Where(x => x.NotificationType == (int)notificationType).FirstOrDefault();
+                    if (checkExistingNotification != null)
+                    {
+                        checkExistingNotification.BusinessTeamId = val;
+                        notificationMembers.Add(checkExistingNotification);
+                    }
+                    else
+                    {
+                        var requestMemberNotification = new BusinessNotificationMemberModel
+                        {
+                            BusinessId = currentMember.Id,
+                            BusinessTeamId = val,
+                            NotificationType = (int)notificationType
+                        };
+                        notificationMembers.Add(requestMemberNotification);
+                    }
+                }
+            }
+
+            var saveSettings = await _settingsViewModel.CreateBusinessSettingListAsync(request);
+            if (saveSettings.success)
+            {
+                await GetNotificationPreferenceSettings();
+                var notificationMembersRequest = new AddUpdateBusinessNotificationPreferences
+                {
+                    BusinessId = currentMember.Id,
+                    NotificationMembers = notificationMembers
+                };
+
+                var addUpdatenotificationsPreferences = await _notificationPreferencesViewModel.AddUpdateBusinessNotificationPreferences(notificationMembersRequest);
+                if (addUpdatenotificationsPreferences.success)
+                {
+                    notificationMembersList = addUpdatenotificationsPreferences.data;
+                    BindNotificationMembers();
+                }
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(saveSettings.error_info.description, ToastLevel.Error);
+            }
+            loading = false;
+        }
+    }
+
+
+    private void HandleMaxSelectionForClubOrder()
+    {
+        if (notificationPreferencesMember.NewClubOrder != null && notificationPreferencesMember.NewClubOrder.Length == maxSelectionMembers)
+            toastService.ShowToast($"Maximum of {maxSelectionMembers} members are only allowed for notifying about a new Club order.", ToastLevel.Error);
+    }
+
+    private void HandleMaxSelectionForWebOrder()
+    {
+        if (notificationPreferencesMember.NewWebOrder != null && notificationPreferencesMember.NewWebOrder.Length == maxSelectionMembers)
+            toastService.ShowToast($"Maximum of {maxSelectionMembers} members are only allowed for notifying about a new Web order.", ToastLevel.Error);
+    }
+
+    private void HandleMaxSelectionForPOSOrder()
+    {
+        if (notificationPreferencesMember.NewPOSOrder != null && notificationPreferencesMember.NewPOSOrder.Length == maxSelectionMembers)
+            toastService.ShowToast($"Maximum of {maxSelectionMembers} members are only allowed for notifying about a new POS order.", ToastLevel.Error);
+    }
+
+    private void HandleMaxSelectionForNewTeamMember()
+    {
+        if (notificationPreferencesMember.NewUserInvite != null && notificationPreferencesMember.NewUserInvite.Length == maxSelectionMembers)
+            toastService.ShowToast($"Maximum of {maxSelectionMembers} members are only allowed for notifying about a new user invitation.", ToastLevel.Error);
+    }
+}

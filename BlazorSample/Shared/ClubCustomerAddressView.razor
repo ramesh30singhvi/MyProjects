@@ -1,0 +1,90 @@
+﻿@using CellarPassAppAdmin.Shared.Enums
+
+<div class="col-12 col-md-6 sf-ddl">
+    <h5 class="mb-3 fs-0 text-uppercase text-500">
+        @Title
+        @if (IsEditIcon)
+        {
+            <a class="btn btn-sm btn-link @(IsButtonDisabled ? "disabled-div" : "")" href="javascript:void(0);" @onclick="@(()=>EditCustomer.InvokeAsync(ClubCustomerType))"><span class="fa-regular fa-pencil"></span></a>
+        }
+        else
+        {
+            <a class="btn btn-sm btn-link"></a>
+        }
+        @if (IsAddressesAvailable)
+        {
+            <a href="javascript:void();" @onclick="@(()=>DisplayAddresses.InvokeAsync())">VIEW ALL</a>
+        }
+    </h5>
+    <h6 class="mb-2"><a href="javascript:void(0)">@((!string.IsNullOrWhiteSpace(CustomerFirstName) ? CustomerFirstName + " " : "") + (!string.IsNullOrWhiteSpace(CustomerLastName) ? CustomerLastName : ""))</a></h6>
+
+    @if (!string.IsNullOrWhiteSpace(Address1))
+    {
+        <p class="mb-1 fs--1">@Address1</p>
+    }
+    @if (!string.IsNullOrWhiteSpace(Address2))
+    {
+        <p class="mb-1 fs--1">@Address2</p>
+    }
+    <p class="mb-1 fs--1">
+        @((!string.IsNullOrWhiteSpace(City) ? City + ", " : "") +
+        (!string.IsNullOrWhiteSpace(StateCode) ? StateCode + ", " : "") +
+        (!string.IsNullOrWhiteSpace(ZipCode) ? ZipCode + " " : "") +
+        ((!string.IsNullOrWhiteSpace(Country) && Country.ToUpper() != "UNITED STATES") ? Country : ""))
+    </p>
+    <p class="mb-0 fs--1"><a href="mailto:@CustomerEmail">@CustomerEmail</a></p>
+    <p class="mb-0 fs--1"><a href="tel:@PhoneFormatted">@PhoneFormatted</a></p>
+</div>
+
+@code {
+    [Parameter]
+    public string Title { get; set; }
+
+    [Parameter]
+    public string CustomerFirstName { get; set; }
+
+    [Parameter]
+    public string CustomerLastName { get; set; }
+
+    [Parameter]
+    public string CustomerEmail { get; set; }
+
+    [Parameter]
+    public string PhoneFormatted { get; set; }
+
+    [Parameter]
+    public string Address1 { get; set; }
+
+    [Parameter]
+    public string Address2 { get; set; }
+
+    [Parameter]
+    public string City { get; set; }
+
+    [Parameter]
+    public string StateCode { get; set; }
+
+    [Parameter]
+    public string ZipCode { get; set; }
+
+    [Parameter]
+    public string Country { get; set; }
+
+    [Parameter]
+    public ClubCustomerType ClubCustomerType { get; set; }
+
+    [Parameter]
+    public EventCallback<ClubCustomerType> EditCustomer { get; set; }
+
+    [Parameter]
+    public bool IsButtonDisabled { get; set; } = false;
+
+    [Parameter]
+    public EventCallback DisplayAddresses { get; set; }
+
+    [Parameter]
+    public bool IsAddressesAvailable { get; set; }
+
+    [Parameter]
+    public bool IsEditIcon { get; set; } = true;
+}

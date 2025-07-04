@@ -1,0 +1,188 @@
+﻿@page "/tickets/event-manager-tickets"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings/ticketing" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="far fa-calendars me-2"></span>Event Manager</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="javascript:void(0)">Create Event</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+
+        <ul class="nav nav-tabs mt-4 text-uppercase">
+            <li class="nav-item"><a class="nav-link active" id="LivePublic-tab" data-bs-toggle="tab" href="#tab-LivePublic" role="tab" aria-controls="tab-LivePublic" aria-selected="true">Live - Public</a></li>
+            <li class="nav-item"><a class="nav-link" id="LivePrivate-tab" data-bs-toggle="tab" href="#tab-LivePrivate" role="tab" aria-controls="tab-LivePrivate" aria-selected="false">Live - Private</a></li>
+            <li class="nav-item"><a class="nav-link" id="Unpublished-tab" data-bs-toggle="tab" href="#tab-Unpublished" role="tab" aria-controls="tab-Unpublished" aria-selected="false">Unpublished</a></li>
+            <li class="nav-item"><a class="nav-link" id="Expired-tab" data-bs-toggle="tab" href="#tab-Expired" role="tab" aria-controls="tab-Expired" aria-selected="false">Expired</a></li>
+        </ul>
+        <div class="tab-content p-3 mb-2" id="productTabContent">
+            <div class="tab-pane fade show active" id="tab-LivePublic" role="tabpanel" aria-labelledby="LivePublic-tab">
+                <div class="sf-grid min-vh-75">
+                    <SfGrid DataSource="@TicketList" AllowPaging="true" Width="100%">
+                        <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                        <GridPageSettings PageSize="50"></GridPageSettings>
+                        <GridTemplates>
+                            <EmptyRecordTemplate>
+                                @if (!isLoading && TicketList.Count <= 0)
+                                {
+                                    <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                        <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Tickets</h6>
+                                    </div>
+                                }
+                            </EmptyRecordTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            <GridColumn HeaderText="Event Name" TextAlign="TextAlign.Left" Width="140">
+                                <Template>
+                                    @{
+                                        var ticketData = (context as TicketData);
+                                        <a href="tickets/event-editor">@ticketData.EventName</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Left" Width="15">
+                                <Template>
+                                    @{
+                                        <a href="/tickets/tickets-event-dashboard"><span class="far fa-tachometer-alt"></span></a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Center" Width="15">
+                                <Template>
+                                    @{
+                                        <a href="/tickets/sell-tickets"><span class="far fa-shopping-cart"></span></a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Center" Width="15">
+                                <Template>
+                                    @{
+                                        <a href="/reports/tickets/ticket-sales-report"><span class="far fa-chart-line"></span></a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Center" Width="15">
+                                <Template>
+                                    @{
+                                        <a href="javascript:void();"><span class="far fa-envelope-open"></span></a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Center" Width="15">
+                                <Template>
+                                    @{
+                                        <a href="javascript:void();"><span class="far fa-chart-bar"></span></a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Center" Width="15">
+                                <Template>
+                                    @{
+                                        <a href="javascript:void();"><span class="far fa-user-clock"></span></a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Center" Width="15">
+                                <Template>
+                                    @{
+                                        <a href="javascript:void();"><span class="far fa-file-export"></span></a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Center" Width="15">
+                                <Template>
+                                    @{
+                                        <a href="javascript:void();"><span class="far fa-user-check"></span></a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Center" Width="15">
+                                <Template>
+                                    @{
+                                        <a href="/reports/tickets/payout-report"><span class="far fa-hand-holding-usd"></span></a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Center" Width="15">
+                                <Template>
+                                    @{
+                                        <a href="javascript:void();"><span class="far fa-id-card-alt"></span></a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Center" Width="15">
+                                <Template>
+                                    @{
+                                        <a href="javascript:void();"><span class="far fa-crown"></span></a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(TicketData.Starts) HeaderText="Starts" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                            <GridColumn Field=@nameof(TicketData.Ends) HeaderText="Ends" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                            <GridColumn Field=@nameof(TicketData.Capacity) HeaderText="Capacity" TextAlign="TextAlign.Left" Width="40"></GridColumn>
+                            <GridColumn Field=@nameof(TicketData.Venue) HeaderText="Venue" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="tab-LivePrivate" role="tabpanel" aria-labelledby="LivePrivate-tab"></div>
+            <div class="tab-pane fade" id="tab-Unpublished" role="tabpanel" aria-labelledby="Unpublished-tab"></div>
+            <div class="tab-pane fade" id="tab-Expired" role="tabpanel" aria-labelledby="Expired-tab"></div>
+        </div>
+    </div>
+</div>
+
+@code
+{
+
+    private string title = "Event Manager | Synergy Commerce Admin Panel";
+
+    [Parameter]
+    public int Id { get; set; }
+
+    private bool SpinnerVisibility { get; set; } = false;
+    private Boolean isLoading = true;
+
+
+    public class TicketData
+    {
+        public string EventName { get; set; }
+        public string Starts { get; set; }
+        public string Ends { get; set; }
+        public string Capacity { get; set; }
+        public string Venue { get; set; }
+    }
+
+    public List<TicketData> TicketList = new List<TicketData>()
+{
+        new TicketData(){ EventName= "Chritsmas Celler Tour (Friday, December 3rd)", Starts= "12/03/2021 6:00 PM", Ends= "12/3/2021 7:00 PM",  Capacity="4/35",Venue="Messina Hof Winery & Resort" },
+        new TicketData(){ EventName= "Chritsmas Celler Tour (Friday, December 10th)", Starts= "12/10/2021 6:00 PM", Ends= "12/10/2021 7:00 PM",  Capacity="0/35",Venue="Messina Hof Winery & Resort" },
+        new TicketData(){ EventName= "Chritsmas Celler Tour (Friday, December 11th)", Starts= "12/11/2021 6:00 PM", Ends= "12/11/2021 7:00 PM",  Capacity="7/35",Venue="Messina Hof Winery & Resort" },
+        new TicketData(){ EventName= "Who Killed Santa? Murder Mystry Dinner", Starts= "12/11/2021 7:00 PM", Ends= "12/11/2021 10:00 PM",  Capacity="60/60",Venue="Messina Hof Winery & Resort" },
+        new TicketData(){ EventName= "Chritsmas Celler Tour (Friday, December 17th)", Starts= "12/17/2021 6:00 PM", Ends= "12/17/2021 7:00 PM",  Capacity="2/35",Venue="Messina Hof Winery & Resort" },
+ };
+
+
+
+}

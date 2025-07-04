@@ -1,0 +1,123 @@
+﻿@page "/settings/integrated-partners/bigcommerce/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm Model="@bigCommerce" Context="formContext" Class="row g-3">
+    <DataAnnotationsValidator />
+    <div class="card">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h5 class="mb-0"><a href="marketplace/partner/@Id" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-plug me-2"></span>Big Commerce</h5>
+                </div>
+                <div class="col-md-auto">
+                    <button @onclick="@(() => TestLogin(formContext))" class="btn btn-sm btn-outline-secondary me-2" hidden="@(SetTestLoginBtnVisibility())">Test Login</button>
+                    <button class="btn btn-sm btn-primary" @onclick="@(() => SaveBigCommerce(formContext))">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="inputBigCommerceAceessToken" class="form-label">Aceess Token</label>
+                <InputText class="form-control" @bind-Value="bigCommerce.AceessToken" id="inputBigCommerceAceessToken" type="text" placeholder="Aceess Token"></InputText>
+                <ValidationMessage For="@(() => bigCommerce.AceessToken)" />
+            </div>
+            <div class="mb-3">
+                <label for="inputBigCommerceStoreId" class="form-label">Store ID</label>
+                <InputText class="form-control" @bind-Value="bigCommerce.StoreId" id="inputBigCommerceStoreId" type="text" placeholder="Store ID"></InputText>
+                <ValidationMessage For="@(() => bigCommerce.StoreId)" />
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "Big Commerce | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    Member currentMember = new Member();
+    BigCommerceRequestModel bigCommerce = new BigCommerceRequestModel();
+    List<string> bigCommerceMetaKeys = new List<string>(){
+        BusinessSettingsMetaKey.BigCommerceAceessToken,
+        BusinessSettingsMetaKey.BigCommerceStoreId
+    };
+
+    protected bool SetTestLoginBtnVisibility()
+    {
+        if (!string.IsNullOrEmpty(bigCommerce.AceessToken) && !string.IsNullOrEmpty(bigCommerce.StoreId))
+            return false;
+        else
+            return true;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get business settings for big Commerce
+        var response = await _settingsViewModel.GetBusinessSettingsListAsync(currentMember.Id, BusinessSettingsMetaNamespace.BigCommerce);
+        bigCommerce.AceessToken = response?.data?.Where(x => x.MetaKey == BusinessSettingsMetaKey.BigCommerceAceessToken)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+        bigCommerce.StoreId = response?.data?.Where(x => x.MetaKey == BusinessSettingsMetaKey.BigCommerceStoreId)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+        SetTestLoginBtnVisibility();
+        SpinnerVisibility = false;
+    }
+    private async Task TestLogin(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var response = await _settingsViewModel.BigCommerceTestLogin(bigCommerce.StoreId, bigCommerce.AceessToken);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.LoginSuccessful, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(string.IsNullOrEmpty(response.error_info.description) ? Constants.LoginFailed : response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    public async Task SaveBigCommerce(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var businessSettings = await Helper.BusinessSettingsMapping(bigCommerce, currentMember.Id, BusinessSettingsMetaNamespace.BigCommerce, bigCommerceMetaKeys);
+            var response = await _settingsViewModel.CreateBusinessSettingListAsync(businessSettings);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+}

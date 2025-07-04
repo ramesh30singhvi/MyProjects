@@ -1,0 +1,197 @@
+﻿@page "/settings/inventory-locations/edit/{Id:guid}"
+@page "/settings/inventory-locations/create"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Enums;
+@using CellarPassAppAdmin.Client.ViewModels;
+@using CellarPassAppAdmin.Shared.Models;
+@using CellarPassAppAdmin.Shared.Entities.v4;
+@using CellarPassAppAdmin.Shared.Models.RequestModel;
+@using CellarPassAppAdmin.Shared.Models.ViewModel;
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head;
+@inject ICountryViewModel _countryViewModel
+@inject IStateViewModel _stateViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject NavigationManager _navigationManager
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+
+<div class="card mb-3">
+    <EditForm Model="@request" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-3 mb-md-0"><a href="settings/inventory-locations" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-industry-alt me-2"></span>@(Id != null ? "Edit" : "Add") Inventory Location</h5>
+                </div>
+                <div class="col-auto">
+                    @if (isSaving)
+                    {
+                        <Loader />
+                    }
+                    <button class="btn btn-sm btn-primary" type="submit" hidden="@(isSaving)">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-12 col-md-8">
+
+                    <div class="mb-3">
+                        <label class="form-label" for="inputLocationName">Location Name</label>
+                        <InputText id="inputLocationName" class="form-control" @bind-Value="request.LocationName" placeholder="Location Name"></InputText>
+                        @*<ValidationMessage For="@(() => request.LocationName)" />*@
+                    </div>
+
+                    <div class="border-dashed-bottom mt-4 mb-3"></div>
+
+                    <AddressControl countries="@countries" states="@states" @bind-address1="@request.Address1" @bind-address2="@request.Address2" @bind-selectedCountry="@request.CountryCode" @bind-stateCode="@request.StateCode" @bind-city="@request.City" @bind-zipCode="@request.ZipCode" @ref="address" SelectedNewAddress="AddressChanged" />
+
+                    @if (!string.IsNullOrEmpty(request.PhoneCountry))
+                    {
+                        <div class="mb-3">
+                            <PhoneNumber PhoneCountry="@request.PhoneCountry" @bind-phone="@request.Phone" @ref="phone" />
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label" for="inputLocationLowStockEmail">Low Stock Status Notification</label>
+                        <input id="inputLocationLowStockEmail" class="form-control" type="email" placeholder="Email Address" />
+                        @*<ValidationMessage For="@(() => request.Email)" />*@
+                    </div>
+
+                </div>
+                <div class="col-12 col-md-4">
+
+                    <div class="card shadow-none border mb-2">
+                        <div class="card-body">
+                            <div>
+                                <label class="form-label" for="selItemtStatus">Applicable Channels</label>
+                                <div class="d-flex justify-content-between px-card py-2 border-200">
+                                    <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchPos">Web</label></div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-switch"><input class="form-check-input" id="switchPos" type="checkbox" checked="checked"></div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between border-top px-card  py-2 border-200">
+                                    <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchEcom">POS</label></div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-switch"><input class="form-check-input" id="switchEcom" type="checkbox"></div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between border-top px-card py-2 border-200">
+                                    <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchClub">Club</label></div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-switch"><input class="form-check-input" id="switchClub" type="checkbox"></div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between border-top px-card py-2 border-200">
+                                    <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchPickup">Pickup</label></div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-switch"><input class="form-check-input" id="switchPickup" type="checkbox"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+            </div>
+
+
+        </div>
+    </EditForm>
+</div>
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private Boolean isLoading;
+    private Boolean isSaving;
+    private string title = "Edit Inventory Location | Synergy Commerce Admin Panel";
+    private Member currentMember;
+    private List<CpCountry> countries = new List<CpCountry>();
+    private List<CpState> states = new List<CpState>();
+    private PlaceholderRequest request = new PlaceholderRequest();
+    private AddressControl address;
+    private PhoneNumber phone;
+
+
+    public class PlaceholderRequest
+    {
+        public string LocationName { get; set; }
+        public string Email { get; set; }
+        public string Address1 { get; set; }
+        public string Address2 { get; set; }
+        public string City { get; set; }
+        public string StateCode { get; set; }
+        public string State { get; set; }
+        public string CountryCode { get; set; }
+        public string Country { get; set; }
+        public string ZipCode { get; set; }
+        public string Phone { get; set; }
+        public string PhoneCountry { get; set; }
+        public FormattedPhone formattedPhone { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+
+        CountryResponse res = await _countryViewModel.GetCountries();
+        if (res.success)
+        {
+            countries = res.data;
+        }
+
+        StateResponse stateResponse = await _stateViewModel.GetStates();
+        if (stateResponse.success)
+        {
+            states = stateResponse.data;
+        }
+        if (Id != null)
+        {
+            request.CountryCode = "US";
+            request.StateCode = "";
+            request.PhoneCountry = "US";
+
+        }
+        else
+        {
+            title = "Add Inventory Location | Synergy Commerce Admin Panel";
+            request.CountryCode = "US";
+            request.StateCode = "";
+            request.PhoneCountry = "US";
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void SaveLocation()
+    {
+        isSaving = true;
+
+        StateHasChanged();
+    }
+
+    private void HandleValidSubmit(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SaveLocation();
+        }
+    }
+
+    private void AddressChanged(bool isAddressChanged)
+    {
+        if (isAddressChanged)
+        {
+            request.Address2 = "";
+        }
+        StateHasChanged();
+    }
+}

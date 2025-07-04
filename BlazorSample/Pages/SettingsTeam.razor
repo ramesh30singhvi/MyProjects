@@ -1,0 +1,66 @@
+﻿@page "/settings/team-management"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+
+<div class="card">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md-auto">
+                <h5 class="mb-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-user-tie me-2"></span>Team Management</h5>
+            </div>
+            <div class="col-md-auto">
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+
+        <div class="row my-4">
+            <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="fa-regular fa-key fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/team-management/access-positions">Access & Positions</a></h6>
+                        <p class="fs--2">Setup job titles & access.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="far fa-user-clock fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/team-management/shift-management">Shift Management</a></h6>
+                        <p class="fs--2">Set positions & time clock settings.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code
+{
+    private string title = "Team Management | Synergy Admin Panel";
+
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+
+}

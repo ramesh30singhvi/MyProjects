@@ -1,0 +1,98 @@
+﻿@page "/settings/integrated-partners/google/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm Model="@googleAnalytics" Context="formContext" Class="row g-3">
+    <DataAnnotationsValidator />
+
+    <div class="card">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h5 class="mb-0"><a href="marketplace/partner/@Id" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-brands fa-google me-2"></span>Google Analytics</h5>
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-primary" @onclick="@(() => SaveGoogleAnalytics(formContext))">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <form>
+                <div class="mb-3">
+                    <label for="inputGoogleAnalyticsId" class="form-label">Google Analytics ID</label>
+                    <InputText class="form-control" @bind-Value="googleAnalytics.GoogleAnalyticsId" id="inputGoogleAnalyticsId" type="text" placeholder="Analytics ID"></InputText>
+                    <ValidationMessage For="@(() => googleAnalytics.GoogleAnalyticsId)" />
+                </div>
+                <div class="mb-3">
+                    <label for="inputGoogleTagManagerId" class="form-label">Google Tag Manager</label>
+                    <InputText class="form-control" @bind-Value="googleAnalytics.GoogleTagManager" id="inputGoogleTagManagerId" type="text" placeholder="Tag Manager ID"></InputText>
+                    <ValidationMessage For="@(() => googleAnalytics.GoogleTagManager)" />
+                </div>
+            </form>
+        </div>
+    </div>
+</EditForm>
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "Google Analytics | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    Member currentMember = new Member();
+    GoogleAnalyticsRequestModel googleAnalytics = new GoogleAnalyticsRequestModel();
+    List<string> googleAnalyticsMetaKeys = new List<string>(){
+        BusinessSettingsMetaKey.GoogleAnalyticsId,
+        BusinessSettingsMetaKey.GoogleTagManager
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get business settings for Google Analytics
+        var response = await _settingsViewModel.GetBusinessSettingsListAsync(currentMember.Id, BusinessSettingsMetaNamespace.GoogleAnalytics);
+        googleAnalytics.GoogleAnalyticsId = response?.data?.Where(x => x.MetaKey == BusinessSettingsMetaKey.GoogleAnalyticsId)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+        googleAnalytics.GoogleTagManager = response?.data?.Where(x => x.MetaKey == BusinessSettingsMetaKey.GoogleTagManager)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+        SpinnerVisibility = false;
+    }
+
+    public async Task SaveGoogleAnalytics(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var businessSettings = await Helper.BusinessSettingsMapping(googleAnalytics, currentMember.Id, BusinessSettingsMetaNamespace.GoogleAnalytics, googleAnalyticsMetaKeys);
+            var response = await _settingsViewModel.CreateBusinessSettingListAsync(businessSettings);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+}
+

@@ -1,0 +1,335 @@
+﻿@*<div class="top-row ps-4 navbar navbar-dark">
+    <a class="navbar-brand" href="">CellarPassApp</a>
+    <button class="navbar-toggler" @onclick="ToggleNavMenu">
+    <span class="navbar-toggler-icon"></span>
+    </button>
+    </div>
+
+    <div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    <ul class="nav flex-column">
+
+    </ul>
+    </div>*@
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@inject ISettingsViewModel _settingsViewModel
+@inject IBusinessViewModel _businessViewModel
+@inject NavigationManager _navigationManager
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject IBusinessViewModel _businessViewModel
+
+<ul class="navbar-nav flex-column">
+
+    <li class="nav-item py-1">
+        <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+            <span class="fas fa-home me-2" aria-hidden="true"></span>Dashboard
+        </NavLink>
+    </li>
+    <li class="nav-item py-1">
+        <NavLink class="nav-link" href="store/orders">
+            <span class="far fa-shopping-bag me-2"></span>Orders
+        </NavLink>
+    </li>
+    <li class="nav-item py-1">
+        <a class="nav-link" href="#menuStore" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="Store" @onclick="@RedirectToProducts">
+            <div class="d-flex align-items-center">
+                <span class="nav-link-icon"><span class="fas fa-store fa-fw me-1"></span></span><span class="nav-link-text @((ExpandNavMenuStore())?"text-primary":"")">
+                    Products
+                </span>
+            </div>
+        </a>
+        <ul class="@(ExpandNavMenuStore() ? "nav collapse show" : "nav collapse")" id="menuStore" data-parent="#navbarVerticalCollapse">
+            
+            <li class="nav-item py-1">
+                <NavLink class="nav-link" href="store/create-order">
+                    Create Order
+                </NavLink>
+            </li>
+            <li class="nav-item py-1">
+                <NavLink class="nav-link" href="store/collections">
+                    Collections
+                </NavLink>
+            </li>
+            <li class="nav-item py-1">
+                <NavLink class="nav-link" href="store/inventory">
+                    Inventory
+                </NavLink>
+            </li>
+        </ul>
+    </li>
+    <li class="nav-item py-1">
+        <a class="nav-link" href="#menuCalendar" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="Calendar">
+            <div class="d-flex align-items-center">
+                <span class="nav-link-icon"><span class="fas fa-calendar-days fa-fw me-1"></span></span><span class="nav-link-text @((ExpandNavMenuCalendar())?"text-primary":"")">Calendar</span>
+            </div>
+        </a>
+        <ul class="@(ExpandNavMenuCalendar() ? "nav collapse show" : "nav collapse")" id="menuCalendar" data-parent="#navbarVerticalCollapse">
+            <li class="nav-item py-1">
+                <NavLink class="nav-link" href="event-calendar">Event Calendar</NavLink>
+            </li>
+            <li class="nav-item py-1">
+                <NavLink class="nav-link" href="reservations/guest-manifest">
+                    Daily Manifest
+                </NavLink>
+            </li>
+            <li class="nav-item py-1">
+                <NavLink class="nav-link" href="calendar/notes">
+                    Calendar Notes
+                </NavLink>
+            </li>
+        </ul>
+    </li>
+    <li class="nav-item py-1">
+        <NavLink class="nav-link" href="/events-experiences">
+            <span class="fas fa-calendar-star fa-fw me-1"></span>Experiences
+        </NavLink>
+    </li>
+    <li class="nav-item py-1">
+        <a class="nav-link" href="#menuPeople" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="people" @onclick="@RedirectToCustomers">
+            <div class="d-flex align-items-center">
+                <span class="nav-link-icon"><span class="fas fa-users fa-fw me-1"></span></span><span class="nav-link-text @((ExpandNavMenuPeople())?"text-primary":"")">Customers</span>
+            </div>
+        </a>
+        <ul class="@(ExpandNavMenuPeople() ? "nav collapse show" : "nav collapse")" id="menuPeople" data-parent="#navbarVerticalCollapse">
+
+            @if (isClubServiceSettingsSaved && !string.IsNullOrEmpty(clubServiceSettingName) && clubServiceSettingName != "None")
+            {
+                switch (clubServiceSettingName)
+                {
+                    case "Synergy Commerce":
+                        <li class="nav-item py-1">
+                            <NavLink class="nav-link" href="/settings/club-members">Club Members</NavLink>
+                        </li>
+                        break;
+                    case "Manual Import":
+                        <li class="nav-item py-1">
+                            <NavLink class="nav-link" href="/people/clubs/imported-club-members">Club Members</NavLink>
+                        </li>
+                        break;
+                }
+            }
+            
+        </ul>
+    </li>
+    <li class="nav-item py-1">
+        <a class="nav-link" href="#menuReports" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="reports">
+            <div class="d-flex align-items-center">
+                <span class="nav-link-icon"><span class="fas fa-chart-line fa-fw me-1"></span></span><span class="nav-link-text @((ExpandNavMenuReports())?"text-primary":"")">Analytics</span>
+            </div>
+        </a>
+        <ul class="@(ExpandNavMenuReports() ? "nav collapse show" : "nav collapse")" id="menuReports" data-parent="#navbarVerticalCollapse">
+            <li class="nav-item py-1">
+                <a class="nav-link" href="#menuReportsReservations" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="ReportsReservations">
+                    <div class="d-flex align-items-center">
+                        <span class="nav-link-text @((ExpandNavMenuReportsReservations())?"text-primary":"")">Experiences</span>
+                    </div>
+                </a>
+                <ul class="@(ExpandNavMenuReportsReservations() ? "nav collapse show" : "nav collapse")" id="menuReportsReservations" data-parent="#navbarVerticalCollapse">
+                    <li class="nav-item py-1">
+                        <NavLink class="nav-link" href="reports/seating">Seating Report</NavLink>
+                    </li>
+                </ul>
+            </li>
+            <li class="nav-item py-1">
+                <a class="nav-link" href="#menuReportsTickets" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="ReportsTickets">
+                    <div class="d-flex align-items-center">
+                        <span class="nav-link-text @((ExpandNavMenuReportsTickets())?"text-primary":"")">Ticketing</span>
+                    </div>
+                </a>
+                <ul class="@(ExpandNavMenuReportsTickets() ? "nav collapse show" : "nav collapse")" id="menuReportsTickets" data-parent="#navbarVerticalCollapse">
+                    <li class="nav-item py-1">
+                        <NavLink class="nav-link" href="reports/tickets/ticket-sales-report">
+                            Ticket Sales Report
+                        </NavLink>
+                    </li>
+                    <li class="nav-item py-1">
+                        <NavLink class="nav-link" href="reports/tickets/abandoned-carts-tickets">
+                            Abandoned Cart
+                        </NavLink>
+                    </li>
+                    <li class="nav-item py-1">
+                        <NavLink class="nav-link" href="reports/tickets/pay-out-report">
+                            Pay Out Reports
+                        </NavLink>
+                    </li>
+                    <li class="nav-item py-1">
+                        <NavLink class="nav-link" href="reports/tickets/weekly-sales-tix">
+                            Weekly Sales
+                        </NavLink>
+                    </li>
+                    <li class="nav-item py-1">
+                        <NavLink class="nav-link" href="javascript:void();">
+                            Post Captures
+                        </NavLink>
+                    </li>
+                    <li class="nav-item py-1">
+                        <NavLink class="nav-link" href="javascript:void();">
+                            Check-Ins
+                        </NavLink>
+                    </li>
+                    <li class="nav-item py-1">
+                        <NavLink class="nav-link" href="javascript:void();">
+                            Event Reviews
+                        </NavLink>
+                    </li>
+                </ul>
+            </li>
+            <li class="nav-item py-1">
+                <a class="nav-link" href="#menuReportsTransactions" data-bs-toggle="collapse" role="button" aria-expanded="false" aria-controls="ReportsTransactions">
+                    <div class="d-flex align-items-center">
+                        <span class="nav-link-text @((ExpandNavMenuReportsTransactions())?"text-primary":"")">Transactions</span>
+                    </div>
+                </a>
+                <ul class="@(ExpandNavMenuReportsTransactions() ? "nav collapse show" : "nav collapse")" id="menuReportsTransactions" data-parent="#navbarVerticalCollapse">
+                    <li class="nav-item py-1">
+                        <NavLink class="nav-link" href="reports/gift-card-transaction-history">Gift Cards</NavLink>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </li>
+    <li class="nav-item py-1">
+        <NavLink class="nav-link" href="store/discounts-promotions">
+            <span class="fa-regular fa-tag me-2"></span>Discounts
+        </NavLink>
+    </li>
+    <li class="nav-item py-1">
+        <NavLink class="nav-link" href="/settings">
+            <span class="fas fa-cog fa-fw me-1"></span>Business
+        </NavLink>
+    </li>
+
+</ul>
+
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    List<BusinessConfigurationOptionModel> clubServiceOptions = new List<BusinessConfigurationOptionModel>();
+    private bool isClubServiceSettingsSaved = false;
+    private bool isReservationsServiceSettingsSaved = false;
+    private string clubServiceSettingName = "";
+    private string reservationsServiceSettingName = "";
+    private string synergyCommerce = "Synergy Commerce";
+
+    private bool ExpandNavMenuPeople()
+    {
+        var uri = _navigationManager.ToAbsoluteUri(_navigationManager.Uri).ToString().ToLower();
+        if (uri.Contains("/people/clubs/imported-club-members"))
+            return true;
+        if (uri.Contains("people/team"))
+            return false;
+        if (uri.Contains("/settings/club-members"))
+            return true;
+        return uri.Contains("/guest") || uri.Contains("/team") || uri.Contains("/people");
+    }
+
+    private bool ExpandNavMenuStore()
+    {   
+        var uri = _navigationManager.ToAbsoluteUri(_navigationManager.Uri).ToString().ToLower();
+        if(uri.Contains("/store/orders"))
+            return false;
+        else if(uri.Contains("/store/discounts-promotions"))
+            return false;
+        else
+            return uri.Contains("/store");
+    }
+
+    private void RedirectToProducts()
+    {
+        _navigationManager.NavigateTo("store/products");
+    }
+
+    private void RedirectToCustomers()
+    {
+        _navigationManager.NavigateTo("people/customers");
+    }
+
+    private bool ExpandNavMenuReports()
+    {
+        var uri = _navigationManager.ToAbsoluteUri(_navigationManager.Uri).ToString().ToLower();
+        return uri.Contains("/reports");
+    }
+
+    private bool ExpandNavMenuCalendar()
+    {
+        var uri = _navigationManager.ToAbsoluteUri(_navigationManager.Uri).ToString().ToLower();
+        return uri.Contains("/calendar");
+    }
+
+    private bool ExpandNavMenuReportsTickets()
+    {
+        var uri = _navigationManager.ToAbsoluteUri(_navigationManager.Uri).ToString().ToLower();
+        return uri.Contains("/reports/tickets");
+    }
+
+    private bool ExpandNavMenuReportsReservations()
+    {
+        var uri = _navigationManager.ToAbsoluteUri(_navigationManager.Uri).ToString().ToLower();
+        return uri.Contains("/reports/seating");
+    }
+
+    private bool ExpandNavMenuReportsTransactions()
+    {
+        var uri = _navigationManager.ToAbsoluteUri(_navigationManager.Uri).ToString().ToLower();
+        return uri.Contains("/reports/gift-card-transaction-history");
+    }
+
+    private void HandleChangesForReservations(bool e)
+    {
+        if(e == true)
+        {
+            isReservationsServiceSettingsSaved = true;
+            reservationsServiceSettingName = synergyCommerce;
+        }
+        else
+        {
+            isReservationsServiceSettingsSaved = false;
+        }
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        _navigationManager.LocationChanged += (s, e) => StateHasChanged();
+        Helper.ReservationsForSynergyChanged += HandleChangesForReservations;
+
+        //collapseNavMenu = !collapseNavMenu;
+
+        // Trying to fetch the Current Member if it is delayed in adding to local storage
+        if (currentMember == null || currentMember.Id <= 0)
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+                if (currentMember != null && currentMember.Id > 0)
+                    break;
+                await Task.Delay(500);
+            }
+        }
+
+        //Get ClubService Settings
+        var setting = await _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount, BusinessSettingsMetaKey.ClubService);
+        isClubServiceSettingsSaved = !string.IsNullOrEmpty(setting?.data?.MetaValue ?? string.Empty);
+        if (isClubServiceSettingsSaved)
+        {
+            //Get ClubService Configuration
+            var businessClubServiceConfigurationResponse = await _businessViewModel.GetBusinessConfigurationOptionDetail(BusinessConfigurationNamespace.ClubService, setting.data.MetaValue);
+            clubServiceSettingName = businessClubServiceConfigurationResponse?.data?.SettingName ?? string.Empty;
+        }
+
+        //Get ReservationsService Settings
+        var reservationSetting = await _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount, BusinessSettingsMetaKey.ReservationsService);
+        isReservationsServiceSettingsSaved = !string.IsNullOrEmpty(reservationSetting?.data?.MetaValue ?? string.Empty);
+        if (isReservationsServiceSettingsSaved)
+        {
+            //Get ReservationsService Configuration
+            var businessReservationsServiceConfigurationResponse = await _businessViewModel.GetBusinessConfigurationOptionDetail(BusinessConfigurationNamespace.ReservationsService, reservationSetting.data.MetaValue);
+            reservationsServiceSettingName = businessReservationsServiceConfigurationResponse?.data?.SettingName ?? string.Empty;
+        }
+    }
+
+}

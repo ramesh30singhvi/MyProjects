@@ -1,0 +1,282 @@
+﻿@page "/settings/pos/favorites"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IProductViewModel _productViewModel
+@inject ISettingsViewModel _settingsViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div>
+    <div class="card mb-3">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-3 mb-md-0"><a href="settings/pos" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="fa-regular fa-heart me-2"></span>POS Favorites</h5>
+                </div>
+                <div class="col-auto">
+                    @if (isProcessing)
+                    {
+                        <Loader />
+                    }
+                    <a class="btn btn-primary" href="javascript:void();" @onclick="() => SavePosFavoritesAsync()" hidden="@(isProcessing)">Save</a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+
+            <form>
+
+                <div class="row mb-3">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label" for="inputAddressSearch">Search</label>
+                        <SfComboBox ID="inputGroupSearch" @bind-Value="@selectedProduct" @ref="filterProductsObj" AllowFiltering=true Placeholder="Search Products" DataSource="@products" CssClass="py-1">
+                            <ComboBoxEvents TItem="ProductListModel" TValue="string" ValueChange="SelectProduct" Filtering="OnFilterProducts"></ComboBoxEvents>
+                            <ComboBoxFieldSettings Value="ProductTitle"></ComboBoxFieldSettings>
+                        </SfComboBox>
+                    </div>
+                    <div class="col-12 col-md-6" hidden="@(products == null && products.Count <= 0)">
+                        <label class="form-label" for="selSortProductsBy">Sort</label>
+                        <select id="selSortProductsBy" class="form-select" aria-label="Match Type" @bind="@request.SortType" @onclick="OnSortProducts">
+                            <option value="@((int)CollectionSortType.ProductNameA_Z)" selected>Product Name A-Z</option>
+                            <option value="@((int)CollectionSortType.ProductNameZ_A)">Product Name Z-A</option>
+                            <option value="@((int)CollectionSortType.Manual)">Manual</option>
+                        </select>
+                    </div>
+                </div>
+                @if (posFavorites != null && posFavorites.Count > 0)
+                {
+                    @if (request.SortType != (int)CollectionSortType.Manual)
+                    {
+                        <ul class="list-group">
+                            @foreach (var item in posFavorites)
+                            {
+                                <li class="list-group-item d-flex justify-content-start align-items-center p-3">
+                                    <span class="iemg-thumbnail far fa-image-polaroid fa-4x me-2" hidden="@(!string.IsNullOrEmpty(item.ProductImage))"></span>
+                                    <img class="img-fluid img-thumbnail me-2" width="50" alt="@item.ProductTitle" src="@item.ProductImage" hidden="@(string.IsNullOrEmpty(item.ProductImage))" />
+                                    <span class="flex-fill">@item.ProductTitle</span>
+                                    <a href="javascript:void();" @onclick="@(() => RemoveProduct(item, false))" class="text-dark"><span class="far fa-trash-alt"></span></a>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <SfListBox TValue="string[]" DataSource="@posFavorites" TItem="CollectionProductModel" AllowDragAndDrop="true" @ref="ListBoxObj" CssClass="rounded cp-list">
+                            <ListBoxFieldSettings Text="ProductTitle" Value="ProductTitle" />
+                            <ListBoxTemplates TItem="CollectionProductModel">
+                                <ItemTemplate>
+                                    <div class="d-flex justify-content-start align-items-center">
+                                        <span class="far fa-sort me-2"></span>
+                                        <span class="img-thumbnail far fa-image-polaroid fa-4x me-2" hidden="@(!string.IsNullOrEmpty((context as CollectionProductModel).ProductImage))"></span>
+                                        <img class="img-fluid img-thumbnail me-2" width="50" alt="@((context as CollectionProductModel).ProductImage)" src="@((context as CollectionProductModel).ProductImage)" hidden="@(string.IsNullOrEmpty((context as CollectionProductModel).ProductImage))" />
+                                        <span class="flex-fill">@((context as CollectionProductModel).ProductTitle)</span>
+                                        <a href="javascript:void();" @onclick="@(() => RemoveProduct((context as CollectionProductModel), true))" class="text-dark"><span class="far fa-trash-alt"></span></a>
+                                    </div>
+                                </ItemTemplate>
+                            </ListBoxTemplates>
+                        </SfListBox>
+                    }
+                }
+            </form>
+
+        </div>
+    </div>
+
+</div>
+
+
+@code
+{
+    private string title = "Edit POS Collection | Synergy Commerce Admin Panel";
+    private bool isLoading;
+    private string selectedProduct;
+    private Member currentMember;
+    private bool isProcessing;
+    ObservableCollection<CollectionProductModel> posFavorites = new ObservableCollection<CollectionProductModel>();
+    List<ProductListModel> products = new List<ProductListModel>();
+    SfComboBox<string, ProductListModel> filterProductsObj { get; set; }
+    SfListBox<string[], CollectionProductModel> ListBoxObj = new SfListBox<string[], CollectionProductModel>();
+    SavePOSFavoriteRequestModel request = new SavePOSFavoriteRequestModel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        await GetSortType();
+        SearchProductResponse productResponse = await _productViewModel.SearchProducts(currentMember.Id, true, "");
+        if (productResponse.success)
+        {
+            products = productResponse.data;
+            if (products.Count > 0)
+            {
+                products = products.OrderBy(x => x.ProductTitle).ToList();
+            }
+        }
+
+        GetPOSFavoriteResponse response = await _productViewModel.GetPOSFavorites(currentMember.Id, request.SortType, true);
+        if (response.success)
+        {
+            posFavorites = new ObservableCollection<CollectionProductModel>(response.data);
+        }
+        isLoading = false;
+    }
+
+
+    private async void SavePosFavoritesAsync()
+    {
+        isProcessing = true;
+        request.BusinessId = currentMember.Id;
+        request.FavoriteProducts = new List<POSFavoriteModel>();
+        if (posFavorites.Count > 0)
+        {
+            if (request.SortType != (int)CollectionSortType.Manual)
+            {
+                foreach (var item in posFavorites.Select((value, i) => new { i, value }))
+                {
+                    POSFavoriteModel pOSFavoriteModel = new POSFavoriteModel()
+                    {
+                        ProductId = item.value.Id,
+                        SortIndex = item.i
+                    };
+                    request.FavoriteProducts.Add(pOSFavoriteModel);
+                }
+            }
+            else
+            {
+                var posFavoritesLiBox = ListBoxObj.GetDataList();
+                foreach (var item in posFavoritesLiBox.Select((value, i) => new { i, value }))
+                {
+                    POSFavoriteModel pOSFavoriteModel = new POSFavoriteModel()
+                    {
+                        ProductId = item.value.Id,
+                        SortIndex = item.i
+                    };
+                    request.FavoriteProducts.Add(pOSFavoriteModel);
+                }
+            }
+
+
+        }
+
+        SavePOSFavoriteResponse response = await _productViewModel.SavePOSFavorites(request);
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+
+        isProcessing = false;
+        StateHasChanged();
+    }
+
+
+    private void OnSortProducts()
+    {
+        if (posFavorites.Count > 0)
+        {
+            if (request.SortType == (int)CollectionSortType.ProductNameA_Z)
+            {
+                posFavorites = new ObservableCollection<CollectionProductModel>(posFavorites.OrderBy(x => x.ProductTitle));
+            }
+            else if (request.SortType == (int)CollectionSortType.ProductNameZ_A)
+            {
+                posFavorites = new ObservableCollection<CollectionProductModel>(posFavorites.OrderByDescending(x => x.ProductTitle));
+            }
+            else if (request.SortType == (int)CollectionSortType.Manual)
+            {
+                posFavorites = new ObservableCollection<CollectionProductModel>(posFavorites.OrderBy(x => x.SortIndex));
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private void SelectProduct()
+    {
+        if (!string.IsNullOrEmpty(selectedProduct))
+        {
+            var product = products.Where(x => x.ProductTitle.ToLower() == selectedProduct.ToLower()).FirstOrDefault();
+            var existingPosFavorites = posFavorites.Where(x => x.ProductTitle.ToLower() == selectedProduct.ToLower()).FirstOrDefault();
+            if (product != null && existingPosFavorites == null)
+            {
+                CollectionProductModel posFavorite = new CollectionProductModel();
+                posFavorite.Id = product.Id;
+                posFavorite.ProductTitle = product.ProductTitle;
+                posFavorite.ProductImage = product.ProductImageURL;
+
+                if (posFavorites != null && posFavorites.Count > 0)
+                {
+                    posFavorites.Add(posFavorite);
+                     OnSortProducts();
+                }
+                else
+                {
+                    posFavorites = new ObservableCollection<CollectionProductModel>();
+                    posFavorites.Add(posFavorite);
+                }
+
+                if (request.SortType == (int)CollectionSortType.Manual)
+                {
+                    var Item = new List<CollectionProductModel>();
+                    Item.Add(posFavorite);
+                    ListBoxObj.AddItems(Item);
+                }
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private async void OnFilterProducts(FilteringEventArgs args)
+    {
+        args.PreventDefaultAction = true;
+        var query = new Query().Where(new WhereFilter() { Field = "ProductTitle", Operator = "contains", value = args.Text, IgnoreCase = true });
+
+        query = !string.IsNullOrEmpty(args.Text) ? query : new Query();
+
+        await filterProductsObj.Filter(products, query);
+    }
+
+    private void RemoveProduct(CollectionProductModel product, bool isManual)
+    {
+        if (isManual)
+        {
+            var Item = new List<CollectionProductModel>{
+    new CollectionProductModel
+    {Id = product.Id, ProductTitle = product.ProductTitle},
+    };
+            ListBoxObj.RemoveItem(Item);
+            posFavorites.Remove(product);
+        }
+        else
+        {
+            posFavorites.Remove(product);
+        }
+        StateHasChanged();
+    }
+
+    private async Task GetSortType()
+    {
+        BusinessSettingsResponse response = await _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessSettings, BusinessSettingsMetaKey.POSFavoriteSortType);
+        if (response.success)
+        {
+            if (response.data != null)
+            {
+                request.SortType = Convert.ToInt32(response.data.MetaValue);
+            }
+        }
+    }
+}

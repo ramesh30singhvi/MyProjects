@@ -1,0 +1,106 @@
+﻿@page "/people/clubs/imported-club-members"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Entities.v4;
+@using Syncfusion.Blazor.DropDowns;
+@using CellarPassAppAdmin.Shared.Models.RequestModel;
+@using CellarPassAppAdmin.Shared.Enums;
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject IGuestTagViewModel _guestTagViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md-auto">
+                <h5 class="mb-3 mb-md-0"><span class="fa-regular fa-users me-2"></span>Imported Club Members</h5>
+            </div>
+            <div class="col-md-auto">
+                <button class="btn btn-sm btn-outline-primary me-2">Export</button>
+                <button class="btn btn-sm btn-primary">Add Members</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="sf-grid min-vh-75">
+            <SfGrid DataSource="@ClubMemberList" AllowPaging="false" AllowFiltering="true" Width="100%">
+                <GridColumns>
+                    <GridColumn Field=@nameof(ClubMember.Email) HeaderText="Email" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                    <GridColumn Field=@nameof(ClubMember.FirstName) HeaderText="First Name" TextAlign="TextAlign.Left" Width="30"></GridColumn>
+                    <GridColumn Field=@nameof(ClubMember.LastName) HeaderText="Last Name" TextAlign="TextAlign.Left" Width="30"></GridColumn>
+                    <GridColumn Field=@nameof(ClubMember.Type) HeaderText="Type" TextAlign="TextAlign.Left" Width="30"></GridColumn>
+                    <GridColumn Field=@nameof(ClubMember.Tier) HeaderText="Tier" TextAlign="TextAlign.Left" Width="30"></GridColumn>
+                    <GridColumn Field=@nameof(ClubMember.MobilePhone) HeaderText="MobilePhone" TextAlign="TextAlign.Left" Width="30"></GridColumn>
+                    <GridColumn HeaderText="" AllowFiltering="false" TextAlign="TextAlign.Center" Width="10">
+                        <Template>
+                            @{
+                                <button class="delete_icon">
+                                    <span class="far fa-pencil"></span>
+                                </button>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="" AllowFiltering="false" TextAlign="TextAlign.Center" Width="10">
+                        <Template>
+                            @{
+                                <button class="delete_icon" @onclick="()=>DeleteDialogOpen(0)">
+                                    <span class="far fa-trash-alt"></span>
+                                </button>
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+</div>
+
+@*Delete confimation dialog*@
+<DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="DeleteClass"></DeleteConfirmation>
+
+@code
+{
+    private bool SpinnerVisibility { get; set; } = false;
+    private string title = "Imported Club Members | Synergy Commerce Admin Panel";
+    bool openDeleteDialog = false;
+
+    public class ClubMember
+    {
+        public string Email { get; set; }
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public string Type { get; set; }
+        public string Tier { get; set; }
+        public string MobilePhone { get; set; }
+    }
+
+    public List<ClubMember> ClubMemberList = new List<ClubMember>(){
+        new ClubMember(){ Email= "TADATLAV@GMAIL.COM", FirstName= "Timothy", LastName= "A Dinan",  Type="CELLAR CLUB", Tier="CELLAR CLUB", MobilePhone="" },
+        new ClubMember(){ Email= "ELIZONDO_JORGE@SBCGLOBAL.NET", FirstName= "jorge", LastName= "a elizondo",  Type="DAVIES CLUB", Tier="DAVIES CLUB", MobilePhone="" },
+        new ClubMember(){ Email= "SJASANDOV12@GMAIL.COM", FirstName= "Joseph", LastName= "A Sandoval",  Type="DAVIES CLUB", Tier="DAVIES CLUB", MobilePhone="" },
+        new ClubMember(){ Email= "BAARNI@ATT.NET", FirstName= "Beth", LastName= "Aarni",  Type="DAVIES CLUB", Tier="DAVIES CLUB", MobilePhone="" },
+        new ClubMember(){ Email= "SPENCEREKUHN@GMAIL.COM", FirstName= "Spencer", LastName= "Kuhn",  Type="DAVIES CLUB", Tier="DAVIES CLUB", MobilePhone="781-960-7077" },
+    };
+    private void DialogClose() => openDeleteDialog = false;
+
+    private void DeleteDialogOpen(int id)
+    {
+        openDeleteDialog = true;
+    }
+    private void DeleteClass()
+    {
+    }
+
+}

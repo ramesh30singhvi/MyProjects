@@ -1,0 +1,827 @@
+
+
+/* Validation */
+.valid.modified:not([type=checkbox]) {
+    outline: 1px solid #26b050;
+}
+
+.invalid {
+    outline: 1px solid red;
+}
+
+.validation-message {
+    color: red;
+}
+
+/* Z-Index Utilities */
+
+.z-1090 {
+    z-index: 1090 !important;
+}
+
+.pac-container {
+    z-index: 10000 !important;
+}
+
+#blazor-error-ui {
+    background: lightyellow;
+    bottom: 0;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+    display: none;
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+}
+
+    #blazor-error-ui .dismiss {
+        cursor: pointer;
+        position: absolute;
+        right: 0.75rem;
+        top: 0.5rem;
+    }
+
+
+.form-switch .e-switch-wrapper {
+    height: 25px;
+    width: 65px;
+}
+
+    .form-switch .e-switch-wrapper .e-switch-handle, .form-switch .e-css.e-switch-wrapper .e-switch-handle {
+        left: 5px;
+        top: 6px;
+    }
+
+        .form-switch .e-switch-wrapper .e-switch-handle.e-switch-active, .form-switch .e-css.e-switch-wrapper .e-switch-handle.e-switch-active {
+            margin-left: -17px;
+            margin-top: 0px;
+            top: 6px;
+        }
+
+    .form-switch .e-switch-wrapper .e-switch-on, .form-switch .e-css.e-switch-wrapper .e-switch-on {
+        top: 0;
+    }
+
+    .form-switch .e-switch-wrapper .e-switch-off, .form-switch .e-css.e-switch-wrapper .e-switch-off {
+        top: 0;
+    }
+
+#calendarViewDaysContainer span, #businessHourContainer span {
+    transition: ease-in-out .5s;
+}
+
+.hideeffect span {
+    overflow: hidden;
+    opacity: 0;
+    position: relative;
+    visibility: hidden;
+    width: 0px !important;
+}
+
+#businessHourContainer {
+    /*max-height: 370px;*/
+    transition: ease-in-out .5s;
+}
+
+    #businessHourContainer.hideeffect {
+        overflow: hidden;
+        transform-origin: left top;
+        max-height: 1px;
+        position: relative;
+    }
+
+/*Setting Holiday Screen css*/
+.e-dlg-container.e-dlg-center-center {
+    z-index: 9990 !important;
+}
+
+.modal_btns .btn {
+    font-size: 14px;
+    font-weight: 500;
+    padding: 5px 15px;
+    line-height: 16px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 3px;
+    margin: 0 3px;
+}
+
+.modal_btns {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.checked_box svg {
+    height: 16px;
+    width: 16px !important;
+}
+
+.unchecked_box .empty-check {
+    height: 12px;
+    width: 12px;
+    border: 1px solid #797979;
+    display: inline-block;
+}
+
+.unchecked_box .empty-check {
+    height: 14px;
+    width: 14px;
+    border: 2px solid #a09e9e;
+    display: inline-block;
+    border-radius: 3px;
+}
+
+
+/* START SYNCFUSION CUSTOMIZATIONS */
+
+/*table css start here */
+
+.sf-grid .e-grid .e-gridheader {
+    border: none;
+}
+
+.sf-grid th {
+    color: #344050;
+    background: #efefef;
+    border-width: 0;
+    border-color: transparent !important;
+    padding: 17px 15px !important;
+}
+
+    .sf-grid th .e-headertext {
+        font-weight: 600;
+        font-size: .7rem;
+        color: #344050;
+        text-transform: uppercase !important;
+    }
+
+.sf-grid table, .sf-grid {
+    font-family: "Poppins",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+}
+
+    .sf-grid .e-table thead th.e-headercell {
+        background: #efefef;
+    }
+
+    .sf-grid td.e-rowcell {
+        height: 54px;
+        color: #5e6e82 !important;
+        font-size: .8333333333rem !important;
+    }
+
+    .sf-grid tr.e-row:hover td.e-rowcell {
+        background: none !important;
+    }
+
+    .sf-grid span.empty-check {
+        display: none !important;
+    }
+
+    .sf-grid .e-pager .e-parentmsgbar {
+        font-weight: normal !important;
+        font-size: .8rem !important;
+    }
+
+    .sf-grid span.checked_box, span.unchecked_box {
+        height: 15px;
+        width: 15px;
+        display: inline-block;
+        margin: 0 auto;
+    }
+
+    .sf-grid span.checked_box {
+        background: #1069b0;
+        border-radius: 4px;
+    }
+
+    .sf-grid span.unchecked_box {
+        border: 1px solid #1069b0;
+        border-radius: 4px;
+    }
+
+    .sf-grid span.checked_box {
+        color: #fff;
+        font-size: 12px;
+        line-height: 14px;
+        display: block;
+    }
+
+/* DO NOT DO THIS. IT CAUSES GRID TO BREAK OUT OF PARENT.
+        .sf-grid .e-gridcontent, .sf-grid .e-gridcontent .e-content {
+        overflow: visible !important;
+    }*/
+
+.e-multi-select-wrapper .e-chips {
+    background-color: #8dc63f;
+}
+
+.e-multi-select-wrapper .e-chips.e-chip-selected, .e-multi-select-wrapper .e-chips:hover {
+     background-color: #82cf1a;
+    }
+
+.edit_icon {
+    background: none;
+    border: none !important;
+    color: #1069b0 !important;
+}
+
+.delete_icon {
+    background: none;
+    border: none !important;
+    color: #1069b0 !important;
+}
+/*table css end here */
+
+.e-ddl.e-input-group.e-control-wrapper .e-input {
+    margin-bottom: 5px !important;
+}
+
+/*Setting Holiday Screen css*/
+.hours-time-picker .e-control {
+    background: #fff !important;
+}
+
+
+span.checked_box svg {
+    display: none;
+}
+
+
+.e-toast {
+    z-index: 9999 !important;
+}
+
+.e-toast-container .e-toast .e-toast-message .e-toast-title, .e-toast-content {
+    font-family: "Poppins",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol" !important;
+    color: #fff !important;
+}
+
+.e-toast .e-toast-success.e-toast-success-custom {
+    background: #1069b0 !important;
+    border-color: #1069b0 !important;
+}
+
+.e-toast .e-toast-danger.e-toast-danger-custom {
+    background: #e63757 !important;
+    border-color: #e63757 !important;
+}
+
+.e-listbox-container .cp-list {
+    font-family: unset;
+    font-size: unset;
+    font-weight: unset;
+    line-height: unset;
+    color: #5e6e82 !important;
+}
+
+.cp-list .e-list-item {
+    height: auto !important;
+    padding: 1rem !important;
+}
+
+.cp-list.cp-no-selection .e-list-item.e-selected {
+    background-color: #fff;
+    color: unset;
+}
+
+/*.e-listbox-container .e-list-item.e-selected {
+    background-color: unset;
+    color: unset;
+}
+*/
+.e-control {
+    font-family: "Poppins",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol" !important;
+}
+
+/*css for spinner*/
+.e-spinner-pane.e-spin-show {
+    background: rgb(255 255 255 / 68%);
+    position: fixed;
+    top: 0;
+    border: 0;
+    left: 0;
+    right: 0;
+    display: block;
+    z-index: 9999999999999999 !important;
+}
+/*css for spinner*/
+
+.column-count-2 {
+    column-count: 2;
+}
+
+/*.e-checkbox-wrapper .e-frame.e-check, .e-css.e-checkbox-wrapper .e-frame.e-check {
+    background-color: #1069b0 !important;
+    border-color: #1069b0 !important;
+}*/
+
+input.e-input, textarea.e-input, .e-input-group, .e-input-group.e-control-wrapper {
+    font-family: "Poppins",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol" !important;
+    font-size: 1rem !important;
+    color: #344050 !important;
+}
+
+/*css for syncfusion dialog to be responsive*/
+.e-dialog.e-popup.syncfusion-dialog-size-sm {
+    width: 30%;
+}
+.e-dialog.e-popup.syncfusion-dialog-size-md {
+    width: 50%;
+}
+@media screen and (min-width: 641px) and (max-width: 1007px) {
+    .e-dialog.e-popup.syncfusion-dialog-size-sm {
+        width: 50%;
+    }
+    .e-dialog.e-popup.syncfusion-dialog-size-md {
+        width: 80%;
+    }
+}
+
+@media (max-width:767px){
+    .custom_table_scroll .e-grid .e-table {
+        table-layout: auto;
+    }
+
+    .custom_table_scroll .e-responsive {
+        overflow: auto;
+    }
+
+        .custom_table_scroll .e-responsive .e-gridcontent, .custom_table_scroll .e-responsive .e-content, .custom_table_scroll .e-responsive .e-gridheader, .custom_table_scroll .e-responsive .e-headercontent {
+            overflow-y: inherit;
+        }
+
+    .custom_table_scroll .e-responsive td, .custom_table_scroll .e-responsive th {
+        white-space: normal !important;
+        min-width: 88px;
+    }
+
+    .custom_table_scroll .e-responsive tr td:last-child, .custom_table_scroll .e-responsive th:last-child {
+        min-width: 50px;
+    }
+}
+
+@media screen and (max-width: 640px) {
+    .e-dialog.e-popup.syncfusion-dialog-size {
+        width: 90%;
+    }
+}
+
+/* When you don't want padding in dialog */
+.sf-dialog-content-padding-0 .e-dlg-content {
+    padding: 0;
+}
+
+/* When you want more width in the dialog title header */
+.e-dialog.sf-dialog-header-95 .e-dlg-header {
+    width: 95% !important;
+}
+
+/*css for syncfusion buttons */
+.e-btn, .e-css.e-btn {
+    font-family: "Poppins",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol" !important;
+    font-weight: 500 !important;
+}
+/*.e-btn.e-flat.e-primary, .e-css.e-btn.e-flat.e-primary {
+    background-color: #1069b0 !important;
+    border-color: #1069b0 !important;
+}*/
+
+.e-toolbar-items {
+    float: inline-end;
+}
+
+.sf-hide-img-upload .e-img-uploadwrap.e-droparea, .sf-hide-img-upload .e-linkheader {
+    display: none !important;
+} 
+
+/* END SYNCFUSION CUSTOMIZATIONS */
+
+.sf-dialog-cropper {
+    width: auto !important;
+    max-width: 50%;
+}
+
+@media only screen and (max-width: 640px) {
+    .sf-dialog-cropper {
+        max-width: 90%;
+    }
+}
+
+@media only screen and (min-width: 650px) and (max-width: 1024px) {
+    .sf-dialog-cropper {
+        max-width: 60%;
+    }
+}
+
+/*Hide checkbox from parent tree list when 'sfTree hideParentCheck' is added to tree view css */
+.sfTree.hideParentCheck .e-list-item.e-level-1 .e-text-content.e-icon-wrapper
+.e-checkbox-wrapper {
+    display: none
+}
+
+/*Align collapse icon to top  */
+.sfTree.vertical-align-top.e-treeview .e-list-item div.e-icons.interaction {
+    vertical-align: top !important;
+}
+/*Align checkbox  to top  */
+.sfTree.vertical-align-top.e-treeview .e-checkbox-wrapper {
+    vertical-align: top !important;
+    padding-top: 2px;
+}
+/*fix issue with horizontal scrollbar  */
+.sfTree.vertical-align-top.e-treeview > .e-ul {
+    overflow: hidden;
+}
+
+/*Hide spinner from SfDropDownList and Pivot View*/
+.sf-ddl .e-ddl-icon .e-spinner-pane, .sf-pivotview .e-spinner-pane {
+    display: none !important;
+}
+
+.pagination > li {
+    overflow: hidden;
+    position: relative;
+    margin-top: 25px;
+    width: 25%;
+    float: left;
+    list-style: none;
+    padding: 0;
+}
+
+    .pagination > li p {
+        color: #000;
+        line-height: 1.5;
+        margin-top: 10px;
+        margin-bottom: 35px;
+    }
+
+    .pagination > li > div {
+        line-height: 50px;
+        text-decoration: none;
+        color: #fff;
+        display: block;
+        text-align: center;
+        position: relative;
+    }
+        /*positon the circle*/
+        .pagination > li > div:before {
+            content: '';
+            position: absolute;
+            z-index: 0;
+            width: 50px;
+            height: 50px;
+            left: 50%;
+            margin-left: -25px;
+            border-radius: 100%;
+            border: 1px solid #1069b0;
+            background-color: #1069b0;
+            transition: all .2s;
+        }
+
+        .pagination > li > div > span {
+            color: white;
+            position: inherit;
+        }
+
+    /*positioning the line*/
+    .pagination > li:not(:last-of-type):after,
+    .pagination > li:not(:first-of-type):before {
+        content: '';
+        position: absolute;
+        background: #1069b0;
+        top: 25px;
+        height: 1px;
+    }
+
+    .pagination > li:first-of-type:after {
+        left: 50%;
+        right: 0;
+        margin-left: 25px;
+    }
+
+    .pagination > li:not(:first-of-type):before {
+        left: 0;
+        right: 50%;
+        margin-right: 25px;
+    }
+
+    .pagination > li:not(:first-of-type):after {
+        right: 0;
+        left: 50%;
+        margin-left: 25px;
+    }
+
+
+.list-group-border .list-group-item {
+    border-top-width: 1px !important;
+}
+
+.dropdown-open > .dropdown-menu {
+    position: static;
+    display: block;
+}
+
+.w-0 {
+    width: 0 !important;
+}
+
+#listbox1 {
+    width: 52%;
+    float: left;
+}
+
+#listbox2 {
+    width: 48%;
+    float: right;
+}
+
+.list-decimal {
+    padding-left: 1.25rem;
+    list-style: decimal;
+}
+
+.e-box-color {
+    background: #fff6e5 !important;
+    border-top: 4px solid #ff8c00 !important;
+}
+
+.e-box-header-color {
+    color: #ff8c00 !important;
+}
+
+.link-icon {
+    background: none;
+    border: none !important;
+    color: #1069b0 !important;
+}
+
+.e-split-colorpicker, .e-colorpicker-popup {
+    z-index: 0 !important;
+}
+
+.timeline {
+    list-style: none;
+    padding: 0;
+    position: relative;
+}
+
+
+
+#activity-section .timeline:not(:last-child):before {
+    position: absolute;
+    content: " ";
+    width: 3px;
+    background-color: rgba(133, 131, 94, 0.91);
+}
+#activity-section .timeline:last-child:before {
+    border-left:none !important;
+}
+
+#email-activity-section .timeline:last-child:before {
+    border-left: none !important;
+}
+
+.timeline > li {
+    margin-bottom: 20px;
+    position: relative;
+}
+
+        .timeline > li > .timeline-badge {
+            width: 50px;
+            height: 50px;
+            position: absolute;
+            top: 16px;
+            left: .3125rem;
+            margin-left: -25px;
+            z-index: 100;
+        }
+
+.displayNone {
+    display: none !important;
+}
+
+.vr {
+    display: inline-block;
+    align-self: stretch;
+    width: 2px;
+    min-height: 1em;
+    background-color: currentColor;
+    opacity: .25;
+}
+
+@media only screen and (max-width: 640px) {
+    .vr {
+        display: none;
+    }
+}
+
+.e-grouptopleftcell {
+    background: #efefef !important;
+}
+
+/* Customize Handle and Bar Switch */
+.switch-toggle {
+    float: left;
+    background: #E2E8F0;
+    width: 82px;
+}
+
+    .switch-toggle input {
+        position: absolute;
+        opacity: 0;
+    }
+
+        .switch-toggle input + label {
+            padding: 7px;
+            float: left;
+            color: #000;
+            cursor: pointer;
+        }
+
+        .switch-toggle input:checked + label.off {
+            background: #CB4040;
+            color: #fff;
+        }
+
+        .switch-toggle input:checked + label.on {
+            background: #5ba25b;
+            color: #fff;
+        }
+
+.e-toolbar-items {
+    float: inline-end;
+}
+
+.disabled-div {
+    pointer-events: none;
+    opacity: .56;
+}
+
+
+/*Generate HTML CSS*/
+.col-lg-4 .card-image-box {
+    height: 225px !important;
+    background: #f7f7f7 !important;
+}
+
+.col-lg-6 .card-image-box {
+    height: 325px !important;
+    background: #f7f7f7 !important;
+}
+
+.fw-500 {
+    font-weight: 500 !important;
+}
+
+.black-text {
+    color: #344050 !important;
+}
+
+.m-w-100 {
+    max-width: 100% !important;
+}
+
+
+.btn-lightgray {
+    color: #fff;
+    background-color: lightgray;
+    border-color: lightgray;
+    -webkit-box-shadow: inset 0 1px 0 rgba(255,255,255,.15),0 1px 1px rgba(0,0,0,.075);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.15),0 1px 1px rgba(0,0,0,.075);
+}
+
+.btn-red {
+    color: #fff;
+    background-color: red;
+    border-color: red;
+    -webkit-box-shadow: inset 0 1px 0 rgba(255,255,255,.15),0 1px 1px rgba(0,0,0,.075);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.15),0 1px 1px rgba(0,0,0,.075);
+}
+
+.btn-chartreuse {
+    color: #fff;
+    background-color: chartreuse;
+    border-color: chartreuse;
+    -webkit-box-shadow: inset 0 1px 0 rgba(255,255,255,.15),0 1px 1px rgba(0,0,0,.075);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.15),0 1px 1px rgba(0,0,0,.075);
+}
+
+.form-button {
+    float: right !important
+}
+
+.successful-payments {
+    color: #008000
+}
+
+.failure-payments {
+    color: #FF0000
+}
+
+html, body {
+    height: 100%;
+}
+
+.e-dialog .e-dlg-header{
+    overflow: visible !important;
+}
+
+.e-dialog .e-dlg-header {
+    overflow: visible !important;
+}
+
+.editor-spacing {
+    margin-top: 2.8rem !important;
+}
+
+/*Css form Spinner label*/
+.e-spinner-inner .e-spin-label {
+    font-size: 1.2rem !important;
+    color: var(--falcon-headings-color) !important;
+    font-weight: 500 !important;
+}
+
+#transaction-log_dialog-content {
+    padding-top: 0px !important
+}
+
+.amount_dropdown .dropdown-menu {
+    padding: 4px 0 !important;
+    right: 100% !important;
+    left: auto !important;
+    transform: none !important;
+    position: absolute;
+    min-width: auto;
+    margin-right: 8px !important;
+}
+
+/*CSS form Syncfusion text Box*/
+.sf-TextBox {
+    border-color: #ececec !important;
+}
+
+.sf-TextBox .e-control {
+    height: auto !important;
+    padding: 0 !important;
+}
+/*CSS form Syncfusion text Box*/
+
+.disabled-link {
+    color: darkgrey;
+}
+
+/*css fix to display the actions(which is coming on 3 dots click ...) dropdown in grid */
+.sf-grid .e-content {
+    position:static !important;
+}
+
+#signInBtn {
+    border-radius: 8px;
+}
+
+.hr-sect {
+    display: flex;
+    flex-basis: 100%;
+    align-items: center;
+    color: rgba(0, 0, 0, 0.35);
+    margin: 8px 0px;
+}
+
+.hr-sect:before,
+.hr-sect:after {
+    content: "";
+    flex-grow: 1;
+    background: rgba(0, 0, 0, 0.35);
+    height: 1px;
+    font-size: 0px;
+    line-height: 0px;
+}
+
+.hr-sect:before {
+    margin: 3% 0% 3% 6%
+}
+
+.hr-sect:after {
+    margin: 3% 6% 3% 0%
+}
+
+#orLine {
+    border: 1px solid;
+    border-radius: 13px
+}
+
+#togglePassword {
+    margin-left: -30px;
+    cursor: pointer;
+    border: none;
+    background: transparent
+}
+
+#alternateLoginLinkDialog .e-dlg-header-content {
+    border-bottom: none
+}

@@ -1,0 +1,765 @@
+﻿@page  "/clubs/club-shipments/shipments"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.WebUtilities
+@using EnumsNET
+@using System.Text.RegularExpressions
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA
+@inject IProductViewModel _productViewModel
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject IOrderViewModel _orderViewModel
+@inject IUserViewModel _userViewModel
+@inject ITeamViewModel _teamViewModel
+@inject ILocalStorageService localStorage
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card">
+    <div class="card-header bg-light">
+        <div class="row justify-content-between align-items-start">
+            <div class="col-auto pe-0">
+                <h5 class="mb-3 mb-md-0"><a href="/clubs/club-shipments" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="far fa-shipping-timed"></span></h5>
+            </div>
+            <div class="col-md">
+                <h5>Manage Shipments – [[ShipmentName]]</h5>
+                <h6>Processing Date: [[ProcessingDate]]</h6>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="javascript:void();">Refresh</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <form>
+            <div class="px-2">
+                <div class="row my-3">
+                    <div class="col-12 col-md-10">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                            <input type="text" class="form-control" placeholder="Search orders" aria-label="Search Orders" aria-describedby="inputGroupSearch">
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <div class="input-group d-grid">
+                            <button type="button" class="btn btn-outline-secondary"><span class="fa-solid fa-bars-filter me-1"></span>Filter</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12 col-md-4">
+                        <div class="input-group mb-3">
+                            <label class="input-group-text mb-0 fs--1" for="selBulkActions">1 order selected</label>
+                            <select class="form-select fs--1" id="selBulkActions">
+                                <option selected>Skip Shipment</option>
+                                <option>Process Shipment</option>
+                                <option>Mark as Problem</option>
+                                <option>Hold Shipment</option>
+                                <option>Add Shipment Tag</option>
+                                <option>Set Expected Ship Date</option>
+                                <option>Set Customer Pickup Date</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@ShipmentDataList" AllowPaging="true" Width="100%">
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && ShipmentDataList.Count <= 0)
+                        {
+                            <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Products Available</h6>
+                                <button type="button" class="btn btn-outline-primary">Get Started</button>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn Type="ColumnType.CheckBox" TextAlign="TextAlign.Center" Width="20"></GridColumn>
+                    <GridColumn HeaderText="Customer" TextAlign="TextAlign.Left" Width="80">
+                        <Template>
+                            @{
+                                var customer = (context as ShipmentData).Customer;
+                                var address = (context as ShipmentData).Address;
+                                @customer
+                                @if (address != "")
+                                {
+                                    <br />
+                                    @address
+                                }
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="Ship To" TextAlign="TextAlign.Left" Width="60">
+                        <Template>
+                            @{
+                                var shipTo = (context as ShipmentData).ShipTo;
+                                var shipToAddress = (context as ShipmentData).ShipToAddress;
+                                @shipTo
+                                @if (shipToAddress != "")
+                                {
+                                    <br />
+                                    @shipToAddress
+                                }
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(ShipmentData.Fulfillment) HeaderText="Fulfillment" TextAlign="TextAlign.Center" Width="40" />
+                    <GridColumn HeaderText="" Width="100" TextAlign="TextAlign.Right">
+                        <Template Context="iContext">
+                            @{
+                                var pholder = (iContext as ShipmentData);
+                                @if (pholder.isSkip)
+                                {
+                                    <button class="btn btn-sm btn-outline-primary ms-2" type="button">Skip</button>
+                                }
+                                @if (pholder.isEdit)
+                                {
+                                    <button class="btn btn-sm btn-outline-primary ms-2" type="button">Edit</button>
+                                }
+                                @if (pholder.isProcess)
+                                {
+                                    <button class="btn btn-sm btn-outline-primary ms-2" type="button">Process</button>
+                                }
+                                @if (pholder.isView)
+                                {
+                                    <button class="btn btn-sm btn-outline-primary ms-2" type="button" @onclick="@OpenViewModal">View</button>
+                                }
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="Status" TextAlign="TextAlign.Center" Width="30">
+                        <Template Context="iContext">
+                            @{
+                                var pholder = (iContext as ShipmentData);
+                                @if (pholder.Status == "Failed")
+                                {
+                                    <span class="badge rounded-pill d-block badge-soft-warning text-900">@pholder.Status</span>
+                                }
+                                @if (pholder.Status == "Complete")
+                                {
+                                    <span class="badge rounded-pill d-block badge-soft-success text-900">@pholder.Status</span>
+                                }
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(ShipmentData.Total) HeaderText="Total" TextAlign="TextAlign.Center" Width="30" />
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+    <div class="card-footer">
+    </div>
+</div>
+
+<SfDialog Width="1000px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsViewModalVisible" CssClass="orderDetail">
+    <DialogEvents OnOverlayClick="@OnOverlayclick">
+    </DialogEvents>
+    <DialogTemplates>
+        <Header>
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-3 mb-md-0">
+                        <span class="far fa-shopping-bag me-2"></span>
+                        Order #SHAQ-1365
+                    </h5>
+                </div>
+                <div class="col-md-6 justify-content-end d-flex">
+                    <div class="dropdown font-sans-serif btn-reveal-trigger me-2">
+                        <button class="btn btn-falcon-primary btn-sm dropdown-toggle btn-reveal dropdown-caret-none" type="button" id="dropdown-btn-order" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--2"></span></button>
+                        <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown-btn-order">
+                            <a class="dropdown-item" href="#!">
+                                Print Packing Slip
+                            </a>
+                            <a class="dropdown-item" href="#!">
+                                Print 8.5 X 11 Receipt
+                            </a>
+                            <a class="dropdown-item" href="#!">
+                                Print Thermal Receipt
+                            </a>
+                            <a @onclick="OpenResendReceiptDialog" class="dropdown-item" href="javascript:void(0)">
+                                Resend Order Receipt
+                            </a>
+                            <a class="dropdown-item" href="javascript:void(0)" @onclick="() => ChangeOrderStatus(OrderStatus.Completed)">
+                                Mark Order as Complete
+                            </a>
+                            <a class="dropdown-item" href="javascript:void(0)" @onclick="() => ChangeOrderStatus(OrderStatus.OnHold)">
+                                Place Order on Hold
+                            </a>
+                            <a class="dropdown-item" href="#!">
+                                Duplicate Order
+                            </a>
+                            <hr class="m-0" />
+                            <a class="dropdown-item text-danger" href="javascript:void(0)" @onclick="() => ChangeOrderStatus(OrderStatus.Fraudulent)">Mark Order as Fraud</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Header>
+        <Content>
+            <div class="row">
+                <div class="col-12 col-md-9">
+                    <div class="row mb-4">
+                        <div class="col-12 col-md-6">
+                            <h5 class="mb-3 fs-0 text-uppercase text-500">Bill To</h5>
+                            <h6 class="mb-2"><a href="javascript:void(0)">Jonathan Elliman</a></h6>
+                            <p class="mb-1 fs--1">50 California Street</p>
+                            <p class="mb-1 fs--1">Suite 1500</p>
+                            <p class="mb-1 fs--1">San Francisco, California, 94111 </p>
+                            <p class="mb-0 fs--1"><a href="mailto:jelliman@cellarpass.com">jelliman@cellarpass.com</a></p>
+                            <p class="mb-0 fs--1"><a href="tel:(415) 948-9657">(415) 948-9657</a></p>
+                        </div>
+                        <div class="col-12 col-md-6"></div>
+                    </div>
+                    <div class="row row-cols-1 row-cols-sm-3 row-cols-lg-5 g-4 mb-4">
+                        <div class="col">
+                            <div class="card shadow-none border h-100 text-center fs--2">
+                                <div class="card-body p-1">
+                                    <div class="mx-auto my-2 icon-item icon-item-sm rounded-circle bg-warning text-white shadow-none"><span class="far fa-heart-rate"></span></div>
+                                    <h6 class="text-uppercase fs--2">Order Status</h6>
+                                    <h6 class="text-uppercase fs--2 text-success">Completed</h6>
+                                    December 27, 2021<br />
+                                    03:14 AM
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card shadow-none border h-100 text-center fs--2">
+                                <div class="card-body p-1">
+                                    <div class="mx-auto my-2 icon-item icon-item-sm rounded-circle bg-200 shadow-none"><span class="far fa-shopping-cart"></span></div>
+                                    <h6 class="text-uppercase fs--2">Order Source</h6>
+                                    <h6 class="fs--2 text-uppercase">Club</h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card shadow-none border h-100 text-center fs--2">
+                                <div class="card-body p-1">
+                                    <div class="mx-auto my-2 icon-item icon-item-sm rounded-circle bg-info text-white shadow-none"><span class="far fa-envelope-open-dollar"></span></div>
+                                    <h6 class="text-uppercase fs--2">Payment</h6>
+                                    <h6 class="text-uppercase fs--2 text-success">Paid</h6>
+                                    <p class="fs--2">$120.11 <a class="btn btn-link btn-sm btn-reveal text-600 p-0" href="javascript:void(0)" @onclick="() => PaymentLogModalShow()"><span class="fas fa-external-link-alt"></span></a></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card shadow-none border h-100 text-center fs--2">
+                                <div class="card-body p-1">
+                                    <div class="mx-auto my-2 icon-item icon-item-sm rounded-circle bg-success text-white shadow-none"><span class="far fa-clipboard-check"></span></div>
+                                    <h6 class="text-uppercase fs--2">Compliance</h6>
+                                    <h6 class="text-uppercase fs--2 text-success">No Compliance Required</h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="card shadow-none border h-100 text-center fs--2">
+                                <div class="card-body p-1">
+                                    <div class="mx-auto my-2 icon-item icon-item-sm rounded-circle bg-warning text-white shadow-none"><span class="far fa-box-open"></span></div>
+                                    <h6 class="text-uppercase fs--2">Fulfillment</h6>
+                                    <h6 class="text-uppercase fs--2 text-success">Fulfilled</h6>
+                                    <label class="fs--2 text-uppercase">Carry Out</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card shadow-none border card-block">
+                        <div class="card-body p-0">
+                            <div class="table-responsive pb-4">
+                                <table class="table table-striped fs--1 mb-0 overflow-hidden">
+                                    <thead class="bg-200 text-900">
+                                        <tr>
+                                            <th class="pe-1 text-center white-space-nowrap">QTY</th>
+                                            <th class="pe-1 white-space-nowrap">ITEM</th>
+                                            <th class="pe-1 white-space-nowrap">PRICE</th>
+                                            <th class="pe-1 white-space-nowrap">EXTENDED</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="list" id="table-customers-body">
+                                        <tr>
+                                            <td class="text-center py-2">1</td>
+                                            <td class="white-space-nowrap py-2">Cheese Plate &amp; Charcuterie<br><span class="fs--2 text-500">SKU: CHEESEPLT</span></td>
+                                            <td class="white-space-nowrap py-2"><span class="">$20.00</span><br></td>
+                                            <td class="py-2">$20.00</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-center py-2">1</td>
+                                            <td class="white-space-nowrap py-2">Philly Cheesesteak<br><span class="fs--2 text-500">SKU: PHCSTK</span></td>
+                                            <td class="white-space-nowrap py-2"><span class="">$15.00</span><br></td>
+                                            <td class="py-2">$15.00</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-center py-2">1</td>
+                                            <td class="white-space-nowrap py-2">Raye Crystal Champagne Flutes (Set of 2)<br><span class="fs--2 text-500">SKU: 635863</span></td>
+                                            <td class="white-space-nowrap py-2"><span class="text-info me-2">$34.99</span><br><span><s>$39.99</s></span></td>
+                                            <td class="py-2">$34.99</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-center py-2">1</td>
+                                            <td class="white-space-nowrap py-2">Silicone Wine Glasses<br><span class="fs--2 text-500">SKU: SWG1234</span></td>
+                                            <td class="white-space-nowrap py-2"><span class="text-info me-2">$18.00</span><br><span><s>$20.00</s></span></td>
+                                            <td class="py-2">$18.00</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-center py-2">1</td>
+                                            <td class="white-space-nowrap py-2">2018 Dark Tale Cabernet Sauvignon Glass<br><span class="fs--2 text-500">SKU: 2018DTCSGL</span></td>
+                                            <td class="white-space-nowrap py-2"><span class="">$18.00</span><br></td>
+                                            <td class="py-2">$18.00</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-center py-2">1</td>
+                                            <td class="white-space-nowrap py-2">2021 Summer Splash Rosé Glass<br><span class="fs--2 text-500">SKU: 2021SSRGL</span></td>
+                                            <td class="white-space-nowrap py-2"><span class="">$6.00</span><br></td>
+                                            <td class="py-2">$6.00</td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colspan="3" class="text-end white-space-nowrap py-2 bg-white border-0">Subtotal</td>
+                                            <td class="py-2 border-0">$118.99</td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="3" class="text-end white-space-nowrap py-2 border-0">Shipping</td>
+                                            <td class="py-2 border-0"><span class="">$0.00</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="3" class="text-end white-space-nowrap py-2 border-0">Discounts</td>
+                                            <td class="py-2 border-0">$7.00</td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="3" class="text-end white-space-nowrap py-2 border-0">Sales Tax (8.25%)</td>
+                                            <td class="py-2 border-0">$8.12</td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="3" class="text-end white-space-nowrap py-2 border-0">Gratuity</td>
+                                            <td class="py-2 border-0">$0.00</td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="3" class="text-end white-space-nowrap py-2 h6 text-info border-0">Total</td>
+                                            <td class="py-2 h6 border-0 text-info">$120.11</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-3">
+                    <div class="card shadow-none border h-100 mb-4">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label btn-reveal-trigger d-flex flex-between-center" for="salesReps">Sales Reps <button class="btn btn-link btn-sm btn-reveal text-600" @onclick="@ShowSalesRepsModal"><span class="fas fa-plus"></span></button></label>
+                                <p class="text-wrap">No Sales Reps</p>
+                            </div>
+                            <hr class="editor-spacing mt-4 mb-3" />
+                            <div class="mb-3">
+                                <label class="form-label btn-reveal-trigger d-flex flex-between-center" for="orderTags">Order Tags <button class="btn btn-link btn-sm btn-reveal text-600" @onclick="@ShowTagsModal"><span class="fas fa-plus"></span></button></label>
+                                <p class="text-wrap">No Tags</p>
+                            </div>
+                            <hr class="editor-spacing mt-4 mb-3" />
+                            <div class="mb-3">
+                                <label class="form-label btn-reveal-trigger d-flex flex-between-center" for="selItemType">Customer Notes <button class="btn btn-link btn-sm btn-reveal text-600" @onclick="() => ModalNoteShowDefault(OrderNote.Customer)"><span class="fas fa-plus"></span></button></label>
+                                <div class="row">
+                                    <div class="col-md-10">
+                                        <p class="fs--1 text-500"></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr class="mt-4 mb-3" />
+                            <div class="mb-3">
+                                <label class="form-label btn-reveal-trigger d-flex flex-between-center" for="selItemType">Shipping Notes <button class="btn btn-link btn-sm btn-reveal text-600" @onclick="() => ModalNoteShowDefault(OrderNote.Shipping)"><span class="fas fa-plus"></span></button></label>
+                                <div class="row">
+                                    <div class="col-md-10">
+                                        <p class="fs--1 text-500"></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr class="mt-4 mb-3" />
+                            <div class="mb-5">
+                                <label class="form-label btn-reveal-trigger d-flex flex-between-center" for="selItemType">Gift Notes <button class="btn btn-link btn-sm btn-reveal text-600" @onclick="() => ModalNoteShowDefault(OrderNote.Gift)"><span class="fas fa-plus"></span></button></label>
+                                <div class="row">
+                                    <div class="col-md-10">
+                                        <p class="fs--1 text-500"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-none border">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">Order Activity</h6>
+                </div>
+                <div id="activity-section" class="card-body scrollbar ps-2">
+                    <div class="row timeline timeline-primary timeline-current g-3 pb-card">
+                        <div class="col-auto ps-4 ms-2">
+                            <div class="ps-2">
+                                <div class="icon-item icon-item-sm rounded-circle bg-200 shadow-none"><span class="text-primary far fa-heart-rate"></span></div>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="row gx-0 border-bottom pb-card">
+                                <div class="col">
+                                    <h6 class="text-800 mb-1">Order Created</h6>
+                                    <p class="fs--1 text-600 mb-0">POS</p>
+                                </div>
+                                <div class="col-auto">
+                                    <p class="fs--2 text-500 mb-0">December 27, 2021 03:14 AM</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <SfDialog Width="500px" IsModal="true" @bind-Visible="@NoteModalVisible">
+                <DialogEvents OnOverlayClick="@OnOverlayclick">
+                </DialogEvents>
+                <DialogTemplates>
+                    <Header>
+                        @noteHeader
+                    </Header>
+                    <Content>
+                        <div class="mb-3">
+                            <SfTextBox Multiline="true" placeholder="Enter the note" maxlength="@_noteCharLimit" class="form-control" @bind-Value="@note.Note" @oninput="HandleNoteInput" id="textCustomerNote" rows="4"></SfTextBox>
+                            <p class="@(noteCharRemaining > 0 ? "text-success": "text-danger")">(@noteCharRemaining Remaining)</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputNotifyUsers">Notify</label>
+                            <input class="form-control" @bind-value="@note.UserId" id="inputNotifyUsers" type="number" />
+                        </div>
+                    </Content>
+                </DialogTemplates>
+                <DialogButtons>
+                    <DialogButton Content="Save" IsPrimary="true" OnClick="@ModalNoteSave" />
+                </DialogButtons>
+            </SfDialog>
+
+            <SfDialog CssClass="syncfusion-dialog-size syncfusion-dialog-size-sm" IsModal="true" @bind-Visible="@IsPaymentLogDialogVisible">
+                <DialogEvents OnOverlayClick="@OnOverlayclick">
+                </DialogEvents>
+                <h4 class="mb-2">Payment Log</h4>
+                <div class="row">
+                    <div class="col-4 border text-center">
+                        <p class="mt-2">CASH</p>December 27, 2021<br>
+                        03:14 AM
+                    </div>
+                    <div class="col-8 border">
+                        <p class="successful-payments mt-2">SALE: $120.11</p>
+                        <p class="mt-2 mb-0">Tendered: $120.11</p>
+                        <p>Change: $0.00</p>
+                    </div>
+                </div>
+            </SfDialog>
+
+            <SfDialog Width="500px" IsModal="true" @bind-Visible="@IsTagsDialogVisible">
+                <DialogEvents OnOverlayClick="@OnOverlayclick">
+                </DialogEvents>
+                <DialogTemplates>
+                    <Header>
+                        Order Tags
+                    </Header>
+                    <Content>
+                        <div class="row">
+                            <div class="mb-3 col-10">
+                                <SfMultiSelect Placeholder="Select" TValue="string[]" @bind-Value="orderTags" HtmlAttributes="@(new Dictionary<string,object>() { { "maxLength", "100" } })" TItem="CustomTagModel" AllowCustomValue="true" DataSource="@tags" AllowFiltering="true" Mode="@VisualMode.Box">
+                                    <MultiSelectFieldSettings Text="Value" Value="Value"></MultiSelectFieldSettings>
+                                </SfMultiSelect>
+                            </div>
+                            <div class="col-2 p-0">
+                                <a href="javascript:void(0)" class="btn btn-sm btn-primary" @onclick="@OnActionSuccessHandler" type="button">Save</a>
+                            </div>
+                        </div>
+                    </Content>
+                </DialogTemplates>
+            </SfDialog>
+            <SfDialog Width="500px" IsModal="true" @bind-Visible="@IsSalesRepsModalVisible">
+                <DialogEvents OnOverlayClick="@OnOverlayclick">
+                </DialogEvents>
+                <DialogTemplates>
+                    <Header>
+                        Sales Reps
+                    </Header>
+                    <Content>
+                        <div class="row">
+                            <div class="mb-3 col-10">
+                                <SfMultiSelect TValue="int[]" @bind-Value="@salesReps" TItem="SalesRepresentative" Mode="VisualMode.Box" DataSource="@salesRepresentatives" AllowFiltering="true">
+                                    <MultiSelectFieldSettings Text="Name" Value="UserId"></MultiSelectFieldSettings>
+                                </SfMultiSelect>
+                            </div>
+                            <div class="col-2 p-0">
+                                <a href="javascript:void(0)" class="btn btn-sm btn-primary" @onclick="@SaveSalesRepresentatives" type="button">Save</a>
+                            </div>
+                        </div>
+                    </Content>
+                </DialogTemplates>
+            </SfDialog>
+            <SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="ResendReceiptDialogVisibility">
+                <DialogTemplates>
+                    <Header>
+                        <h5 class="modal-title mb-1" id="modalLabel">Resend Order Receipt</h5>
+                        <div class="">
+                            <label class="form-label" for="">Order #SHAQ-1365</label>
+                        </div>
+                        <div class="">
+                            <label class="form-label" for="">jelliman@cellarpass.com</label>
+                        </div>
+                    </Header>
+                    <Content>
+                        <div class="mb-3">
+                            <p>You have selected to resend the confirmation email.</p>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" checked="@SendToAlternativeEmail" @bind-value="@SendToAlternativeEmail">
+                                <label class="form-check-label" for="">
+                                    Send to Alternative Email Address(es)
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <input @bind-value="AlternativeEmails" disabled="@(!SendToAlternativeEmail)" class="form-control" type="text" placeholder="Enter up to 3 email addresses, separated by commas" />
+                        </div>
+                    </Content>
+                    <FooterTemplate>
+                        <button type="button" @onclick="CloseResendReceiptDialog" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" @onclick="ResendOrderReceiptEmail" class="btn btn-primary">Send</button>
+                    </FooterTemplate>
+                </DialogTemplates>
+            </SfDialog>
+
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+    private string title = "Club Shipments | Synergy Commerce Admin Panel";
+    private Boolean isLoading = false;
+    private bool IsViewModalVisible = false;
+
+    private void OpenViewModal()
+    {
+        IsViewModalVisible = true;
+    }
+    private void CloseViewModal()
+    {
+        IsViewModalVisible = false;
+    }
+
+    //private void OnOverlayclick(MouseEventArgs arg)
+    //{
+    //    IsViewModalVisible = false;
+    //}
+
+    public class ShipmentData
+    {
+        public string Customer { get; set; }
+        public string Address { get; set; }
+        public string ShipTo { get; set; }
+        public string ShipToAddress { get; set; }
+        public string Fulfillment { get; set; }
+        public string Status { get; set; }
+        public string Total { get; set; }
+        public bool isSkip { get; set; }
+        public bool isEdit { get; set; }
+        public bool isProcess { get; set; }
+        public bool isView { get; set; }
+    }
+
+    public List<ShipmentData> ShipmentDataList = new List<ShipmentData>(){
+        new ShipmentData(){ Customer= "Jonathan Elliman", Address="Bainbridge island, Washington, 98110", ShipTo="Javed Kalaniya", ShipToAddress="Arnold, Missouri, 630110", Fulfillment="Ship", Status="", Total="$82.39", isSkip=true, isEdit=true, isProcess= true, isView=false  },
+        new ShipmentData(){ Customer= "Javed Kalaniya", Address="Jersey City, New Jersey", ShipTo="[[LocationName]]", ShipToAddress="", Fulfillment="Pickup", Status="Complete", Total="$54.70", isSkip=false, isEdit=false, isProcess= false, isView=false  },
+        new ShipmentData(){ Customer= "Javed Kalaniya", Address="Jersey City, New Jersey", ShipTo="[[LocationName]]", ShipToAddress="", Fulfillment="Pickup", Status="Complete", Total="$48.26", isSkip=false, isEdit=false, isProcess= false, isView=true  },
+        new ShipmentData(){ Customer= "Jonathan Elliman", Address="St. Helena, California", ShipTo="[[LocationName]]", ShipToAddress="", Fulfillment="Pickup", Status="Complete", Total="$42.89", isSkip=false, isEdit=false, isProcess= false, isView=true  },
+        new ShipmentData(){ Customer= "Jonathan Elliman", Address="St. Helena, California", ShipTo="[[LocationName]]", ShipToAddress="", Fulfillment="Pickup", Status="Failed", Total="$42.89", isSkip=false, isEdit=false, isProcess= false, isView=true  },
+    };
+
+    public Guid? OrderGUID { get; set; }
+    private string noteHeader = "Customer Notes";
+    private bool NoteModalVisible { get; set; } = false;
+    private bool IsPaymentLogDialogVisible { get; set; } = false;
+    private bool IsTagsDialogVisible = false;
+    private bool IsSalesRepsModalVisible = false;
+
+    Member currentMember = null;
+    bool SpinnerVisibility = true;
+    OrderDetailFullModel order { get; set; }
+    OrderNoteModel note = new OrderNoteModel();
+    List<TeamsViewModel> teamUsers = new List<TeamsViewModel>();
+    List<UserDetailViewModel> users = new List<UserDetailViewModel>();
+    List<SalesRepresentative> salesRepresentatives = new List<SalesRepresentative>();
+    List<OrderDetailFullModel> orders = new List<OrderDetailFullModel>();
+    UserDetailModel loggedInUser = new UserDetailModel();
+    int[] salesReps = new int[] { };
+    int[] bindedSalesReps = new int[] { };
+    private int noteCharRemaining = 512;
+    const int _noteCharLimit = 512;
+
+    private string searchOrderNumber { get; set; }
+    private string searchOrderLastName { get; set; }
+    private string searchOrderPhone { get; set; }
+    public bool ResendReceiptDialogVisibility { get; set; }
+    public bool SendToAlternativeEmail { get; set; }
+    public string AlternativeEmails { get; set; }
+
+    public string[] orderTags;
+    public string[] bindedTags;
+
+    List<CustomTagModel> tags = new List<CustomTagModel>();
+    private RenderMode Mode = RenderMode.Inline;
+
+    public class CustomTagModel
+    {
+        public string Id { get; set; }
+        public string Value { get; set; }
+    }
+
+    public class InplaceModes
+    {
+        public string value { get; set; }
+        public string text { get; set; }
+    }
+
+    public class SalesRepresentative
+    {
+        public int UserId { get; set; }
+        public string Name { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        SpinnerVisibility = false;
+    }
+
+    public async Task SaveSalesRepresentatives()
+    {
+        IsSalesRepsModalVisible = false;
+    }
+
+    private void ShowTagsModal()
+    {
+        IsTagsDialogVisible = true;
+        orderTags = bindedTags;
+    }
+
+    private void ShowSalesRepsModal()
+    {
+        IsSalesRepsModalVisible = true;
+        salesReps = bindedSalesReps;
+    }
+
+    private async Task OnActionSuccessHandler()
+    {
+        IsTagsDialogVisible = false;
+    }
+
+    private void ModalNoteShowDefault(OrderNote noteType)
+    {
+        note = new OrderNoteModel();
+        noteCharRemaining = _noteCharLimit;
+        if (noteType == OrderNote.Customer)
+        {
+            noteHeader = "Customer Notes";
+            note.NoteType = (int)OrderNote.Customer;
+        }
+        else if (noteType == OrderNote.Shipping)
+        {
+            noteHeader = "Shipping Notes";
+            note.NoteType = (int)OrderNote.Shipping;
+        }
+        else if (noteType == OrderNote.Gift)
+        {
+            noteHeader = "Gift Notes";
+            note.NoteType = (int)OrderNote.Gift;
+        }
+        else if (noteType == OrderNote.Private)
+        {
+            noteHeader = "Merchant Notes";
+            note.NoteType = (int)OrderNote.Private;
+        }
+
+        this.NoteModalVisible = true;
+    }
+
+    private void ModalNoteShow(int noteId)
+    {
+        NoteModalVisible = true;
+    }
+
+    private async Task ModalNoteSave()
+    {
+        this.NoteModalVisible = false;
+    }
+
+    private async Task ChangeOrderStatus(OrderStatus orderStatus)
+    {
+
+    }
+
+    private void HandleNoteInput(ChangeEventArgs args)
+    {
+        var checkCharLength = (_noteCharLimit - args.Value.ToString().Length);
+        if (checkCharLength > 0)
+        {
+            note.Note = args.Value.ToString();
+            noteCharRemaining = checkCharLength;
+        }
+        else
+        {
+            noteCharRemaining = 0;
+        }
+    }
+
+    private void PaymentLogModalShow()
+    {
+        IsPaymentLogDialogVisible = true;
+    }
+
+    private void OnOverlayclick(MouseEventArgs arg)
+    {
+        IsPaymentLogDialogVisible = false;
+        IsTagsDialogVisible = false;
+        IsSalesRepsModalVisible = false;
+        NoteModalVisible = false;
+    }
+
+
+
+    //Resend Order Receipt
+    private void CloseResendReceiptDialog() => ResendReceiptDialogVisibility = false;
+    private void OpenResendReceiptDialog()
+    {
+        SendToAlternativeEmail = false;
+        AlternativeEmails = string.Empty;
+        ResendReceiptDialogVisibility = true;
+    }
+    private async Task ResendOrderReceiptEmail()
+    {
+        ResendReceiptDialogVisibility = false;
+    }
+}
+
+<style>
+    .orderDetail .e-dlg-header {
+        width: 100%;
+    }
+</style>

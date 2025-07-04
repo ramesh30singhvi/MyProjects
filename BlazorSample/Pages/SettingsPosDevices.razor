@@ -1,0 +1,560 @@
+﻿@page "/settings/devices"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using Syncfusion.Blazor.Spinner
+@using Syncfusion.Blazor
+@using Microsoft.Extensions.Configuration;
+@using CellarPassAppAdmin.Shared.Enums
+@inject ILocalStorageService localStorage
+@inject HttpClient _httpClient
+@inject IBusinessService _businessService
+@inject IPOSLicenceService _posLicenceService
+@inject IConfiguration _configuration
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject IBusinessReceiptProfileViewModel _businessReceiptProfileViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0">
+                            <a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back">
+                                <span class="far fa-arrow-left me-1"></span>
+                            </a><span class="far fa-tablet me-2"></span>
+                            Devices
+                        </h5>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-primary" href="javascript:void();" @onclick="() => OpenModal()">Add Device</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <img src="https://cdn.cellarpass.com/static/images/admin/add-devices-banner.png" class="img-fluid w-100" alt="Pos Devices">
+                    </div>
+                </div>
+                <h5>Installed Devices</h5>
+                <div class="row my-4">
+                    <div class="col-12">
+                        <ul class="nav nav-tabs nav-fill border-bottom-0">
+                            <li class="nav-item">
+                                <button class="nav-link active fs--2" id="pos-tab" data-bs-toggle="tab" data-bs-target="#poscontent" type="button" role="tab">POS Device</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link fs--2" id="printer-tab" @onclick="@(() => HandleInstalledDevicesTabs("printer-tab"))" data-bs-toggle="tab" data-bs-target="#printercontent" type="button" role="tab">Thermal Printer</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link fs--2" id="cc-tab" data-bs-toggle="tab" data-bs-target="#creditcardcontent" type="button" role="tab">Credit Card Reader</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link fs--2" id="kitchen-tab" data-bs-toggle="tab" data-bs-target="#kitchencontent" type="button" role="tab">Kitchen Display</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link fs--2" id="cashdrawer-tab" data-bs-toggle="tab" data-bs-target="#cashdrawercontent" type="button" role="tab">Cash Drawer</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link fs--2" id="tablemanagement-tab" data-bs-toggle="tab" data-bs-target="#tablemanagementcontent" type="button" role="tab">Table Management</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link fs--2" id="guestreviews-tab" data-bs-toggle="tab" data-bs-target="#guestreviewscontent" type="button" role="tab">Guest Reviews</button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link fs--2" id="barcode-tab" data-bs-toggle="tab" data-bs-target="#barcodecontent" type="button" role="tab">Barcode Reader</button>
+                            </li>
+                        </ul>
+                        <div class="tab-content" id="deviceTabContent">
+                            <div class="tab-pane fade show active" id="poscontent" role="tabpanel" aria-labelledby="pos-tab">
+                                <div class="row my-4">
+                                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                        <div class="card shadow-none border h-100 text-center py-3">
+                                            <div class="card-body p-2">
+                                                <a class="ps-5" href="javascript:void();"><i class="fal fa-cash-register fa-3x text-800 mb-2"></i></a>
+                                                <button class="btn btn-link text-600 btn-sm btn-reveal float-end mt-n3" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="settings/pos-devices/ee436305-f079-4aff-b0d3-a4f698b3cb13">Configure Device</a>
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => DeleteDialogOpen())">Delete Device</a>
+                                                </div>
+                                                <h6 class="my-2 fs-0">[[DeviceName]]</h6>
+                                                <h6 class="mb-1 fs-0">[[DeviceStatus]]</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                        <div class="card shadow-none border h-100 text-center py-3">
+                                            <div class="card-body p-2">
+                                                <a class="ps-5" href="javascript:void();"><i class="fal fa-cash-register fa-3x text-800 mb-2"></i></a>
+                                                <button class="btn btn-link text-600 btn-sm btn-reveal float-end mt-n3" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="settings/pos-devices/ee436305-f079-4aff-b0d3-a4f698b3cb13">Configure Device</a>
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => DeleteDialogOpen())">Delete Device</a>
+                                                </div>
+                                                <h6 class="my-2 fs-0">[[DeviceName]]</h6>
+                                                <h6 class="mb-1 fs-0">[[DeviceStatus]]</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade show" id="printercontent" role="tabpanel" aria-labelledby="printer-tab">
+                                <div class="row my-4">
+                                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                        <div class="card shadow-none border h-100 text-center py-3">
+                                            <div class="card-body p-2">
+                                                <a class="ps-5" href="javascript:void();"><i class="fal fa-print fa-3x text-800 mb-2"></i></a>
+                                                <button class="btn btn-link text-600 btn-sm btn-reveal float-end mt-n3" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="settings/pos-devices/ee436305-f079-4aff-b0d3-a4f698b3cb13">Configure Device</a>
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => DeleteDialogOpen())">Delete Device</a>
+                                                </div>
+                                                <h6 class="my-2 fs-0">[[DeviceName]]</h6>
+                                                <h6 class="mb-1 fs-0">[[DeviceStatus]]</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                        <div class="card shadow-none border h-100 text-center py-3">
+                                            <div class="card-body p-2">
+                                                <a class="ps-5" href="javascript:void();"><i class="fal fa-print fa-3x text-800 mb-2"></i></a>
+                                                <button class="btn btn-link text-600 btn-sm btn-reveal float-end mt-n3" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="settings/pos-devices/ee436305-f079-4aff-b0d3-a4f698b3cb13">Configure Device</a>
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => DeleteDialogOpen())">Delete Device</a>
+                                                </div>
+                                                <h6 class="my-2 fs-0">[[DeviceName]]</h6>
+                                                <h6 class="mb-1 fs-0">[[DeviceStatus]]</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <h6 class="my-2">Receipt Profiles</h6>
+                                <div class="row my-4">
+                                    @{
+                                        foreach (var receiptProfile in receiptProfiles)
+                                        {
+                                            <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                                <div class="card shadow-none border h-100 text-center py-3">
+                                                    <div class="card-body p-2">
+                                                        <a class="stretched-link" href="settings/receipt-profile/@receiptProfile.IdGUID"><i class="fal fa-receipt fa-3x text-800 mb-2"></i></a>
+                                                        <h6 class="my-2 fs-0">@receiptProfile.ProfileName</h6>
+                                                        <h6 class="mb-1">Receipt Profile</h6>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                        <div class="card shadow-none border h-100 text-center py-3">
+                                            <div class="card-body p-2">
+                                                <a class="stretched-link" href="settings/receipt-profile/create"><i class="fal fa-receipt fa-3x text-800 mb-2"></i></a>
+                                                <h6 class="my-2 fs-0">Add Receipt Profile</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade show" id="creditcardcontent" role="tabpanel" aria-labelledby="cc-tab">
+                                <div class="row my-4">
+                                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                        <div class="card shadow-none border h-100 text-center py-3">
+                                            <div class="card-body p-2">
+                                                <a class="ps-5" href="javascript:void();"><i class="fal fa-credit-card fa-3x text-800 mb-2"></i></a>
+                                                <button class="btn btn-link text-600 btn-sm btn-reveal float-end mt-n3" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="settings/pos-devices/ee436305-f079-4aff-b0d3-a4f698b3cb13">Configure Device</a>
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => DeleteDialogOpen())">Delete Device</a>
+                                                </div>
+                                                <h6 class="my-2 fs-0">[[DeviceName]]</h6>
+                                                <h6 class="mb-1 fs-0">[[DeviceStatus]]</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                        <div class="card shadow-none border h-100 text-center py-3">
+                                            <div class="card-body p-2">
+                                                <a class="ps-5" href="javascript:void();"><i class="fal fa-credit-card fa-3x text-800 mb-2"></i></a>
+                                                <button class="btn btn-link text-600 btn-sm btn-reveal float-end mt-n3" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="settings/pos-devices/ee436305-f079-4aff-b0d3-a4f698b3cb13">Configure Device</a>
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => DeleteDialogOpen())">Delete Device</a>
+                                                </div>
+                                                <h6 class="my-2 fs-0">[[DeviceName]]</h6>
+                                                <h6 class="mb-1 fs-0">[[DeviceStatus]]</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade show" id="kitchencontent" role="tabpanel" aria-labelledby="kitchen-tab">
+                                <div class="row my-4">
+                                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                        <div class="card shadow-none border h-100 text-center py-3">
+                                            <div class="card-body p-2">
+                                                <a class="ps-5" href="javascript:void();"><i class="fal fa-desktop fa-3x text-800 mb-2"></i></a>
+                                                <button class="btn btn-link text-600 btn-sm btn-reveal float-end mt-n3" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="settings/pos-devices/ee436305-f079-4aff-b0d3-a4f698b3cb13">Configure Device</a>
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => DeleteDialogOpen())">Delete Device</a>
+                                                </div>
+                                                <h6 class="my-2 fs-0">[[DeviceName]]</h6>
+                                                <h6 class="mb-1 fs-0">[[DeviceStatus]]</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                        <div class="card shadow-none border h-100 text-center py-3">
+                                            <div class="card-body p-2">
+                                                <a class="ps-5" href="javascript:void();"><i class="fal fa-desktop fa-3x text-800 mb-2"></i></a>
+                                                <button class="btn btn-link text-600 btn-sm btn-reveal float-end mt-n3" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="settings/pos-devices/ee436305-f079-4aff-b0d3-a4f698b3cb13">Configure Device</a>
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => DeleteDialogOpen())">Delete Device</a>
+                                                </div>
+                                                <h6 class="my-2 fs-0">[[DeviceName]]</h6>
+                                                <h6 class="mb-1 fs-0">[[DeviceStatus]]</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade show" id="cashdrawercontent" role="tabpanel" aria-labelledby="cashdrawer-tab">
+                                <div class="row my-4">
+                                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                        <div class="card shadow-none border h-100 text-center py-3">
+                                            <div class="card-body p-2">
+                                                <a class="ps-5" href="javascript:void();"><i class="fal fa-money-bill fa-3x text-800 mb-2"></i></a>
+                                                <button class="btn btn-link text-600 btn-sm btn-reveal float-end mt-n3" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="settings/pos-devices/ee436305-f079-4aff-b0d3-a4f698b3cb13">Configure Device</a>
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => DeleteDialogOpen())">Delete Device</a>
+                                                </div>
+                                                <h6 class="my-2 fs-0">[[DeviceName]]</h6>
+                                                <h6 class="mb-1 fs-0">[[DeviceStatus]]</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                        <div class="card shadow-none border h-100 text-center py-3">
+                                            <div class="card-body p-2">
+                                                <a class="ps-5" href="javascript:void();"><i class="fal fa-money-bill fa-3x text-800 mb-2"></i></a>
+                                                <button class="btn btn-link text-600 btn-sm btn-reveal float-end mt-n3" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="settings/pos-devices/ee436305-f079-4aff-b0d3-a4f698b3cb13">Configure Device</a>
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => DeleteDialogOpen())">Delete Device</a>
+                                                </div>
+                                                <h6 class="my-2 fs-0">[[DeviceName]]</h6>
+                                                <h6 class="mb-1 fs-0">[[DeviceStatus]]</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade show" id="tablemanagementcontent" role="tabpanel" aria-labelledby="tablemanagment-tab">
+                                <div class="row my-4">
+                                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                        <div class="card shadow-none border h-100 text-center py-3">
+                                            <div class="card-body p-2">
+                                                <a class="ps-5" href="javascript:void();"><i class="fal fa-chair fa-3x text-800 mb-2"></i></a>
+                                                <button class="btn btn-link text-600 btn-sm btn-reveal float-end mt-n3" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="settings/pos-devices/ee436305-f079-4aff-b0d3-a4f698b3cb13">Configure Device</a>
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => DeleteDialogOpen())">Delete Device</a>
+                                                </div>
+                                                <h6 class="my-2 fs-0">[[DeviceName]]</h6>
+                                                <h6 class="mb-1 fs-0">[[DeviceStatus]]</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                        <div class="card shadow-none border h-100 text-center py-3">
+                                            <div class="card-body p-2">
+                                                <a class="ps-5" href="javascript:void();"><i class="fal fa-chair fa-3x text-800 mb-2"></i></a>
+                                                <button class="btn btn-link text-600 btn-sm btn-reveal float-end mt-n3" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="settings/pos-devices/ee436305-f079-4aff-b0d3-a4f698b3cb13">Configure Device</a>
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => DeleteDialogOpen())">Delete Device</a>
+                                                </div>
+                                                <h6 class="my-2 fs-0">[[DeviceName]]</h6>
+                                                <h6 class="mb-1 fs-0">[[DeviceStatus]]</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade show" id="guestreviewscontent" role="tabpanel" aria-labelledby="guestreview-tab">
+                                <div class="row my-4">
+                                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                        <div class="card shadow-none border h-100 text-center py-3">
+                                            <div class="card-body p-2">
+                                                <a class="ps-5" href="javascript:void();"><i class="fal fa-trophy fa-3x text-800 mb-2"></i></a>
+                                                <button class="btn btn-link text-600 btn-sm btn-reveal float-end mt-n3" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="settings/pos-devices/ee436305-f079-4aff-b0d3-a4f698b3cb13">Configure Device</a>
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => DeleteDialogOpen())">Delete Device</a>
+                                                </div>
+                                                <h6 class="my-2 fs-0">[[DeviceName]]</h6>
+                                                <h6 class="mb-1 fs-0">[[DeviceStatus]]</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                        <div class="card shadow-none border h-100 text-center py-3">
+                                            <div class="card-body p-2">
+                                                <a class="ps-5" href="javascript:void();"><i class="fal fa-trophy fa-3x text-800 mb-2"></i></a>
+                                                <button class="btn btn-link text-600 btn-sm btn-reveal float-end mt-n3" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="settings/pos-devices/ee436305-f079-4aff-b0d3-a4f698b3cb13">Configure Device</a>
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => DeleteDialogOpen())">Delete Device</a>
+                                                </div>
+                                                <h6 class="my-2 fs-0">[[DeviceName]]</h6>
+                                                <h6 class="mb-1 fs-0">[[DeviceStatus]]</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade show" id="barcodecontent" role="tabpanel" aria-labelledby="barcode-tab">
+                                <div class="row my-4">
+                                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                        <div class="card shadow-none border h-100 text-center py-3">
+                                            <div class="card-body p-2">
+                                                <a class="ps-5" href="javascript:void();"><i class="fal fa-barcode-read fa-3x text-800 mb-2"></i></a>
+                                                <button class="btn btn-link text-600 btn-sm btn-reveal float-end mt-n3" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="settings/pos-devices/ee436305-f079-4aff-b0d3-a4f698b3cb13">Configure Device</a>
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => DeleteDialogOpen())">Delete Device</a>
+                                                </div>
+                                                <h6 class="my-2 fs-0">[[DeviceName]]</h6>
+                                                <h6 class="mb-1 fs-0">[[DeviceStatus]]</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                        <div class="card shadow-none border h-100 text-center py-3">
+                                            <div class="card-body p-2">
+                                                <a class="ps-5" href="javascript:void();"><i class="fal fa-barcode-read fa-3x text-800 mb-2"></i></a>
+                                                <button class="btn btn-link text-600 btn-sm btn-reveal float-end mt-n3" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="settings/pos-devices/ee436305-f079-4aff-b0d3-a4f698b3cb13">Configure Device</a>
+                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => DeleteDialogOpen())">Delete Device</a>
+                                                </div>
+                                                <h6 class="my-2 fs-0">[[DeviceName]]</h6>
+                                                <h6 class="mb-1 fs-0">[[DeviceStatus]]</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+<SfDialog IsModal="true" Width="800px" ShowCloseIcon="true" @bind-Visible="ModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Add Device</h5></Header>
+        <Content>
+            <div class="">
+                <h5>Select Type of Device</h5>
+                <div class="row my-4">
+                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                        <div class="card shadow-none border h-100 text-center py-3">
+                            <div class="card-body p-2">
+                                <a href="javascript:void();" class="stretched-link"><i class="fal fa-cash-register fa-3x mb-2 text-800"></i></a>
+                                <h6 class="my-2 fs-0">POS Device</h6>
+                                <hr />
+                                <p class="text-start mb-0">Add a POS terminal to ring up sales</p>
+                            </div>
+                            <div class="card-footer text-center p-0">
+                                <p class="mb-0 fs-0">@DeviceType.pos</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                        <div class="card shadow-none border h-100 text-center py-3">
+                            <div class="card-body p-2">
+                                <a href="settings/manage-printers/create" class="stretched-link"><i class="fal fa-print fa-3x mb-2 text-800"></i></a>
+                                <h6 class="my-2 fs-0">Thermal Printer</h6>
+                                <hr />
+                                <p class="text-start mb-0">Add a thermal printer for customer receipts or kitchen tickets.</p>
+                            </div>
+                            <div class="card-footer text-center p-0">
+                                <p class="mb-0 fs-0">@DeviceType.thermalprinter</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                        <div class="card shadow-none border h-100 text-center py-3">
+                            <div class="card-body p-2">
+                                <a href="javascript:void();" class="stretched-link"><i class="fal fa-credit-card fa-3x mb-2 text-800"></i></a>
+                                <h6 class="my-2 fs-0">Credit Card Reader</h6>
+                                <hr />
+                                <p class="text-start mb-0">Accept payments through a credit card reader.</p>
+                            </div>
+                            <div class="card-footer text-center p-0">
+                                <p class="mb-0 fs-0">@DeviceType.creditcardreader</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                        <div class="card shadow-none border h-100 text-center py-3">
+                            <div class="card-body p-2">
+                                <a href="/settings/add-kitchen-display-device" class="stretched-link"><i class="fal fa-desktop fa-3x mb-2 text-800"></i></a>
+                                <h6 class="my-2 fs-0">Kitchen Display</h6>
+                                <hr />
+                                <p class="text-start mb-0">Display fired items to prep stations or kitchens.</p>
+                            </div>
+                            <div class="card-footer text-center p-0">
+                                <p class="mb-0 fs-0">@DeviceType.kitchendisplay</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                        <div class="card shadow-none border h-100 text-center py-3">
+                            <div class="card-body p-2">
+                                <a href="javascript:void();" class="stretched-link"><i class="fal fa-money-bill fa-3x mb-2 text-800"></i></a>
+                                <h6 class="my-2 fs-0">Cash Drawer</h6>
+                                <hr />
+                                <p class="text-start mb-0">Add a cash drawer to accept cash and track cash deposits.</p>
+                            </div>
+                            <div class="card-footer text-center p-0">
+                                <p class="mb-0 fs-0">@DeviceType.cashdrawer</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                        <div class="card shadow-none border h-100 text-center py-3">
+                            <div class="card-body p-2">
+                                <a href="javascript:void();" class="stretched-link"><i class="fal fa-chair fa-3x mb-2 text-800"></i></a>
+                                <h6 class="my-2 fs-0">Table Management</h6>
+                                <hr />
+                                <p class="text-start mb-0">Manage reservations, walk-ins and waitlists through our TablePro app.</p>
+                            </div>
+                            <div class="card-footer text-center p-0">
+                                <p class="mb-0 fs-0">@DeviceType.tablemanagement</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                        <div class="card shadow-none border h-100 text-center py-3">
+                            <div class="card-body p-2">
+                                <a href="javascript:void();" class="stretched-link"><i class="fal fa-trophy fa-3x mb-2 text-800"></i></a>
+                                <h6 class="my-2 fs-0">Guest Reviews</h6>
+                                <hr />
+                                <p class="text-start mb-0">Install the Guest Reviews app and watch the feedback pour in.</p>
+                            </div>
+                            <div class="card-footer text-center p-0">
+                                <p class="mb-0 fs-0">@DeviceType.guestreviews</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                        <div class="card shadow-none border h-100 text-center py-3">
+                            <div class="card-body p-2">
+                                <a href="javascript:void();" class="stretched-link"><i class="fal fa-barcode-read fa-3x mb-2 text-800"></i></a>
+                                <h6 class="my-2 fs-0">Barcode Reader</h6>
+                                <hr />
+                                <p class="text-start mb-0">Barcode readers can be used for adding products to a POS order, scanning tickets and much more.</p>
+                            </div>
+                            <div class="card-footer text-center p-0">
+                                <p class="mb-0 fs-0">@DeviceType.barcodescanner</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+<SfDialog IsModal="true" Width="410px" ShowCloseIcon="true" @bind-Visible="DeleteDialogVisibility">
+    <DialogTemplates>
+        <Header>Delete Device</Header>
+        <Content>
+            <div class="">
+                <p> <i class="fa-regular fa-exclamation-triangle fa-2x me-2"></i> Warning, deleted a device cannot be undone.</p>
+                <p>Are you sure you would like to proceed?</p>
+            </div>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="@CloseDeleteDialog">Cancel</button>
+            <button type="button" class="btn btn-primary" @onclick="@DeleteConfirmation">Yes</button>
+        </FooterTemplate>
+    </DialogTemplates>
+    <DialogEvents Closed="@CloseDeleteDialog"></DialogEvents>
+</SfDialog>
+@code
+{
+    private string title = "Devices";
+    private bool SpinnerVisibility = false;
+    private bool ModalVisibility { get; set; } = false;
+    private bool DeleteDialogVisibility { get; set; } = false;
+    private List<BusinessReceiptProfileListModel> receiptProfiles = new List<BusinessReceiptProfileListModel>();
+    private Member currentMember = new Member();
+
+    private void OpenModal()
+    {
+        this.ModalVisibility = true;
+    }
+    private void CloseModal()
+    {
+        this.ModalVisibility = false;
+    }
+
+    private void DeleteDialogOpen()
+    {
+        DeleteDialogVisibility = true;
+    }
+
+    /// <summary>
+    /// Close dialog
+    /// </summary>
+    private void CloseDeleteDialog() => DeleteDialogVisibility = false;
+
+
+    public async Task DeleteConfirmation()
+    {
+        DeleteDialogVisibility = false;
+        toastService.ShowToast(Constants.DeleteMessage, ToastLevel.Success);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        SpinnerVisibility = false;
+    }
+
+    private async Task HandleInstalledDevicesTabs(string tabName )
+    {
+        if(tabName == "printer-tab")
+        {
+            if (!receiptProfiles.Any())
+            {
+                SpinnerVisibility = true;
+                var getReceiptProfilesResponse = await _businessReceiptProfileViewModel.GetBusinessReceiptProfiles(currentMember.Id);
+                if (getReceiptProfilesResponse.success)
+                {
+                    receiptProfiles = getReceiptProfilesResponse.data.OrderBy(x => x.ProfileName).ToList();
+                }
+                SpinnerVisibility = false;
+            }
+        }
+    }
+}

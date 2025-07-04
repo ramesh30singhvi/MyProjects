@@ -1,0 +1,74 @@
+﻿@page "/events/ticket-event"
+@layout AuthorizedLayoutSlim
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject IBusinessViewModel _businessViewModel
+@inject ISettingsViewModel _settingsViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject NavigationManager _navigationManager
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="isLoading"></SfSpinner>
+
+        <div class="d-flex justify-content-start navbar navbar-light d-lg-none px-0">
+            <button class="navbar-toggler me-2" type="button" data-bs-toggle="collapse" data-bs-target="#secondary-menu" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle menu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <h4>Event Name Here</h4>
+        </div>
+        <div class="row">
+            <div id="secondary-menu" class="col-lg-2 pt-4 bg-light border-end min-vh-100 d-lg-block collapse">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="#">Active</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Link</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Link</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link disabled">Disabled</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="col-lg-7 offset-lg-1 pt-4">
+                <h1>Event Dashboard</h1>
+                <div class="mt-4">
+                    <p>Some content here</p>
+                </div>
+
+            </div>
+        </div>
+        
+    </Authorized>
+</AuthorizeView>
+
+@code
+{
+    private bool isLoading { get; set; }
+
+    private string title = "Ticket Events | Synergy Commerce Admin Panel";
+
+
+    protected override async Task OnInitializedAsync()
+    {
+
+
+    }
+
+}
+

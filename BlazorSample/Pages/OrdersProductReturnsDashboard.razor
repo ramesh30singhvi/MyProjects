@@ -1,0 +1,122 @@
+﻿@page "/orders/product-returns-dashboard"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card">
+    <div class="card-header bg-light">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="/store/orders" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-recycle me-2"></span>Product Returns Dashboard</h5>
+            </div>
+            <div class="col-auto">
+                <select class="form-select fs--1" id="selLastDays">
+                    <option value="1" selected>Last 7 Days</option>
+                    <option value="2">Last 30 Days</option>
+                    <option value="2">Last 60 Days</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <ul class="nav nav-tabs mt-4 text-uppercase">
+            <li class="nav-item"><a class="nav-link active" id="Pending-tab" data-bs-toggle="tab" href="#tab-Pending" role="tab" aria-controls="tab-Pending" aria-selected="false">PENDING</a></li>
+            <li class="nav-item"><a class="nav-link" id="Processed-tab" data-bs-toggle="tab" href="#tab-Processed" role="tab" aria-controls="tab-Processed" aria-selected="false">PROCESSED</a></li>
+            <li class="nav-item"><a class="nav-link" id="All-tab" data-bs-toggle="tab" href="#tab-All" role="tab" aria-controls="tab-All" aria-selected="true">All</a></li>
+        </ul>
+        <div class="tab-content border-x border-bottom p-3 mb-2" id="productTabContent">
+            <div class="tab-pane fade show active" id="tab-Pending" role="tabpanel" aria-labelledby="Pending-tab">
+                <div class="mt-2">
+                    <div class="row mb-3">
+                        <div class="col-12 col-md-4">
+                            <select class="form-select" id="selBulkActions">
+                                <option selected>[[Inventory1]]</option>
+                                <option>[[Inventory2]]</option>
+                                <option>[[Inventory3]]</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-8">
+                            <button class="btn btn-sm btn-primary">Transfer</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="min-vh-75 sf-grid">
+                    <SfGrid DataSource="@inventory" AllowPaging="true" Width="100%">
+                        <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                        <GridPageSettings PageSize="50"></GridPageSettings>
+                        <GridTemplates>
+                            <EmptyRecordTemplate>
+                                @if (!isLoading && inventory.Count <= 0)
+                                {
+                                    <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                        <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Inventory Available</h6>
+                                        <button type="button" class="btn btn-outline-primary">Get Started</button>
+                                    </div>
+                                }
+                            </EmptyRecordTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            <GridColumn Type="ColumnType.CheckBox" TextAlign="TextAlign.Center" Width="20"></GridColumn>
+                            <GridColumn Field=@nameof(InventoryModel.Status) HeaderText="Status" TextAlign="TextAlign.Left" Width="40" />
+                            <GridColumn Field=@nameof(InventoryModel.Source) HeaderText="Source" TextAlign="TextAlign.Left" Width="40" />
+                            <GridColumn Field=@nameof(InventoryModel.ReturnRequested) HeaderText="Return Requested" TextAlign="TextAlign.Left" Width="40" />
+                            <GridColumn HeaderText="Return Order" TextAlign="TextAlign.Left" Width="40">
+                                <Template>
+                                    @{
+                                        var returnOrder = (context as InventoryModel).ReturnOrder;
+                                        <a href="store/orders/order/5c368936-e85a-41c8-9aa7-8ef4b576e967">@returnOrder</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="Sku" TextAlign="TextAlign.Left" Width="40">
+                                <Template>
+                                    @{
+                                        var productName = (context as InventoryModel).Sku;
+                                        <a href="store/products/ee436305-f079-4aff-b0d3-a4f698b3cb13">@productName</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(InventoryModel.ReturnQty) HeaderText="Return Qty" TextAlign="TextAlign.Left" Width="40" />
+                            <GridColumn Field=@nameof(InventoryModel.Product) HeaderText="Product" TextAlign="TextAlign.Left" Width="60" />
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="tab-Processed" role="tabpanel" aria-labelledby="Processed-tab"></div>
+            <div class="tab-pane fade" id="tab-All" role="tabpanel" aria-labelledby="All-tab"></div>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    private string title = "Product Returns Dashboard | Synergy Commerce Admin Panel";
+    private Boolean isLoading = false;
+    private class InventoryModel
+    {
+        public string Status { get; set; }
+        public string Source { get; set; }
+        public string ReturnRequested { get; set; }
+        public string ReturnOrder { get; set; }
+        public string Sku { get; set; }
+        public string ReturnQty { get; set; }
+        public string Product { get; set; }
+    }
+    private List<InventoryModel> inventory = new List<InventoryModel>() {
+        new InventoryModel(){ Status= "Pending Return", Source= "Web", ReturnRequested="3/26/2022", ReturnOrder="SHTR-1257", Sku="1546734", ReturnQty="12", Product="2018 Cabernet Sauvignon" },
+        new InventoryModel(){ Status= "Pending Return", Source= "POS", ReturnRequested="3/21/2022", ReturnOrder="SHTR-1249", Sku="1546734", ReturnQty="4", Product="2018 Cabernet Sauvignon" },
+        new InventoryModel(){ Status= "Pending Return", Source= "Web", ReturnRequested="3/18/2022", ReturnOrder="SHTR-1221", Sku="1546734", ReturnQty="4", Product="2018 Cabernet Sauvignon" },
+        new InventoryModel(){ Status= "Pending Return", Source= "Web", ReturnRequested="3/13/2022", ReturnOrder="SHTR-1166", Sku="1546734", ReturnQty="4", Product="2018 Cabernet Sauvignon" },
+    };
+}

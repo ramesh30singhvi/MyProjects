@@ -1,0 +1,394 @@
+﻿@page "/settings/holidays"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Entities.v4;
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Syncfusion.Blazor.SplitButtons
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject IBusinessPropertyViewModel _propertyViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ISettingsViewModel _settingsViewModel
+@inject ILocalStorageService localStorage
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<div class="card">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-calendar-times me-2"></span>Business Holidays</h5>
+            </div>
+            <div class="col-auto col-md-3 d-flex mb-2 mb-md-0 sf-ddl">
+                <SfDropDownList TValue="int" TItem="BusinessPropertyModel" @bind-Value="CurrentBusinessProperty" PopupHeight="350px" PopupWidth="203px" DataSource="businessProperties">
+                    <DropDownListFieldSettings Value="Id" Text="PropertyName"></DropDownListFieldSettings>
+                    <DropDownListEvents ValueChange="OnBusinessPropertyDropdownChange" TItem="BusinessPropertyModel" TValue="int"></DropDownListEvents>
+                </SfDropDownList>
+            </div>
+
+            <div class="col-auto d-flex sf-ddl">
+                <SfDropDownList TValue="int" TItem="YearDDN" @bind-Value="currentYear" PopupHeight="350px" PopupWidth="203px" DataSource="@yearList">
+                    <DropDownListFieldSettings Value="Year" Text="Name"></DropDownListFieldSettings>
+                    <DropDownListEvents TItem="YearDDN" TValue="int" ValueChange="OnYearDropdownChange"></DropDownListEvents>
+                </SfDropDownList>
+            </div>
+            <div class="col-auto">
+                <button type="button" class="btn btn-sm btn-primary" @onclick="()=>AddDialogOpen()">Add New</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body min-vh-50 p-0 sf-grid">
+        <SfGrid DataSource="@businessHolidays" AllowPaging="false" Width="100%">
+            <GridColumns>
+                <GridColumn HeaderText="" TextAlign="TextAlign.Left" Width="300">
+                    <Template Context="BusinessHolidayContext">
+                        @{
+                            var businessHoliday = (BusinessHolidayContext as BusinessHolidayRequestModel);
+                            <button class="btn btn-link text-800 fs--1" @onclick="()=>EditDialogOpen(businessHoliday)">@businessHoliday.HolidayName</button>
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="Closed" TextAlign="TextAlign.Center" Width="80">
+                    <Template Context="BusinessHolidayContext">
+                        @{
+                            var businessHoliday = (BusinessHolidayContext as BusinessHolidayRequestModel);
+                        }
+                        @if (businessHoliday.BusinessClosed)
+                        {
+                            <span class="checked_box">
+                                <span class="far fa-check-square"></span>
+                                ✓
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="unchecked_box">
+                                <span class="empty-check"></span>
+                            </span>
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="Date Observed" Type="ColumnType.String" TextAlign="TextAlign.Left" Width="200">
+                    <Template Context="BusinessHolidayContext">
+                        @{
+                            var businessHoliday = (BusinessHolidayContext as BusinessHolidayRequestModel);
+                            if (businessHoliday.HolidayEndDate != null)
+                            {
+                                <span>
+                                    @(businessHoliday.HolidayStartDate.Value.ToString("MM/dd/yyyy") + " - " + businessHoliday.HolidayEndDate.Value.ToString("MM/dd/yyyy"))
+                                </span>
+                            }
+                            else
+                            {
+                                <span>
+                                    @(businessHoliday.HolidayStartDate.Value.ToString("MM/dd/yyyy"))
+                                </span>
+                            }
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="Modified" Type="ColumnType.String" TextAlign="TextAlign.Left" Width="200">
+                    <Template Context="BusinessHolidayContext">
+                        @{
+                            var businessHoliday = (BusinessHolidayContext as BusinessHolidayRequestModel);
+                            <span>
+                                @*@(TimeZoneInfo.ConvertTimeFromUtc(businessHoliday.ModifiedDate.Value, TimeZoneInfo.Local))*@
+                                @(businessHoliday.ModifiedDate.Value)
+                            </span>
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="Modified By" Type="ColumnType.String" TextAlign="TextAlign.Left" Width="150">
+                    <Template Context="BusinessHolidayContext">
+                        @{
+                            var businessHoliday = (BusinessHolidayContext as BusinessHolidayRequestModel);
+                            <span>
+                                @(businessHoliday.FirstName +" "+ businessHoliday.LastName )
+                            </span>
+                        }
+                    </Template>
+                </GridColumn>
+                <GridColumn HeaderText="" TextAlign="TextAlign.Left" Width="50">
+                    <Template Context="BusinessHolidayContext">
+                        @{
+                            var businessHoliday = (BusinessHolidayContext as BusinessHolidayRequestModel);
+                            <button class="delete_icon" @onclick="()=>DeleteDialogOpen(businessHoliday.Id.Value)">
+                                <span class="far fa-trash-alt"></span>
+                            </button>
+                        }
+                    </Template>
+                </GridColumn>
+            </GridColumns>
+        </SfGrid>
+    </div>
+</div>
+
+<EditForm Model="@businessHolidayRequestModel" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="AddEditDialogVisibility">
+        <DialogTemplates>
+            <Header><h5 class="modal-title" id="modalLabel">Add Business Holiday</h5></Header>
+            <Content>
+                <div class="row">
+                    <div class="col-12 mb-3 sf-ddl">
+                        <label class="form-label" for="inputHolidayName">Business Profile</label>
+                        <SfDropDownList TValue="int" TItem="BusinessPropertyModel" @bind-Value="AddEditForBusinessProperty" DataSource="businessProperties">
+                            <DropDownListFieldSettings Value="Id" Text="PropertyName"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                    </div>
+                    <div class="col-12 mb-3 sf-ddl">
+                        <label class="form-label" for="inputHolidayName">Holidays</label>
+                        <SfComboBox AllowFiltering="true" FilterType="Syncfusion.Blazor.DropDowns.FilterType.Contains" TValue="string" TItem="HolidayModel" Placeholder="Add Custom Date" DataSource="@holidayList">
+                            <ComboBoxEvents TItem="HolidayModel" TValue="string" ValueChange="OnHolidayComboChange"></ComboBoxEvents>
+                            <ComboBoxFieldSettings GroupBy="Category" Text="HolidayDisplayName" Value="HolidayDate"></ComboBoxFieldSettings>
+                        </SfComboBox>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="inputHolidayName">Holiday Name</label>
+                        <SfTextBox @bind-Value="businessHolidayRequestModel.HolidayName"></SfTextBox>
+                        <ValidationMessage For="@(() => businessHolidayRequestModel.HolidayName)" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        @if (businessHolidayRequestModel.BusinessClosed)
+                        {
+                            <label class="form-label" for="switchClosed">Closed</label>
+                        }
+                        else
+                        {
+                            <label class="form-label" for="switchClosed">Open</label>
+                        }
+                        <div class="form-check form-switch ps-0">
+                            <SfSwitch @bind-Checked="@businessHolidayRequestModel.BusinessClosed" OffLabel="Open" OnLabel="Closed"></SfSwitch>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="inputStartDate">Start Date</label>
+                        <SfDatePicker Max="MinDate" @bind-Value="businessHolidayRequestModel.HolidayStartDate">
+                            <DatePickerEvents TValue="DateTime?" ValueChange="()=>StartDateChangeHandler(businessHolidayRequestModel)"></DatePickerEvents>
+                        </SfDatePicker>
+                        <ValidationMessage For="@(() => businessHolidayRequestModel.HolidayStartDate)" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="inputEndDate">End Date</label>
+                        <SfDatePicker Min="MaxDate" @bind-Value="businessHolidayRequestModel.HolidayEndDate">
+                            <DatePickerEvents TValue="DateTime?" ValueChange="()=>EndDateChangeHandler(businessHolidayRequestModel)"></DatePickerEvents>
+                        </SfDatePicker>
+                    </div>
+                </div>
+            </Content>
+            <FooterTemplate>
+                <button type="button" @onclick="CloseAddEditDialog" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" @onclick="@(() => AddUpdateBusinessHoliday(formContext))" class="btn btn-primary">Save</button>
+            </FooterTemplate>
+        </DialogTemplates>
+    </SfDialog>
+</EditForm>
+
+@*Delete confimation dialog*@
+<DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="DeleteBusinessHoliday"></DeleteConfirmation>
+
+@code
+{
+    private bool FirstRender { get; set; }
+    bool openDeleteDialog = false;
+    private string title = "Business Holidays | Synergy Commerce Admin Panel";
+    Member currentMember = null;
+    private bool SpinnerVisibility { get; set; } = false;
+    private bool AddEditDialogVisibility { get; set; } = false;
+    List<BusinessHolidayRequestModel> businessHolidays = new List<BusinessHolidayRequestModel>();
+    BusinessHolidayRequestModel businessHolidayRequestModel = new BusinessHolidayRequestModel();
+    List<HolidayModel> holidayList = new List<HolidayModel>();
+    List<BusinessPropertyModel> businessProperties = new List<BusinessPropertyModel>();
+    public int CurrentBusinessProperty { get; set; }
+    public int AddEditForBusinessProperty { get; set; }
+    int idForDelete = 0;
+    int currentYear = DateTime.Now.Year;
+    List<YearDDN> yearList = new List<YearDDN>(){
+        new YearDDN { Year = DateTime.UtcNow.Year, Name = "Current Year ("+ DateTime.UtcNow.Year +")" },
+        new YearDDN { Year = DateTime.UtcNow.Year + 1, Name = "Following Year ("+ (DateTime.UtcNow.Year + 1) +")"}
+    };
+    public class YearDDN
+    {
+        public string Name { get; set; }
+
+        public int Year { get; set; }
+    }
+    public async Task OnYearDropdownChange(ChangeEventArgs<int, YearDDN> eventArgs)
+    {
+        SpinnerVisibility = true;
+        requestDto.HolidayForYear = eventArgs.ItemData.Year;
+        requestDto.BusinessPropertyId = CurrentBusinessProperty;
+        var result = await _settingsViewModel.GetBusinessHolidayAsync(requestDto);
+        businessHolidays = result.data;
+        SpinnerVisibility = false;
+    }
+
+    public DateTime MinDate { get; set; }
+    public DateTime MaxDate { get; set; }
+    public void StartDateChangeHandler(BusinessHolidayRequestModel businessHolidayRequestModel)
+    {
+        MinDate = businessHolidayRequestModel.HolidayStartDate.Value.AddDays(1);
+    }
+    public void EndDateChangeHandler(BusinessHolidayRequestModel businessHolidayRequestModel)
+    {
+        MaxDate = businessHolidayRequestModel.HolidayEndDate.Value.AddDays(-1);
+    }
+
+    BusinessHolidayRequestDto requestDto = new BusinessHolidayRequestDto
+    {
+        HolidayForYear = DateTime.Now.Year
+    };
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        FirstRender = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        requestDto.BusinessId = currentMember.Id;
+        //Get business property data
+        var businessPropertyResponse = await _propertyViewModel.GetBusinessProperties(currentMember.Id);
+        businessProperties = businessPropertyResponse ?? new List<BusinessPropertyModel>();
+        CurrentBusinessProperty = businessPropertyResponse?.FirstOrDefault()?.Id ?? 0;
+        AddEditForBusinessProperty = businessPropertyResponse?.FirstOrDefault()?.Id ?? 0;
+        requestDto.BusinessPropertyId = CurrentBusinessProperty;
+        //Get Holiday Data
+        var result = await _settingsViewModel.GetBusinessHolidayAsync(requestDto);
+        businessHolidays = result.data;
+
+        holidayList = new List<HolidayModel>();
+        holidayList.AddRange(HolidayHelper.HolidayListForYear(DateTime.Now.Year));
+        holidayList.AddRange(HolidayHelper.HolidayListForYear(DateTime.Now.Year + 1));
+        SpinnerVisibility = false;
+    }
+
+    public async Task OnBusinessPropertyDropdownChange(ChangeEventArgs<int, BusinessPropertyModel> eventArgs)
+    {
+        if (!FirstRender)
+        {
+            SpinnerVisibility = true;
+            CurrentBusinessProperty = eventArgs.ItemData.Id;
+            requestDto.BusinessPropertyId = CurrentBusinessProperty;
+            var result = await _settingsViewModel.GetBusinessHolidayAsync(requestDto);
+            businessHolidays = result.data;
+            SpinnerVisibility = false;
+        }
+        else
+            FirstRender = false;
+    }
+
+    public async Task OnHolidayComboChange(ChangeEventArgs<string, HolidayModel> args)
+    {
+        if (args.ItemData == null)
+        {
+            businessHolidayRequestModel.HolidayName = string.Empty;
+            businessHolidayRequestModel.HolidayStartDate = null;
+            MinDate = DateTime.MinValue;
+            MaxDate = DateTime.MaxValue;
+        }
+        else
+        {
+            businessHolidayRequestModel.HolidayName = args.ItemData?.HolidayName;
+            businessHolidayRequestModel.HolidayStartDate = Convert.ToDateTime(args.ItemData.HolidayDate);
+            businessHolidayRequestModel.HolidayEndDate = Convert.ToDateTime(args.ItemData.HolidayDate);
+            MinDate = Convert.ToDateTime(args.ItemData.HolidayDate).AddDays(1);
+            MaxDate = Convert.ToDateTime(args.ItemData.HolidayDate);
+        }
+    }
+
+
+    public async Task AddUpdateBusinessHoliday(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            businessHolidayRequestModel.BusinessPropertyId = AddEditForBusinessProperty;
+            var response = await _settingsViewModel.AddUpdateBusinessHolidayAsync(businessHolidayRequestModel);
+            if (response.success)
+            {
+                var result = await _settingsViewModel.GetBusinessHolidayAsync(requestDto);
+                businessHolidays = result.data;
+                SpinnerVisibility = false;
+                if (businessHolidayRequestModel.Id != null && businessHolidayRequestModel.Id > 0)
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                else
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+
+                AddEditDialogVisibility = false;
+            }
+            else
+            {
+                SpinnerVisibility = false;
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    public void CloseAddEditDialog()
+    {
+        AddEditDialogVisibility = false;
+    }
+    private void AddDialogOpen()
+    {
+        MinDate = DateTime.MinValue;
+        MaxDate = DateTime.MaxValue;
+        businessHolidayRequestModel = new BusinessHolidayRequestModel();
+        businessHolidayRequestModel.BusinessClosed = true;
+        AddEditForBusinessProperty = businessProperties?.FirstOrDefault()?.Id ?? 0;
+        AddEditDialogVisibility = true;
+    }
+    private void EditDialogOpen(BusinessHolidayRequestModel business)
+    {
+        businessHolidayRequestModel = new BusinessHolidayRequestModel();
+        businessHolidayRequestModel.BusinessClosed = business.BusinessClosed;
+        businessHolidayRequestModel.HolidayEndDate = business.HolidayEndDate;
+        businessHolidayRequestModel.HolidayStartDate = business.HolidayStartDate;
+        businessHolidayRequestModel.Id = business.Id;
+        businessHolidayRequestModel.HolidayName = business.HolidayName;
+        AddEditForBusinessProperty = business.BusinessPropertyId;
+        if (business.HolidayEndDate != null)
+        {
+            MinDate = business.HolidayStartDate.Value.AddDays(1);
+            MaxDate = business.HolidayEndDate.Value.AddDays(-1);
+        }
+        else
+            MinDate = business.HolidayStartDate.Value.AddDays(1);
+        AddEditDialogVisibility = true;
+    }
+
+    private void DialogClose() => openDeleteDialog = false;
+
+    private void DeleteDialogOpen(int id)
+    {
+        openDeleteDialog = true;
+        idForDelete = id;
+    }
+
+    private async Task DeleteBusinessHoliday()
+    {
+        SpinnerVisibility = true;
+        var response = await _settingsViewModel.DeleteBusinessHolidayById(idForDelete);
+        openDeleteDialog = false;
+        if (response)
+        {
+            var result = await _settingsViewModel.GetBusinessHolidayAsync(requestDto);
+            businessHolidays = result.data;
+            SpinnerVisibility = false;
+            toastService.ShowToast(Constants.DeleteMessage, ToastLevel.Success);
+        }
+        else
+        {
+            SpinnerVisibility = false;
+            toastService.ShowToast("Error!", ToastLevel.Error);
+        }
+    }
+}

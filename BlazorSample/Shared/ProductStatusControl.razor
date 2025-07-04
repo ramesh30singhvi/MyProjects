@@ -1,0 +1,36 @@
+﻿@using CellarPassAppAdmin.Shared.Enums
+
+<div class="d-flex justify-content-center">
+    <SfTooltip>
+        <TooltipTemplates><Content>@prodcutStatusDesc</Content></TooltipTemplates>
+        <span class="@(CheckStatus(productStatus))"></span>
+    </SfTooltip>
+</div>
+
+@code {
+    [Parameter]
+    public int productStatus { get; set; }
+
+    [Parameter]
+    public string prodcutStatusDesc { get; set; }
+
+    private string CheckStatus(int status)
+    {
+        if (status == (int)ProductStatus.Active_Public)
+        {
+            return "fas fa-eye";
+        }
+        else if (status == (int)ProductStatus.Active_Private)
+        {
+            return "fas fa-lock";
+        }
+        else if (status == (int)ProductStatus.Draft)
+        {
+            return "fas fa-file-edit";
+        }
+        else
+        {
+            return "fas fa-times";
+        }
+    }
+}

@@ -1,0 +1,61 @@
+﻿@page "/settings/integrated-partners/reserve-cloud"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-0"><a href="settings/integrated-partners" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-plug me-2"></span>ReServe Cloud</h5>
+                    </div>
+                    <div class="col-md-auto"><a class="btn btn-sm btn-primary" href="#!">Save</a></div>
+                </div>
+            </div>
+            <div class="card-body">
+
+                <div class="mb-3">
+                    <label for="inputReServeSiteId" class="form-label">ReServe Site ID</label>
+                    <input class="form-control" id="inputReServeSiteId" type="text" placeholder="Site ID">
+                </div>
+                <div class="mb-3">
+                    <label for="inputReServeApiUsername" class="form-label">ReServe Api Username</label>
+                    <input class="form-control" id="inputReServeApiUsername" type="text" placeholder="Api Username">
+                </div>
+                <div class="mb-3">
+                    <label for="inputReServeApiPassword" class="form-label">ReServe Api Password</label>
+                    <input class="form-control" id="inputReServeApiPassword" type="text" placeholder="Api Password">
+                </div>
+
+            </div>
+
+        </div>
+
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+
+    private string title = "ReServe Cloud | Synergy Commerce Admin Panel";
+
+    
+}

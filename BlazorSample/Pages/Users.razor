@@ -1,0 +1,345 @@
+﻿@page "/people/team"     
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using Blazored.LocalStorage
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.XlsIO;
+@using System.Data;
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ITeamViewModel _teamViewModel
+@inject IBusinessPositionNameViewModel _businessPositionNameViewModel
+@inject ILocalStorageService localStorage
+@inject IJSRuntime jsRuntime
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="Manage Team | Synergy Commerce Admin Panel"></Title>
+<SfSpinner @bind-Visible="loading"></SfSpinner>
+<Feedback DisplayWordOur="true" PageSection="PageSection.TeamManagement"></Feedback>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row flex-between-center">
+            <div class="col-auto">
+                <h5 class="mb-4 mb-md-0" id="followers"><span class="far fa-user-tie me-2"></span>Manage Team <span class="d-none d-sm-inline-block">(@filteredTeams.Count)</span></h5>
+            </div>
+            <div class="col-auto d-flex">
+                <a class="btn btn-sm btn-outline-primary me-2" @onclick="ExportTeamMembers" href="javascript:void();">Export</a>
+                <a class="btn btn-sm btn-primary" href="javascript:void();" @onclick="DisplayInviteTeamMemberModal">Add Team Member</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="row m-3 border-bottom">
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="inputGroupSearch">Search</label>
+                <div class="input-group mb-3">
+                    <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                    <input type="text" @bind="searchText" @oninput="FilterTeamMembers" class="form-control" placeholder="Search" />
+                </div>
+            </div>
+            <div class="col-12 col-md-6">
+                <label class="form-label" for="inputGroupSearch">Filter by Position</label>
+                <select class="form-select" @onchange="@SelectRole">
+                    <option value="All" selected="selected">All Team Positions</option>
+                    @foreach (var item in Roles)
+                    {
+                        <option value="@item">@item</option>
+                    }
+                </select>
+            </div>
+        </div>
+        @if (filteredTeams.Count > 0)
+        {
+            <div class="row g-0 text-center fs--1">
+                @foreach (var item in filteredTeams)
+                {
+                    <div class="col-6 col-md-4 col-lg-3 col-xxl-2 mb-1">
+                        <div class="bg-white p-3 h-100">
+                            <a href="people/team/@item.UserGUID">
+                                <div class="avatar avatar-4xl"><img class="img-thumbnail img-fluid rounded-circle mb-3 shadow-sm" src="@(item.UserImageUrl)" alt="@(item.FirstName + ' ' + item.LastName + ' ' + "Photo")" /></div>
+                            </a>
+                            <h6 class="mb-1"><a href="people/team/@item.UserGUID">@item.FirstName @item.LastName</a></h6>
+                            @*<p class="fs--2 mb-1"><a class="text-700" href="javascript:void();">@item.Title</a></p>*@
+                            <p class="fs--2 mb-1">@item.RoleNames</p>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="m-3">No Record Found</p>
+        }
+    </div>
+    <div class="card-footer">
+    </div>
+</div>
+
+<SfDialog IsModal="true" Width="700px" ShowCloseIcon="true" @bind-Visible="IsInviteTeamMemberModalVisible">
+    <DialogEvents OnOverlayClick="() => IsInviteTeamMemberModalVisible = false"></DialogEvents>
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Invite Team Member</h5></Header>
+        <Content>
+            <EditForm @ref="inviteTeamMemberForm" Model="inviteTeamMember" Context="formContext">
+                <DataAnnotationsValidator />
+                <div class="mb-3">
+                    <label class="form-label" for="selPosition">Position</label>
+                    <SfDropDownList TValue="int" ID="selPosition" TItem="BusinessPositionNameModel" @bind-Value="inviteTeamMember.PositionId" Placeholder="Select the Team member position" DataSource="businessPositionNames">
+                        <DropDownListFieldSettings Value="Id" Text="TitleName"></DropDownListFieldSettings>
+                    </SfDropDownList>
+                    <label class="mt-2">The job position you assign to the new team member defines the level of access they will have to your admin panel.</label>
+                    <hr />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="teamMemberEmail">Email</label>
+                    <InputText @bind-Value="inviteTeamMember.Email" id="teamMemberEmail" class="form-control" type="text" />
+                    <ValidationMessage For="@(() => inviteTeamMember.Email)" />
+                </div>
+            </EditForm>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="() => IsInviteTeamMemberModalVisible = false">Cancel</button>
+            <button type="button" class="btn btn-primary" @onclick="InviteUser">Send Invite</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+
+    private bool loading = false;
+    private bool IsInviteTeamMemberModalVisible { get; set; }
+    private Member currentMember = new Member();
+    private List<TeamsViewModel> teams = new List<TeamsViewModel>();
+    private List<TeamsViewModel> filteredTeams = new List<TeamsViewModel>();
+    private string[] Roles = { "Admin", "Host", "Server", "Accounting" };
+    List<BusinessPositionNameModel> businessPositionNames = new List<BusinessPositionNameModel>();
+    InviteUserRequestModel inviteTeamMember = new InviteUserRequestModel();
+    private List<ExportTeamMemberModel> exportTeamMembers = new List<ExportTeamMemberModel>();
+    EditForm inviteTeamMemberForm;
+    private string searchText { get; set; }
+    private string selectedRole { get; set; } = "All";
+
+    protected override async Task OnInitializedAsync()
+    {
+        loading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        TeamResponse response = await _teamViewModel.GetBusinessTeams(currentMember.Id);
+        if (response.success)
+        {
+            teams = response.data;
+            filteredTeams = teams;
+        }
+
+        loading = false;
+    }
+
+    private void SelectRole(ChangeEventArgs eventArgs)
+    {
+        selectedRole = eventArgs.Value.ToString();
+        HandleRoleFilter();
+        if (!string.IsNullOrWhiteSpace(searchText) && searchText.Length > 2)
+            HandleSearchFilter();
+        StateHasChanged();
+    }
+
+    private void HandleRoleFilter()
+    {
+        if (selectedRole != "All")
+        {
+            filteredTeams = teams.Where(x => x.RoleNames?.Contains(selectedRole) ?? false).ToList();
+        }
+        else
+        {
+            filteredTeams = teams;
+        }
+    }
+
+    private void HandleSearchFilter()
+    {
+        var loweredText = searchText.ToLower();
+        filteredTeams = filteredTeams.Where(x => (x.FirstName?.ToLower().Contains(loweredText) ?? false) || (x.LastName?.ToLower().Contains(loweredText) ?? false) || (x.Email?.ToLower().Contains(loweredText) ?? false)).ToList();
+    }
+
+    private void FilterTeamMembers(ChangeEventArgs args)
+    {
+        searchText = args.Value == null ? null : args.Value.ToString();
+        if(!string.IsNullOrWhiteSpace(searchText) && searchText.Length > 2)
+        {
+            HandleSearchFilter();
+        }
+        else
+        {
+            HandleRoleFilter();
+        }
+    }
+
+    private async Task DisplayInviteTeamMemberModal()
+    {
+        inviteTeamMember = new InviteUserRequestModel();
+        // Get Business Positions
+        if (!businessPositionNames.Any())
+        {
+            loading = true;
+            var getUserData = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+            var currentUserId = getUserData?.Id ?? 0;
+            if (currentUserId > 0)
+            {
+                //Get Business Teams for current user
+                var userBusinessTeamsResponse = await _teamViewModel.GetUserBusinessTeams(currentUserId);
+                var userBusinessTeams = userBusinessTeamsResponse?.data ?? new List<UserBusinessTeamModel>();
+                var defaultAdminAccountId = userBusinessTeams.Where(x => x.IsDefault)?.FirstOrDefault()?.BusinessId ?? 0;
+
+                var response = await _businessPositionNameViewModel.GetBusinessPositionNameListAsync(defaultAdminAccountId);
+                businessPositionNames = response?.data?.OrderBy(x => x.TitleName).ToList() ?? new List<BusinessPositionNameModel>();
+                if (businessPositionNames.Any())
+                    inviteTeamMember.PositionId = businessPositionNames[0].Id;
+            }
+            loading = false;
+        }
+        else
+        {
+            inviteTeamMember.PositionId = businessPositionNames[0].Id;
+        }
+        IsInviteTeamMemberModalVisible = true;
+    }
+
+    private async Task InviteUser()
+    {
+        inviteTeamMember.Status = InviteUserStatus.Invited;
+        inviteTeamMember.BusinessId = currentMember.Id;
+        if (inviteTeamMemberForm.EditContext.Validate())
+        {
+            loading = true;
+            var response = await _teamViewModel.AddUpdateInviteUser(inviteTeamMember);
+            loading = false;
+            if (response?.success ?? false)
+            {
+                IsInviteTeamMemberModalVisible = false;
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    private async Task ExportTeamMembers()
+    {
+        loading = true;
+        var exportTeamMembersResponse = await _teamViewModel.ExportTeamMembers(currentMember.Id);
+        if (exportTeamMembersResponse.success)
+        {
+            exportTeamMembers = exportTeamMembersResponse.data;
+            //Create an instance of ExcelEngine.
+            using (ExcelEngine excelEngine = new ExcelEngine())
+            {
+                IApplication application = excelEngine.Excel;
+                application.DefaultVersion = ExcelVersion.Xlsx;
+
+                //Create a workbook.
+                IWorkbook workbook = application.Workbooks.Create(1);
+                IWorksheet worksheet = workbook.Worksheets[0];
+
+                DataTable table = BindDataTable();
+
+                //Export data from DataTable to Excel worksheet.
+                worksheet.ImportDataTable(table, true, 1, 1);
+
+                worksheet.UsedRange.AutofitColumns();
+                IStyle headerStyle = workbook.Styles.Add("HeaderStyle");
+                headerStyle.Font.Bold = true;
+                worksheet.SetDefaultRowStyle(1, headerStyle);
+                worksheet.UsedRange.HorizontalAlignment = ExcelHAlign.HAlignLeft;
+
+                //Save the document as a stream.
+                using (MemoryStream stream = new MemoryStream())
+                {
+                    //Save the created Excel document to MemoryStream.
+                    workbook.SaveAs(stream);
+                    await jsRuntime.InvokeAsync<object>(
+                           "fileSaveAs",
+                            "Team_Members.xlsx",
+                           Convert.ToBase64String(stream.ToArray()));
+                }
+            }
+        }
+        else
+        {
+            toastService.ShowToast(exportTeamMembersResponse.error_info.extra_info, ToastLevel.Error);
+        }
+        loading = false;
+        StateHasChanged();
+    }
+
+    private DataTable BindDataTable()
+    {
+        DataTable teamMembers = new DataTable();
+
+        teamMembers.Columns.Add("Last Name");
+        teamMembers.Columns.Add("First Name");
+        teamMembers.Columns.Add("Email");
+        teamMembers.Columns.Add("Position");
+        teamMembers.Columns.Add("Company");
+        teamMembers.Columns.Add("Date of Birth");
+        teamMembers.Columns.Add("Work Phone");
+        teamMembers.Columns.Add("Home Phone");
+        teamMembers.Columns.Add("Mobile Phone");
+        teamMembers.Columns.Add("Billing First Name");
+        teamMembers.Columns.Add("Billing Last Name");
+        teamMembers.Columns.Add("Billing Country");
+        teamMembers.Columns.Add("Billing Address 1");
+        teamMembers.Columns.Add("Billing Address 2");
+        teamMembers.Columns.Add("Billing City");
+        teamMembers.Columns.Add("Billing State");
+        teamMembers.Columns.Add("Billing Zip Code");
+        teamMembers.Columns.Add("Shipping First Name");
+        teamMembers.Columns.Add("Shipping Last Name");
+        teamMembers.Columns.Add("Shipping Country");
+        teamMembers.Columns.Add("Shipping Address 1");
+        teamMembers.Columns.Add("Shipping Address 2");
+        teamMembers.Columns.Add("Shipping City");
+        teamMembers.Columns.Add("Shipping State");
+        teamMembers.Columns.Add("Shipping Zip Code");
+        teamMembers.Columns.Add("Last Login");
+        teamMembers.Columns.Add("UserID");
+        teamMembers.Columns.Add("Created Date");
+        teamMembers.Columns.Add("Investor Price");
+        teamMembers.Columns.Add("Vintage");
+        teamMembers.Columns.Add("Varietals");
+
+        foreach (var teamMember in exportTeamMembers)
+        {
+            CustomBusinessMetaDataModel investorPrice = new CustomBusinessMetaDataModel();
+            CustomBusinessMetaDataModel vintage = new CustomBusinessMetaDataModel();
+            CustomBusinessMetaDataModel varietal = new CustomBusinessMetaDataModel();
+
+            var billingAddress = teamMember.Address.FirstOrDefault(x => x.IsDefaultBilling);
+            var shippingAddress = teamMember.Address.FirstOrDefault(x => x.IsDefaultShipping);
+            var positions = teamMember.Positions.Select(x => x.TitleName).ToList();
+
+            if (teamMember.CustomBusinessMetaDatas.Count > 0)
+            {
+                vintage = teamMember.CustomBusinessMetaDatas.Where(x => x.Name == TeamMetaName.Vintage).FirstOrDefault() ?? new CustomBusinessMetaDataModel();
+                varietal = teamMember.CustomBusinessMetaDatas.Where(x => x.Name == TeamMetaName.Varietals).FirstOrDefault() ?? new CustomBusinessMetaDataModel();
+                investorPrice = teamMember.CustomBusinessMetaDatas.Where(x => x.Name == TeamMetaName.InvestorPrice).FirstOrDefault() ?? new CustomBusinessMetaDataModel();
+            }
+
+            teamMembers.Rows.Add(teamMember.LastName, teamMember.FirstName, teamMember.Email, Helper.GetCommaSeparatedStringFromList(positions), teamMember.Company, teamMember.FormattedDOB, teamMember.WorkPhoneFormatted, teamMember.HomePhoneFormatted, teamMember.CellPhone
+            , Helper.GetStringValue(billingAddress?.FirstName ?? null), Helper.GetStringValue(billingAddress?.LastName ?? null), Helper.GetStringValue(billingAddress?.Country ?? null), Helper.GetStringValue(billingAddress?.Address1 ?? null)
+            , Helper.GetStringValue(billingAddress?.Address2 ?? null), Helper.GetStringValue(billingAddress?.City ?? null), Helper.GetStringValue(billingAddress?.State ?? null), Helper.GetStringValue(billingAddress?.ZipCode ?? null)
+            , Helper.GetStringValue(shippingAddress?.FirstName ?? null), Helper.GetStringValue(shippingAddress?.LastName ?? null), Helper.GetStringValue(shippingAddress?.Country ?? null), Helper.GetStringValue(shippingAddress?.Address1 ?? null)
+            , Helper.GetStringValue(shippingAddress?.Address2 ?? null), Helper.GetStringValue(shippingAddress?.City ?? null), Helper.GetStringValue(shippingAddress?.State ?? null), Helper.GetStringValue(shippingAddress?.ZipCode ?? null)
+            , teamMember.FormattedLoginDate, teamMember.UserGUID, teamMember.FormattedCreatedDate, investorPrice.BusinessMetaDataId != 0 ? investorPrice.PriceDefaultValue : string.Empty, vintage.BusinessMetaDataId != 0 ? vintage.DateDefaultValue : string.Empty
+            , varietal.BusinessMetaDataId != 0 ? varietal.DefaultValue : string.Empty);
+        }
+        return teamMembers;
+    }
+}

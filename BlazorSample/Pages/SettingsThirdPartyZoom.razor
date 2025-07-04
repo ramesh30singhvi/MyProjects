@@ -1,0 +1,202 @@
+﻿@page "/settings/integrated-partners/zoom/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm Model="@zoom" Context="formContext" Class="row g-3">
+    <DataAnnotationsValidator />
+    <div class="card">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h5 class="mb-0"><a href="marketplace/partner/@Id" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-circle-video me-2"></span>Zoom</h5>
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-primary" @onclick="@(() => SaveZoom(formContext))">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="mb-1">
+                <button class="btn btn-sm btn-primary" @onclick="@(() => OpenConnectToZoomDialog())">Connect to Zoom</button>
+            </div>
+            <div class="mb-1">
+                <label for="inputZoom" class="form-label">Meeting ID</label>
+            </div>
+            <div class="mb-3">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="inlineZoomRadioOptions" id="radioZoomMeetingAutomatic" @onchange="SelectMeetingId" value="0" checked="@(zoom.MeeingIdType == (int)ZoomMeetingIdType.Auto)"> @*Auto*@
+                    <label class="form-check-label" for="radioZoomMeetingAutomatic">Generate Automatically</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="inlineZoomRadioOptions" id="radioZoomMeetingPersonal" @onchange="SelectMeetingId" value="1" checked="@(zoom.MeeingIdType == (int)ZoomMeetingIdType.Manual)"> @*Manual*@
+                    <label class="form-check-label" for="radioZoomMeetingPersonal">Personal Meeting ID XXX-XXX-XXX</label>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Meeting Password</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="" id="chkZoomRequirePassword" @bind="zoom.RequireMeetingPassword">
+                    <label class="form-check-label" for="chkZoomRequirePassword">
+                        Required
+                    </label>
+                </div>
+                <InputText class="form-control" @bind-Value="zoom.MeetingPassword" id="inputZoomMeetingPassword" type="password" placeholder="Meeting Password"></InputText>
+                <ValidationMessage For="@(() => zoom.MeetingPassword)" />
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+<SfDialog IsModal="true" Width="550px" ShowCloseIcon="true" @bind-Visible="ConnectZoomDialogVisibility">
+    <DialogTemplates>
+        <Header><h4 class="fs-1 fw-normal m-0">Zoom Integration Disclaimer (beta)</h4></Header>
+        <Content>
+            <div class="row justify-content-lg-start">
+                <div class="col-md-12">
+                    <div class="mt-2 mb-5">
+                        <p class="fw-normal h6">We have invested a lot of time and energy to ensure the the CellarPass integration with Zoom is as complete and reliable as possible. But before you continue, we ask that you acknowledge and agree on some of the outlined limitations that Zoom sets forth on all integrated partners. </p>
+                        <p class="fw-normal h6">Therefore, it’s extremely important that you understand these limitations and make sure everyone at your company that may use Zoom or the CellarPass platform of these limitations:</p>
+                        <ol>
+                            <li class="fw-normal h6">
+                                <p>Compatible with <b>Zoom Pro</b> subscription plan only.</p>
+                            </li>
+                            <li class="fw-normal h6">
+                                <p>Zoom does not allow more than 100 meeting requests per day. That specifically means that if you run an ad campaign and receive over 100 reservations on a single day (booked date, not event date) it will reject the 101st request and any other additional until the next business day, where the 100-request limit is reset.</p>
+                            </li>
+                            <li class="fw-normal h6">
+                                <p>The integration with Zoom was designed to be an automated convenience to creating Zoom meetings, but due to the limit outlined above, we would never recommend that you rely on Zoom to manage your capacity, nor accurate meetings.</p>
+                            </li>
+                            <li class="fw-normal h6">
+                                <p>Any changes to Zoom meetings, whether that’s the meeting time, place or attendees made in the Zoom software will NOT be posted back to CellarPass. Therefore, any changes should be made in CellarPass to remain in sync.</p>
+                            </li>
+                            <li class="fw-normal h6">
+                                <p>We encourage everyone to provide constructive feedback as we consider this an early-beta release in the environment that you will provide feedback as to how we can improve your experience with both CellarPass and the Zoom integration.</p> Feel free to send an email to jelliman@cellarpass.com with any questions or feedback. Complete documentation about our Zoom integration is available <a href="https://admin.cellarpass.com/admin/help_center_article.aspx?id=433" target="_blank">here</a>.
+                            </li>
+                        </ol>
+                        <p class="fw-normal h6">By completing the Zoom to CellarPass authentication steps, you are automatically agreeing to these terms and renew such agreement each time you log into the CellarPass platform.</p>
+                    </div>
+                </div>
+            </div>
+        </Content>
+        <FooterTemplate>
+            <button @onclick="CloseConnectZoomDialog" class="btn btn-sm btn-outline-secondary me-2">Do not Agree</button>
+            <a class="btn btn-sm btn-primary" href="@zoomConnectNavigateUrl" target="_blank">I Agree</a>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "Zoom | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    private bool ConnectZoomDialogVisibility { get; set; } = false;
+    Member currentMember = new Member();
+    ZoomRequestModel zoom = new ZoomRequestModel();
+    private string zoomConnectNavigateUrl { get; set; } = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get business settings for Zoom
+        var response = await _settingsViewModel.GetBusinessSettingsListAsync(currentMember.Id, BusinessSettingsMetaNamespace.Zoom);
+        zoom.MeeingIdType = Convert.ToInt32(response?.data?.Where(x => x.MetaKey == BusinessSettingsMetaKey.ZoomMeeingIdType)?.FirstOrDefault()?.MetaValue ?? "0");
+        zoom.RequireMeetingPassword = Convert.ToBoolean(response?.data?.Where(x => x.MetaKey == BusinessSettingsMetaKey.ZoomRequireMeetingPassword)?.FirstOrDefault()?.MetaValue ?? "false");
+        zoom.MeetingPassword = response?.data?.Where(x => x.MetaKey == BusinessSettingsMetaKey.ZoomMeetingPassword)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+
+        zoomConnectNavigateUrl = string.Empty;//String.Format("https://zoom.us/oauth/authorize?response_type=code&client_id={0}&redirect_uri={1}&state={2}", "gVfyV9mOSNmtvXCKmCkSig", "https://dev.cellarpass.com/admin/zoom-auth.aspx", currentMember.Id);
+        SpinnerVisibility = false;
+    }
+
+    /// <summary>
+    ///Auto = 0
+    ///Manual = 1
+    /// </summary>
+    /// <param name="args"></param>
+    private void SelectMeetingId(ChangeEventArgs args)
+    {
+        zoom.MeeingIdType = Convert.ToInt32(args.Value);
+    }
+
+    public async Task SaveZoom(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var businessSettings = new List<BusinessSettingsRequestModel>();
+            businessSettings.Add(new BusinessSettingsRequestModel
+            {
+                BusinessId = currentMember.Id,
+                MetaNamespace = BusinessSettingsMetaNamespace.Zoom,
+                Title = string.Empty,
+                Description = string.Empty,
+                MetaKey = BusinessSettingsMetaKey.ZoomMeeingIdType,
+                MetaValue = Convert.ToString(zoom.MeeingIdType),
+                ValueType = Convert.ToInt32(ValueTypeEnum.Integer)
+            });
+            businessSettings.Add(new BusinessSettingsRequestModel
+            {
+                BusinessId = currentMember.Id,
+                MetaNamespace = BusinessSettingsMetaNamespace.Zoom,
+                Title = string.Empty,
+                Description = string.Empty,
+                MetaKey = BusinessSettingsMetaKey.ZoomRequireMeetingPassword,
+                MetaValue = Convert.ToString(zoom.RequireMeetingPassword),
+                ValueType = Convert.ToInt32(ValueTypeEnum.Boolean)
+            });
+            businessSettings.Add(new BusinessSettingsRequestModel
+            {
+                BusinessId = currentMember.Id,
+                MetaNamespace = BusinessSettingsMetaNamespace.Zoom,
+                Title = string.Empty,
+                Description = string.Empty,
+                MetaKey = BusinessSettingsMetaKey.ZoomMeetingPassword,
+                MetaValue = zoom.MeetingPassword,
+                ValueType = Convert.ToInt32(ValueTypeEnum.String)
+            });
+            var response = await _settingsViewModel.CreateBusinessSettingListAsync(businessSettings);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Close dialog
+    /// </summary>
+    private void CloseConnectZoomDialog()
+    {
+        ConnectZoomDialogVisibility = false;
+    }
+    private void OpenConnectToZoomDialog()
+    {
+        ConnectZoomDialogVisibility = true;
+    }
+}

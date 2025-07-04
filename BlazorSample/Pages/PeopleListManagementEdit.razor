@@ -1,0 +1,130 @@
+﻿@page "/people/list-management-edit"
+@layout AuthorizedLayout
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="/people/list-management" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-address-book me-2"></span>Manage List</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary float-end" href="javascript:void();">Save</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="px-2 mx-2 ">
+            <div class="row my-3">
+                <div class="col-12 col-md-12">
+                    <label class="form-label">List Name</label>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <input type="text" class="form-control">
+                        </div>
+                        <div class="col-md-8">
+                            <div class="row justify-content-end">
+                                <div class="col-auto">
+                                    <a class="btn btn-sm btn-outline-primary float-end" href="javascript:void();">Deactivate</a>
+                                </div>
+                                <div class="col-auto">
+                                    <a class="btn btn-sm btn-primary float-end" href="/people/list-management-add-contact">Add Guests</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@lists" Width="100%" AllowFiltering="true" class="border-x-0">
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && lists.Count <= 0)
+                        {
+                            <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Reason Available</h6>
+                                <button type="button" class="btn btn-outline-primary">Get Started</button>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn Field=@nameof(ListModel.Email) HeaderText="Email" TextAlign="TextAlign.Left" Width="120" />
+                    <GridColumn Field=@nameof(ListModel.FirstName) HeaderText="First Name" TextAlign="TextAlign.Left" Width="70" />
+                    <GridColumn Field=@nameof(ListModel.LastName) HeaderText="Last Name" TextAlign="TextAlign.Left" Width="70" />
+                    <GridColumn Field=@nameof(ListModel.Phone) HeaderText="Phone" TextAlign="TextAlign.Left" Width="80" />
+                    <GridColumn Field=@nameof(ListModel.Field1) HeaderText="Field 1" TextAlign="TextAlign.Left" Width="60" />
+                    <GridColumn Field=@nameof(ListModel.Field2) HeaderText="Field 2" TextAlign="TextAlign.Left" Width="60" />
+                    <GridColumn Field=@nameof(ListModel.Field3) HeaderText="Field 3" TextAlign="TextAlign.Left" Width="60" />
+                    <GridColumn Field=@nameof(ListModel.Field4) HeaderText="Field 4" TextAlign="TextAlign.Left" Width="60" />
+                    <GridColumn HeaderText="" AllowFiltering="false" TextAlign="TextAlign.Center" Width="30">
+                        <Template>
+                            @{
+                                <button class="delete_icon">
+                                    <span class="far fa-pencil"></span>
+                                </button>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="" AllowFiltering="false" TextAlign="TextAlign.Center" Width="30">
+                        <Template>
+                            @{
+                                <button class="delete_icon" @onclick="()=>DeleteDialogOpen(0)">
+                                    <span class="far fa-trash-alt"></span>
+                                </button>
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+</div>
+
+@*Delete confimation dialog*@
+<DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="DeleteClass"></DeleteConfirmation>
+
+@code
+{
+    private string title = "Manage List | Synergy Admin Panel";
+    private Boolean isLoading = false;
+    bool openDeleteDialog = false;
+
+    private class ListModel
+    {
+        public string Email { get; set; }
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public string Phone { get; set; }
+        public string Field1 { get; set; }
+        public string Field2 { get; set; }
+        public string Field3 { get; set; }
+        public string Field4 { get; set; }
+    }
+
+    private List<ListModel> lists = new List<ListModel>() {
+        new ListModel(){ Email= "subrat.jain@kashnishtech.com", FirstName= "Subrat",LastName= "Jain",Phone= "+1 (555) 555-5555",Field1= "",Field2= "",Field3= "",Field4= "" },
+        new ListModel(){ Email= "	cristian.leonard@gmail.com", FirstName= "Cristian",LastName= "Leonard",Phone= "+1 (707) 255-4390",Field1= "",Field2= "",Field3= "",Field4= "" },
+    };
+
+    private void DialogClose() => openDeleteDialog = false;
+
+    private void DeleteDialogOpen(int id)
+    {
+        openDeleteDialog = true;
+    }
+
+    private async Task DeleteClass()
+    {
+    }
+
+
+}

@@ -1,0 +1,225 @@
+﻿@page "/settings/pos-devices/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Enums;
+@using CellarPassAppAdmin.Client.ViewModels;
+@using CellarPassAppAdmin.Shared.Models;
+@using CellarPassAppAdmin.Shared.Entities.v4;
+@using CellarPassAppAdmin.Shared.Models.RequestModel;
+@using CellarPassAppAdmin.Shared.Models.ViewModel;
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head;
+@inject NavigationManager _navigationManager
+@inject ITeamViewModel _teamViewModel
+@inject IMemberViewModel _memberViewModel
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+
+<div class="card mb-3">
+
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings/devices" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-cash-register me-2"></span>Add POS Device</h5>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-sm btn-primary" type="button">Add Device</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-12 col-md-8">
+                <div class="mb-3">
+                    <label class="form-label" for="inputDeviceName">Device Name</label>
+                    <input id="inputDeviceName" class="form-control" type="text" value="POS 1" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="selPOSProfile">POS Profile</label>
+                    <select id="selPOSProfile" class="form-select">
+                        <option value="0" selected>[[POSProfileName]]</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="selAppType">App Type</label>
+                    <select id="selAppType" class="form-select">
+                        <option value="0" selected>Retail POS</option>
+                        <option value="1">Tasting Room</option>
+                        <option value="2">Restaurant</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="selPOSProfile">POS Profile</label>
+                    <select id="selPOSProfile" class="form-select">
+                        <option value="0" selected>[[POSProfileName]]</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label mb-0">Signature & Receipt</label><br />
+                    <span class="fs--1">Connect a thermal printer to collect tips and signatures on printed receipts.</span>
+                    <div class="form-check form-switch mt-2">
+                        <input class="form-check-input" type="checkbox" id="switchCollectSignatures" checked>
+                        <label class="form-check-label" for="switchCollectSignatures">Collect Signatures</label>
+                    </div>
+                    <div class="px-3 ms-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioDefault1" checked>
+                            <label class="form-check-label" for="flexRadioDefault1">Orders greater than $25</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="flexRadioDefault" id="flexRadioDefault2">
+                            <label class="form-check-label" for="flexRadioDefault2">All orders greater than $0.01</label>
+                        </div>
+                        <hr class="my-2" />
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="flexRadioDefault1" id="flexRadioDefault3" checked>
+                            <label class="form-check-label" for="flexRadioDefault3">
+                                Always show receipt screen<br /><span class="fs--2">Customers can choose to receipt printed or digital receipts.</span>
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="flexRadioDefault1" id="flexRadioDefault4">
+                            <label class="form-check-label" for="flexRadioDefault4">
+                                Skip receipt screen<br /><span class="fs--2">When checkout speed is a priority and customers don’t often ask for a receipt.</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="card border mb-2">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Apple DeviceID</label><br />
+                            <label class="form-label">05D21897-2723-4B17-B891-2105FD3A270F</label>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">iPad Model</label><br />
+                            <label class="form-label">Pro 12.9</label>
+                        </div>
+                        <div class="mb-3">
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <label class="form-label">iOS Version</label><br />
+                                    <label class="form-label">14.25</label>
+                                </div>
+                                <div class="col-sm-6">
+                                    <button class="btn btn-md btn-outline-danger" type="button">UPDATE NOW</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">GLP Version</label><br />
+                            <label class="form-label">2.2.124</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card rounded-0 shadow-none border-bottom">
+            <div class="card-header border-bottom">
+                <div class="d-flex flex-between-center">
+                    <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-user-lock me-2"></span>Device Key</h5>
+                    <button @onclick="@(() => GenerateQR())" class="btn btn-link fs--1 me-2" disabled="@(SetQRBtnDisablity())"><span class="far fa-qrcode me-1"></span>QR Code</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label" for="inputAccessCode">Sign In Using this Code</label>
+                    <div class="row g-1 mb-3">
+                        <div class="col-12 col-md-10">
+                            <input id="inputAccessCode" type="text" aria-label="code section 1" class="form-control font-monospace text-center bg-white fs--1 fs-md-1" value="B3C7 D9F1 GBA3" style="letter-spacing:10px;" readonly>
+                        </div>
+                        <div class="col-12 col-md-2 d-grid">
+                            <button class="btn btn-outline-primary" type="button" @onclick="@(() => OpenGenerateDeviceCodeModal())">Generate Code</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    
+                        <div class="row">
+                            <div class="col-10">
+                                <label class="form-label" for="inputUsername">Send Code to Email or Phone</label>
+                                <SfDropDownList TValue="int" ID="inputUsername" TItem="DropdownBindingModel" Placeholder="Select Team User" AllowFiltering="true" DataSource="@teamUsers">
+                                    <DropDownListFieldSettings Text="Value" Value="Key"></DropDownListFieldSettings>
+                                </SfDropDownList>
+                            </div>
+                            <div class="col-2 mt-4">
+                                <button class="btn btn-outline-primary" type="button">Email</button>
+                                <button class="btn btn-outline-primary" type="button">SMS</button>
+                            </div>
+                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<SfDialog IsModal="true" Width="400px" ShowCloseIcon="true" @bind-Visible="GenerateDeviceCodeModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Generate New Device Code</h5></Header>
+        <Content>
+            <p>Requesting to generate a new Device code will immediately logout all devices using this code.</p>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary me-2" @onclick="@CloseGenerateDeviceCodeModal">Cancel</button>
+            <button type="button" class="btn btn-primary">Proceed</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private Boolean isLoading;
+    private string title = "Add POS Device | Synergy Commerce Admin Panel";
+
+    POSProfileRequestModel pOSProfile = new POSProfileRequestModel();
+    private bool QRDialogVisibility { get; set; } = false;
+    private string QRCodeText { get; set; } = string.Empty;
+    private bool GenerateDeviceCodeModalVisibility { get; set; } = false;
+    List<DropdownBindingModel> teamUsers = new List<DropdownBindingModel>();
+    Member currentMember = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        if (Id == null)
+        {
+            title = "Add Printer | Synergy Commerce Admin Panel";
+        }
+        var getTeamUsersResponse = await _teamViewModel.GetBusinessTeams(currentMember.Id);
+        if (getTeamUsersResponse.success)
+        {
+            teamUsers = getTeamUsersResponse.data.OrderBy(x => x.LastName).Select(x => new DropdownBindingModel {  Key = x.UserId, Value = x.LastName + " "+ x.FirstName}).ToList();
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    protected void GenerateQR()
+    {
+        QRCodeText = pOSProfile.POSLoginName + "&" + pOSProfile.POSLoginPassword;
+        this.QRDialogVisibility = true;
+    }
+
+    protected bool SetQRBtnDisablity()
+    {
+        if (!string.IsNullOrEmpty(pOSProfile.POSLoginName) && !string.IsNullOrEmpty(pOSProfile.POSLoginPassword))
+            return false;
+        else
+            return true;
+    }
+
+    private void OpenGenerateDeviceCodeModal()
+    {
+        this.GenerateDeviceCodeModalVisibility = true;
+    }
+    private void CloseGenerateDeviceCodeModal()
+    {
+        this.GenerateDeviceCodeModalVisibility = false;
+    }
+}

@@ -1,0 +1,107 @@
+﻿@page "/loyalty/create-loyalty-redemption-complimentary-product"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IProductViewModel _productViewModel
+@inject IStoreCollectionViewModel _storeCollectionViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+
+<div class="card">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="loyalty/create-loyalty-redemption" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-trophy-alt me-2"></span>Create Campaign</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="#!">Save</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-12">
+                <h6 class="fw-bold text-500">STEP 2 OF 2</h6>
+                <h5>Discount on Specific Products</h5>
+                <p>Set a fixed percentage or dollar discount for entire sale.</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-12 col-xl-6">
+                <div class="mb-3">
+                    <label class="form-label" for="inputAwarded">Reward Value</label>
+                    <input id="inputAwarded" class="form-control" type="text" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="inputRewardFriendlyName">Reward Friendly Name</label>
+                    <input id="inputRewardFriendlyName" class="form-control" type="text" />
+                </div>
+            </div>
+            @*Product Search Function Component*@
+            <ProductSearchFunction products="products" collectionProducts="collectionProducts" storeCollection="storeCollection"></ProductSearchFunction>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    private string title = "Create Campaign | Synergy Commerce Admin Panel";
+    ObservableCollection<StoreCollectionProduct> collectionProducts = new ObservableCollection<StoreCollectionProduct>();
+    private bool isLoading;
+    private StoreCollectionFullDetail storeCollection = new StoreCollectionFullDetail();
+    private Member currentMember;
+    private List<ProductListModel> products = new List<ProductListModel>();
+
+    [Parameter]
+    public Guid Id { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var response = await _storeCollectionViewModel.GetStoreCollectionDetails(Id.ToString(), 0);
+        if (response.success)
+        {
+            storeCollection = response.data;
+            if (storeCollection.Products != null && storeCollection.Products.Count > 0)
+            {
+                collectionProducts = new ObservableCollection<StoreCollectionProduct>(storeCollection.Products);
+                if (collectionProducts.Count > 0)
+                {
+                    if (storeCollection.CollectionSortType == (int)CollectionSortType.ProductNameA_Z)
+                    {
+                        collectionProducts = new ObservableCollection<StoreCollectionProduct>(collectionProducts.OrderBy(x => x.ProductTitle));
+                    }
+                    else if (storeCollection.CollectionSortType == (int)CollectionSortType.ProductNameZ_A)
+                    {
+                        collectionProducts = new ObservableCollection<StoreCollectionProduct>(collectionProducts.OrderByDescending(x => x.ProductTitle));
+                    }
+                    else if (storeCollection.CollectionSortType == (int)CollectionSortType.Manual)
+                    {
+                        collectionProducts = new ObservableCollection<StoreCollectionProduct>(collectionProducts.OrderBy(x => x.SortIndex));
+                    }
+                }
+            }
+        }
+
+        var productResponse = await _productViewModel.SearchProducts(currentMember.Id, true, string.Empty);
+        if (productResponse.success)
+        {
+            products = productResponse.data;
+            if (products.Count > 0)
+            {
+                products = products.OrderBy(x => x.ProductTitle).ToList();
+            }
+        }
+        isLoading = false;
+    }
+}

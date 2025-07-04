@@ -1,0 +1,24 @@
+﻿@using CellarPassAppAdmin.Shared.Enums 
+
+<div class="alert bg-soft-info mb-3" hidden="@hidePopUp" role="alert">
+    <div class="row flex-between-center">
+        <div class="col-md-auto">
+            <strong><i class="fas fa-flag-checkered me-2"></i>If you have a spare moment, let us know what you think about @((DisplayWordOur)?"our":"") @(EnumHelper.GetDescription(PageSection))</strong>
+            <a class="btn btn-link btn-sm btn-reveal text-600 p-0 mb-1" href="javascript:void(0)"><span class="fas fa-external-link-alt"></span></a>
+        </div>
+        <div class="col-auto d-flex">
+            <button type="button" class="btn btn-outline-dark" @onclick="() => hidePopUp = true">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public PageSection PageSection { get; set; }
+    [Parameter]
+    public bool DisplayWordOur { get; set; }
+
+    private bool hidePopUp { get; set; }
+}

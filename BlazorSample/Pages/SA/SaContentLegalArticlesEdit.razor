@@ -1,0 +1,157 @@
+﻿@page "/sa/content/legal-articles-edit/{Id:guid}"
+@page "/sa/content/legal-articles-create"
+@*@layout SaLayout*@
+@layout AuthorizedLayout
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.Blazor.Calendars
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Models.ViewModel.SA
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums;
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA;
+@using Syncfusion.Blazor.RichTextEditor
+@inject ISaContentViewModel _saContentViewModel
+@inject ILegalArticleViewModel _legalArticleViewModel
+@inject ToastService toastService
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+
+<style>
+    .e-richtexteditor .e-rte-srctextarea {
+        height: calc(100vh - 370px);
+    }
+
+    main#main-authorized .vh-100 {
+        height: calc(100vh - 70px) !important;
+    }
+</style>
+
+<AuthorizeView>
+    <Authorized Context="LegalArticleAddUpdate">
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        <EditForm Model="@legalArticle" OnValidSubmit="@SaveArticle">
+            <DataAnnotationsValidator />
+            <div class="py-3">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto mb-4 mb-md-0"><h5><a href="sa/content/legal-articles" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><i class="fa-regular fa-file-signature me-2"></i>@(Id != null ? "Edit" : "Add") Legal Article</h5></div>
+                    <div class="col-md-auto">
+                        <button type="button" class="btn btn-sm btn-outline-primary">Preview</button>
+                        <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                    </div>
+                </div>
+                <hr />
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Title</label>
+                    <InputText @bind-Value="@legalArticle.ArticleTitle" class="form-control" id="inputTitle" placeholder="Title" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="chkStatus" class="form-label">Status</label>
+                    <div class="form-check">
+                        <div class="d-flex">
+                            <SfCheckBox @bind-Checked="@articleStatus"></SfCheckBox>
+                            <label class="form-check-label" for="card-checkbox">Enabled</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="inputSubTitle" class="form-label">SubTitle</label>
+                    <InputText @bind-Value="@legalArticle.ArticleSubTitle" placeholder="SubTitle" class="form-control" id="inputSubTitle" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="inputLegalArticleURL" class="form-label">Legal Article URL <span class="form-text">(Create from title)</span></label>
+                    <InputText class="form-control" @bind-Value="@legalArticle.ArticleURL" id="inputLegalArticleURL" placeholder="Legal Article URL" />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label" for="dpPublishedDate">Published Date</label>
+                    <SfDateTimePicker id="dpPublishedDate" TValue="DateTime?" @bind-Value="@legalArticle.ArticlePublishDate" Placeholder="Published Date"></SfDateTimePicker>
+                </div>
+            </div>
+            <SfRichTextEditor @bind-Value="@legalArticle.Article">
+                <RichTextEditorFontFamily Default="Poppins" Items="@FontFamilyItems" />
+                <RichTextEditorToolbarSettings Items="@SfRichTextEditorHelper.Tools" Type="ToolbarType.MultiRow" />
+                <RichTextEditorFormat Items="@SfRichTextEditorHelper.FormatItems" />
+            </SfRichTextEditor>
+        </EditForm>
+    </Authorized>
+</AuthorizeView>
+
+
+
+
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "Edit Legal Article | Synergy Commerce Super Admin  Panel";
+    private bool SpinnerVisibility { get; set; } = true;
+    private string Content { get; set; }
+    LegalArticleModel legalArticle = new LegalArticleModel();
+    private bool articleStatus = true;
+    private List<DropDownItemModel> FontFamilyItems = new List<DropDownItemModel>()
+    {
+        new DropDownItemModel() { CssClass = "e-poppins", Command = "Font", SubCommand = "FontName", Text = "Poppins", Value = "Poppins,Helvetica,sans-serif" },
+        new DropDownItemModel() { CssClass = "e-segoe-ui", Command = "Font", SubCommand = "FontName", Text = "Segoe UI", Value = "Segoe UI,Helvetica,sans-serif" },
+        new DropDownItemModel() { CssClass = "e-arial", Command = "Font", SubCommand = "FontName", Text = "Arial", Value = "Roboto" },
+        new DropDownItemModel() { CssClass = "e-georgia", Command = "Font", SubCommand = "FontName", Text = "Georgia", Value = "Georgia,serif" },
+        new DropDownItemModel() { CssClass = "e-impact", Command = "Font", SubCommand = "FontName", Text = "Impact", Value = "Impact,Charcoal,sans-serif" },
+        new DropDownItemModel() { CssClass = "e-tahoma", Command = "Font", SubCommand = "FontName", Text = "Tahoma", Value = "Tahoma,Geneva,sans-serif" },
+        new DropDownItemModel() { CssClass = "e-times-new-roman", Command = "Font", SubCommand = "FontName", Text = "Times New Roman", Value = "Times New Roman,Charcoal,sans-serif" },
+        new DropDownItemModel() { CssClass = "e-verdana", Command = "Font", SubCommand = "FontName", Text = "Verdana", Value = "Verdana,Geneva,sans-serif" }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id.HasValue)
+        {
+            var response = await _legalArticleViewModel.GetLegalArticleByGUID(Id.Value);
+            if (response.success)
+            {
+                legalArticle = response.data;
+            }
+            if (legalArticle.ArticleStatus == "enabled")
+            {
+                articleStatus = true;
+            }
+            else
+            {
+                articleStatus = false;
+            }
+        }
+        else
+        {
+            title = "Add Legal Article | Synergy Commerce Admin Panel";
+        }
+        SpinnerVisibility = false;
+    }
+
+    private async Task SaveArticle()
+    {
+        legalArticle.ArticleLocation = "San Francisco, CA";
+        if (articleStatus)
+        {
+            legalArticle.ArticleStatus = "enabled";
+        }
+        else
+        {
+            legalArticle.ArticleStatus = "disabled";
+        }
+        SpinnerVisibility = true;
+        var response = await _legalArticleViewModel.CreateUpdateLegalArticle(legalArticle);
+        if (response.success)
+        {
+            legalArticle = response.data;
+            toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+            NavigationManager.NavigateTo(string.Format("/sa/content/legal-articles-edit/{0}", legalArticle.IdGUID));
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        SpinnerVisibility = false;
+
+    }
+}

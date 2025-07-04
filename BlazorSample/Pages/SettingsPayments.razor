@@ -1,0 +1,559 @@
+﻿@page "/settings/payment-profiles/{IdGUID:guid}"
+@page "/settings/payment-profiles/create"
+@layout AuthorizedLayout
+@using Syncfusion.Blazor.Buttons
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject NavigationManager NavigationManager
+@inject IPaymentProfileViewModel _paymentProfileViewModel
+@inject ISettingsViewModel _settingsViewModel
+@inject ISaIntegrationPartnerViewModel _saIntegrationPartnerViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized Context="Payment_profile">
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        @if (paymentProfile != null)
+        {
+            <EditForm Model="@paymentProfile" OnValidSubmit="SavePaymentProfile">
+                <DataAnnotationsValidator />
+                <div class="card">
+                    <div class="card-header border-bottom">
+                        <div class="row justify-content-between">
+                            <div class="col-md-auto">
+                                <h5 class="mb-0"><a href="settings/payment-profiles" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-hand-holding-usd me-2"></span>Payments</h5>
+                            </div>
+                            <div class="col-md-auto">
+                                <button type="button" @onclick="TestConnection" class="btn btn-sm btn-outline-primary">Test Connection</button>
+                                <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+
+                        <div class="card rounded-0" id="sectionPaymentGateway">
+
+                            <div class="card-header border-bottom">
+                                <div class="row flex-between-center">
+                                    <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                                        <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-credit-card me-2"></span>Payment Profile</h5>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card-body p-0">
+
+                                <div class="px-card py-4">
+
+                                    <div class="mb-3">
+                                        <label for="inputProfieName" class="form-label">Profile Name</label>
+                                        <InputText @bind-Value=@paymentProfile.PaymentProfileName class="form-control" id="inputProfieName" placeholder="Unique Profile Name" />
+                                        <ValidationMessage For="@(() => paymentProfile.PaymentProfileName)" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="inputGateway">Gateway</label>
+                                        <SfDropDownList Readonly="@((IdGUID.HasValue))" id=inputGateway TValue="int" @bind-Value="@paymentProfile.GatewayProvider"
+                                                        TItem="IntegrationPartnerCategoryDetailModel" Placeholder="Select Gateway" AllowFiltering="true"
+                                                        DataSource="@paymentGateways">
+                                            <DropDownListEvents TItem="IntegrationPartnerCategoryDetailModel" TValue="int" ValueChange="@onGatewayChange"></DropDownListEvents>
+                                            <DropDownListFieldSettings Text="AppName" Value="IntegrationPartnerId"></DropDownListFieldSettings>
+                                        </SfDropDownList>
+                                    </div>
+
+                                    @switch (gatewayVal)
+                                    {
+                                        @*case ((int)PaymentGateway.AuthorizeNet):
+                                                <SettingsPaymentsAuthorizeDotNet @ref="SettingsPaymentsAuthorizeDotNet" data=@paymentProfile.data />
+                                                break;
+                                            case ((int)PaymentGateway.BrainTree):
+                                                <SettingsPaymentsBrainTree @ref="SettingsPaymentsBrainTree" data="@paymentProfile.data" />
+                                                break;
+                                            case ((int)PaymentGateway.CardConnect):
+                                                <SettingsPaymentsCardConnect @ref="SettingsPaymentsCardConnect" data="@paymentProfile.data" />
+                                                break;*@
+                                        case ((int)PaymentGateway.SynergyPayments):
+                                            <SettingsPaymentsSynergyPayments @ref="SettingsPaymentsSynergyPayments" data="@paymentProfile.data" />
+                                            break;
+                                            @*case ((int)PaymentGateway.OpenEdge):
+                                                    <SettingsPaymentsOpenEdge @ref="SettingsPaymentsOpenEdge" data="@paymentProfile.data" />
+                                                    break;
+                                                case ((int)PaymentGateway.WorldPay):
+                                                    <SettingsPaymentsWorldPay @ref="SettingsPaymentsWorldPay" data="@paymentProfile.data" />
+                                                    break;*@
+                                    }
+                                </div>
+                            </div>
+
+                        </div>
+                        <div class="card rounded-0" id="sectionCardTypes">
+
+                            <div class="card-header border-bottom">
+                                <div class="row flex-between-center">
+                                    <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                                        <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-credit-card-front me-2"></span>Accepted Card Types</h5>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card-body">
+                                <div class="px-card py-4">
+                                    <form>
+                                        <div class="form-check form-check-inline">
+                                            <SfCheckBox @bind-Checked="@checkVisa"></SfCheckBox>
+                                            <label class="form-check-label" for="chkVisa"><span class="fab fa-cc-visa fa-2x ms-2"></span></label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <SfCheckBox @bind-Checked="@checkMasterCard"></SfCheckBox>
+                                            <label class="form-check-label" for="chkMasterCard"><span class="fab fa-cc-mastercard fa-2x ms-2"></span></label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <SfCheckBox @bind-Checked="@checkDiscover"></SfCheckBox>
+                                            <label class="form-check-label" for="chkDiscover"><span class="fab fa-cc-discover fa-2x ms-2"></span></label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <SfCheckBox @bind-Checked="@checkAmex"></SfCheckBox>
+                                            <label class="form-check-label" for="chkAmex"><span class="fab fa-cc-amex fa-2x ms-2"></span></label>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+            </EditForm>
+        }
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    bool isDisabledModalVisible = false;
+
+    private string title = "Payments | Synergy Commerce Admin Panel";
+    private int rsvpSelectedGateway = 3;
+    Member currentMember = null;
+    [Parameter]
+    public Guid? IdGUID { get; set; }
+    private int gatewayVal { get; set; }
+    SettingsPaymentsAuthorizeDotNet SettingsPaymentsAuthorizeDotNet = new SettingsPaymentsAuthorizeDotNet();
+    SettingsPaymentsBrainTree SettingsPaymentsBrainTree;
+    SettingsPaymentsCardConnect SettingsPaymentsCardConnect;
+    SettingsPaymentsSynergyPayments SettingsPaymentsSynergyPayments;
+    SettingsPaymentsOpenEdge SettingsPaymentsOpenEdge;
+    SettingsPaymentsWorldPay SettingsPaymentsWorldPay;
+    private bool SpinnerVisibility { get; set; } = false;
+    PaymentProfileDetailsViewModel paymentProfile;
+    private List<int> businessAccountIntegrationPartners = new List<int>();
+    EditContext reqForm;
+
+    private bool checkVisa = true;
+    private bool checkMasterCard = true;
+    private bool checkDiscover = true;
+    private bool checkAmex = true;
+
+    List<string> integrationSettingsMetaKeys = new List<string>(){
+    BusinessSettingsMetaKey.ReservationsPaymentGateway,
+    BusinessSettingsMetaKey.TicketingPaymentGateway,
+    BusinessSettingsMetaKey.WebPaymentGateway,
+    BusinessSettingsMetaKey.POSPaymentGateway,
+    BusinessSettingsMetaKey.ClubPaymentGateway
+    };
+
+    private List<IntegrationPartnerCategoryDetailModel> paymentGateways = new List<IntegrationPartnerCategoryDetailModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var getIntegrationPartnersResponse = await _saIntegrationPartnerViewModel.GetIntegrationPartnerCategoryListAsync(true);
+        if (getIntegrationPartnersResponse.success)
+        {
+            var integrationPartnersCateg = getIntegrationPartnersResponse.data.Where(x => x.IntegrationCategoryId == (int)IntegrationCategoryType.Payments).ToList();
+            if (integrationPartnersCateg != null && integrationPartnersCateg.Any())
+            {
+                paymentGateways = integrationPartnersCateg[0].IntegrationPartners;
+            }
+        }
+
+        var settingListResponse = await _settingsViewModel.GetBusinessSettingsListAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount);
+        foreach (var metaKey in integrationSettingsMetaKeys)
+        {
+            var metaValue = settingListResponse?.data?.Where(x => x.MetaKey == metaKey)?.FirstOrDefault()?.MetaValue;
+            if(!string.IsNullOrWhiteSpace(metaValue))
+            {
+                businessAccountIntegrationPartners.Add(Convert.ToInt32(metaValue));
+            }
+        }
+
+        paymentGateways = paymentGateways.Where(x => businessAccountIntegrationPartners.Any(y => y == x.IntegrationPartnerId)).ToList();
+        if (IdGUID.HasValue)
+        {
+            var paymentProfileResponse = await _paymentProfileViewModel.GetPaymentProfileDetails(0, IdGUID.Value.ToString());
+            if (paymentProfileResponse.success)
+            {
+                paymentProfile = paymentProfileResponse.data;
+            }
+            setCheckBoxes();
+        }
+        else
+        {
+            paymentProfile = new PaymentProfileDetailsViewModel
+            {
+                BusinessId = currentMember.Id,
+                GatewayProvider = (int)PaymentGateway.SynergyPayments
+            };
+        }
+
+        gatewayVal = paymentProfile.GatewayProvider;
+        SpinnerVisibility = false;
+    }
+
+    public class Gateway
+    {
+        public int ID { get; set; }
+        public string Name { get; set; }
+    }
+
+    private void setCheckBoxes()
+    {
+        var visaInfo = paymentProfile.data.Where(x => x.MetaKey == "Visa").FirstOrDefault();
+        if (visaInfo != null)
+        {
+            checkVisa = Convert.ToBoolean(visaInfo.MetaValue);
+            paymentProfile.data.Remove(visaInfo);
+        }
+        var masterCardInfo = paymentProfile.data.Where(x => x.MetaKey == "MasterCard").FirstOrDefault();
+        if (masterCardInfo != null)
+        {
+            checkMasterCard = Convert.ToBoolean(masterCardInfo.MetaValue);
+            paymentProfile.data.Remove(masterCardInfo);
+        }
+        var discoverInfo = paymentProfile.data.Where(x => x.MetaKey == "Discover").FirstOrDefault();
+        if (discoverInfo != null)
+        {
+            checkDiscover = Convert.ToBoolean(discoverInfo.MetaValue);
+            paymentProfile.data.Remove(discoverInfo);
+        }
+        var amexInfo = paymentProfile.data.Where(x => x.MetaKey == "Amex").FirstOrDefault();
+        if (amexInfo != null)
+        {
+            checkAmex = Convert.ToBoolean(amexInfo.MetaValue);
+            paymentProfile.data.Remove(amexInfo);
+        }
+    }
+
+    private async Task onGatewayChange(ChangeEventArgs<int, IntegrationPartnerCategoryDetailModel> args)
+    {
+        try{
+            if(args is null)
+            {
+                return;
+            }
+            SpinnerVisibility = true;
+            if (paymentProfile.Id> 0)
+            {
+                var paymentProfileResponse = await _paymentProfileViewModel.GetPaymentProfileDetails(0, paymentProfile.IdGUID.ToString());
+                if (paymentProfileResponse.success)
+                {
+                    paymentProfile = paymentProfileResponse.data;
+                }
+            }
+
+        // setCheckBoxes();
+        if(args.ItemData != null)
+        {
+            var metaNamespace = args.ItemData.AppName;
+            var visaInfo = paymentProfile.data.Where(x => x.MetaNamespace == metaNamespace && x.MetaKey == "Visa").FirstOrDefault();
+            if (visaInfo != null)
+            {
+                checkVisa = Convert.ToBoolean(visaInfo.MetaValue);
+                paymentProfile.data.Remove(visaInfo);
+            }
+            else
+            {
+                checkVisa = true;
+            }
+
+            var masterCardInfo = paymentProfile.data.Where(x => x.MetaNamespace == metaNamespace && x.MetaKey == "MasterCard").FirstOrDefault();
+            if (masterCardInfo != null)
+            {
+                checkMasterCard = Convert.ToBoolean(masterCardInfo.MetaValue);
+                paymentProfile.data.Remove(masterCardInfo);
+            }
+            else
+            {
+                checkMasterCard = true;
+            }
+
+            var discoverInfo = paymentProfile.data.Where(x => x.MetaNamespace == metaNamespace && x.MetaKey == "Discover").FirstOrDefault();
+            if (discoverInfo != null)
+            {
+                checkDiscover = Convert.ToBoolean(discoverInfo.MetaValue);
+                paymentProfile.data.Remove(discoverInfo);
+            }
+            else
+            {
+                checkDiscover = true;
+            }
+
+            var amexInfo = paymentProfile.data.Where(x => x.MetaNamespace == metaNamespace && x.MetaKey == "Amex").FirstOrDefault();
+            if (amexInfo != null)
+            {
+                checkAmex = Convert.ToBoolean(amexInfo.MetaValue);
+                paymentProfile.data.Remove(amexInfo);
+            }
+            else
+            {
+                checkAmex = true;
+            }
+        }      
+
+            gatewayVal = args.Value;
+            paymentProfile.GatewayProvider = gatewayVal;
+
+        }
+        catch (Exception e)
+        {
+            //  Block of code to handle errors
+        }
+        SpinnerVisibility = false;
+
+    }
+
+    private void TestConnection()
+    {
+        try
+        {
+            switch (gatewayVal)
+            {
+                //case ((int)PaymentGateway.BrainTree):
+                //    reqForm = SettingsPaymentsBrainTree.BrainTreeForm.EditContext;
+                //    break;
+                //case ((int)PaymentGateway.CardConnect):
+                //    reqForm = SettingsPaymentsCardConnect.CardConnectForm.EditContext;
+                //    break;
+                //case ((int)PaymentGateway.OpenEdge):
+                //    reqForm = SettingsPaymentsOpenEdge.OpenEdgeForm.EditContext;
+                //    break;
+                case ((int)PaymentGateway.SynergyPayments):
+                    reqForm = SettingsPaymentsSynergyPayments.SynergyPaymentForm.EditContext;
+                    break;
+                    //case ((int)PaymentGateway.WorldPay):
+                    //    reqForm = SettingsPaymentsWorldPay.WorldPayForm.EditContext;
+                    //    break;
+                    //default:
+                    //    reqForm = SettingsPaymentsAuthorizeDotNet.AuthorizeNetForm.EditContext;
+                    //    break;
+            }
+            reqForm.Validate();
+        }
+        catch (Exception e)
+        {
+            //  Block of code to handle errors
+        }
+    }
+
+    private async Task SavePaymentProfile()
+    {
+        TestConnection();
+        if (reqForm.Validate())
+        {
+            paymentProfile.data = new List<BusinessPaymentProviderProfileSettingsViewModel>();
+            switch (gatewayVal)
+            {
+                //case ((int)PaymentGateway.AuthorizeNet):
+                //    AuthorizeDotNetRequestModel authorizeDotNetRequest = (AuthorizeDotNetRequestModel)reqForm.Model;
+                //    paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+                //    {
+                //        MetaNamespace = BusinessSettingsMetaNamespace.AuthorizeNet,
+                //        MetaKey = BusinessSettingsMetaKey.AuthorizeNetAPILoginKey,
+                //        MetaValue = authorizeDotNetRequest.APILoginKey
+                //    });
+                //    paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+                //    {
+                //        MetaNamespace = BusinessSettingsMetaNamespace.AuthorizeNet,
+                //        MetaKey = BusinessSettingsMetaKey.AuthorizeNetTransactionKey,
+                //        MetaValue = authorizeDotNetRequest.TransactionKey
+                //    });
+                //    break;
+                //case ((int)PaymentGateway.BrainTree):
+                //    BrainTreeRequestModel brainTreeRequest = (BrainTreeRequestModel)reqForm.Model;
+                //    paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+                //    {
+                //        MetaNamespace = BusinessSettingsMetaNamespace.BrainTree,
+                //        MetaKey = BusinessSettingsMetaKey.BrainTreeMerchantId,
+                //        MetaValue = brainTreeRequest.MerchantId
+                //    });
+                //    paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+                //    {
+                //        MetaNamespace = BusinessSettingsMetaNamespace.BrainTree,
+                //        MetaKey = BusinessSettingsMetaKey.BrainTreePublicKey,
+                //        MetaValue = brainTreeRequest.PublicKey
+                //    });
+                //    paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+                //    {
+                //        MetaNamespace = BusinessSettingsMetaNamespace.BrainTree,
+                //        MetaKey = BusinessSettingsMetaKey.BrainTreePrivateKey,
+                //        MetaValue = brainTreeRequest.PrivateKey
+                //    });
+                //    break;
+                //case ((int)PaymentGateway.CardConnect):
+                //    CardConnectRequestModel cardConnectRequest = (CardConnectRequestModel)reqForm.Model;
+                //    paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+                //    {
+                //        MetaNamespace = BusinessSettingsMetaNamespace.CardConnect,
+                //        MetaKey = BusinessSettingsMetaKey.CardConnectMerchantId,
+                //        MetaValue = cardConnectRequest.MerchantId
+                //    });
+                //    paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+                //    {
+                //        MetaNamespace = BusinessSettingsMetaNamespace.CardConnect,
+                //        MetaKey = BusinessSettingsMetaKey.CardConnectUsername,
+                //        MetaValue = cardConnectRequest.Username
+                //    });
+                //    paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+                //    {
+                //        MetaNamespace = BusinessSettingsMetaNamespace.CardConnect,
+                //        MetaKey = BusinessSettingsMetaKey.CardConnectPassword,
+                //        MetaValue = cardConnectRequest.Password
+                //    });
+                //    paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+                //    {
+                //        MetaNamespace = BusinessSettingsMetaNamespace.CardConnect,
+                //        MetaKey = BusinessSettingsMetaKey.CardConnectSiteId,
+                //        MetaValue = cardConnectRequest.SiteId
+                //    });
+                //    break;
+                //case ((int)PaymentGateway.OpenEdge):
+                //    OpenEdgeRequestModel openEdgeRequest = (OpenEdgeRequestModel)reqForm.Model;
+                //    paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+                //    {
+                //        MetaNamespace = BusinessSettingsMetaNamespace.OpenEdge,
+                //        MetaKey = BusinessSettingsMetaKey.OpenEdgeXWebID,
+                //        MetaValue = openEdgeRequest.XWebID
+                //    });
+                //    paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+                //    {
+                //        MetaNamespace = BusinessSettingsMetaNamespace.OpenEdge,
+                //        MetaKey = BusinessSettingsMetaKey.OpenEdgeAuthKey,
+                //        MetaValue = openEdgeRequest.AuthKey
+                //    });
+                //    paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+                //    {
+                //        MetaNamespace = BusinessSettingsMetaNamespace.OpenEdge,
+                //        MetaKey = BusinessSettingsMetaKey.OpenEdgeTerminalId,
+                //        MetaValue = openEdgeRequest.TerminalId
+                //    });
+                //    break;
+                case ((int)PaymentGateway.SynergyPayments):
+                    SynergyPaymentsRequestModel synergyPaymentsRequest = (SynergyPaymentsRequestModel)reqForm.Model;
+                    paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+                    {
+                        MetaNamespace = BusinessSettingsMetaNamespace.SynergyPayments,
+                        MetaKey = BusinessSettingsMetaKey.SynergyPaymentsUserId,
+                        MetaValue = synergyPaymentsRequest.UserId
+                    });
+                    paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+                    {
+                        MetaNamespace = BusinessSettingsMetaNamespace.SynergyPayments,
+                        MetaKey = BusinessSettingsMetaKey.SynergyPaymentsAPIKey,
+                        MetaValue = synergyPaymentsRequest.APIKey
+                    });
+                    paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+                    {
+                        MetaNamespace = BusinessSettingsMetaNamespace.SynergyPayments,
+                        MetaKey = BusinessSettingsMetaKey.SynergyPaymentsLocationId,
+                        MetaValue = synergyPaymentsRequest.LocationId
+                    });
+                    break;
+                    //case ((int)PaymentGateway.WorldPay):
+                    //    WorldPayRequestModel worldPayRequest = (WorldPayRequestModel)reqForm.Model;
+                    //    paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+                    //    {
+                    //        MetaNamespace = BusinessSettingsMetaNamespace.WorldPay,
+                    //        MetaKey = BusinessSettingsMetaKey.WorldPayAcceptorId,
+                    //        MetaValue = worldPayRequest.AcceptorId
+                    //    });
+                    //    paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+                    //    {
+                    //        MetaNamespace = BusinessSettingsMetaNamespace.WorldPay,
+                    //        MetaKey = BusinessSettingsMetaKey.WorldPayAccountId,
+                    //        MetaValue = worldPayRequest.AccountId
+                    //    });
+                    //    paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+                    //    {
+                    //        MetaNamespace = BusinessSettingsMetaNamespace.WorldPay,
+                    //        MetaKey = BusinessSettingsMetaKey.WorldPayAccountToken,
+                    //        MetaValue = worldPayRequest.AccountToken
+                    //    });
+                    //    break;
+            }
+
+            SpinnerVisibility = true;
+            paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+            {
+                MetaNamespace = paymentProfile.data[0].MetaNamespace,
+                MetaKey = "Visa",
+                MetaValue = checkVisa.ToString(),
+            });
+            paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+            {
+                MetaNamespace = paymentProfile.data[0].MetaNamespace,
+                MetaKey = "MasterCard",
+                MetaValue = checkMasterCard.ToString(),
+            });
+            paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+            {
+                MetaNamespace = paymentProfile.data[0].MetaNamespace,
+                MetaKey = "Discover",
+                MetaValue = checkDiscover.ToString(),
+            });
+            paymentProfile.data.Add(new BusinessPaymentProviderProfileSettingsViewModel
+            {
+                MetaNamespace = paymentProfile.data[0].MetaNamespace,
+                MetaKey = "Amex",
+                MetaValue = checkAmex.ToString(),
+            });
+            foreach (var metadata in paymentProfile.data)
+            {
+                metadata.BusinessPaymentProfileId = paymentProfile.Id;
+                metadata.Description = " ";
+                metadata.Title = " ";
+                metadata.ValueType = 0;
+            }
+            var addUpdateResponse = await _paymentProfileViewModel.CreatePaymentProfileAsync(paymentProfile);
+            if (addUpdateResponse.success)
+            {
+                paymentProfile = addUpdateResponse.data;
+                setCheckBoxes();
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                StateHasChanged();
+                NavigationManager.NavigateTo(string.Format("/settings/payment-profiles/{0}", paymentProfile.IdGUID));
+            }
+            else
+            {
+                toastService.ShowToast(addUpdateResponse.error_info.description, ToastLevel.Error);
+            }
+            SpinnerVisibility = false;
+        }
+
+    }
+
+}

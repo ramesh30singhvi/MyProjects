@@ -1,0 +1,806 @@
+﻿@page "/settings/shipping/create"
+@page "/settings/shipping/edit/{Id:int}/{IdGUID:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Client.ViewModels
+@using Microsoft.Extensions.Configuration;
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using System
+@using System.ComponentModel;
+@using System.Reflection;
+@inject IShippingClassViewModel _shippingClassViewModel
+@inject IShippingRatesViewModel _shippingRatesViewModel
+@inject IShippingZoneViewModel _shippingZoneViewModel
+@inject IShippingCarrierViewModel _shippingCarrierViewModel
+@inject IConfiguration _configuration
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ToastService toastService
+@inject NavigationManager NavigationManager
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm Model="@shippingRate" Context="formContext">
+    <DataAnnotationsValidator />
+    <div class="card mb-3">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-3 mb-md-0"><a href="/settings/shipping-rates" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-shipping-fast me-2"></span>Shipping Rates</h5>
+                </div>
+                <div class="col-auto">
+                    @{
+                        if (shippingRate.Id > 0)
+                        {
+                            <button type="button" class="btn btn-sm btn-danger me-2" @onclick="DisplayDeleteRateConfirmation">Delete</button>
+                        }
+                    }
+                    <button @onclick="() => SaveShippingRate(formContext)" class="btn btn-sm btn-primary">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-12 col-md-8">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Shipping Rate Name</label>
+                            <InputText class="form-control" Placeholder="Enter Shipping rate name" @bind-Value="@shippingRate.ShippingRateName" />
+                            <ValidationMessage For="@(() => shippingRate.ShippingRateName)" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Shipping Technical Name</label>
+                            <InputText class="form-control" Placeholder="Enter Shipping rate technical name" @bind-Value="@shippingRate.ShippingTechnicalName" />
+                            <ValidationMessage For="@(() => shippingRate.ShippingTechnicalName)" />
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label class="form-label">Calculation Mode</label>
+                            <SfDropDownList TValue="int" TItem="DropDownClass" Placeholder="Select Calculation mode" @bind-Value="@calculationMode" DataSource="@calculationModes">
+                                <DropDownListEvents TItem="DropDownClass" TValue="int" ValueChange="@SetCalculationMode"></DropDownListEvents>
+                                <DropDownListFieldSettings Value="Id" Text="Name"></DropDownListFieldSettings>
+                            </SfDropDownList>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Preferred Carrier</label>
+                            <SfDropDownList TValue="int" TItem="ShippingCarrierModel" Placeholder="Select Preferred Carrier" @bind-Value="shippingRate.PreferredCarrier" DataSource="@shippingCarriers">
+                                <DropDownListEvents TItem="ShippingCarrierModel" TValue="int" ValueChange="@GetCarrierServiceCodes"></DropDownListEvents>
+                                <DropDownListFieldSettings Value="Id" Text="CarrierName"></DropDownListFieldSettings>
+                            </SfDropDownList>
+                            <ValidationMessage For="@(() => shippingRate.PreferredCarrier)" />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="selServiceCodes" class="form-label">Shipping Service Codes</label>
+                            <SfDropDownList TValue="int" TItem="ShippingCarrierCodeModel" Placeholder="Select Service Code" @bind-Value="@shippingRate.ShippingServiceCode" DataSource="@serviceCodes">
+                                <DropDownListFieldSettings Value="Id" Text="ServiceCodeName"></DropDownListFieldSettings>
+                            </SfDropDownList>
+                            <ValidationMessage For="@(() => shippingRate.ShippingServiceCode)" />
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label>Fulfillment House</label>
+                            <SfDropDownList TValue="int" TItem="DropDownClass" Placeholder="Select Fulfillment House" @bind-Value="shippingRate.FulfillmentHouse" DataSource="@fulfillmentHouses">
+                                <DropDownListFieldSettings Value="Id" Text="Name"></DropDownListFieldSettings>
+                            </SfDropDownList>
+                            <ValidationMessage For="@(() => shippingRate.FulfillmentHouse)" />
+                        </div>
+                        <div class="col-md-6">
+                            <label>Shipping Class</label>
+                            <SfDropDownList TValue="int" TItem="ShippingClassModel" Placeholder="Select Shipping Class" @bind-Value="@shippingRate.ShippingClass" DataSource="@shippingClasses">
+                                <DropDownListFieldSettings Value="Id" Text="Class"></DropDownListFieldSettings>
+                            </SfDropDownList>
+                            <ValidationMessage For="@(() => shippingRate.ShippingClass)" />
+                        </div>
+                    </div>
+                    <div class="row mb-4">
+                        <div class="col-md-6" hidden="@(!IsAdjustRatesVisible)">
+                            <label for="inputAdjustRates" class="form-label">Adjust Rates</label>
+                            <div class="row g-2">
+                                <div class="col-md-6 mb-2">
+                                    <InputNumber id="inputAdjustRates" class="form-control" Placeholder="Enter Adjust rates" @bind-Value="@shippingRate.AdjustRates" />
+                                </div>
+                                <div class="col-md-6 mb-2">
+                                    <SfDropDownList TValue="int" TItem="DropDownClass" Placeholder="Select Percent Or Dollar" @bind-Value="@percentOrDollar" DataSource="@percentTypes" aria-label="Rate Percent or Dollar">
+                                        <DropDownListFieldSettings Value="Id" Text="Name"></DropDownListFieldSettings>
+                                    </SfDropDownList>
+
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tax</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="chkCalcSalesTaxShipping" @bind="@shippingRate.ChargeTaxOnShipping">
+                                <label class="form-check-label" for="chkCalcSalesTaxShipping">
+                                    Calculate Sales Tax on Shipping
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-2 justify-content-between align-items-center">
+                        <div class="col-md">
+                            <h6>Shipping Charges</h6>
+                        </div>
+                        @{
+                            if (calculationMode == (int)ShippingRateCalculationMode.ManualByWeight || calculationMode == (int)ShippingRateCalculationMode.ManualItemCount)
+                            {
+                                if (ShippingChargesDataList.Any())
+                                {
+                                    <div class="col-auto">
+                                        <button type="button" @onclick="() => ShowAdjustRatesModal()" class="btn btn-sm btn-outline-primary">Adjust Rates</button>
+                                    </div>
+                                }
+                                <div class="col-auto">
+                                    <button type="button" @onclick="() => ShowAddShippingChargeModal(Guid.Empty)" class="btn btn-sm btn-primary">Add New</button>
+                                </div>
+                            }
+                        }
+
+                    </div>
+
+                    <div class="mb-3">
+                        <SfGrid DataSource="@reqDataSource" AllowPaging="true">
+                            <GridPageSettings PageSize="10"></GridPageSettings>
+                            <GridEditSettings AllowEditing="true">
+                                <Validator>
+                                    @{
+                                        ValidatorTemplateContext txt = context as ValidatorTemplateContext;
+                                    }
+                                    <ShippingChargeGridValidator shippingChargesDataList="ShippingChargesDataList" CalculationMode="calculationMode" OnValidDataInput="UpdateShippingCharges" context="@txt"></ShippingChargeGridValidator>
+                                </Validator>
+                            </GridEditSettings>
+                            <GridColumns>
+                                <GridColumn Field=@nameof(ShippingChargeModel.IdGUID) HeaderText="Order ID" IsPrimaryKey="true" TextAlign="TextAlign.Right" Width="0px"></GridColumn>
+                                <GridColumn Visible="calculationMode == (int)ShippingRateCalculationMode.ManualByWeight" EditType="EditType.NumericEdit" Field=@nameof(ShippingChargeModel.ItemWeight) HeaderText="Item Weight" ValidationRules="@(new ValidationRules{ Required=true})" TextAlign="TextAlign.Left" Width="100px"></GridColumn>
+                                <GridColumn Visible="calculationMode == (int)ShippingRateCalculationMode.ManualItemCount" Field=@nameof(ShippingChargeModel.ItemCount) HeaderText="Item Count" ValidationRules="@(new ValidationRules{ Required=true})" TextAlign="TextAlign.Left" Width="100px"></GridColumn>
+                                <GridColumn Field=@nameof(ShippingChargeModel.Amount) HeaderText="Shipping Charge" EditType="EditType.NumericEdit" Format="C2" TextAlign="TextAlign.Left" Width="150px"></GridColumn>
+                                <GridColumn HeaderText="Manage Records" Width="150px">
+                                    <GridCommandColumns>
+                                        <GridCommandColumn Type="CommandButtonType.Edit" ButtonOption="@(new CommandButtonOptions() {IconCss="e-icons e-edit", CssClass="e-flat" })"></GridCommandColumn>
+                                        <GridCommandColumn Type="CommandButtonType.Save" ButtonOption="@(new CommandButtonOptions() {IconCss="e-icons e-save", CssClass="e-flat" })"></GridCommandColumn>
+                                        <GridCommandColumn Type="CommandButtonType.Cancel" ButtonOption="@(new CommandButtonOptions() {IconCss="e-icons e-cancel-icon", CssClass="e-flat" })"></GridCommandColumn>
+                                    </GridCommandColumns>
+                                </GridColumn>
+                                <GridColumn HeaderText="" TextAlign="TextAlign.Right" Width="80px">
+                                    <Template Context="profileContext">
+                                        @{
+                                            var shippingChargeId = (profileContext as ShippingChargeModel).IdGUID;
+                                            <button type="button" class="delete_icon" @onclick="() => ShowDeleteShippingChargesModal(shippingChargeId)">
+                                                <span class="far fa-trash-alt"></span>
+                                            </button>
+                                        }
+                                    </Template>
+                                </GridColumn>
+                            </GridColumns>
+                        </SfGrid>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <div class="card shadow-none border mb-2">
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Active Status</label><br />
+                                    <SfSwitch @bind-Checked="@shippingRate.IsActive"></SfSwitch>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Sort Order</label>
+                                    <InputNumber @bind-Value="@shippingRate.SortOrder" class="form-control" />
+                                    <ValidationMessage For="@(() => shippingRate.SortOrder)" />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <label class="form-label">Shipping Zone</label>
+                                    <SfDropDownList @bind-Value="@shippingRate.ShippingZone" Placeholder="Select Shipping Zone" DataSource="shippingZones" TValue="int" TItem="ShippingZoneListModel">
+                                        <DropDownListFieldSettings Text="ZoneName" Value="Id"></DropDownListFieldSettings>
+                                    </SfDropDownList>
+                                    <ValidationMessage For="@(() => shippingRate.ShippingZone)" />
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="selItemtStatus">Applicable Channels</label>
+                                <div class="d-flex justify-content-between px-card py-2 border-200">
+                                    <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchWeb">Web</label></div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-switch"><input class="form-check-input" id="switchWeb" type="checkbox" checked="@shippingRate.IsWebSalesChannel" @bind-value="@shippingRate.IsWebSalesChannel"></div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between border-top px-card  py-2 border-200">
+                                    <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchPOS">POS</label></div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-switch"><input class="form-check-input" id="switchPOS" type="checkbox" checked="@shippingRate.IsPOSSalesChannel" @bind-value="@shippingRate.IsPOSSalesChannel"></div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between border-top px-card py-2 border-200">
+                                    <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchClub">Club</label></div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-switch"><input class="form-check-input" id="switchClub" type="checkbox" checked="@shippingRate.IsClubSalesChannel" @bind-value="@shippingRate.IsClubSalesChannel"></div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between border-top px-card py-2 border-200">
+                                    <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchClub">OMS</label></div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-switch"><input class="form-check-input" id="switchOMS" type="checkbox" checked="@shippingRate.IsOMSSalesChannel" @bind-value="@shippingRate.IsOMSSalesChannel"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+<SfDialog Width="400px" IsModal="true" @bind-Visible="@IsDeleteShippingChargesModalVisible">
+    <DialogTemplates>
+        <Header>Delete Shipping Charge</Header>
+        <Content>
+            <p class="mb-3">You have selected to delete a shipping charge.</p>
+            <p class="mb-3">Are you sure?</p>
+        </Content>
+    </DialogTemplates>
+    <DialogButtons>
+        <DialogButton Content="Cancel" OnClick="@CloseDeleteShippingChargesModal" />
+        <DialogButton Content="Yes" @onclick="DeleteShippingCharge" IsPrimary="true" />
+    </DialogButtons>
+</SfDialog>
+
+<SfDialog Width="400px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsDeleteShippingRateModalVisible">
+    <DialogTemplates>
+        <Header>Delete Shipping Charge</Header>
+        <Content>
+            <p class="mb-3">You have requested to delete this shipping rates table which cannot be undone.</p>
+            <p class="mb-3">To delete this shipping rates table, you must enter the name exactly as shown in the Shipping Rate Name field above.</p>
+            <input class="form-control" placeholder="Enter the exact Shipping Rate name" @oninput="@HandleShippingRateConfirmation" />
+        </Content>
+    </DialogTemplates>
+    <DialogButtons>
+        <DialogButton Content="Cancel" OnClick="() => IsDeleteShippingRateModalVisible = false" />
+        <DialogButton Content="Delete" OnClick="DeleteShippingRate" Disabled="@((shippingRateNameConfirmation == shippingRate.ShippingRateName)?false:true)" CssClass="@((shippingRateNameConfirmation == shippingRate.ShippingRateName)?"e-danger":"")" />
+    </DialogButtons>
+</SfDialog>
+
+<SfDialog Width="400px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsAddShippingChargeModalVisible">
+    <DialogTemplates>
+        <Header>@((shippingCharge.IdGUID != Guid.Empty)?"Edit":"Add") Shipping Charge</Header>
+        <Content>
+            <EditForm Model="shippingCharge" @ref="adjustChargesForm" Context="formContext">
+                <DataAnnotationsValidator />
+                @if (calculationMode == (int)ShippingRateCalculationMode.ManualByWeight)
+                {
+                    <label class="form-label">Item Weight</label>
+                    <InputNumber class="form-control" @bind-Value="@shippingCharge.ItemWeight" />
+                    <ValidationMessage For="@(() => shippingCharge.ItemWeight)" />
+                }
+                else if (calculationMode == (int)ShippingRateCalculationMode.ManualItemCount)
+                {
+                    <label class="form-label">Item Count</label>
+                    <InputNumber class="form-control" @bind-Value="@shippingCharge.ItemCount" />
+                    <ValidationMessage For="@(() => shippingCharge.ItemCount)" />
+                }
+                <label class="form-label">Shipping Charge</label>
+                <SfNumericTextBox CssClass="form-control" TValue="decimal" ValidateDecimalOnType="true" Format="c2" Placeholder="0.00" Min="Convert.ToDecimal(0.00)" Decimals=2 ShowSpinButton="false" @bind-Value=@shippingCharge.Amount></SfNumericTextBox>
+            </EditForm>
+
+
+        </Content>
+    </DialogTemplates>
+    <DialogButtons>
+        <DialogButton Content="Cancel" OnClick="() => IsAddShippingChargeModalVisible = false" />
+        <DialogButton Content="@((shippingCharge.IdGUID != Guid.Empty)?"Edit":"Add")" OnClick="@AddShippingCharge" IsPrimary="true" />
+    </DialogButtons>
+</SfDialog>
+
+<SfDialog Width="400px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@IsAdjustRatesModalVisible">
+    <DialogTemplates>
+        <Header>Adjust Rates</Header>
+        <Content>
+            <EditForm Model="adjustRates" OnValidSubmit="ApplyAdjustRates">
+                <DataAnnotationsValidator />
+                <content>
+                    <div class="mb-3">
+                        <div class="btn-group d-flex" role="group" aria-label="Adjust by button group">
+                            <input type="radio" class="btn-check" name="btnAddSubstractGroup" id="btnAdd" autocomplete="off" checked>
+                            <label class="btn btn-outline-primary w-50" @onclick="() => adjustRates.IsAdd = true" for="btnAdd">Add</label>
+
+                            <input type="radio" class="btn-check" name="btnAddSubstractGroup" id="btnSubstract" autocomplete="off">
+                            <label class="btn btn-outline-primary w-50" @onclick="() => adjustRates.IsAdd = false" for="btnSubstract">Subtract</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="inputDiscountSchema" class="form-label">Amount Type</label>
+                        <InputSelect @bind-Value="adjustRates.AmountType" class="form-select">
+                            @foreach (ShippingRatePercentDollarType adjustRateType in Enum.GetValues(typeof(ShippingRatePercentDollarType)))
+                            {
+                                <option value="@adjustRateType">@adjustRateType</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="mb-3">
+                        <label for="inputSurchargeRealtimeRates" class="form-label">Adjust Amount By</label>
+                        <InputNumber min="0.01" class="form-control" id="inputSurchargeRealtimeRates" @bind-Value="adjustRates.Amount" />
+                        <ValidationMessage For="@(() => adjustRates.Amount)" />
+                    </div>
+                </content>
+                <div class="e-footer-content px-0">
+                    <button type="button" class="btn btn-secondary" @onclick="() => IsAdjustRatesModalVisible = false">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Adjust Rates</button>
+                </div>
+            </EditForm>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+@code {
+    private string title = "Shipping | Create Shipping Rate";
+    private bool SpinnerVisibility = true;
+    ShippingRateRequestModel shippingRate = new ShippingRateRequestModel();
+    List<ShippingClassModel> shippingClasses = new List<ShippingClassModel>();
+    List<DropDownClass> calculationModes = new List<DropDownClass>();
+    List<DropDownClass> percentTypes = new List<DropDownClass>();
+    List<DropDownClass> fulfillmentHouses = new List<DropDownClass>();
+    List<DropDownClass> preferredCarriers = new List<DropDownClass>();
+    private List<ShippingZoneListModel> shippingZones = new List<ShippingZoneListModel>();
+    private List<ShippingCarrierCodeModel> serviceCodes = new List<ShippingCarrierCodeModel>();
+    int bindShipFulfillment = 0;
+    int shippingCarrier = 0;
+    int calculationMode = 0;
+    int percentOrDollar = 0;
+    int shippingServiceCode = 0;
+    Member currentMember = new Member();
+    private bool IsDeleteShippingChargesModalVisible = false;
+    private bool IsDeleteShippingRateModalVisible = false;
+    private bool IsAddShippingChargeModalVisible = false;
+    private bool IsAdjustRatesModalVisible = false;
+    private bool IsAdjustRatesVisible = false;
+    private string shippingRateNameConfirmation { get; set; }
+    ShippingChargeModel shippingCharge = new ShippingChargeModel();
+    private Guid deleteShippingCharge { get; set; }
+    private AdjustRatesRequestModel adjustRates = new AdjustRatesRequestModel();
+    public List<ShippingChargeModel> ShippingChargesDataList = new List<ShippingChargeModel>();
+    private List<ShippingChargeModel> reqDataSource = new List<ShippingChargeModel>();
+    public List<ShippingCarrierModel> shippingCarriers = new List<ShippingCarrierModel>();
+    EditForm adjustChargesForm;
+
+    [Parameter]
+    public ValidatorTemplateContext context { get; set; }
+
+    private ValidationMessageStore messageStore;
+
+    [CascadingParameter]
+    private EditContext CurrentEditContext { get; set; }
+
+    [Parameter]
+    public Guid? IdGUID { get; set; }
+
+    [Parameter]
+    public int Id { get; set; }
+    private class DropDownClass
+    {
+        public int Id { get; set; }
+        public string Name { get; set; }
+    }
+
+    private List<ShippingChargeModel> GetShippingChargesByCalculationMode()
+    {
+        if (calculationMode == (int)ShippingRateCalculationMode.ManualByWeight)
+        {
+            return ShippingChargesDataList.Where(x => x.ItemWeight > 0).OrderBy(x => x.ItemWeight).ToList();
+        }
+        else if (calculationMode == (int)ShippingRateCalculationMode.ManualItemCount)
+        {
+            return ShippingChargesDataList.Where(x => x.ItemCount > 0).OrderBy(x => x.ItemCount).ToList();
+        }
+        else
+        {
+            return new List<ShippingChargeModel>();
+        }
+    }
+
+    protected void HandleValidation(FieldIdentifier identifier)
+    {
+        if (identifier.FieldName.Equals("ItemCount"))
+        {
+            messageStore.Clear(identifier);
+            if ((context.Data as ShippingChargeModel).ItemCount < 0)
+            {
+                messageStore.Add(identifier, "Freight value should be greater than 0");
+                context.ShowValidationMessage("ItemCount", false, "Freight value should be greater than 0");
+            }
+            else if ((context.Data as ShippingChargeModel).ItemCount > 100)
+            {
+                messageStore.Add(identifier, "Freight value should be lesser than 100");
+                context.ShowValidationMessage("ItemCount", false, "Freight value should be lesser than 100");
+            }
+            else
+            {
+                messageStore.Clear(identifier);
+                context.ShowValidationMessage("ItemCount", true, null);
+            }
+        }
+    }
+
+    protected void ValidateField(object editContext, FieldChangedEventArgs fieldChangedEventArgs)
+    {
+        HandleValidation(fieldChangedEventArgs.FieldIdentifier);
+    }
+
+    private void ValidateRequested(object editContext, ValidationRequestedEventArgs validationEventArgs)
+    {
+        HandleValidation(CurrentEditContext.Field("Field"));
+    }
+
+    private void AddGUIDToCharges()
+    {
+        ShippingChargesDataList = shippingRate.ShippingCharges;
+        foreach (var charge in ShippingChargesDataList)
+        {
+            charge.IdGUID = Guid.NewGuid();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var getShippingClasses = await _shippingClassViewModel.GetShippingClasses(currentMember.Id);
+        if (getShippingClasses.success)
+        {
+            shippingClasses = getShippingClasses.data;
+        }
+
+        var getShippingZonesResponse = await _shippingZoneViewModel.GetShippingZones(currentMember.Id);
+        if (getShippingZonesResponse.success)
+        {
+            shippingZones = getShippingZonesResponse.data;
+        }
+
+        var getShippingCarriersResponse = await _shippingCarrierViewModel.GetAllShippingCarriers();
+        if (getShippingCarriersResponse.success)
+        {
+            shippingCarriers = getShippingCarriersResponse.data;
+        }
+
+        if (IdGUID.HasValue)
+        {
+            title = "Shipping | Edit Shipping Rate";
+            var getShippingRateResponse = await _shippingRatesViewModel.GetShippingRate(Id, IdGUID.Value);
+            if (getShippingRateResponse.success)
+            {
+                shippingRate = getShippingRateResponse.data;
+                shippingServiceCode = shippingRate.ShippingServiceCode;
+                await GetCarrierServiceCodes();
+                AddGUIDToCharges();
+            }
+        }
+
+        foreach (ShippingRateCalculationMode i in Enum.GetValues(typeof(ShippingRateCalculationMode)))
+        {
+            calculationModes.Add(new DropDownClass
+            {
+                Id = (int)i,
+                Name = StringValueOfEnum(i)
+            });
+        }
+
+        foreach (int i in Enum.GetValues(typeof(ShippingRatePercentDollarType)))
+        {
+            percentTypes.Add(new DropDownClass
+            {
+                Id = i,
+                Name = Enum.GetName(typeof(ShippingRatePercentDollarType), i)
+            });
+        }
+
+        foreach (ShippingRateFulfillmentHouse i in Enum.GetValues(typeof(ShippingRateFulfillmentHouse)))
+        {
+            fulfillmentHouses.Add(new DropDownClass
+                {
+                    Id = (int)i,
+                    Name = StringValueOfEnum(i)
+                });
+        }
+
+        calculationMode = (int)(ShippingRateCalculationMode)shippingRate.CalculationMode;
+        percentOrDollar = (int)(ShippingRatePercentDollarType)shippingRate.PercentDollar;
+        reqDataSource = GetShippingChargesByCalculationMode();
+        SpinnerVisibility = false;
+    }
+
+    private async Task SaveShippingRate(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var check = shippingRate.Id;
+            shippingRate.CalculationMode = (ShippingRateCalculationMode)calculationMode;
+            shippingRate.PercentDollar = (ShippingRatePercentDollarType)percentOrDollar;
+
+            shippingRate.BusinessId = currentMember.Id;
+
+
+            shippingRate.ShippingCharges = GetShippingChargesByCalculationMode();
+            if (!shippingRate.ShippingCharges.Any())
+            {
+                toastService.ShowToast("Please add Shipping Charge", ToastLevel.Error);
+                SpinnerVisibility = false;
+                return;
+            }
+            var addUpdateShippingRateResponse = await _shippingRatesViewModel.AddUpdateShippingRates(shippingRate);
+            if (addUpdateShippingRateResponse.success)
+            {
+                shippingRate = addUpdateShippingRateResponse.data;
+                if (check > 0)
+                {
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                }
+                else
+                {
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                    NavigationManager.NavigateTo(string.Format("/settings/shipping/edit/{0}/{1}", shippingRate.Id, shippingRate.IdGUID));
+                }
+
+                AddGUIDToCharges();
+                reqDataSource = GetShippingChargesByCalculationMode();
+            }
+            else
+            {
+                toastService.ShowToast(addUpdateShippingRateResponse.error_info.description, ToastLevel.Error);
+            }
+            SpinnerVisibility = false;
+        }
+    }
+
+    static string StringValueOfEnum(Enum value)
+    {
+        FieldInfo fi = value.GetType().GetField(value.ToString());
+        DescriptionAttribute[] attributes = (DescriptionAttribute[])fi.GetCustomAttributes(typeof(DescriptionAttribute), false);
+        if (attributes.Length > 0)
+        {
+            return attributes[0].Description;
+        }
+        else
+        {
+            return value.ToString();
+        }
+    }
+
+    private void ShowDeleteShippingChargesModal(Guid deleteShippingChargeId)
+    {
+        deleteShippingCharge = deleteShippingChargeId;
+        IsDeleteShippingChargesModalVisible = true;
+    }
+
+    private void CloseDeleteShippingChargesModal()
+    {
+        IsDeleteShippingChargesModalVisible = false;
+    }
+
+    private void DisplayDeleteRateConfirmation()
+    {
+        shippingRateNameConfirmation = "";
+        IsDeleteShippingRateModalVisible = true;
+    }
+
+    private async Task DeleteShippingRate()
+    {
+        SpinnerVisibility = true;
+        IsDeleteShippingRateModalVisible = false;
+        var deleteShippingRateResponse = await _shippingRatesViewModel.DeleteShippingRate(shippingRate.Id);
+        if (deleteShippingRateResponse.success)
+        {
+            toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+            NavigationManager.NavigateTo("settings/shipping-rates");
+        }
+        else
+        {
+            toastService.ShowToast(deleteShippingRateResponse.error_info.description, ToastLevel.Error);
+        }
+        SpinnerVisibility = false;
+    }
+
+    private void HandleShippingRateConfirmation(ChangeEventArgs args)
+    {
+        shippingRateNameConfirmation = args.Value.ToString();
+    }
+
+    private void ShowAddShippingChargeModal(Guid shippingChargeId)
+    {
+        if (shippingChargeId == Guid.Empty)
+        {
+            shippingCharge = new ShippingChargeModel { ShippingRateId = shippingRate.Id };
+        }
+        else
+        {
+            var reqShipCharge = ShippingChargesDataList.Where(x => x.IdGUID == shippingChargeId).FirstOrDefault();
+            shippingCharge = new ShippingChargeModel
+            {
+                Id = reqShipCharge.Id,
+                IdGUID = reqShipCharge.IdGUID,
+                ItemCount = reqShipCharge.ItemCount,
+                ItemWeight = reqShipCharge.ItemWeight,
+                Amount = reqShipCharge.Amount,
+                SortOrder = reqShipCharge.SortOrder,
+                ShippingRateId = reqShipCharge.ShippingRateId
+            };
+        }
+        IsAddShippingChargeModalVisible = true;
+    }
+
+    private void ShowAdjustRatesModal()
+    {
+        adjustRates = new AdjustRatesRequestModel { IsAdd = true };
+        IsAdjustRatesModalVisible = true;
+    }
+
+    private void AddShippingCharge()
+    {
+        if (calculationMode == (int)ShippingRateCalculationMode.ManualItemCount)
+        {
+            if (ShippingChargesDataList.Any(x => x.IdGUID != shippingCharge.IdGUID && x.ItemCount == shippingCharge.ItemCount))
+            {
+                toastService.ShowToast("Item Count exists.", ToastLevel.Error);
+                return;
+            }
+        }
+        if (calculationMode == (int)ShippingRateCalculationMode.ManualByWeight)
+        {
+            if (ShippingChargesDataList.Any(x => x.ItemWeight == shippingCharge.ItemWeight && x.IdGUID != shippingCharge.IdGUID))
+            {
+                toastService.ShowToast("Item Weight exists.", ToastLevel.Error);
+                return;
+            }
+        }
+        adjustChargesForm.EditContext.Validate();
+        if (adjustChargesForm.EditContext.Validate())
+        {
+            if (calculationMode == (int)ShippingRateCalculationMode.ManualItemCount && shippingCharge.ItemCount < 1)
+            {
+                toastService.ShowToast("Item Count should be atleast 1.", ToastLevel.Error);
+                return;
+            }
+            if (calculationMode == (int)ShippingRateCalculationMode.ManualByWeight && shippingCharge.ItemWeight <= 0)
+            {
+                toastService.ShowToast("Item weight should be greater than zero.", ToastLevel.Error);
+                return;
+            }
+            SpinnerVisibility = true;
+            IsAddShippingChargeModalVisible = false;
+
+            if (shippingCharge.IdGUID != Guid.Empty)
+            {
+                foreach (var charge in ShippingChargesDataList)
+                {
+                    if (charge.IdGUID == shippingCharge.IdGUID)
+                    {
+                        charge.ShippingRateId = shippingCharge.ShippingRateId;
+                        charge.Id = shippingCharge.Id;
+                        charge.ItemCount = shippingCharge.ItemCount;
+                        charge.ItemWeight = shippingCharge.ItemWeight;
+                        charge.Amount = shippingCharge.Amount;
+                        charge.SortOrder = shippingCharge.SortOrder;
+                    }
+                }
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                shippingCharge.IdGUID = Guid.NewGuid();
+                ShippingChargesDataList.Add(shippingCharge);
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+            }
+            SpinnerVisibility = false;
+            reqDataSource = GetShippingChargesByCalculationMode();
+        }
+    }
+
+    private async Task DeleteShippingCharge()
+    {
+        SpinnerVisibility = true;
+        IsDeleteShippingChargesModalVisible = false;
+        if (shippingRate.Id > 0)
+        {
+            var reqCharge = ShippingChargesDataList.Where(x => x.IdGUID == deleteShippingCharge).FirstOrDefault();
+            var deleteResponse = await _shippingRatesViewModel.DeleteShippingCharge(reqCharge.Id);
+            if (deleteResponse.success)
+            {
+                ShippingChargesDataList.Remove(reqCharge);
+            }
+            else
+            {
+                toastService.ShowToast(Constants.InternalServerError, ToastLevel.Error);
+                SpinnerVisibility = false;
+                return;
+            }
+        }
+        else
+        {
+            ShippingChargesDataList.RemoveAll(x => x.IdGUID == deleteShippingCharge);
+        }
+        toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+        reqDataSource = GetShippingChargesByCalculationMode();
+        SpinnerVisibility = false;
+    }
+
+    private void ApplyAdjustRates()
+    {
+        IsAdjustRatesModalVisible = false;
+        SpinnerVisibility = true;
+        //if(shippingRate.Id > 0)
+        //{
+        //    adjustRates.ShippingRates = new int[] { shippingRate.Id };
+        //    var response = await _shippingRatesViewModel.AdjustRatesForMultipleShippingRates(adjustRates);
+        //}
+        foreach (var shippingCharges in ShippingChargesDataList)
+        {
+            if (adjustRates.IsAdd)
+            {
+                if (adjustRates.AmountType == ShippingRatePercentDollarType.Dollar)
+                {
+                    shippingCharges.Amount = Math.Round(shippingCharges.Amount + adjustRates.Amount, 2);
+                }
+                else
+                {
+                    shippingCharges.Amount = Math.Round(shippingCharges.Amount + shippingCharges.Amount * (adjustRates.Amount / 100), 2);
+                }
+            }
+            else
+            {
+                if (adjustRates.AmountType == ShippingRatePercentDollarType.Dollar)
+                {
+                    shippingCharges.Amount = Math.Round(shippingCharges.Amount - adjustRates.Amount, 2);
+                }
+                else
+                {
+                    shippingCharges.Amount = Math.Round(shippingCharges.Amount - shippingCharges.Amount * (adjustRates.Amount / 100), 2);
+                }
+                if (shippingCharges.Amount < 0)
+                {
+                    shippingCharges.Amount = 0;
+                }
+            }
+        }
+        reqDataSource = GetShippingChargesByCalculationMode();
+        toastService.ShowToast("Adjust Rates Applied successfully", ToastLevel.Success);
+        SpinnerVisibility = false;
+
+    }
+
+    private async Task GetCarrierServiceCodes()
+    {
+        SpinnerVisibility = true;
+        var getCarrierCodesResponse = await _shippingCarrierViewModel.GetShippingCarrierServiceCodesByCarrierId(shippingRate.PreferredCarrier);
+        if (getCarrierCodesResponse.success)
+        {
+            serviceCodes = getCarrierCodesResponse.data;
+        }
+        SpinnerVisibility = false;
+    }
+
+    private async Task SetCalculationMode()
+    {
+        reqDataSource = GetShippingChargesByCalculationMode();
+        if (calculationMode == (int)ShippingRateCalculationMode.RealTimeFedEx || calculationMode == (int)ShippingRateCalculationMode.RealTimeUPS || calculationMode == (int)ShippingRateCalculationMode.RealTimeUSPS)
+        {
+            shippingRate.PreferredCarrier = calculationMode;
+            await GetCarrierServiceCodes();
+        }
+    }
+
+    private async Task UpdateShippingCharges()
+    {
+        SpinnerVisibility = true;
+        toastService.ShowToast("Shipping Charge Updated successfully", ToastLevel.Success);
+        await Task.Delay(600);
+        reqDataSource = GetShippingChargesByCalculationMode();
+        SpinnerVisibility = false;
+    }
+}

@@ -1,0 +1,224 @@
+﻿@page "/sa/content/style-guide"
+@layout SaLayout
+
+<Title Value="@title"></Title>
+
+<h2>Style Guide</h2>
+<hr />
+<h6>Soft Badges - Orders</h6>
+<div class="row my-4">
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block bg-light text-900">Shopping Cart</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-info text-900">In Progress</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-success text-900">Completed</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-warning text-900">Problem Order</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-secondary text-900">On Hold</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-danger text-900">Canceled</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-success text-900">Return Completed</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-danger text-900">Voided Order</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-secondary text-900">Suspended</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-warning text-900">Fraudulent Order</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block  badge-soft-info text-900">Partially Returned</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-warning text-900">Error</span>
+    </div>
+</div>
+
+<hr />
+<h6>Soft Badges - Payment Status</h6>
+<div class="row my-4">
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block bg-light text-900">Unpaid</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-info text-900">Authorized</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-success text-900">Paid</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-warning text-900">Payment Error</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block progress-bar bg-soft-primary progress-bar-striped text-900">Partial Refund</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-primary text-900">Full Refund</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-danger text-900">Voided</span>
+    </div>
+
+</div>
+
+<hr />
+<h6>Soft Badges - Waitlist</h6>
+
+<div class="row my-4">
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-info text-900">Pending</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-primary text-900">Approved</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-success text-900">Converted</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-danger text-900">Canceled</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-warning text-900">No Response</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block badge-soft-warning text-900">Expired</span>
+    </div>
+</div>
+
+<hr />
+<h6>Soft Badges - Discounts</h6>
+
+<div class="row my-4">
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block p-2 badge-soft-success text-900">Active</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block p-2 badge-soft-info text-900">Upcoming</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block p-2 badge-soft-danger text-900">Expired</span>
+    </div>
+</div>
+
+<hr />
+<h6>Soft Badges - Club Shipments</h6>
+
+<div class="row my-4">
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block bg-light text-900">Inactive</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block p-2 badge-soft-warning text-900">Error</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block p-2 badge-soft-primary text-900">Ready</span>
+    </div>
+    <div class="col-2 mb-4">
+        <span class="badge rounded-pill d-block p-2 badge-soft-success text-900">Processed</span>
+    </div>
+</div>
+
+
+<h2>Playground</h2>
+
+<div class="my-4">
+
+    <a href="javascript:void(0)" class="btn btn-falcon-default btn-sm" @onclick="()=>UnsavedDialogOpen()">Unsaved Changes Modal</a>
+
+    <a href="javascript:void(0)" class="btn btn-falcon-default btn-sm" @onclick="()=>AddressSuggestionDialogOpen()">Address Validation Modal</a>
+
+     <a href="javascript:void(0)" class="btn btn-falcon-default btn-sm" @onclick="()=>DisabledDialogOpen()">Disabled Feature Modal</a>
+</div>
+
+<div class="my-4">
+
+    <h6> Button Group Examples</h6>
+    <div class="btn-group" role="group" aria-label="Status Button Group">
+        <input type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" checked>
+        <label class="btn btn-sm btn-outline-danger" for="btnradio1"><i class="fa-solid fa-x"></i></label>
+
+        <input type="radio" class="btn-check" name="btnradio" id="btnradio2" autocomplete="off">
+        <label class="btn btn-sm btn-outline-secondary" for="btnradio2"><i class="fa-regular fa-circle"></i></label>
+
+        <input type="radio" class="btn-check" name="btnradio" id="btnradio3" autocomplete="off">
+        <label class="btn btn-sm btn-outline-success" for="btnradio3"><span class="fa-solid fa-check"></span></label>
+    </div>
+    <br />
+    <div class="btn-group" role="group" aria-label="Status Button Group">
+        <input type="radio" class="btn-check" name="btnradio2" id="btnradio4" autocomplete="off" checked>
+        <label class="btn btn-sm btn-outline-danger" for="btnradio4"><i class="fa-solid fa-x"></i></label>
+
+        <input type="radio" class="btn-check" name="btnradio2" id="btnradio5" autocomplete="off">
+        <label class="btn btn-sm btn-outline-success" for="btnradio5"><span class="fa-solid fa-check"></span></label>
+    </div>
+
+</div>
+
+<UnsavedConfirmation OpenUnsavedDialog="openUnsavedDialog" OnDialogClose="DialogClose" OnUnsavedConfirmed="()=>ConfirmUnsaved()"></UnsavedConfirmation>
+
+<AddressSuggestion OpenAddressValidationDialog="openAddressSuggestionDialog" OnDialogClose="DialogCloseAddressSuggestion" OnUseOriginalAddress="()=>UseOriginalAddress()" OnUseSuggestedAddress="()=>UseSuggestedAddress()"></AddressSuggestion>
+
+<DisabledModal OpenDisabledDialog="openDisabledDialog" OnDialogClose="DialogCloseDisabled" DisabledHeading="Reservations"></DisabledModal>
+
+@code
+{
+    private string title = "Style Guide | Synergy Commerce Super Admin Panel";
+
+    //Disabled Modal
+    bool openDisabledDialog = false;
+
+    //Unsaved Confirmation
+    bool openUnsavedDialog = false;
+
+
+    private void DialogClose() => openUnsavedDialog = false;
+    private void DialogCloseDisabled() => openDisabledDialog = false;
+
+
+    private void UnsavedDialogOpen()
+    {
+        openUnsavedDialog = true;
+    }
+
+    private void DisabledDialogOpen()
+    {
+        openDisabledDialog = true;
+    }
+
+    async Task ConfirmUnsaved()
+    {
+        openUnsavedDialog = false;
+    }
+
+    //Address Suggestion
+    bool openAddressSuggestionDialog = false;
+
+    private void DialogCloseAddressSuggestion() => openAddressSuggestionDialog = false;
+
+    private void AddressSuggestionDialogOpen()
+    {
+        openAddressSuggestionDialog = true;
+    }
+
+    async Task UseOriginalAddress()
+    {
+        openAddressSuggestionDialog = false;
+    }
+
+    async Task UseSuggestedAddress()
+    {
+        openAddressSuggestionDialog = false;
+    }
+
+}

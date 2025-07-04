@@ -1,0 +1,273 @@
+﻿@page "/settings/integrated-partners"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-3 mb-md-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-plug me-2"></span>Integrated Partners</h5>
+                    </div>
+                    <div class="col-md-auto"></div>
+                </div>
+            </div>
+            <div class="card-body">
+                <h5>eCommerce Partners</h5>
+                <hr />
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="card h-100 shadow-none bg-soft-info">
+                            <div class="card-body">
+                                <h6 class="fs--2 text-600 mb-1">E-Commerce Sync</h6>
+                                <h5 class="fs-0 text-900 mb-0 me-2">Commerce 7</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="card h-100 shadow-none bg-soft-info">
+                            <div class="card-body">
+                                <h6 class="fs--2 text-600 mb-1">Club Lookup</h6>
+                                <h5 class="fs-0 text-900 mb-0 me-2">Commerce 7</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="card h-100 shadow-none bg-soft-info">
+                            <div class="card-body">
+                                <h6 class="fs--2 text-600 mb-1">Upsert Order Date</h6>
+                                <h5 class="fs-0 text-900 mb-0 me-2">Booked Date</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="card h-100 shadow-none bg-soft-info">
+                            <div class="card-body">
+                                <h6 class="fs--2 text-600 mb-1">Upsert Ship Date</h6>
+                                <h5 class="fs-0 text-900 mb-0 me-2">Event Date</h5>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @*<div class="row my-4">
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="far fa-plug fa-2x mb-2"></span>
+                                <a href="settings/integrated-partners/ams" class="stretched-link"><h5 class="card-title">AMS</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="far fa-plug fa-2x mb-2"></span>
+                                <a href="settings/integrated-partners/bigcommerce" class="stretched-link"><h5 class="card-title">BigCommerce</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="far fa-plug fa-2x mb-2"></span>
+                                <a href="settings/integrated-partners/commerce7" class="stretched-link"><h5 class="card-title">Commerce 7</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="far fa-plug fa-2x mb-2"></span>
+                                <a href="settings/integrated-partners/microworks" class="stretched-link"><h5 class="card-title">Microworks</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="far fa-plug fa-2x mb-2"></span>
+                                <a href="settings/integrated-partners/orderport" class="stretched-link"><h5 class="card-title">OrderPort</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="fa-brands fa-shopify fa-2x mb-2"></span>
+                                <a href="settings/integrated-partners/shopify" class="stretched-link"><h5 class="card-title">Shopify</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="far fa-plug fa-2x mb-2"></span>
+                                <a href="settings/integrated-partners/vinsuite" class="stretched-link"><h5 class="card-title">VinSuite</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="far fa-plug fa-2x mb-2"></span>
+                                <a href="settings/integrated-partners/winedirect" class="stretched-link"><h5 class="card-title">WineDirect</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="far fa-circle-video fa-2x mb-2"></span>
+                                <a href="settings/integrated-partners/zoom" class="stretched-link"><h5 class="card-title">Zoom</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>*@
+
+                <h5>Marketing & Analytics</h5>
+                <hr />
+                <div class="row my-4">
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="fa-brands fa-google fa-2x mb-2"></span>
+                                <a href="settings/integrated-partners/google" class="stretched-link"><h5 class="card-title">Google Analytics</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                    @*<div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="fa-brands fa-mailchimp fa-2x mb-2"></span>
+                                <a href="settings/integrated-partners/mailchimp" class="stretched-link"><h5 class="card-title">MailChimp</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="far fa-share-alt fa-2x mb-2"></span>
+                                <a href="content/social" class="stretched-link"><h5 class="card-title">Social Media</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="fa-brands fa-facebook-square fa-2x mb-2"></span>
+                                <a href="settings/integrated-partners/facebook" class="stretched-link"><h5 class="card-title">Facebook</h5></a>
+                            </div>
+                        </div>
+                    </div>*@
+                </div>
+
+                <h5>Payment Processing</h5>
+                <hr />
+                <div class="row my-4">
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="far fa-credit-card fa-2x mb-2"></span>
+                                <a href="settings/payment-partners/cellarpass" class="stretched-link"><h5 class="card-title">CellarPass Payments</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="far fa-credit-card fa-2x mb-2"></span>
+                                <a href="settings/payment-partners/authorizedotnet" class="stretched-link"><h5 class="card-title">Authorize.Net</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="far fa-credit-card fa-2x mb-2"></span>
+                                <a href="settings/payment-partners/braintree" class="stretched-link"><h5 class="card-title">Braintree Payments</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="far fa-credit-card fa-2x mb-2"></span>
+                                <a href="settings/payment-partners/worldpay" class="stretched-link"><h5 class="card-title">WorldPay</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="far fa-credit-card fa-2x mb-2"></span>
+                                <a href="settings/payment-partners/cardconnect" class="stretched-link"><h5 class="card-title">CardConnect</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="far fa-credit-card fa-2x mb-2"></span>
+                                <a href="settings/payment-partners/openedge" class="stretched-link"><h5 class="card-title">OpenEdge</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="far fa-credit-card fa-2x mb-2"></span>
+                                <a href="" class="stretched-link"><h5 class="card-title">Shift4</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="fab fa-cc-stripe fa-2x mb-2"></span>
+                                <a href="" class="stretched-link"><h5 class="card-title">Stripe</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3 mb-3">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body text-center">
+                                <span class="far fa-credit-card fa-2x mb-2"></span>
+                                <a href="" class="stretched-link"><h5 class="card-title">USAePay</h5></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    bool isDisabledModalVisible = false;
+
+    private string title = "Integrated Partners | Synergy Commerce Admin Panel";
+
+
+    [Parameter]
+    public int Id { get; set; }
+
+
+}

@@ -1,0 +1,195 @@
+﻿@page "/product-search-function"
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+
+<div class="col-12">
+    <div class="mb-3">
+        <label class="form-label" for="selExpireAfter">Selected Products</label>
+        <div class="card-body bg-light">
+            <div class="row mb-3">
+                <div class="col-12 col-md-6 sf-ddl">
+                    <label class="form-label" for="inputAddressSearch">Search</label>
+                    <SfComboBox ID="inputGroupSearch" @bind-Value="@selectedProduct" @ref="filterProductsObj" AllowFiltering=true Placeholder="Search products" DataSource="@products">
+                        <ComboBoxEvents TItem="ProductListModel" TValue="string" ValueChange="@SelectProduct" Filtering="OnFilterProducts"></ComboBoxEvents>
+                        <ComboBoxFieldSettings Value="ProductTitle"></ComboBoxFieldSettings>
+                    </SfComboBox>
+                </div>
+                <div class="col-12 col-md-6 sf-ddl" hidden="@(collectionProducts == null || collectionProducts.Count <= 0)">
+                    <label class="form-label" for="selSortProductsBy">Sort</label>
+                    <SfDropDownList id=sfItemType TValue="int" TItem="DropdownBindingModel" AllowFiltering="true" DataSource="@collectionSortTypes" @bind-Value="storeCollection.CollectionSortType">
+                        <DropDownListEvents TItem="DropdownBindingModel" TValue="int" ValueChange="OnSortProducts"></DropDownListEvents>
+                        <DropDownListFieldSettings Text="Value" Value="Key"></DropDownListFieldSettings>
+                    </SfDropDownList>
+                </div>
+            </div>
+            <div class="sf-ddl">
+                @if (collectionProducts != null && collectionProducts.Count > 0)
+                {
+                    @if (storeCollection.CollectionSortType != (int)CollectionSortType.Manual)
+                    {
+                        <ul class="list-group">
+                            @foreach (var item in collectionProducts)
+                            {
+                                <li class="list-group-item d-flex justify-content-start align-items-center p-3">
+                                    @if (!string.IsNullOrEmpty(item.ProductImageURL))
+                                    {
+                                        <div>
+                                            <img class="img-fluid img-thumbnail me-2" width="50" alt="@item.ProductTitle" src="@(item.ProductImageURL)" />
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div>
+                                            <span class="img-thumbnail far fa-image-polaroid fa-4x me-2"></span>
+                                        </div>
+                                    }
+                                    <span class="flex-fill">@item.ProductTitle</span>
+                                    <a href="javascript:void(0);" @onclick="@(() => RemoveProduct(item, false))" class="text-dark"><span class="far fa-trash-alt"></span></a>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <SfListBox TValue="string[]" DataSource="@collectionProducts" TItem="StoreCollectionProduct" AllowDragAndDrop="true" @ref="listBoxObj" CssClass="rounded cp-list">
+                            <ListBoxFieldSettings Text="ProductTitle" />
+                            <ListBoxEvents TValue="string[]" TItem="StoreCollectionProduct"></ListBoxEvents>
+                            <ListBoxTemplates TItem="StoreCollectionProduct">
+                                <ItemTemplate>
+                                    <div class="d-flex justify-content-start align-items-center">
+                                        <span class="far fa-sort me-2"></span>
+                                        @if (!string.IsNullOrEmpty((context as StoreCollectionProduct).ProductImageURL))
+                                        {
+                                            <div>
+                                                <img class="img-fluid img-thumbnail me-2" width="50" alt="@((context as StoreCollectionProduct).ProductTitle)" src="@((context as StoreCollectionProduct).ProductImageURL)" />
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div>
+                                                <span class="img-thumbnail far fa-image-polaroid fa-4x me-2"></span>
+                                            </div>
+                                        }
+                                        <span class="flex-fill">@((context as StoreCollectionProduct).ProductTitle)</span>
+                                        <a href="javascript:void(0);" @onclick="@(() => RemoveProduct((context as StoreCollectionProduct), true))" class="text-dark"><span class="far fa-trash-alt"></span></a>
+                                    </div>
+                                </ItemTemplate>
+                            </ListBoxTemplates>
+                        </SfListBox>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public List<ProductListModel> products { get; set; }
+
+    [Parameter]
+    public StoreCollectionFullDetail storeCollection { get; set; }
+
+    [Parameter]
+    public ObservableCollection<StoreCollectionProduct> collectionProducts { get; set; }
+
+    private string selectedProduct;
+    SfComboBox<string, ProductListModel> filterProductsObj { get; set; }
+    SfListBox<string[], StoreCollectionProduct> listBoxObj = new SfListBox<string[], StoreCollectionProduct>();
+
+    List<DropdownBindingModel> collectionSortTypes = Enum.GetValues(typeof(CollectionSortType))
+                                             .Cast<CollectionSortType>()
+                                             .Select(t => new DropdownBindingModel
+                                             {
+                                                 Key = (int)t,
+                                                 Value = Helper.GetDisplayName(t)
+                                             }).ToList();
+
+    private void SelectProduct(ChangeEventArgs<string, ProductListModel> args)
+    {
+        if (args.ItemData != null)
+        {
+            var product = products.Where(x => x.Id == args.ItemData.Id).FirstOrDefault();
+            if (product != null)
+            {
+                var collectionProduct = new StoreCollectionProduct()
+                {
+                    CollectionId = storeCollection.Id,
+                    ProductId = product.Id,
+                    ProductImage = product.ProductImage,
+                    ProductImageURL = product.ProductImageURL,
+                    ProductTitle = product.ProductTitle
+                };
+                if (collectionProducts != null && collectionProducts.Count > 0)
+                {
+                    collectionProducts.Add(collectionProduct);
+                }
+                else
+                {
+                    collectionProducts = new ObservableCollection<StoreCollectionProduct>();
+                    collectionProducts.Add(collectionProduct);
+                    StateHasChanged();
+                }
+                if (storeCollection.CollectionSortType == (int)CollectionSortType.Manual)
+                {
+                    var Item = new List<StoreCollectionProduct>();
+                    Item.Add(collectionProduct);
+                    listBoxObj.AddItems(Item);
+                }
+            }
+        }
+        StateHasChanged();
+    }
+
+    private void RemoveProduct(StoreCollectionProduct product, bool isManual)
+    {
+        if (isManual)
+        {
+            var itemToRemove = new List<StoreCollectionProduct>{
+               new StoreCollectionProduct
+               {
+                   ProductId = product.Id,
+                   CollectionId = product.CollectionId,
+                   ProductImage = product.ProductImage,
+                   ProductImageURL = product.ProductImageURL,
+                   ProductTitle = product.ProductTitle
+               }
+            };
+            listBoxObj.RemoveItem(itemToRemove);
+            collectionProducts.Remove(product);
+        }
+        else
+        {
+            collectionProducts.Remove(product);
+        }
+        StateHasChanged();
+    }
+
+    private async Task OnFilterProducts(FilteringEventArgs args)
+    {
+        args.PreventDefaultAction = true;
+        var query = new Query().Where(new WhereFilter() { Field = "ProductTitle", Operator = "contains", value = args.Text, IgnoreCase = true });
+        query = !string.IsNullOrEmpty(args.Text) ? query : new Query();
+        await filterProductsObj.Filter(products, query);
+    }
+
+    private void OnSortProducts()
+    {
+        if (collectionProducts.Count > 0)
+        {
+            if (storeCollection.CollectionSortType == (int)CollectionSortType.ProductNameA_Z)
+            {
+                collectionProducts = new ObservableCollection<StoreCollectionProduct>(collectionProducts.OrderBy(x => x.ProductTitle));
+            }
+            else if (storeCollection.CollectionSortType == (int)CollectionSortType.ProductNameZ_A)
+            {
+                collectionProducts = new ObservableCollection<StoreCollectionProduct>(collectionProducts.OrderByDescending(x => x.ProductTitle));
+            }
+            else if (storeCollection.CollectionSortType == (int)CollectionSortType.Manual)
+            {
+                collectionProducts = new ObservableCollection<StoreCollectionProduct>(collectionProducts.OrderBy(x => x.SortIndex));
+            }
+        }
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,330 @@
+﻿@page "/settings/shipping-zones-add"
+@page "/settings/shipping-zones-edit/{IdGUID:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Enums
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject IShippingZoneViewModel _shippingZoneViewModel
+@inject NavigationManager _navigationManager
+@inject ToastService toastService
+@attribute [Authorize]
+
+
+<AuthorizeView>
+    <Authorized Context="create_shippingzone">
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        <EditForm Model="@shippingZone" OnValidSubmit="SaveShippingZone">
+            <DataAnnotationsValidator />
+            <div class="card">
+                <div class="card-header border-bottom">
+                    <div class="row justify-content-between align-items-center">
+                        <div class="col-md">
+                            <h5 class="mb-3 mb-md-0"><a href="settings/shipping-zones" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-earth-americas me-2"></span>Shipping Zone</h5>
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="mb-3">
+                                <label class="form-label">Zone Name</label>
+                                <InputText class="form-control" id="inputZoneName" PlaceHolder="Enter Zone Name" @bind-Value="@shippingZone.ZoneName" />
+                                <ValidationMessage For="() => shippingZone.ZoneName" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Country</label>
+                                <SfDropDownList @bind-Value="shippingZone.CountryId" Placeholder="Select Country" DataSource="countryStateGroup" TValue="int" TItem="BusinessCountryStatesViewModel">
+                                    <DropDownListFieldSettings Text="CountryName" Value="CountryId"></DropDownListFieldSettings>
+                                </SfDropDownList>
+                                <ValidationMessage For="() => shippingZone.CountryId" />
+                            </div>
+                        </div>
+                        <div class="col-8">
+                            <div class="mb-4">
+                                @{
+                                    foreach (BusinessCountryStatesViewModel countryStates in countryStateGroup)
+                                    {
+                                        if (countryStates.CountryId == shippingZone.CountryId)
+                                        {
+                                            <div class="card shadow-none">
+                                                <div class="card-body">
+                                                    <h6 class="mb-3">State / Region</h6>
+                                                    <ul class="list-inline">
+                                                        @foreach (BusinessStatesViewModel state in countryStates.CountryStates)
+                                                        {
+                                                            <li class="list-inline-item mb-2">
+                                                                @{
+                                                                    if (!string.IsNullOrWhiteSpace(state.CountryNiceName))
+                                                                    {
+                                                                        <a href="javascript:void(0)" @onclick="() => AddStateToZone(state)"><span class="badge @(state.IsActiveForBusiness ? "bg-primary" : "badge-soft-secondary") rounded-pill fw-normal">@state.StateName</span></a>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <span class="badge bg-dark rounded-pill fw-normal">@state.StateName</span>
+                                                                    }
+                                                                }
+                                                            </li>
+                                                        }
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </EditForm>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    [Parameter]
+    public Guid? IdGUID { get; set; }
+    Member currentMember = new Member();
+    private string title = "Add Shipping Zone | Synergy Commerce Admin Panel";
+    private bool EditDialogVisibility { get; set; } = false;
+    private bool IsAllSelected { get; set; } = false;
+    private bool SpinnerVisibility { get; set; } = false;
+    string toastTitle = string.Empty;
+    string content = string.Empty;
+    ShippingZoneRequestModel shippingZone = new ShippingZoneRequestModel();
+    private List<ShippingZoneListModel> shippingZones = new List<ShippingZoneListModel>();
+    ShippingZoneDetailModel shippingZoneDetails = new ShippingZoneDetailModel();
+    /// <summary>
+    /// For list of counties and state
+    /// </summary>
+    List<BusinessCountryStatesViewModel> countryStateGroup = new List<BusinessCountryStatesViewModel>();
+    /// <summary>
+    /// Get all active countries with states (both enable disable) and then bind data on screen
+    /// </summary>
+    /// <returns></returns>
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var getShippingZonesResponse = await _shippingZoneViewModel.GetShippingZones(currentMember.Id);
+        if (getShippingZonesResponse.success)
+        {
+            if (IdGUID.HasValue)
+            {
+                title = "Edit Shipping Zone | Synergy Commerce Admin Panel";
+                getShippingZonesResponse.data.RemoveAll(x => x.IdGUID == IdGUID.Value);
+            }
+            shippingZones = getShippingZonesResponse.data;
+        }
+        var result = await _settingsViewModel.GetBusinessStatesAsync(currentMember.Id);
+        if (result.success)
+        {
+            result.data.ForEach(x => x.CountryStates.RemoveAll(y => !y.IsActiveForBusiness));
+            if (IdGUID.HasValue)
+            {
+                var response = await _shippingZoneViewModel.GetShippingZoneByIdGUID(IdGUID.Value);
+                if (response.success)
+                {
+                    shippingZoneDetails = response.data;
+                }
+            }
+
+            foreach (var businessState in result.data)
+            {
+                foreach (var state in businessState.CountryStates)
+                {
+                    if (shippingZoneDetails.Id > 0)
+                    {
+                        if (shippingZoneDetails.StatesList.Any(x => x.CP_State_Id == state.StateId))
+                        {
+                            state.IsActiveForBusiness = true;
+                        }
+                        else
+                        {
+                            state.IsActiveForBusiness = false;
+                        }
+                    }
+
+                    foreach (var zone in shippingZones)
+                    {
+                        foreach (var zoneState in zone.StatesList)
+                        {
+                            if (state.StateId == zoneState.CP_State_Id)
+                            {
+                                state.CountryNiceName = "";
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (shippingZoneDetails.Id > 0)
+            {
+                shippingZone = new ShippingZoneRequestModel
+                {
+                    BusinessId = shippingZoneDetails.BusinessId,
+                    CountryId = shippingZoneDetails.CountryId,
+                    Id = shippingZoneDetails.Id,
+                    IdGUID = shippingZoneDetails.IdGUID,
+                    ZoneName = shippingZoneDetails.ZoneName,
+                    States = shippingZoneDetails.StatesList.Select(x => x.CP_State_Id).ToArray()
+                };
+            }
+        }
+        countryStateGroup = result.data;
+
+        SpinnerVisibility = false;
+    }
+
+    /// <summary>
+    /// Default values for state setting dialog
+    /// </summary>
+    BusinessCountryStateSettingViewModel countryStateSettings = new BusinessCountryStateSettingViewModel()
+    {
+        CountryId = 0,
+        AllStates = new List<BusinessStateSettings>(),
+        CountryCode = string.Empty,
+        CountryName = string.Empty
+    };
+
+    /// <summary>
+    /// On edit business state setting button we will display all states in a dialog then user can disable/enable states
+    /// </summary>
+    /// <param name="businessCountryStatesViewModel"></param>
+    /// <returns></returns>
+    private async Task BtnEditStateSettings(BusinessCountryStatesViewModel businessCountryStatesViewModel)
+    {
+        IsAllSelected = businessCountryStatesViewModel.CountryStates.All(x => x.IsActiveForBusiness);
+        countryStateSettings = new BusinessCountryStateSettingViewModel()
+        {
+            CountryId = businessCountryStatesViewModel.CountryId,
+            AllStates = businessCountryStatesViewModel.CountryStates.Select(x => new BusinessStateSettings
+            {
+                IsEnable = x.IsActiveForBusiness,
+                StateCode = x.StateCode,
+                StateId = x.StateId,
+                StateName = x.StateName
+            }).ToList(),
+            CountryCode = businessCountryStatesViewModel.CountryCode,
+            CountryName = businessCountryStatesViewModel.CountryName
+        };
+        this.EditDialogVisibility = true;
+    }
+
+    /// <summary>
+    /// disable/enable all country states on select all checkbox click
+    /// </summary>
+    private void SelectAllOnChange()
+    {
+        countryStateSettings.AllStates.ForEach(x => x.IsEnable = IsAllSelected);
+    }
+
+    /// <summary>
+    /// Save business state setting in database
+    /// </summary>
+    /// <returns></returns>
+    private async Task OnSaveBtnClick()
+    {
+        //Save State Settings
+        SpinnerVisibility = true;
+        this.EditDialogVisibility = false;
+        var requestDto = new SettingCountriesRequestModel()
+        {
+            ActiveStateIds = countryStateSettings.AllStates.Where(x => x.IsEnable).Select(x => x.StateId).ToList(),
+            BusinessId = currentMember.Id,
+            CountryId = countryStateSettings.CountryId
+        };
+        var result = await _settingsViewModel.AddUpdateBusinessStateSettingsAsync(requestDto);
+        if (result.success)
+        {
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            await OnInitializedAsync();
+        }
+        else
+        {
+            toastService.ShowToast(result.error_info.description, ToastLevel.Error);
+        }
+        countryStateGroup = result.data;
+        SpinnerVisibility = false;
+    }
+
+    /// <summary>
+    /// Close dialog on cancel button click
+    /// </summary>
+    private void OnCancelBtnClick()
+    {
+        //Close Dialog
+        this.EditDialogVisibility = false;
+    }
+
+    private async Task SaveShippingZone()
+    {
+        SpinnerVisibility = true;
+        if (!string.IsNullOrWhiteSpace(shippingZone.ZoneName))
+        {
+            if (shippingZones.Any(x => x.ZoneName.ToLower() == shippingZone.ZoneName.ToLower()))
+            {
+                toastService.ShowToast("Zone Name already exists.", ToastLevel.Error);
+                SpinnerVisibility = false;
+                return;
+            }
+        }
+
+
+        var states = countryStateGroup.Where(x => x.CountryId == shippingZone.CountryId).FirstOrDefault().CountryStates.Where(y => y.IsActiveForBusiness && !string.IsNullOrWhiteSpace(y.CountryNiceName)).Select(z => z.StateId).ToArray();
+        if (states.Any())
+        {
+            shippingZone.States = states;
+            shippingZone.BusinessId = currentMember.Id;
+            var response = await _shippingZoneViewModel.AddUpdateShippingZone(shippingZone);
+            if (response.success)
+            {
+                if (shippingZone.Id > 0)
+                {
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                }
+                else
+                {
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                }
+                _navigationManager.NavigateTo("settings/shipping-zones");
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+            SpinnerVisibility = false;
+        }
+        else
+        {
+            toastService.ShowToast("Please select State.", ToastLevel.Error);
+            SpinnerVisibility = false;
+            return;
+        }
+
+    }
+
+    private void AddStateToZone(BusinessStatesViewModel state)
+    {
+        if (state.IsActiveForBusiness)
+            state.IsActiveForBusiness = false;
+        else
+            state.IsActiveForBusiness = true;
+    }
+}

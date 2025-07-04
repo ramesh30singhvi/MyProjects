@@ -1,0 +1,183 @@
+﻿@page "/marketplace"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Client.Models
+@using Microsoft.Extensions.Options;
+@inject IOptions<SynergyAppSettings> _synergyAppSettings
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISaIntegrationPartnerViewModel _saIntegrationPartnerViewModel
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-3 mb-md-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-plug me-2"></span>Apps Marketplace</h5>
+                    </div>
+                    <div class="col-md-auto"></div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <img src="@(_synergyAppSettings.Value.SynergyCDNBaseUrl)admin/images/partners/partners-banner.png" class="img-fluid w-100" alt="Name of Image">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12 col-lg-6">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white" id="inputPartnerSearch"><span class="far fa-search"></span></span>
+                            <input type="text" @oninput="(EventArgs) => {SearchPartner(EventArgs.Value.ToString());}" class="form-control" placeholder="Search marketplace" aria-label="Search Marketplace" aria-describedby="inputPartnerSearch">
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-6">
+                        <div class="d-flex justify-content-end align-items-center px-card py-2 border-200">
+                            <div class="d-flex align-items-center fw-bold"><label class="form-label me-2" for="switchInstalledOnly">Show installed only</label></div>
+                            <div class="d-flex align-items-center"><div class="form-check form-switch"><input class="form-check-input" id="switchInstalledOnly" type="checkbox" checked="checked"></div></div>
+                        </div>
+                    </div>
+                </div>
+                <hr class="mb-4" />
+                <h5>Most Popular</h5>
+                <div class="row my-4">
+                    @foreach (var partner in filteredIntegrationPartners)
+                    {
+                        <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                            <div class="card shadow-none border h-100">
+                                <div class="card-body p-2">
+                                    <img src="@(string.IsNullOrEmpty(partner.ImageURL)? $"{_synergyAppSettings.Value.SynergyCDNBaseUrl}admin/images/partners/default.png": partner.ImageURL )" class="rounded mb-2" alt="@partner.AppName" width="50">
+                                    <a href="marketplace/partner/@partner.PartnerGUID" class="stretched-link"><h5>@partner.AppName</h5></a>
+                                    <p class="card-text fs--2">
+                                        @partner.IntroDesc
+                                    </p>
+                                    <span class="fs--2 text-400 ms-2 mb-2 position-absolute bottom-0 start-0">
+                                        @partner.Categories
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <h5>Explore</h5>
+                <div class="row my-4">
+                    <div class="col-12">
+                        <ul class="nav nav-tabs border-bottom-0">
+                            <li class="nav-item">
+                                <button class="nav-link active fs--2" id="all-tab" data-bs-toggle="tab" data-bs-target="#all" type="button" role="tab" aria-controls="all">All</button>
+                            </li>
+                            @foreach (var category in integrationPartnerCategoryList)
+                            {
+                                <li class="nav-item">
+                                    <button class="nav-link fs--2" id="@("category"+category.IntegrationCategoryId+"-tab")" data-bs-toggle="tab" data-bs-target="@("#category"+category.IntegrationCategoryId)" type="button" role="tab" aria-controls="@("category"+category.IntegrationCategoryId)">@category.CategoryName</button>
+                                </li>
+                            }
+                        </ul>
+                        <div class="tab-content" id="myTabContent">
+                            <div class="tab-pane fade show active" id="all" role="tabpanel" aria-labelledby="all-tab">
+                                <div class="row my-4">
+                                    @foreach (var partner in integrationPartners)
+                                    {
+                                        <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                            <div class="card shadow-none border h-100">
+                                                <div class="card-body d-flex align-items-center p-2">
+                                                    <img src="@(string.IsNullOrEmpty(partner.ImageURL)? $"{_synergyAppSettings.Value.SynergyCDNBaseUrl}admin/images/partners/default.png": partner.ImageURL )" class="rounded float-start me-2" alt="@partner.AppName" width="50">
+                                                    <div>
+                                                        <span class="fs--2 text-400">
+                                                            @partner.Categories
+                                                        </span>
+                                                        <a href="marketplace/partner/@partner.PartnerGUID" class="stretched-link"><h5>@partner.AppName</h5></a>
+                                                        <p class="card-text fs--2">
+                                                            @partner.IntroDesc
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                            @foreach (var category in integrationPartnerCategoryList)
+                            {
+                                <div class="tab-pane fade show" id="@("category"+category.IntegrationCategoryId)" role="tabpanel" aria-labelledby="@("category"+category.IntegrationCategoryId+"-tab")">
+                                    <div class="row my-4">
+                                        @foreach (var partner in category.IntegrationPartners)
+                                        {
+                                            <div class="col-sm-6 col-md-4 col-lg-3 mb-3">
+                                                <div class="card shadow-none border h-100">
+                                                    <div class="card-body d-flex align-items-center p-2">
+                                                        <img src="@(string.IsNullOrEmpty(partner.ImageURL) ? $"{_synergyAppSettings.Value.SynergyCDNBaseUrl}admin/images/partners/default.png" : partner.ImageURL )" class="rounded float-start me-2" alt="@partner.AppName" width="50">
+                                                        <div>
+                                                            <span class="fs--2 text-400">
+                                                                @category.CategoryName
+                                                            </span>
+                                                            <a href="marketplace/partner/@partner.PartnerGUID" class="stretched-link"><h5>@partner.AppName</h5></a>
+                                                            <p class="card-text fs--2">
+                                                                @partner.IntroDesc
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private bool SpinnerVisibility { get; set; } = false;
+    private string title = "Marketplace | Synergy Commerce Admin Panel";
+    List<IntegrationPartnerModel> integrationPartners = new List<IntegrationPartnerModel>();
+    List<IntegrationPartnerModel> filteredIntegrationPartners = new List<IntegrationPartnerModel>();
+    List<IntegrationPartnerCategoryTreeModel> integrationPartnerCategoryList = new List<IntegrationPartnerCategoryTreeModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        //Get Inegrated Partners
+        var response = await _saIntegrationPartnerViewModel.GetIntegrationPartnerListAsync(true);
+        integrationPartners = response?.data ?? new List<IntegrationPartnerModel>();
+        filteredIntegrationPartners = integrationPartners.Where(x => x.IsFeaturedPartner).ToList();
+        var partnerCategoryListResponse = await _saIntegrationPartnerViewModel.GetIntegrationPartnerCategoryListAsync(true);
+        integrationPartnerCategoryList = partnerCategoryListResponse?.data ?? new List<IntegrationPartnerCategoryTreeModel>();
+        SpinnerVisibility = false;
+    }
+
+    private void SearchPartner(string searchValue)
+    {
+        if (!string.IsNullOrEmpty(searchValue))
+        {
+            filteredIntegrationPartners = integrationPartners.Where(x => x.IsFeaturedPartner && (x.AppName.ToLower().Contains(searchValue.ToLower()) || x.Company.ToLower().Contains(searchValue.ToLower()))).ToList();
+        }
+        else
+        {
+            filteredIntegrationPartners = integrationPartners.Where(x => x.IsFeaturedPartner).ToList();
+        }
+        StateHasChanged();
+    }
+}

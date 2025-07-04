@@ -1,0 +1,122 @@
+﻿@page "/store/collections"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IProductViewModel _productViewModel
+@inject IStoreCollectionViewModel _storeCollectionViewModel
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<Feedback PageSection="PageSection.Collections"></Feedback>
+<div class="card shadow-none border" hidden="@(isLoading)">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><span class="fad fa-layer-group me-2"></span>Collections</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="store/collections/create">Add New</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@storeCollections" @ref="collectionDataGrid" AllowPaging="true" Width="100%" class="border-x-0">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="10"></GridPageSettings>
+                <GridEditSettings ShowConfirmDialog="false" AllowDeleting="true" Mode="EditMode.Batch"></GridEditSettings>
+                <GridColumns>
+                    <GridColumn IsPrimaryKey="true" Field=@nameof(StoreCollectionModelAdmin.Id) HeaderText="Id" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" />
+                    <GridColumn HeaderText="Collection Name" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })">
+                        <Template>
+                            @{
+                                <a href="store/collections/@($"{(context as StoreCollectionModelAdmin).CollectionGuid}")">@($"{(context as StoreCollectionModelAdmin).CollectionName}")</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="Type" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })">
+                        <Template>
+                            @{
+                                @((context as StoreCollectionModelAdmin).CollectionSelectionType == 0 ? CollectionSelectionType.Manual.ToString() : CollectionSelectionType.Dynamic.ToString())
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="Conditions">
+                        <Template>
+                            @{
+                                @if ((context as StoreCollectionModelAdmin).CollectionDynamicDescriptions != null && (context as StoreCollectionModelAdmin).CollectionDynamicDescriptions.Count > 0)
+                        {
+                                @foreach (var item in (context as StoreCollectionModelAdmin).CollectionDynamicDescriptions)
+                                {
+                                    <p class="m-0">@item.DynamicDesc</p>
+                                }
+                                }
+                        else
+                        {
+                              <p class="m-0">N/A</p>  
+                        }
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="">
+                        <Template>
+                            @{
+                                <a href="javascript:void();" @onclick="@(() => RemoveCollection((context as StoreCollectionModelAdmin)))" class="text-dark"><span class="far fa-trash-alt"></span></a>
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+    <div class="card-footer">
+    </div>
+</div>
+
+@code
+{
+    private string title = "Collections | Synergy Commerce Admin Panel";
+    private Boolean isLoading;
+    private Member currentMember;
+    SfGrid<StoreCollectionModelAdmin> collectionDataGrid { get; set; }
+    private List<StoreCollectionModelAdmin> storeCollections = new List<StoreCollectionModelAdmin>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        StoreCollectionsAdminResponse response = await _storeCollectionViewModel.GetStoreCollectionsAdmin(currentMember.Id);
+        if (response.success)
+        {
+            storeCollections = response.data;
+        }
+        await collectionDataGrid.HideColumnAsync("Id");
+        isLoading = false;
+    }
+
+    private async void RemoveCollection(StoreCollectionModelAdmin collection)
+    {
+        storeCollections.Remove(collection);
+        await collectionDataGrid.DeleteRecord("Id", collection);
+        await collectionDataGrid.EndEdit();
+        BaseResponse response = await _storeCollectionViewModel.DeleteStoreCollection(collection.Id);
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        StateHasChanged();
+    }
+}

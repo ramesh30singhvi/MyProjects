@@ -1,0 +1,400 @@
+﻿@page "/settings/tags"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Entities.v4;
+@using Syncfusion.Blazor.DropDowns;
+@using CellarPassAppAdmin.Shared.Models.RequestModel;
+@using CellarPassAppAdmin.Shared.Enums;
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject IGuestTagViewModel _guestTagViewModel
+@inject ToastService toastService
+@inject IClubViewModel _clubViewModel
+@inject IOrderViewModel _orderViewModel
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<div class="card mb-4">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md-auto">
+                <h5 class="mb-3 mb-md-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-tags me-2"></span>Tags</h5>
+            </div>
+            <div class="col-md-auto"><button @onclick="OpenAddDialog" class="btn btn-sm btn-primary">Add New</button></div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <ul class="nav nav-tabs mt-4 text-uppercase">
+            <li class="nav-item"><a class="nav-link@(isCustomerTabActive ? " active" : "")" @onclick="@(() => SetActiveTab("Customer-tab"))" id="Customer-tab" data-bs-toggle="tab" href="#tab-Customer" role="tab" aria-controls="tab-Customer" aria-selected="@(isCustomerTabActive ? "true" : "false")">Customer</a></li>
+            <li class="nav-item"><a class="nav-link@(isOrderTabActive ? " active" : "")" @onclick="@(() => SetActiveTab("Order-tab"))" id="Order-tab" data-bs-toggle="tab" href="#tab-Order" role="tab" aria-controls="tab-Order" aria-selected="@(isOrderTabActive ? "true" : "false")">Order</a></li>
+            <li class="nav-item"><a class="nav-link@(isShipmentTabActive ? " active" : "")" @onclick="@(() => SetActiveTab("Shipment-tab"))" id="Shipment-tab" data-bs-toggle="tab" href="#tab-Shipment" role="tab" aria-controls="tab-Shipment" aria-selected="@(isShipmentTabActive ? "true" : "false")">Shipment</a></li>
+        </ul>
+        <div class="tab-content" id="productTabContent">
+            <div class="tab-pane fade@(isCustomerTabActive ? " active show" : "")" id="tab-Customer" role="tabpanel" aria-labelledby="Customer-tab">
+                <div class="sf-grid min-vh-75">
+                    <SfGrid DataSource="@businessTags" AllowPaging="true" Width="100%" Height="100%">
+                        <GridColumns>
+                            <GridColumn HeaderText="Tag Name" TextAlign="TextAlign.Left" Width="40%">
+                                <Template Context="BusinessTagContext">
+                                    @{
+                                        var businessTag = (BusinessTagContext as BusinessTagModel);
+                                        <a href="javascript:void(0)" class="" @onclick="() => OpenEditDialog(businessTag)">@businessTag.Tag</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(BusinessTagModel.TagType) HeaderText="Tag Type" Width="20%"></GridColumn>
+                            <GridColumn Field=@nameof(BusinessTagModel.IsPublic) HeaderText="Public" TextAlign="TextAlign.Center" Width="20%">
+                                <Template Context="BusinessTagContext">
+                                    @{
+                                        var businessTag = (BusinessTagContext as BusinessTagModel);
+                                        @if (businessTag.IsPublic)
+                                        {
+                                            <span class="checked_box">
+                                                <span class="far fa-check-square"></span>
+                                                ✓
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="unchecked_box">
+                                                <span class="empty-check"></span>
+                                            </span>
+                                        }
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Right" Width="20%">
+                                <Template Context="BusinessTagContext">
+                                    @{
+                                        var businessTag = (BusinessTagContext as BusinessTagModel);
+                                        <div class="font-sans-serif position-static d-inline-block">
+                                            <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                            <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                @{ if (businessTag.IsPublic)
+                                                    {
+                                                        <a class="dropdown-item" @onclick="()=>SetTagPublicPrivate(businessTag, false)" href="javascript:void(0)">Set Private</a>
+                                                    }
+                                                    else
+                                                    {
+                                                        <a class="dropdown-item" @onclick="()=>SetTagPublicPrivate(businessTag, true)" href="javascript:void(0)">Set Public</a>
+                                                    }
+                                                }
+                                                <div class="dropdown-divider"></div>
+                                                <a class="dropdown-item text-danger" @onclick="()=>OpenDeleteDialog(businessTag.Id)" href="javascript:void(0)">Delete</a>
+                                            </div>
+                                        </div>
+                                    }
+                                </Template>
+                            </GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+            <div class="tab-pane fade@(isOrderTabActive ? " active show" : "")" id="tab-Order" role="tabpanel" aria-labelledby="Order-tab">
+                <div class="sf-grid min-vh-75">
+                    <SfGrid DataSource="@orderTags" AllowPaging="true" Width="100%" Height="100%">
+                        <GridColumns>
+                            <GridColumn Field=@nameof(TagListModel.Value) HeaderText="Tag Name" TextAlign="TextAlign.Left" Width="40%"></GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+            <div class="tab-pane fade@(isShipmentTabActive ? " active show" : "")" id="tab-Shipment" role="tabpanel" aria-labelledby="Shipment-tab">
+                <div class="sf-grid min-vh-75">
+                    <SfGrid DataSource="@shipmentTagList" AllowPaging="true" Width="100%" Height="100%">
+                        <GridColumns>
+                            <GridColumn Field=@nameof(ClubShipmentTagListModel.Value) HeaderText="Tag Name" TextAlign="TextAlign.Left" Width="40%"></GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<EditForm Model="@businessTagRequest" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="AddEditDialogVisibility">
+        <DialogTemplates>
+            <Header><h5 class="modal-title" id="modalLabel">Add Tag</h5></Header>
+            <Content>
+                <div class="mb-3 sf-ddl">
+                    <label for="selTagType" class="form-label">Tag Type</label>
+                    <SfDropDownList TValue="int" @bind-Value="tagType" TItem="DropdownBindingModel" DataSource="@tagTypes">
+                        <DropDownListFieldSettings Text="Value" Value="Key"></DropDownListFieldSettings>
+                    </SfDropDownList>
+                </div>
+                @if (tagType == (int)BusinessTagTypes.CustomerTag)
+                {
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" @bind="businessTagRequest.IsPublic" class="form-check-input" id="chkIsPublic">
+                        <label class="form-check-label" for="exampleCheck1">Allow customer to select</label>
+                    </div>
+                }
+                <div class="mb-3 sf-ddl">
+                    <label for="inputTagName" class="form-label">Tag Name</label>
+                    <SfComboBox CssClass="e-hide-spinner" AllowFiltering="true" FilterType="Syncfusion.Blazor.DropDowns.FilterType.Contains" @bind-Value="businessTagRequest.Tag" TValue="string" Placeholder="Select or enter a Tag" TItem="CpTag" DataSource="@cpTags" AllowCustom="true">
+                        <ComboBoxFieldSettings Text="TagName" Value="TagName"></ComboBoxFieldSettings>
+                    </SfComboBox>
+                    <ValidationMessage For="@(() => businessTagRequest.Tag)" />
+                </div>
+                @if (tagType == (int)BusinessTagTypes.CustomerTag)
+                {
+                    <div class="mb-3 form sf-ddl">
+                        <label for="inputTagType" class="form-label">Tag Type</label>
+                        <SfDropDownList TValue="int" @bind-Value="businessTagRequest.CPTagTypeId" TItem="CpTagType" DataSource="@cpTagTypes">
+                            <DropDownListFieldSettings Value="Id" Text="TagType"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => businessTagRequest.CPTagTypeId)" />
+                    </div>
+                }
+            </Content>
+            <FooterTemplate>
+                <button type="button" @onclick="CloseAddEditDialog" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" @onclick="@(() => AddUpdateGuestTag(formContext))" class="btn btn-primary">Save</button>
+            </FooterTemplate>
+        </DialogTemplates>
+    </SfDialog>
+</EditForm>
+
+@*Delete confimation dialog*@
+<DeleteConfirmation OpenDeleteDialog="DeleteDialogVisibility" OnDialogClose="CloseDeleteDialog" OnDeleteConfirmed="DeleteConfired"></DeleteConfirmation>
+
+@code
+{
+    #region On Load
+    private bool SpinnerVisibility { get; set; } = false;
+    Member currentMember = new Member();
+    private string title = "Tags | Synergy Commerce Admin Panel";
+    private bool AddEditDialogVisibility { get; set; } = false;
+    private bool DeleteDialogVisibility { get; set; } = false;
+    private bool IsExist { get; set; } = true;
+    List<BusinessTagModel> businessTags = new List<BusinessTagModel>();
+    List<TagListModel> orderTags = new List<TagListModel>();
+    List<ClubShipmentTagListModel> shipmentTagList = new List<ClubShipmentTagListModel>();
+    List<CpTag> cpTags = new List<CpTag>();
+    List<CpTagType> cpTagTypes = new List<CpTagType>();
+    CpTagType firstCpTagType = new CpTagType();
+    BusinessTagRequestModel businessTagRequest = new BusinessTagRequestModel();
+    int idForDelete = 0;
+    private int tagType = 0;
+    List<DropdownBindingModel> tagTypes = Enum.GetValues(typeof(BusinessTagTypes))
+             .Cast<BusinessTagTypes>()
+             .Select(t => new DropdownBindingModel
+             {
+                 Key = (int)t,
+                 Value = EnumHelper.GetDescription(t)
+             }).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        isCustomerTabActive = true;
+        SpinnerVisibility = true;
+
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+
+        //Get All CP Tags for Guest type category
+        var cpTagsResponse = await _guestTagViewModel.GetCpTagsAsync(Convert.ToInt32(TagCategoryType.Guest));
+        cpTags = cpTagsResponse?.data ?? new List<CpTag>();
+
+        //Activate Customer-tab on load
+        await SetActiveTab("Customer-tab");
+
+        //Get All CP Tag Type
+        var cpTagTypeResponse = await _guestTagViewModel.GetCpTagTypesAsync();
+        cpTagTypes = cpTagTypeResponse?.data ?? new List<CpTagType>();
+
+        SpinnerVisibility = false;
+    }
+    #endregion
+
+    #region Activate Tab
+    private bool isCustomerTabActive = false;
+    private bool isOrderTabActive = false;
+    private bool isShipmentTabActive = false;
+    private async Task SetActiveTab(string tabName)
+    {
+        SpinnerVisibility = true;
+        switch (tabName)
+        {
+            case "Customer-tab":
+                //Get All Business Tags By Business Id
+                var businessTagsResponse = await _guestTagViewModel.GetBusinessTagAsync(currentMember.Id);
+                businessTags = businessTagsResponse?.data ?? new List<BusinessTagModel>();
+                isCustomerTabActive = true;
+                isOrderTabActive = isShipmentTabActive = false;
+                break;
+            case "Order-tab":
+                //Get All Order Tags By Business Id
+                var tagListResponse = await _orderViewModel.GetTagList(currentMember.Id);
+                orderTags = tagListResponse?.data ?? new List<TagListModel>();
+                isOrderTabActive = true;
+                isCustomerTabActive = isShipmentTabActive = false;
+                break;
+            case "Shipment-tab":
+                //Get All Shipment Tags By Business Id
+                var shipmentTagListResponse = await _clubViewModel.GetClubShipmentTagList(currentMember.Id);
+                shipmentTagList = shipmentTagListResponse?.data ?? new List<ClubShipmentTagListModel>();
+                isShipmentTabActive = true;
+                isCustomerTabActive = isOrderTabActive = false;
+                break;
+        }
+        SpinnerVisibility = false;
+    }
+    #endregion
+
+    #region Add/Edit
+    /// <summary>
+    /// Open Dialog for add Tag
+    /// </summary>
+    /// <returns></returns>
+    private async Task OpenAddDialog()
+    {
+        AddEditDialogVisibility = true;
+        businessTagRequest = new BusinessTagRequestModel();
+        businessTagRequest.CPTagTypeId = cpTagTypes?.FirstOrDefault()?.Id ?? 0;
+    }
+
+    /// <summary>
+    /// Open Dialog for edit Tag
+    /// </summary>
+    /// <param name="businessTagModel"></param>
+    /// <returns></returns>
+    private async Task OpenEditDialog(BusinessTagModel businessTagModel)
+    {
+        businessTagRequest.Id = businessTagModel.Id;
+        businessTagRequest.BusinessId = businessTagModel.BusinessId;
+        businessTagRequest.CPTagTypeId = businessTagModel.CPTagTypeId;
+        businessTagRequest.IsPublic = businessTagModel.IsPublic;
+        businessTagRequest.Tag = businessTagModel.Tag;
+        businessTagRequest.TagIcon = businessTagModel.TagIcon;
+        AddEditDialogVisibility = true;
+    }
+
+    /// <summary>
+    /// Close dialog
+    /// </summary>
+    private void CloseAddEditDialog()
+    {
+        AddEditDialogVisibility = false;
+    }
+
+    /// <summary>
+    /// Add Update Tag
+    /// </summary>
+    /// <param name="editContext"></param>
+    /// <returns></returns>
+    private async Task AddUpdateGuestTag(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var isTagNameAlreadyExist = businessTags.Any(x => x.Tag == businessTagRequest.Tag && x.Id != businessTagRequest.Id);
+            if (isTagNameAlreadyExist) //If tag name is already exist
+            {
+                SpinnerVisibility = false;
+                toastService.ShowToast(Constants.GuestTagNamesMustBeUnique, ToastLevel.Error);
+            }
+            else
+            {
+                businessTagRequest.BusinessId = currentMember.Id;
+                businessTagRequest.TagIcon = string.Empty;
+                var addUpdateResponse = await _guestTagViewModel.AddUpdateBusinessTagAsync(businessTagRequest);
+                AddEditDialogVisibility = false;
+                SpinnerVisibility = false;
+                if (addUpdateResponse.success)
+                {
+                    if (businessTagRequest.Id > 0)
+                    {
+                        toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                        businessTags = addUpdateResponse.data;
+                    }
+                    else
+                    {
+                        toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                        businessTags = addUpdateResponse.data;
+                    }
+                }
+                else
+                {
+                    toastService.ShowToast(addUpdateResponse.error_info.description, ToastLevel.Error);
+                }
+                StateHasChanged();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Update tag status to public or private
+    /// </summary>
+    /// <param name="businessTagModel"></param>
+    /// <param name="isPublic"></param>
+    /// <returns></returns>
+    private async Task SetTagPublicPrivate(BusinessTagModel businessTagModel, bool isPublic)
+    {
+        SpinnerVisibility = true;
+        var response = await _guestTagViewModel.SetBusinessTagPublicAsync(businessTagModel.Id, isPublic);
+        if (response.success)
+        {
+            businessTagModel.IsPublic = isPublic;
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        SpinnerVisibility = false;
+        StateHasChanged();
+    }
+    #endregion
+
+    #region Delete
+    /// <summary>
+    /// Close dialog
+    /// </summary>
+    private void CloseDeleteDialog() => DeleteDialogVisibility = false;
+
+    /// <summary>
+    /// Open dialog for delete a tag
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    private async Task OpenDeleteDialog(int id)
+    {
+        DeleteDialogVisibility = true;
+        idForDelete = id;
+    }
+    /// <summary>
+    /// Delete Tag after confirmation
+    /// </summary>
+    /// <returns></returns>
+    private async Task DeleteConfired()
+    {
+        SpinnerVisibility = true;
+        var response = await _guestTagViewModel.DeleteBusinessTagByIdAsync(idForDelete);
+        DeleteDialogVisibility = false;
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.DeleteMessage, ToastLevel.Success);
+            businessTags = response.data;
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        SpinnerVisibility = false;
+        StateHasChanged();
+    }
+    #endregion
+}

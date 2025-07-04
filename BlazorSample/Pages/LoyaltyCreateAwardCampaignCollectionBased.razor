@@ -1,0 +1,94 @@
+﻿@page "/loyalty/create-award-campaign-collection-based"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="loyalty/create-award-campaign" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-trophy-alt me-2"></span>Create Campaign</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-primary" href="#!">Save</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="fw-bold text-500">STEP 2 OF 2</h6>
+                        <h5>Collection Based</h5>
+                        <p>Create a rewards program based on the amount they spend for an Item Collection you’ve selected. For example, get 15 points when you purchase $15 or more from the “general merchandise” collection.</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12  col-xl-6">
+                        <div class="mb-3">
+                            <label class="form-label" for="inputCollection">Collection</label>
+                            <input id="inputCollection" class="form-control" type="text" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputAwarded">[[LoyaltyPluralName]] Awarded</label>
+                            <input id="inputAwarded" class="form-control" type="text" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="inputRewardFriendlyName">Reward Friendly Name</label>
+                            <input id="inputRewardFriendlyName" class="form-control" type="text" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="selExpireAfter">[[LoyaltyPluralName]] Expire After</label>
+                            <select id="selExpireAfter" class="form-select">
+                                <option value="DoNotExpire" selected>Do Not Expire</option>
+                                <option value="3Months">3 Months</option>
+                                <option value="6Months">6 Months</option>
+                                <option value="12Months">12 Months</option>
+                                <option value="18Months">18 Months</option>
+                                <option value="24Months">24 Months</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchIncludeSalesTax">Include Sales Tax</label></div>
+                                <div class="d-flex align-items-center">
+                                    <div class="form-check form-switch"><input class="form-check-input" id="switchIncludeSalesTax" type="checkbox"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchAllowCombinedEarnedPoints">Allow Combined Earned Points</label></div>
+                                <div class="d-flex align-items-center">
+                                    <div class="form-check form-switch"><input class="form-check-input" id="switchAllowCombinedEarnedPoints" type="checkbox"></div>
+                                </div>
+                            </div>
+                            <label class="form-label"><span class="form-text">When enabled, allow multiple qualified points to be awarded to customer</span></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private string title = "Create Campaign | Synergy Commerce Admin Panel";
+
+}

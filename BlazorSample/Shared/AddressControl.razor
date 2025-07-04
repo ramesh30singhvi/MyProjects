@@ -1,0 +1,250 @@
+﻿@inject IJSRuntime JSRuntime
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Entities.v4
+
+<div class="mb-3">
+    <label class="form-label" for="selCountry">Country</label>
+    <select id="selCountry" @onchange="OnCountryChanged" value="@selectedCountry" class="form-select @selectedCountryCss">
+        @if (countries != null && countries.Count > 0)
+        {
+            @foreach (var item in countries)
+            {
+                <option value="@item.CountryCode">@item.Name</option>
+            }
+        }
+    </select>
+    @foreach (var message in editContext?.GetValidationMessages(selectedCountryFieldId))
+    {
+        <div class="validation-message">@message</div>
+    }
+</div>
+<div class="mb-3">
+    <label class="form-label" for="inputAddress1">Address 1</label>
+    <input id="inputAddress1" class="form-control @address1Css" value="@address1" @oninput="@OnAddress1Typed" @onchange="OnAddress1Changed" @onfocus="GeoLocate" type="text" placeholder="Address 1">
+    @foreach (var message in editContext?.GetValidationMessages(address1FieldId))
+    {
+        <div class="validation-message">@message</div>
+    }
+</div>
+<div class="mb-3">
+    <label class="form-label" for="inputAddress2">Address 2</label>
+    <input id="inputAddress2" class="form-control @address2Css" @onchange="OnAddress2Changed" value="@address2" type="text" placeholder="Address 2">
+    @foreach (var message in editContext?.GetValidationMessages(address2FieldId))
+    {
+        <div class="validation-message">@message</div>
+    }
+</div>
+<div class="mb-3">
+    <label class="form-label" for="inputCity">City</label>
+    <input id="inputCity" class="form-control @cityCss" @oninput="OnCityChanged" @bind-value="city" type="text" placeholder="City" />
+    @foreach (var message in editContext?.GetValidationMessages(cityFieldId))
+    {
+        <div class="validation-message">@message</div>
+    }
+</div>
+
+<div class="row gx-2">
+    <div class="col-sm-6">
+        <label class="form-label" for="selState">State</label>
+        <select id="selState" @onchange="OnStateChanged" value="@stateCode" class="form-select @stateCodeCss">
+            <option id="selStateOption" value=""></option>
+            @if (filteredStates != null && filteredStates.Count > 0)
+            {
+                @foreach (var item in filteredStates)
+                {
+                    <option value="@item.StateCode">@item.State</option>
+                }
+            }
+        </select>
+        @foreach (var message in editContext?.GetValidationMessages(stateCodeFieldId))
+        {
+            <div class="validation-message">@message</div>
+        }
+    </div>
+    <div class="col-sm-6">
+        <label class="form-label" for="inputPostalCode">Postal Code</label>
+        <input id="inputPostalCode" class="@zipCodeCss form-control" @oninput="HandleZipCodeInput" value="@zipCode" type="text" placeholder="Postal Code">
+        @foreach (var message in editContext?.GetValidationMessages(zipCodeFieldId))
+        {
+            <div class="validation-message">@message</div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public List<CpCountry> countries { get; set; } = new List<CpCountry>();
+    [Parameter]
+    public List<CpState> states { get; set; } = new List<CpState>();
+    private List<CpState> filteredStates = new List<CpState>();
+    private string countryCode { get; set; }
+    [Parameter]
+    public string selectedCountry
+    {
+        get { return countryCode; }
+        set
+        {
+            countryCode = value;
+            filterStates();
+        }
+    }
+    [Parameter]
+    public string address1 { get; set; }
+    [Parameter]
+    public string address2 { get; set; }
+    [Parameter]
+    public string city { get; set; }
+    [Parameter]
+    public string stateCode { get; set; }
+    [Parameter]
+    public string zipCode { get; set; }
+    [Parameter]
+    public string googleBusinessPhone { get; set; }
+    [Parameter]
+    public string googleBusinessPhoneCountry { get; set; }
+    private AddressModel address;
+    [CascadingParameter]
+    private EditContext editContext { get; set; }
+    private FieldIdentifier address1FieldId;
+    private FieldIdentifier address2FieldId;
+    private FieldIdentifier cityFieldId;
+    private FieldIdentifier stateCodeFieldId;
+    private FieldIdentifier selectedCountryFieldId;
+    private FieldIdentifier zipCodeFieldId;
+    private string address1Css => editContext?.FieldCssClass(address1FieldId) ?? "";
+    private string address2Css => editContext?.FieldCssClass(address2FieldId) ?? "";
+    private string cityCss => editContext?.FieldCssClass(cityFieldId) ?? "";
+    private string stateCodeCss => editContext?.FieldCssClass(stateCodeFieldId) ?? "";
+    private string selectedCountryCss => editContext?.FieldCssClass(selectedCountryFieldId) ?? "";
+    private string zipCodeCss => editContext?.FieldCssClass(zipCodeFieldId) ?? "";
+    [Parameter]
+    public System.Linq.Expressions.Expression<Func<string>> address1Expression { get; set; }
+    [Parameter]
+    public System.Linq.Expressions.Expression<Func<string>> address2Expression { get; set; }
+    [Parameter]
+    public System.Linq.Expressions.Expression<Func<string>> cityExpression { get; set; }
+    [Parameter]
+    public System.Linq.Expressions.Expression<Func<string>> stateCodeExpression { get; set; }
+    [Parameter]
+    public System.Linq.Expressions.Expression<Func<string>> selectedCountryExpression { get; set; }
+    [Parameter]
+    public System.Linq.Expressions.Expression<Func<string>> zipCodeExpression { get; set; }
+    [Parameter]
+    public EventCallback<string> Address1Changed { get; set; }
+    [Parameter]
+    public EventCallback<string> Address2Changed { get; set; }
+    [Parameter]
+    public EventCallback<string> CityChanged { get; set; }
+    [Parameter]
+    public EventCallback<string> StateCodeChanged { get; set; }
+    [Parameter]
+    public EventCallback<string> SelectedCountryChanged { get; set; }
+    [Parameter]
+    public EventCallback<string> zipCodeChanged { get; set; }
+    [Parameter]
+    public EventCallback<string> SelectedCompanyName { get; set; }
+    [Parameter]
+    public EventCallback<bool> SelectedNewAddress { get; set; }
+
+    protected override void OnInitialized()
+    {
+        address1FieldId = FieldIdentifier.Create(address1Expression);
+        address2FieldId = FieldIdentifier.Create(address2Expression);
+        cityFieldId = FieldIdentifier.Create(cityExpression);
+        stateCodeFieldId = FieldIdentifier.Create(stateCodeExpression);
+        selectedCountryFieldId = FieldIdentifier.Create(selectedCountryExpression);
+        zipCodeFieldId = FieldIdentifier.Create(zipCodeExpression);
+        StateHasChanged();
+    }
+
+    private void filterStates()
+    {
+        var country = countries.FirstOrDefault(x => x.CountryCode == countryCode);
+        filteredStates = states.Where(x => x.CountryId == country.Id).ToList();
+        StateHasChanged();
+    }
+
+    private async Task GeoLocate()
+    {
+        address = await JSRuntime.InvokeAsync<AddressModel>("initAutocomplete");
+        if (address != null && !string.IsNullOrEmpty(address.Country))
+        {
+            var country = countries.FirstOrDefault(x => x.CountryCode == address.Country);
+            filteredStates = states.Where(x => x.CountryId == country.Id).ToList();
+            stateCode = address.State;
+            if (!string.IsNullOrEmpty(stateCode))
+            {
+                await StateCodeChanged.InvokeAsync(stateCode);
+            }
+            address1 = address.Address1;
+            if (!string.IsNullOrEmpty(address1))
+            {
+                await Address1Changed.InvokeAsync(address1);
+            }
+            city = address.City;
+            if (!string.IsNullOrEmpty(city))
+            {
+                await CityChanged.InvokeAsync(city);
+            }
+            zipCode = address.ZipCode;
+            if (!string.IsNullOrEmpty(zipCode))
+            {
+                await zipCodeChanged.InvokeAsync(zipCode);
+            }
+            if (!string.IsNullOrEmpty(address.CompanyName))
+            {
+                await SelectedCompanyName.InvokeAsync(address.CompanyName);
+            }
+            selectedCountry = address.Country;
+            googleBusinessPhone = address.BusinessPhone;
+            googleBusinessPhoneCountry = address.BusinessPhoneCountry;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleZipCodeInput(ChangeEventArgs args)
+    {
+        await zipCodeChanged.InvokeAsync(args.Value.ToString());
+        editContext?.NotifyFieldChanged(zipCodeFieldId);
+    }
+
+    private void OnAddress1Typed(ChangeEventArgs args)
+    {
+        string inputAddress = args.Value.ToString();
+        address1 = inputAddress;
+        JSRuntime.InvokeAsync<bool>("HideDisplaySuggestAddressField", (inputAddress.Length < 5));
+    }
+
+    private async Task OnAddress1Changed(ChangeEventArgs args)
+    {
+        string inputAddress = args.Value.ToString();
+        await Address1Changed.InvokeAsync(inputAddress);
+        await SelectedNewAddress.InvokeAsync(true);
+        editContext?.NotifyFieldChanged(address1FieldId);
+        StateHasChanged();
+    }
+
+    private async Task OnAddress2Changed(Microsoft.AspNetCore.Components.ChangeEventArgs args)
+    {
+        await Address2Changed.InvokeAsync(args.Value.ToString());
+        editContext?.NotifyFieldChanged(address2FieldId);
+    }
+
+    private async Task OnCityChanged(ChangeEventArgs args)
+    {
+        await CityChanged.InvokeAsync(args.Value.ToString());
+        editContext?.NotifyFieldChanged(cityFieldId);
+    }
+
+    private async Task OnStateChanged(ChangeEventArgs args)
+    {
+        await StateCodeChanged.InvokeAsync(args.Value.ToString());
+        editContext?.NotifyFieldChanged(stateCodeFieldId);
+    }
+
+    private async Task OnCountryChanged(ChangeEventArgs args)
+    {
+        await SelectedCountryChanged.InvokeAsync(args.Value.ToString());
+        editContext?.NotifyFieldChanged(selectedCountryFieldId);
+    }
+}

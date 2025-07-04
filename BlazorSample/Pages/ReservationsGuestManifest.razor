@@ -1,0 +1,190 @@
+﻿@page "/reservations/guest-manifest"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md-4">
+                        <h5 class="mb-4 mb-md-0"><span class="fa-regular fa-book-user fa-fw me-2"></span>Guest Manifest</h5>
+                    </div>
+                    <div class="col-auto mb-3 mb-md-0 d-flex">
+                        @{
+                            var getDate = DateTime.UtcNow.AddMinutes(offsetMins).Date;
+                        }
+                        <SfDatePicker TValue="DateTime?" Value="getDate" Placeholder="Choose a Date" ShowClearButton="true"></SfDatePicker>
+                    </div>
+                    <div class="col-auto d-flex">
+                        <h6 class="mb-0 float-md-end">6 Orders | 28 Guests</h6>
+                    </div>
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-sm btn-outline-secondary"><span class="fa-solid fa-bars-filter me-1"></span>Filter</button>
+                        <a class="btn btn-sm btn-primary" id="guestManifestationsMoreActions" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="Search">More Actions</a>
+                        <div class="dropdown-menu dropdown-menu-end py-0 me-10" aria-labelledby="guestManifestationsMoreActions">
+                            <div class="bg-white rounded-lg py-2">
+                                <a class="dropdown-item" href="#!">Export</a>
+                                <a class="dropdown-item" href="#!">Print</a>
+                                <a class="dropdown-item" href="#!">Send</a>
+                                <a class="dropdown-item" href="#!">Refresh</a>
+                                @*<button class="btn btn-sm btn-outline-primary me-2">Export</button>
+                                <button class="btn btn-sm btn-outline-primary me-2">Print</button>
+                                <button class="btn btn-sm btn-outline-primary me-2">Send</button>
+                                <button class="btn btn-sm btn-outline-primary me-2">Refresh</button>*@
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+            <div class="card-body p-0 pt-2">
+                <!--<form>
+                    <div class="row m-2 mb-4">-->
+                        @*<div class="col-12 col-md-2">
+                        </div>*@
+                        @*<div class="col-12 col-md-2">
+                            <select class="form-select form-select" aria-label=".form-select-sm example">
+                                <option selected="selected">Session Manifest</option>
+                            </select>
+                        </div>*@
+                        @*
+                        <div class="col-12 col-md-2">
+                            <select class="form-select form-select" aria-label=".form-select-sm example">
+                                <option selected="selected">Send Manifest</option>
+                            </select>
+                        </div>*@
+                        <!--
+                    </div>
+                </form>-->
+                <div class="min-vh-75 sf-grid">
+                    <SfGrid DataSource="@GuestManifests" AllowGrouping="true" AllowFiltering="true" AllowPaging="true">
+                        <GridGroupSettings ShowDropArea="false" Columns="@GroupedColumns">
+                            <CaptionTemplate Context="captionTemplateContext">
+                                @{
+                                    var guestManifest = (captionTemplateContext as CaptionTemplateContext);
+                                    <div class="row">
+                                        <div class="col-auto"><strong>@guestManifest.Key SIGNATURE TOUR & TASTING</strong></div>
+                                        <div class="col-md-2"><strong>@guestManifest.Count Orders / 14 Guests</strong></div>
+                                        <div class="col-md-1">
+                                            <div class="delete_icon col-auto"><span class="fa-regular fa-print "></span></div>
+                                        </div>
+                                    </div>
+                                }
+                            </CaptionTemplate>
+                        </GridGroupSettings>
+                        <GridColumns>
+                            <GridColumn Field=@nameof(GuestManifest.EventStartTime) HeaderText="" Width="150"></GridColumn>
+                            <GridColumn AllowFiltering="false" HeaderText="Status" TextAlign="TextAlign.Left" Width="120">
+                                <FilterTemplate Context="tcontext"></FilterTemplate>
+                                <Template Context="tcontext">
+                                    @{
+                                        var status = (tcontext as GuestManifest).Status;
+                                        var id = (tcontext as GuestManifest).ID;
+                                        <div class="switch-toggle">
+                                            <input id="off-@id" name="state-d-@id" type="radio" checked="@(status == "false")" />
+                                            <label class="mb-0 off" for="off-@id" onclick=""><span class="fas fa-times fs--1 px-2"></span></label>
+                                            <input id="na-@id" name="state-d-@id" type="radio" checked="@(status == "")" />
+                                            <label class="mb-0 disabled p-0" for="na-@id" onclick=""></label>
+                                            <input id="on-@id" name="state-d-@id" type="radio" checked="@(status == "true")" />
+                                            <label class="mb-0 on" for="on-@id" onclick=""><span class="fas fa-check fs--1 px-2"></span></label>
+                                        </div>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(GuestManifest.Confirm) HeaderText=" Confirm#" TextAlign="TextAlign.Left" Width="130">
+                                <Template Context="tcontext">
+                                    @{
+                                        var confirm = (tcontext as GuestManifest).Confirm;
+                                        <a href="javascript:void();">@confirm</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="Guest" TextAlign="TextAlign.Left" Width="150">
+                                <Template Context="tcontext">
+                                    @{
+                                        var guest = (tcontext as GuestManifest).Guest;
+                                        var isDiamond = (tcontext as GuestManifest).IsDiamond;
+                                        <div class="row">
+                                            <div class="delete_icon col-auto" hidden="@(!isDiamond)"><span class="fa-regular fa-gem"></span></div>
+                                            <div class="@(!isDiamond ? "col-auto mx-4" : "col-auto p-0")">
+                                                <a href="javascript:void();">@guest</a>
+                                            </div>
+                                        </div>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(GuestManifest.Phone) HeaderText="Phone" TextAlign="TextAlign.Left" Width="120"></GridColumn>
+                            <GridColumn Field=@nameof(GuestManifest.QTY) HeaderText="QTY" TextAlign="TextAlign.Left" Width="100"></GridColumn>
+                            <GridColumn Field=@nameof(GuestManifest.AddOns) HeaderText="Add-Ons" TextAlign="TextAlign.Left" Width="120"></GridColumn>
+                            <GridColumn HeaderText="Balance Due" TextAlign="TextAlign.Left" Width="130">
+                                <Template Context="tcontext">
+                                    @{
+                                        var balanceDue = (tcontext as GuestManifest).BalanceDue;
+                                        <p class=@(balanceDue > 0 ? "text-danger m-0" :"text-success m-0")>$@balanceDue.00</p>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(GuestManifest.Total) HeaderText="Total" TextAlign="TextAlign.Left" Width="80"></GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private string title = "Guest Manifest | Synergy Commerce Admin Panel";
+    public string[] GroupedColumns = new string[] { "EventStartTime" };
+    private int offsetMins = 0;
+
+    public class GuestManifest
+    {
+        public int ID { get; set; }
+        public string Status { get; set; }
+        public string Confirm { get; set; }
+        public bool IsDiamond { get; set; }
+        public string Guest { get; set; }
+        public string Phone { get; set; }
+        public string QTY { get; set; }
+        public string AddOns { get; set; }
+        public decimal BalanceDue { get; set; }
+        public string Total { get; set; }
+        public string EventStartTime { get; set; }
+        public string EventName { get; set; }
+    }
+
+    private List<GuestManifest> GuestManifests = new List<GuestManifest>() {
+        new GuestManifest(){ ID = 1, Status = "true", Confirm= "YAKIPHPO", IsDiamond= true, Guest= "Mike Johnstone", Phone= "(855) 423-4448",QTY= "2 Guest(s)", AddOns= "", BalanceDue= 0, Total= "$900.00", EventStartTime="12:30PM", EventName="SIGNATURE TOUR & TASTING" },
+        new GuestManifest(){ ID = 2, Status= "true", Confirm= "SHFLKSFSA", IsDiamond= true, Guest= "Jonathan Elliman", Phone= "(855) 235-4515",QTY= "4 Guest(s)", AddOns= "", BalanceDue= 0, Total= "$900.00", EventStartTime="12:30PM", EventName="SIGNATURE TOUR & TASTING" },
+        new GuestManifest(){ ID = 3, Status= "true", Confirm= "SH5DFFSJ", IsDiamond= false, Guest= "Tim Holtermann", Phone= "(707) 235-4515",QTY= "8 Guest(s)", AddOns= "(2) Cheese & Charcuterie", BalanceDue= 0, Total= "$1,100.00", EventStartTime="12:30PM", EventName="SIGNATURE TOUR & TASTING" },
+        new GuestManifest(){ ID = 4, Status= "", Confirm= "DHRHDHDS", IsDiamond= true, Guest= "Spencer Kuhn", Phone= "(855) 423-4448",QTY= "8 Guest(s)", AddOns= "", BalanceDue= 450, Total= "$450.00", EventStartTime="01:30PM", EventName="SIGNATURE TOUR & TASTING" },
+        new GuestManifest(){ ID = 5, Status= "true", Confirm= "DU000041", IsDiamond= false, Guest= "Cletus Spuckler", Phone= "",QTY= "2 Guest(s)", AddOns= "", BalanceDue= 450, Total= "$450.00", EventStartTime="01:30PM", EventName="SIGNATURE TOUR & TASTING" },
+        new GuestManifest(){ ID = 6, Status= "false", Confirm= "DGJKFDASS", IsDiamond= true, Guest= "Doris Day", Phone= "(855) 235-4515",QTY= "8 Guest(s)", AddOns= "(2) Cheese & Charcuterie", BalanceDue= 0, Total= "$1100.00", EventStartTime="02:30PM", EventName="SIGNATURE TOUR & TASTING" },
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var getUserData = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+        var offsetMins = getUserData?.OffsetMinutes ?? 0;
+        if (offsetMins != 0)
+            this.offsetMins = offsetMins;
+    }
+
+}

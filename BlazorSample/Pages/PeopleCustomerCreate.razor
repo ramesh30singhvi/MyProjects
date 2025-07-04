@@ -1,0 +1,243 @@
+﻿@page "/people/customer/create"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Enums;
+@using CellarPassAppAdmin.Client.ViewModels;
+@using CellarPassAppAdmin.Shared.Models;
+@using CellarPassAppAdmin.Shared.Entities.v4;
+@using CellarPassAppAdmin.Shared.Models.RequestModel;
+@using CellarPassAppAdmin.Shared.Models.ViewModel;
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head;
+@inject ICountryViewModel _countryViewModel
+@inject IStateViewModel _stateViewModel
+@inject IBusinessViewModel _businessViewModel
+@inject ICustomerViewModel _customerViewModel
+@inject IUserViewModel _userViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+
+<div class="card mb-3">
+    <EditForm Model="@request" OnSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-3 mb-md-0"><a href="people/customers" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-user-tie me-2"></span>Add Customer</h5>
+                </div>
+                <div class="col-auto">
+                    @if (isSaving)
+                    {
+                        <Loader />
+                    }
+                    <button class="btn btn-sm btn-primary" type="submit" hidden="@(isSaving)">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col">
+                    <div class="mb-3">
+                        <label class="form-label" for="inputCustomerEmail">Contact Email</label>
+                        <InputText id="inputCustomerEmail" class="form-control" @bind-Value="@request.Email" @oninput="SearchBusinessCustomersAsync" type="email" placeholder="Email Address" />
+                        <ValidationMessage For="@(() => request.Email)" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="inputCustomerFirstName">First Name</label>
+                        <InputText id="inputCustomerFirstName" class="form-control" @bind-Value="@request.FirstName" placeholder="First Name" />
+                        <ValidationMessage For="@(() => request.FirstName)" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="inputCustomerLastName">Last Name</label>
+                        <InputText id="inputCustomerLastName" class="form-control" @bind-Value="@request.LastName" placeholder="Last Name" />
+                        <ValidationMessage For="@(() => request.LastName)" />
+                    </div>
+                    <div class="border-dashed-bottom mt-4 mb-3"></div>
+                    <AddressControl countries="@countries" states="@states" @bind-address1="@request.Address1" @bind-address2="@request.Address2" @bind-selectedCountry="@request.CountryCode" @bind-stateCode="@request.StateCode" @bind-city="@request.City" @bind-zipCode="@request.ZipCode" @ref="address" SelectedNewAddress="AddressChanged" />
+                </div>
+                <div class="col">
+                    <div class="mb-3">
+                        <label class="form-label" for="inputCustomerCompany">Company</label>
+                        <InputText id="inputCustomerCompany" class="form-control" @bind-Value="@request.Company" placeholder="Company Name" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="inputCustomerTitle">Position/Title</label>
+                        <InputText id="inputCustomerTitle" class="form-control" @bind-Value="@request.Title" placeholder="Position/Title" />
+                    </div>
+                    @if (!string.IsNullOrEmpty(request.AddressPhoneCountry))
+                    {
+                        <div class="mb-3">
+                            <PhoneNumber phoneCountry="@request.AddressPhoneCountry" @bind-phone="@request.AddressPhone" label="Addess Phone" @ref="addressPhone" />
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(request.PhoneCountry))
+                    {
+                        <div class="mb-3">
+                            <PhoneNumber PhoneCountry="@request.PhoneCountry" @bind-phone="@request.Phone" @ref="phone" />
+                            <ValidationMessage For="@(() => request.Phone)" />
+                        </div>
+                    }
+                    <div class="mb-3">
+                        <label class="form-label">Date of Birth</label>
+                        <SfMaskedTextBox Placeholder='Date of Birth' Mask="00/00/0000" @bind-Value="@UserAddressDob" @ref="UserAddressDobObj"></SfMaskedTextBox>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+</div>
+
+@code
+{
+    private string title = "Add Customer | Synergy Commerce Admin Panel";
+    private List<CpCountry> countries = new List<CpCountry>();
+    private List<CpState> states = new List<CpState>();
+    private AddCustomerRequestModel request = new AddCustomerRequestModel();
+    private Member currentMember = new Member();
+    private UserDetailModel user = new UserDetailModel();
+    private BusinessDetailModel business = new BusinessDetailModel();
+    private AddressControl address;
+    private PhoneNumber phone;
+    private PhoneNumber addressPhone;
+    private bool isSaving;
+    SfMaskedTextBox UserAddressDobObj;
+    SfMaskedTextBox UserDobObj;
+    private string UserAddressDob;
+    private string UserDob;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        CountryResponse res = await _countryViewModel.GetCountries();
+        if (res.success)
+        {
+            countries = res.data;
+        }
+
+        StateResponse stateResponse = await _stateViewModel.GetStates();
+        if (stateResponse.success)
+        {
+            states = stateResponse.data;
+        }
+
+        request.CountryCode = "US";
+        request.StateCode = "";
+        request.PhoneCountry = "US";
+        request.AddressPhoneCountry = "US";
+
+        StateHasChanged();
+    }
+
+    public async void SearchBusinessCustomersAsync(ChangeEventArgs eventArgs)
+    {
+        request.Email = eventArgs.Value.ToString();
+        if (!string.IsNullOrEmpty(request.Email) && Validator.EmailIsValid(request.Email))
+        {
+            UserDetailResponse userResponse = await _userViewModel.GetUserByEmail(request.Email);
+            if (userResponse.success)
+            {
+                user = userResponse.data;
+                if (user == null)
+                {
+                    BusinessDetailResponse businessDetailResponse = await _businessViewModel.GetBusinessDetail(Guid.Empty, currentMember.Id);
+                    if (businessDetailResponse.success)
+                    {
+                        business = businessDetailResponse.data;
+                        if (business != null)
+                        {
+                            user = new UserDetailModel();
+                            request.Company = business.BusinessName;
+                            request.Address1 = business.Address1;
+                            request.Address2 = business.Address2;
+                            request.City = business.City;
+                            request.CountryCode = business.CountryCode;
+                            request.StateCode = business.StateCode;
+                            request.Phone = business.Phone;
+                            request.AddressPhone = business.AddressPhone;
+                        }
+                    }
+                }
+                else
+                {
+                    business = new BusinessDetailModel();
+                    request.FirstName = user.FirstName;
+                    request.LastName = user.LastName;
+                    request.Company = user.Company;
+                    request.DOB = user.DOB;
+                    request.Address1 = user.Address1;
+                    request.Address2 = user.Address2;
+                    request.City = user.City;
+                    request.CountryCode = user.CountryCode;
+                    request.StateCode = user.StateCode;
+                    request.ZipCode = user.ZipCode;
+                    request.Phone = user.Phone;
+                    request.AddressPhone = user.AddressPhone;
+                }
+            }
+            StateHasChanged();
+        }
+        StateHasChanged();
+    }
+
+    private void HandleValidSubmit(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            if (string.IsNullOrEmpty(request.Phone) && string.IsNullOrEmpty(request.AddressPhone))
+            {
+                toastService.ShowToast("Please enter at least one phone number.", ToastLevel.Error);
+                return;
+            }
+            SaveCustomer();
+        }
+    }
+
+    private async void SaveCustomer()
+    {
+        isSaving = true;
+        request.BusinessId = currentMember.Id;
+        request.PhoneCountry = phone.phoneCountry;
+        request.Phone = phone.phone;
+        request.AddressPhoneCountry = addressPhone.phoneCountry;
+        request.AddressPhone = addressPhone.phone;
+
+        if (!String.IsNullOrEmpty(UserAddressDob))
+        {
+            var dob = UserAddressDobObj.GetMaskedValue();
+            request.DOB = Convert.ToDateTime(dob);
+        }
+
+        request.AddressSource = (int)AddressSource.Website;
+        if (!string.IsNullOrEmpty(request.CountryCode))
+        {
+            request.Country = countries.FirstOrDefault(x => x.CountryCode == request.CountryCode).Name;
+        }
+        if (!string.IsNullOrEmpty(request.StateCode))
+        {
+            request.State = states.FirstOrDefault(x => x.StateCode == request.StateCode).State;
+        }
+        var result = await _customerViewModel.AddBusinessCustomer(request);
+        if (result.success)
+        {
+            isSaving = false;
+            toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+        }
+        else
+        {
+            isSaving = false;
+            toastService.ShowToast(result.error_info.description, ToastLevel.Error);
+        }
+        StateHasChanged();
+    }
+
+    private void AddressChanged(bool isAddressChanged)
+    {
+        if (isAddressChanged)
+        {
+            request.Address2 = "";
+        }
+        StateHasChanged();
+    }
+}

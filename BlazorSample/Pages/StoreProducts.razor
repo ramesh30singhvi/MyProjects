@@ -1,0 +1,598 @@
+﻿@page "/store/products"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.XlsIO;
+@using System.Data;
+@inject IProductViewModel _productViewModel
+@inject ISettingsViewModel _settingViewModel
+@inject IBusinessViewModel _businessViewModel
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject IJSRuntime jsRuntime
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<Feedback DisplayWordOur="true" PageSection="PageSection.Products"></Feedback>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><span class="far fa-box-open me-2"></span>Products</h5>
+            </div>
+            <div class="col-auto d-flex">
+                <a class="btn btn-sm btn-outline-primary me-2" @onclick="ExportProducts" href="javascript:void();">Export</a>
+                <button class="btn btn-sm btn-primary" type="button" @onclick="@(() => OpenCreateProductModal())">Add Product</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0 text-uppercase">
+        <ul class="nav nav-tabs mt-1">
+            <li class="nav-item">
+                <a class="nav-link active" id="Active-tab" data-bs-toggle="tab" href="#tab-Active" role="tab" aria-controls="tab-Active" aria-selected="false" @onclick='()=>OnTabClick("ALL")'>ALL</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link " id="New-tab" data-bs-toggle="tab" href="#tab-New" role="tab" aria-controls="tab-New" aria-selected="false" @onclick='()=>OnTabClick("NEW")'>Recently Added</a>
+                </li>
+            <li class="nav-item">
+                <a class="nav-link " id="New-tab" data-bs-toggle="tab" href="#tab-Recent" role="tab" aria-controls="tab-Recent" aria-selected="false" @onclick='()=>OnTabClick("RECENT")'>Recently Modified</a>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body p-0">
+        <div class="theme-wizard border-bottom p-3">
+            <ul class="nav justify-content-between nav-wizard">
+                <li class="nav-item">
+                    <a class="nav-link active fw-semi-bold" href="#bootstrap-wizard-tab1" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-1"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Click Add Product</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab2" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-2"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Add Product Details</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab3" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-3"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Add Photos</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab4" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-4"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Set Inventory</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab5" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-5"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Click Save</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="row m-3">
+            <div class="col-12 col-md-12">
+                <label class="form-label" for="inputAddressSearch">Search</label>
+                <div class="input-group mb-3">
+                    <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                    <input type="text" class="form-control" @bind="searchText" @oninput="(EventArgs) => {searchProducts(EventArgs.Value.ToString());}" placeholder="Search Products" aria-label="Search Products" aria-describedby="inputGroupSearch" />
+                </div>
+            </div>
+        </div>
+        <div class="tab-content border-x border-bottom p-3 mb-2">
+            <div class="tab-pane fade show active custom_table_scroll" id="tab-Active" role="tabpanel" aria-labelledby="Active-tab">
+                <div class="min-vh-75 sf-grid">
+                    <SfGrid DataSource="@filteredProducts" AllowPaging="true" Width="100%" class="border-x-0">
+                        <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                        <GridPageSettings PageSize="50"></GridPageSettings>
+                        <GridTemplates>
+                            <EmptyRecordTemplate>
+                                @if (!isLoading && filteredProducts.Count <= 0)
+                                {
+                                    <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                        <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Products Available</h6>
+                                        <button type="button" class="btn btn-outline-primary">Get Started</button>
+                                    </div>
+                                }
+                            </EmptyRecordTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            <GridColumn HeaderText="Active" TextAlign="TextAlign.Center" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="60px">
+                                <Template>
+                                    @{
+                                        var productStatus = (context as ProductListModel).ProductStatus;
+                                        var prodcutStatusDesc = (context as ProductListModel).ProductStatusDesc;
+                                        <ProductStatusControl productStatus="@productStatus" prodcutStatusDesc="@prodcutStatusDesc"></ProductStatusControl>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="Product Name" TextAlign="TextAlign.Left" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="340px">
+                                <Template>
+                                    @{
+                                        var product = (context as ProductListModel);
+                                        <a href="@(product.ProductType == (int)ProductTypeEnum.GiftCard  ? "/payments/gift-card-settings" : "store/products/" + @product.ProductGuid)">@product.ProductTitle</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(ProductListModel.ProductSku) HeaderText="Sku" TextAlign="TextAlign.Center" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="100px" />
+                            <GridColumn Field=@nameof(ProductListModel.ProductTypeName) HeaderText="Type" TextAlign="TextAlign.Center" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="100px" />
+                            <GridColumn HeaderText="Retail" TextAlign="TextAlign.Center" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="80px">
+                                <Template>
+                                    @{
+                                        var retailPrice = (context as ProductListModel).RetailPrice;
+                                        @($"${retailPrice.ToString("n2")}")
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="Sale" TextAlign="TextAlign.Center" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="80px">
+                                <Template>
+                                    @{
+                                        @($"${(context as ProductListModel).SalePrice.ToString("n2")}")
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(ProductListModel.VariantCount) HeaderText="Variants" TextAlign="TextAlign.Center" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="80px" />
+                            <GridColumn HeaderText="" Width="50px">
+                                <Template>
+                                    @{
+                                        <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                        <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                            <a class="dropdown-item" href="#!">Copy</a>
+                                            <div class="dropdown-divider"></div>
+                                            <a class="dropdown-item" href="javascript:void();" @onclick="() => updateProductStatus(context as ProductListModel, ProductStatus.Active_Public)">Set as Active <span class="text-500">(Public)</span></a>
+                                            <a class="dropdown-item" href="javascript:void();" @onclick="() => updateProductStatus(context as ProductListModel, ProductStatus.Active_Private)">Set as Active <span class="text-500">(Private)</span></a>
+                                            <a class="dropdown-item" href="javascript:void();" @onclick="() => updateProductStatus(context as ProductListModel, ProductStatus.Draft)">Set as Draft</a>
+                                            <a class="dropdown-item" href="javascript:void();" @onclick="() => updateProductStatus(context as ProductListModel, ProductStatus.Inactive)">Set as Inactive</a>
+                                        </div>
+                                    }
+                                </Template>
+                            </GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+        </div>
+  
+    </div>
+    <div class="card-footer">
+    </div>
+</div>
+
+<SfDialog IsModal="true" Width="800px" ShowCloseIcon="true" @bind-Visible="CreateProductModalVisibility" CssClass="sf-dialog-content-padding-0">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Create Product</h5></Header>
+        <Content>
+            <div class="list-group list-group-flush">
+                <a href="/store/products/create?typeName=General Merchandise" class="list-group-item list-group-item-action py-3">
+                    <div class="d-flex align-items-center position-relative">
+                        <span class="fa-regular fa-bag-shopping fa-2x fa-fw"></span>
+                        <div class="flex-1 ms-3">
+                            <h6 class="mb-1 text-nowrap">General Merchandise</h6>
+                            <p class="mb-0 text-600 fs--1">Generate items like clothing, food, gifts and standard products.</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/store/products/create?typeName=Beer" class="list-group-item list-group-item-action py-3">
+                    <div class="d-flex align-items-center position-relative">
+                        <span class="fa-regular fa-beer fa-2x fa-fw"></span>
+                        <div class="flex-1 ms-3">
+                            <h6 class="mb-1 text-nowrap">Alcohol- Beer</h6>
+                            <p class="mb-0 text-600 fs--1">You are selling any type of beer.</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/store/products/create?typeName=Spirits" class="list-group-item list-group-item-action py-3">
+                    <div class="d-flex align-items-center position-relative">
+                        <span class="fa-regular fa-cocktail fa-2x fa-fw"></span>
+                        <div class="flex-1 ms-3">
+                            <h6 class="mb-1 text-nowrap">Alcohol- Spirits</h6>
+                            <p class="mb-0 text-600 fs--1">You are selling any type of spirits.</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/store/products/create?typeName=Wine" class="list-group-item list-group-item-action py-3">
+                    <div class="d-flex align-items-center position-relative">
+                        <span class="fa-regular fa-wine-glass-alt fa-2x fa-fw"></span>
+                        <div class="flex-1 ms-3">
+                            <h6 class="mb-1 text-nowrap">Alcohol- Wine</h6>
+                            <p class="mb-0 text-600 fs--1">You are selling any type of wine, fortified, sparkling or champagne</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/store/products/create?typeName=Food (Prepared)" class="list-group-item list-group-item-action py-3">
+                    <div class="d-flex align-items-center position-relative">
+                        <span class="fa-regular fa-burger-glass fa-2x fa-fw"></span>
+                        <div class="flex-1 ms-3">
+                            <h6 class="mb-1 text-nowrap">Food & Menu Items</h6>
+                            <p class="mb-0 text-600 fs--1">You are selling food items; pre-packaged or prepared</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/store/products/create" class="list-group-item list-group-item-action py-3">
+                    <div class="d-flex align-items-center position-relative">
+                        <span class="fa-regular fa-gifts fa-2x fa-fw"></span>
+                        <div class="flex-1 ms-3">
+                            <h6 class="mb-1 text-nowrap">Product Bundle / Kit</h6>
+                            <p class="mb-0 text-600 fs--1">Product Bundle / KitYou are combining multiple items to create a bundle.</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/store/products/create" class="list-group-item list-group-item-action py-3">
+                    <div class="d-flex align-items-center position-relative">
+                        <span class="fa-regular fa-wine-glass fa-2x fa-fw"></span>
+                        <div class="flex-1 ms-3">
+                            <h6 class="mb-1 text-nowrap">Attractions, Activities & Tours</h6>
+                            <p class="mb-0 text-600 fs--1">Use this for tours, tastings and activities.</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/store/products/create" class="list-group-item list-group-item-action py-3">
+                    <div class="d-flex align-items-center position-relative">
+                        <span class="fa-regular fa-memo fa-2x fa-fw"></span>
+                        <div class="flex-1 ms-3">
+                            <h6 class="mb-1 text-nowrap">Collateral Materials</h6>
+                            <p class="mb-0 text-600 fs--1">Typically printed items that are included in a shipment.</p>
+                        </div>
+                    </div>
+                </a>
+                <a href="/store/products/create" class="list-group-item list-group-item-action py-3">
+                    <div class="d-flex align-items-center position-relative">
+                        <span class="fa-regular fa-credit-card fa-2x fa-fw"></span>
+                        <div class="flex-1 ms-3">
+                            <h6 class="mb-1 text-nowrap">Rebate & Credit</h6>
+                            <p class="mb-0 text-600 fs--1">Used for store credit or tracking rebates provided to customers.</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary me-2" @onclick="@CloseCreateProductModal">Cancel</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+    private string title = "Products | Synergy Commerce Admin Panel";
+    private Boolean isLoading = true;
+    Member currentMember = new Member();
+    private List<ProductListModel> products = new List<ProductListModel>();
+    private List<ProductListModel> filteredProducts = new List<ProductListModel>();
+    private bool CreateProductModalVisibility { get; set; } = false;
+    public string searchText = string.Empty;
+    private List<ExportProductModel> exportProducts = new List<ExportProductModel>();
+    private bool isECommerceSettingsSaved = false;
+    private string eCommerceSettingName = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        await getProducts("ALL");
+        //Get eCommerce Settings
+        var eCommerceSettings = await _settingViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount, BusinessSettingsMetaKey.WebSync);
+        isECommerceSettingsSaved = !string.IsNullOrEmpty(eCommerceSettings?.data?.MetaValue ?? string.Empty);
+        if (isECommerceSettingsSaved)
+        {
+            //Get eCommerce Configuration
+            var businessECommerceConfigurationResponse = await _businessViewModel.GetBusinessConfigurationOptionDetail(BusinessConfigurationNamespace.WebSync, eCommerceSettings.data.MetaValue);
+            eCommerceSettingName = businessECommerceConfigurationResponse?.data?.SettingName ?? string.Empty;
+        }
+        isLoading = false;
+    }
+
+    private async void OnTabClick(string listType)
+    {
+        await getProducts(listType);
+    }
+
+    private void OpenCreateProductModal()
+    {
+        this.CreateProductModalVisibility = true;
+    }
+    private void CloseCreateProductModal()
+    {
+        this.CreateProductModalVisibility = false;
+    }
+
+    private async Task getProducts(string listType)
+    {
+        SearchProductResponse result = await _productViewModel.SearchProducts(currentMember.Id, false, "", listType);
+        if (result.success)
+        {
+            products = result.data;
+            if (products.Count > 0)
+            {
+                filteredProducts = products;
+            }
+            StateHasChanged();
+        }
+    }
+
+    private void searchProducts(string searchValue)
+    {
+        if (searchValue.Length >= 4) //requires at lest 4 character to search
+        {
+            if (!string.IsNullOrEmpty(searchValue))
+            {
+                filteredProducts = products.Where(x => x.ProductTitle.ToLower().Contains(searchValue.ToLower()) || x.ProductTitle.ToLower().Contains(searchValue.ToLower())).ToList();
+            }
+            else
+            {
+                filteredProducts = products;
+            } 
+        }
+        else if (string.IsNullOrEmpty(searchValue))
+        {
+            filteredProducts = products;
+        }
+        StateHasChanged();
+    }
+
+    private async Task updateProductStatus(ProductListModel product, ProductStatus status)
+    {
+        var request = new ProductStatusRequestModel()
+        {
+            ProductId = product.Id,
+            ProductStatus = status
+        };
+
+        BaseResponse response = await _productViewModel.UpdateProductStatus(request);
+        if (response.success)
+        {
+            await getProducts("ALL");
+            toastService.ShowToast(Constants.StatusUpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        StateHasChanged();
+    }
+
+    private async Task ExportProducts()
+    {
+        isLoading = true;
+        var exportProductsResponse = await _productViewModel.ExportProducts(currentMember.Id, false, searchText);
+        if (exportProductsResponse.success)
+        {
+            exportProducts = exportProductsResponse.data;
+            //Create an instance of ExcelEngine.
+            using (ExcelEngine excelEngine = new ExcelEngine())
+            {
+                IApplication application = excelEngine.Excel;
+                application.DefaultVersion = ExcelVersion.Xlsx;
+
+                //Create a workbook.
+                IWorkbook workbook = application.Workbooks.Create(1);
+                IWorksheet worksheet = workbook.Worksheets[0];
+
+                DataTable table = BindDataTable();
+
+                //Export data from DataTable to Excel worksheet.
+                worksheet.ImportDataTable(table, true, 1, 1);
+
+                worksheet.UsedRange.AutofitColumns();
+                worksheet.UsedRange.AutofitRows();
+                worksheet.SetColumnWidth(4, 30);
+                worksheet.SetColumnWidth(5, 30);
+                worksheet.SetColumnWidth(34, 50);
+                worksheet.SetColumnWidth(22, 40);
+                worksheet.UsedRange.WrapText = true;
+                IStyle headerStyle = workbook.Styles.Add("HeaderStyle");
+                headerStyle.Font.Bold = true;
+                worksheet.SetDefaultRowStyle(1, headerStyle);
+                worksheet.UsedRange.HorizontalAlignment = ExcelHAlign.HAlignCenter;
+
+                //Save the document as a stream.
+                using (MemoryStream stream = new MemoryStream())
+                {
+                    //Save the created Excel document to MemoryStream.
+                    workbook.SaveAs(stream);
+                    await jsRuntime.InvokeAsync<object>(
+                           "fileSaveAs",
+                            "Products.xlsx",
+                           Convert.ToBase64String(stream.ToArray()));
+                }
+            }
+        }
+        else
+        {
+            toastService.ShowToast(exportProductsResponse.error_info.extra_info, ToastLevel.Error);
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private DataTable BindDataTable()
+    {
+        DataTable productsDataTable = new DataTable();
+        productsDataTable.Columns.Add("Item GUID");
+        productsDataTable.Columns.Add("Item Status");
+        productsDataTable.Columns.Add("Item Name");
+        productsDataTable.Columns.Add("Teaser");
+        productsDataTable.Columns.Add("Item Description");
+        productsDataTable.Columns.Add("Item Type");
+        productsDataTable.Columns.Add("Unit Type");
+        productsDataTable.Columns.Add("Retail Price");
+        productsDataTable.Columns.Add("Sale Price");
+        productsDataTable.Columns.Add("Cost");
+        productsDataTable.Columns.Add("Club Price");
+        productsDataTable.Columns.Add("Exclude Discounts");
+        productsDataTable.Columns.Add("Volume Type");
+        productsDataTable.Columns.Add("Volume");
+        productsDataTable.Columns.Add("SKU");
+        productsDataTable.Columns.Add("Barcode");
+        productsDataTable.Columns.Add("Channels");
+        productsDataTable.Columns.Add("Product Template");
+        productsDataTable.Columns.Add("Department");
+        productsDataTable.Columns.Add("Tax Class");
+        productsDataTable.Columns.Add("Vendor");
+        productsDataTable.Columns.Add("Menus");
+        productsDataTable.Columns.Add("Collections");
+        productsDataTable.Columns.Add("Purchase URL");
+        productsDataTable.Columns.Add("External URL");
+        productsDataTable.Columns.Add("Modifiers");
+        productsDataTable.Columns.Add("Pickup Only");
+        productsDataTable.Columns.Add("Shipping Class");
+        productsDataTable.Columns.Add("Item Width");
+        productsDataTable.Columns.Add("Item Height");
+        productsDataTable.Columns.Add("Item Length");
+        productsDataTable.Columns.Add("Item Weight");
+        productsDataTable.Columns.Add("Item Measurement");
+        productsDataTable.Columns.Add("Image URLs");
+        if (isECommerceSettingsSaved && !string.IsNullOrEmpty(eCommerceSettingName) && eCommerceSettingName == ThirdPartyType.Commerce7.ToString())
+        {
+            productsDataTable.Columns.Add("C7 Sku");
+            productsDataTable.Columns.Add("C7 Tax Type");
+            productsDataTable.Columns.Add("C7 Item Type");
+            productsDataTable.Columns.Add("C7 Category");
+        }
+        productsDataTable.Columns.Add("Tags");
+        productsDataTable.Columns.Add("Robert Parker Score");
+        productsDataTable.Columns.Add("Vintage");
+        productsDataTable.Columns.Add("Varietal");
+        productsDataTable.Columns.Add("Link to Recipe");
+        productsDataTable.Columns.Add("Investor Price");
+        productsDataTable.Columns.Add("Member Exclusive");
+        productsDataTable.Columns.Add("On Demand Video");
+        productsDataTable.Columns.Add("Appellation");
+
+        foreach (var product in exportProducts)
+        {
+            string volumeType = "None";
+            string departmentName = "None";
+            string taxClass = "None";
+            string formattedMenu = string.Empty;
+            string purchaseURL = "https://www.cellarpass.com/pr/";
+            bool isRequireShipping = !Convert.ToBoolean(product.RequiresShipping);
+            ProductMetaDataModel metaBrandKey = new ProductMetaDataModel();
+            ProductMetaDataModel metaProductKey = new ProductMetaDataModel();
+            ProductMetaDataModel taxType = new ProductMetaDataModel();
+            ProductMetaDataModel itemType = new ProductMetaDataModel();
+            ProductMetaDataModel categoryType = new ProductMetaDataModel();
+            ProductMetaDataModel itemSKU = new ProductMetaDataModel();
+            ProductMetaDataModel customField1 = new ProductMetaDataModel();
+            ProductMetaDataModel customField2 = new ProductMetaDataModel();
+            ProductMetaDataModel externalPurchaseUrl = new ProductMetaDataModel();
+            ProductMetaDataModel department = new ProductMetaDataModel();
+            ProductMetaDataModel selectedTaxClass = new ProductMetaDataModel();
+            ProductMetaDataModel template = new ProductMetaDataModel();
+            CustomBusinessMetaDataModel robertParkerScore = new CustomBusinessMetaDataModel();
+            CustomBusinessMetaDataModel vintage = new CustomBusinessMetaDataModel();
+            CustomBusinessMetaDataModel varietal = new CustomBusinessMetaDataModel();
+            CustomBusinessMetaDataModel linkToRecipe = new CustomBusinessMetaDataModel();
+            CustomBusinessMetaDataModel investorPrice = new CustomBusinessMetaDataModel();
+            CustomBusinessMetaDataModel memberExclusive = new CustomBusinessMetaDataModel();
+            CustomBusinessMetaDataModel onDemandVideo = new CustomBusinessMetaDataModel();
+            CustomBusinessMetaDataModel appellation = new CustomBusinessMetaDataModel();
+
+            var channels = product.Channels.Select(x => ((ProductChannels)x.Channel).ToString()).ToList();
+            var modifiers = product.Modifiers.Select(x => x.ModifierGroupName).ToList();
+            var imageUrls = product.Images.Select(x => x.GalleryImage).ToList();
+            var tags = product.Tags.Select(x => x.Value).ToList();
+            var productMenu = product.Menu.GroupBy(x => x.MenuName).ToList();
+
+            purchaseURL += product.ProductTitle.ToLower().Replace(" ", "-");
+            purchaseURL += "-" + product.Id;
+
+            if (productMenu != null && productMenu.Count > 0)
+            {
+                foreach (var menu in productMenu)
+                {
+                    string menuItems = Helper.GetCommaSeparatedStringFromList(menu.Select(x => x.GroupName).ToList());
+                    string menuName = menu.FirstOrDefault().MenuName;
+                    formattedMenu += menuName + ": " + menuItems + "\n";
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(product.VolumeValue))
+            {
+                string[] splittedVolumeValue = product.VolumeValue.Split("-");
+                if (splittedVolumeValue.Length > 1)
+                {
+                    product.VolumeValue = splittedVolumeValue[0];
+                    volumeType = splittedVolumeValue[1];
+                }
+            }
+
+            if (product.MetaData.Count > 0)
+            {
+                metaBrandKey = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.ComplianceBrandKey).FirstOrDefault() ?? new ProductMetaDataModel();
+                metaProductKey = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.ComplianceProductKey).FirstOrDefault() ?? new ProductMetaDataModel();
+                taxType = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.Commerce7TaxType).FirstOrDefault() ?? new ProductMetaDataModel();
+                itemType = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.Commerce7ItemType).FirstOrDefault() ?? new ProductMetaDataModel();
+                categoryType = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.Commerce7CategoryType).FirstOrDefault() ?? new ProductMetaDataModel();
+                itemSKU = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.Commerce7ItemSKU).FirstOrDefault() ?? new ProductMetaDataModel();
+                customField1 = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.CustomField1).FirstOrDefault() ?? new ProductMetaDataModel();
+                customField2 = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.CustomField2).FirstOrDefault() ?? new ProductMetaDataModel();
+                externalPurchaseUrl = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.ExternalPurchaseURL).FirstOrDefault() ?? new ProductMetaDataModel();
+                department = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.Department).FirstOrDefault() ?? new ProductMetaDataModel();
+                departmentName = string.IsNullOrEmpty(department.Description) ? "None" : department.Description;
+                template = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.Template).FirstOrDefault() ?? new ProductMetaDataModel();
+                selectedTaxClass = product.MetaData.Where(x => x.MetaKey == ProductMetaKey.Commerce7TaxClass).FirstOrDefault() ?? new ProductMetaDataModel();
+                taxClass = string.IsNullOrEmpty(selectedTaxClass.Description) ? "None" : selectedTaxClass.Description;
+            }
+            else
+            {
+                template.MetaValue = "Default";
+            }
+
+            if (product.CustomBusinessMetaDatas.Count > 0)
+            {
+                robertParkerScore = product.CustomBusinessMetaDatas.Where(x => x.Name == ProductMetaName.RobertParkerScore).FirstOrDefault() ?? new CustomBusinessMetaDataModel();
+                vintage = product.CustomBusinessMetaDatas.Where(x => x.Name == ProductMetaName.Vintage).FirstOrDefault() ?? new CustomBusinessMetaDataModel();
+                varietal = product.CustomBusinessMetaDatas.Where(x => x.Name == ProductMetaName.Varietal).FirstOrDefault() ?? new CustomBusinessMetaDataModel();
+                linkToRecipe = product.CustomBusinessMetaDatas.Where(x => x.Name == ProductMetaName.LinkToRecipe).FirstOrDefault() ?? new CustomBusinessMetaDataModel();
+                investorPrice = product.CustomBusinessMetaDatas.Where(x => x.Name == ProductMetaName.InvestorPrice).FirstOrDefault() ?? new CustomBusinessMetaDataModel();
+                memberExclusive = product.CustomBusinessMetaDatas.Where(x => x.Name == ProductMetaName.MemberExclusive).FirstOrDefault() ?? new CustomBusinessMetaDataModel();
+                onDemandVideo = product.CustomBusinessMetaDatas.Where(x => x.Name == ProductMetaName.OnDemandVideo).FirstOrDefault() ?? new CustomBusinessMetaDataModel();
+                appellation = product.CustomBusinessMetaDatas.Where(x => x.Name == ProductMetaName.Appellation).FirstOrDefault() ?? new CustomBusinessMetaDataModel();
+            }
+
+
+            if (isECommerceSettingsSaved && !string.IsNullOrEmpty(eCommerceSettingName) && eCommerceSettingName == ThirdPartyType.Commerce7.ToString())
+            {
+                productsDataTable.Rows.Add(product.ProductGuid, product.ProductStatusDesc, product.ProductTitle, product.ProductTeaser, product.ProductDescription, product.ProductTypeName
+, !string.IsNullOrWhiteSpace(product.VolumeUnit) ? "Per " + ((UnitType)Convert.ToInt32(product.VolumeUnit)).ToString() : string.Empty, product.RetailPrice.ToString("0.00")
+, product.SalePrice.ToString("0.00"), product.CostPrice.ToString("0.00"), product.ClubPrice.ToString("0.00"), product.ExcludeDiscounts ? "Yes" : "No", volumeType, product.VolumeValue
+, product.ProductSku, product.ProductBarcode, Helper.GetCommaSeparatedStringFromList(channels), template.MetaValue, departmentName, taxClass, product.VendorName, formattedMenu
+, product.Collections, purchaseURL, externalPurchaseUrl.MetaValue, Helper.GetCommaSeparatedStringFromList(modifiers), isRequireShipping ? "Yes" : "No", !isRequireShipping ? product.ShippingClassName : string.Empty, !isRequireShipping ? product.DimensionsWidth : string.Empty
+, !isRequireShipping ? product.DimensionsHeight : string.Empty, !isRequireShipping ? product.DimensionsLength : string.Empty, !isRequireShipping ? product.WeightValue : string.Empty, !isRequireShipping && !string.IsNullOrWhiteSpace(product.WeightUnit) ? ((WeightUnit)Convert.ToInt32(product.WeightUnit)).ToString() : string.Empty, Helper.GetCommaSeparatedStringFromList(imageUrls)
+, product.Modifiers.Count > 0 ? itemSKU.MetaValue : string.Empty, product.Modifiers.Count > 0 && product.ChargeSalesTax ? taxType.MetaValue : string.Empty, product.Modifiers.Count > 0 && product.ChargeSalesTax ? itemType.MetaValue : string.Empty
+, product.Modifiers.Count > 0 ? (string.IsNullOrWhiteSpace(categoryType.MetaValue) ? "None" : categoryType.MetaValue) : string.Empty, Helper.GetCommaSeparatedStringFromList(tags), GetProductMetaDataValue(robertParkerScore), GetProductMetaDataValue(vintage)
+, GetProductMetaDataValue(varietal), GetProductMetaDataValue(linkToRecipe), investorPrice.BusinessMetaDataId != 0 ? investorPrice.PriceDefaultValue : string.Empty, memberExclusive.BusinessMetaDataId != 0 ? (memberExclusive.SwitchDefaultValue ? "Yes" : "No") : string.Empty, GetProductMetaDataValue(onDemandVideo), GetProductMetaDataValue(appellation));
+            }
+            else
+            {
+                productsDataTable.Rows.Add(product.ProductGuid, product.ProductStatusDesc, product.ProductTitle, product.ProductTeaser, product.ProductDescription, product.ProductTypeName
+, !string.IsNullOrWhiteSpace(product.VolumeUnit) ? "Per " + ((UnitType)Convert.ToInt32(product.VolumeUnit)).ToString() : string.Empty, product.RetailPrice.ToString("0.00")
+, product.SalePrice.ToString("0.00"), product.CostPrice.ToString("0.00"), product.ClubPrice.ToString("0.00"), product.ExcludeDiscounts ? "Yes" : "No", volumeType, product.VolumeValue
+, product.ProductSku, product.ProductBarcode, Helper.GetCommaSeparatedStringFromList(channels), template.MetaValue, departmentName, taxClass, product.VendorName, formattedMenu
+, product.Collections, purchaseURL, externalPurchaseUrl.MetaValue, Helper.GetCommaSeparatedStringFromList(modifiers), isRequireShipping ? "Yes" : "No", !isRequireShipping ? product.ShippingClassName : string.Empty, !isRequireShipping ? product.DimensionsWidth : string.Empty
+, !isRequireShipping ? product.DimensionsHeight : string.Empty, !isRequireShipping ? product.DimensionsLength : string.Empty, !isRequireShipping ? product.WeightValue : string.Empty, !isRequireShipping && !string.IsNullOrWhiteSpace(product.WeightUnit) ? ((WeightUnit)Convert.ToInt32(product.WeightUnit)).ToString() : string.Empty, Helper.GetCommaSeparatedStringFromList(imageUrls)
+, Helper.GetCommaSeparatedStringFromList(tags), GetProductMetaDataValue(robertParkerScore), GetProductMetaDataValue(vintage), GetProductMetaDataValue(varietal), GetProductMetaDataValue(linkToRecipe), investorPrice.BusinessMetaDataId != 0 ? investorPrice.PriceDefaultValue : string.Empty
+, memberExclusive.BusinessMetaDataId != 0 ? (memberExclusive.SwitchDefaultValue ? "Yes" : "No") : string.Empty, GetProductMetaDataValue(onDemandVideo), GetProductMetaDataValue(appellation));
+            }
+        }
+        return productsDataTable;
+    }
+
+    private string GetProductMetaDataValue(CustomBusinessMetaDataModel customBusinessMeta)
+    {
+        return customBusinessMeta.BusinessMetaDataId != 0 ? customBusinessMeta.DefaultValue : string.Empty;
+    }
+
+}

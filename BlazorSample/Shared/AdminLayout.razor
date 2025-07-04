@@ -1,0 +1,839 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager _navigationManager
+@using CellarPassAppAdmin.Shared.Services
+@inject IUserService _userService;
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Web
+@using Syncfusion.Blazor.Navigations
+@using CellarPassAppAdmin.Client.Models
+@using Microsoft.Extensions.Options;
+@inject IOptions<SynergyAppSettings> _synergyAppSettings
+@inject IMemberViewModel _memberViewModel
+@inject ICustomerViewModel _customerViewModel
+@inject IOrderViewModel  _orderViewModel
+@inject IMemberViewModel _userViewModel
+@inject IBookmarkViewModel _bookmarkViewModel
+@inject ILocalStorageService localStorage
+@inject IUserViewModel _userViewModel
+@inject ToastService toastService
+@inject IMessageViewModel MessageViewModel
+@inject NavigationManager NavigationManager
+
+<main class="main" id="main-authorized">
+    <SfSpinner @bind-Visible="isVisible"></SfSpinner>
+    <AuthorizeView>
+        <Authorized>
+
+            <nav class="navbar navbar-dark navbar-top bg-1100 fw-normal text-white navbar-expand-xl shadow mx-auto">
+
+                <button class="navbar-toggler d-xl-none collapsed mx-2" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="navbar-brand mx-2">
+                    <div class="d-flex align-items-center">
+                        <a href=""><img src="@(_synergyAppSettings.Value.SynergyCDNBaseUrl)images/branding/synergy-logomark-color.svg" alt="Synergy Admin" width="50" /></a>
+                    </div>
+                </div>
+
+                @if (selectedMember != null && !isLoading)
+                {
+                    <ul class="navbar-nav align-items-center d-none d-lg-block d-flex justify-content-center">
+                        <li class="nav-item fs--1">
+                            @selectedMember.Name
+                        </li>
+                    </ul>
+                }
+
+            <ul class="navbar-nav navbar-nav-icons ms-auto flex-row align-items-center">
+                <li class="nav-item px-2 px-xl-0">
+                    <a class="nav-link" id="navbarDropdownSearch" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="Search"><span class="fa-solid fa-magnifying-glass"></span></a>
+                    <div class="dropdown-menu dropdown-menu-end py-0 me-10" aria-labelledby="navbarDropdownSearch">
+                        <div class="bg-white rounded-lg py-2">
+                            <div class="text-900 font-weight-bold ms-3">Search</div>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="javascript:void(0);" @onclick="DisplaySearchCustomerModal">Customers</a>
+                            <a class="dropdown-item" href="javascript:void(0);" @onclick="DisplaySearchOrderModal">Orders</a>
+                            @if (isReservationsEnabledForSynergy)
+                            {
+                                <a class="dropdown-item" href="#!">Reservations</a>
+                            }
+                            <a class="dropdown-item" href="#!">Tracking Numbers</a>
+                        </div>
+                    </div>
+                </li>
+                <li class="nav-item px-2 px-xl-0">
+                    <a class="nav-link" href="help" title="Help"><span class="fa-regular fa-question-circle fa-lg me-1"></span>Help Center</a>
+                </li>
+                <li class="nav-item px-2 px-xl-0" hidden="true">
+                    <a class="nav-link" id="navbarDropdownSearch" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="Quick Menu"><span class="fa-solid fa-bolt-lightning"></span></a>
+                    <div class="dropdown-menu dropdown-menu-end py-0 me-10" aria-labelledby="navbarDropdownSearch">
+                        <div class="bg-white rounded-lg py-2">
+                            <div class="text-900 font-weight-bold ms-3">Quick Menu</div>
+                            <div class="dropdown-divider"></div>
+                            <div class="dropdown-item">
+                                <SfDropDownList TValue="string" TItem="QuickLink" Placeholder="Select a country" AllowFiltering="true" DataSource="@QuickLinks">
+                                    <DropDownListFieldSettings Text="LinkName" Value="URL" />
+                                    <DropDownListEvents TItem="QuickLink" TValue="string" ValueChange="QuickLinkOnChange" />
+                                </SfDropDownList>
+                            </div>
+                        </div>
+                    </div>
+                </li>
+
+                @if (member != null && member.Id > 0)
+                {
+                    <li class="nav-item px-2 px-xl-0">
+                        <a class="nav-link" href="javascript:void(0);" @onclick="() => OpenBookmarkModal()" title="Bookmarks"><span class="fas fa-lg fa-table-cells-large"></span></a>
+                    </li>
+                }
+
+                <li class="nav-item dropdown px-2 px-xl-0">
+                    <a class="nav-link pt-0 pb-0" id="navbarDropdownUser" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        @*<span hidden="@(!string.IsNullOrEmpty(user?.UserImage))" class="d-md-none fa-regular fa-user"></span><span class="d-none d-md-block">@(context.User.Identity.Name)</span>*@
+                        <div class="avatar avatar-2xl"><img class="img-fluid rounded-circle shadow-sm" src="@(user?.UserImage ?? string.Empty)" alt="@($"{(!string.IsNullOrEmpty(user?.FirstName)?user.FirstName+" ":"")}{(!string.IsNullOrEmpty(user?.LastName)?user.LastName+" ":"")}photo")" /></div>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-end py-0 me-3 mt-2" aria-labelledby="navbarDropdownUser">
+                        <div class="bg-white rounded-lg py-2">
+                            <div class="dropdown-item font-weight-bold"><span class="text-secondary">@context.User.Identity.Name</span><br /><span style="font-size: smaller" class="text-secondary">@(user != null && !string.IsNullOrEmpty(user.RoleNames) ? user.RoleNames : "")</span></div>
+                            @if (user?.IsSuperAdmin ?? false)
+                            {
+                                <a class="dropdown-item" href="sa/dashboard" title="Super Admin Dashboard">Super Admin</a>
+                            }
+                                <a class="dropdown-item" href="https://cellarpasssupport.zendesk.com/hc/en-us/sections/15576592394772-Synergy-Release-Notes" target="_blank" title="Product Updates">Product Updates</a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href=@($"people/team/{user?.UserGUID}")>Profile</a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="javascript:void(0);" @onclick="() => openModal()" @onclick:preventDefault>Switch Accounts</a>
+                            <a class="dropdown-item" href="#">Upgrade to TablePro</a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="javascript:void(0);" @onclick="@ShowSetupGuide" @onclick:preventDefault title="Setup Guide">Setup & User Guide</a>
+                            <a class="dropdown-item" href="javascript:void(0);" @onclick="() => DisplaySiteContentDialog(CPContentType.SiteContentBlock, ContentBlocks.PrivacyPolicyPlatform)">Privacy Policy</a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item text-danger" href="javascript:void(0);" @onclick="() => LogoutUser(false)">Logout</a>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+            </nav>
+
+            @Body
+
+
+            @if (showModal)
+            {
+                <div class="modal fade show" tabindex="-1" role="dialog" style="display: block;">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Select Member Account</h5>
+                                <button type="button" class="close" data-dismiss="modal" @onclick="() => closeModal()" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                @if (membersList.Count > 0)
+                                {
+                                    <SfComboBox @bind-Value="@selectedMemberName" AllowFiltering=true DataSource="@membersList" CssClass="py-2">
+                                        <ComboBoxEvents TItem="Member" TValue="string" ValueChange="SelectMemberName"></ComboBoxEvents>
+                                        <ComboBoxFieldSettings Value="Name"></ComboBoxFieldSettings>
+                                    </SfComboBox>
+                                }
+                                @if (member != null)
+                                {
+                                    <div class="mt-2">
+                                        <p><b>Billing Plan:</b> @(member.BillingPlan.Name != null ? member.BillingPlan.Name : "NA")</p>
+                                        <p><b>Ticket Plan:</b> @(member.TicketPlan.Name != null ? member.TicketPlan.Name : "NA")</p>
+                                        <p><b>Member Type:</b> @(member.MemberType.Name != null ? member.MemberType.Name : "NA")</p>
+                                        <p><b>Region:</b> @(member.Region.Name != null ? member.Region.Name : "NA")</p>
+                                    </div>
+                                }
+
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" @onclick="() => closeModal()">Cancel</button>
+                                <button type="button" class="btn btn-primary" @onclick="() => selectAccount()">Select Account</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <SfSidebar Width="450px" Type="@SidebarType.Push" Position="@SidebarPosition.Right" @ref="Sidebar" ZIndex="1100" @bind-IsOpen="SetupGuideSidebarToggle">
+                <ChildContent>
+                    <div class="bg-white p-2 mb-3 border-bottom">
+                        <div class="d-flex">
+                            <button class="btn btn-falcon-default btn-sm flex-shrink-1" type="button" @onclick="@CloseSetupGuide" aria-label="Close"><span class="far fa-times fa-lg"></span></button>
+                            <div class="z-index-1 py-1 pe-4 w-100 text-center">
+                                <h5>Setup Guide</h5>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="px-2">
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h6 class="mb-3">Let’s get started</h6>
+                                <p>
+                                    This Setup Guide will take you through the steps needed to get your business running on CellarPass.
+                                </p>
+                                <div class="progress" style="height: 1px;">
+                                    <div class="progress-bar" role="progressbar" style="width: 25%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <div class="progress mb-2" style="height: 8px;">
+                                    <div class="progress-bar" role="progressbar" style="width: 25%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <p class="fs--2">25% setup</p>
+                            </div>
+                        </div>
+
+                        <div class="card mb-3">
+                            <div class="card-body p-0">
+                                <div class="accordion accordion-flush" id="scheduleOrientation">
+                                    <div class="accordion-item bg-white">
+
+                                        <div class="accordion-header bg-white" id="flush-headingOne">
+                                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne" aria-expanded="false" aria-controls="flush-collapseOne">
+                                                <h6 class="mb-0">Schedule Orientation</h6>
+                                            </button>
+                                        </div>
+                                        <div id="flush-collapseOne" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#scheduleOrientation">
+                                            <div class="accordion-body p-0">
+                                                <div class="list-group list-group-flush">
+                                                    <a href="#!" class="list-group-item text-decoration-none py-3">
+                                                        <h6>This is an milestone item heading</h6>
+                                                        <div class="fs--1">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</div>
+                                                    </a>
+                                                    <a href="#!" class="list-group-item text-decoration-none py-3">
+                                                        <h6>This is an milestone item heading</h6>
+                                                        <div class="fs--1">Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</div>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </ChildContent>
+            </SfSidebar>
+
+            <SfDialog IsModal="true" Width="800px" ShowCloseIcon="true" @bind-Visible="BookmarkModalVisibility" CssClass="sf-dialog-header-95">
+                <DialogTemplates>
+                    <Header><h5 class="modal-title d-flex align-items-center" id="modalLabel">App Bookmarks <a class="btn btn-sm btn-outline-primary ms-auto" href="javascript:void(0);" @onclick="() => OpenEditBookmarkModal(false)" hidden="@(userBookmarks.Count == 0)">Edit</a></h5></Header>
+                    <Content>
+                        <div class="">
+                            <div class="row g-2">
+                                @if (userBookmarks?.Count > 0)
+                                {
+
+                                    foreach (var bookmark in userBookmarks)
+                                    {
+                                        string icon = $"<span class='d-block text-800'><i class='fa-light fa-{bookmark.Icon} fa-3x mb-2'></i></span>";
+                                        <div class="col-6 col-md-4">
+                                            <div class="d-grid h-100">
+                                                <a href="@bookmark.URL" class="btn btn-outline-dark border p-4" @onclick="@CloseBookmarkModal">@((MarkupString)icon)@bookmark.ButtonName</a>
+                                            </div>
+                                        </div>
+                                    }
+
+                                }
+                                else
+                                {
+                                    <div class="card-body row justify-content-center">
+                                        <div class="col-sm-6 col-md-8 mb-3">
+                                            <div class="d-flex position-relative mb-2">
+                                                <span class="fa-regular fa-exclamation-triangle fa-4x fa-fw me-2"></span>
+                                                <div class="flex-1">
+                                                    <p class="fs-1 mb-0">You don’t have any bookmarks configured.</p>
+                                                    <p class="fs-1"><a class="stretched-link" @onclick="() => OpenEditBookmarkModal(true)" href="javascript:void(0);">Create custom bookmarks</a></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </Content>
+                </DialogTemplates>
+            </SfDialog>
+
+            <SfDialog IsModal="true" Width="800px" ShowCloseIcon="true" @bind-Visible="EditBookmarkModalVisibility">
+                <DialogTemplates>
+                    <Header><h5 class="modal-title" id="modalLabel">@(isAddBookmark ? "Add" : "Edit") Bookmarks</h5></Header>
+                    <Content>
+                        <p class="mb-4">Save time by adding frequently-used actions as bookmarks</p>
+
+                        <h6 class="mb-3">Assigned Bookmarks</h6>
+                        <div class="mb-4">
+                            <SfListBox TValue="string[]" DataSource="@assignedBookmarks" TItem="UserBookmarkRequestModel" AllowDragAndDrop="true" @ref="BookmarksObj" CssClass="rounded cp-list">
+                                <ListBoxFieldSettings Text="ButtonName" />
+                                <ListBoxEvents TValue="string[]" TItem="UserBookmarkRequestModel"></ListBoxEvents>
+                                <ListBoxTemplates TItem="UserBookmarkRequestModel">
+                                    <ItemTemplate Context="bmContext">
+                                        <div class="d-flex align-items-center">
+                                            <span class="far fa-sort me-4"></span><span class="fa-light fa-lg fa-fw fa-@bmContext.Icon me-2"></span>@bmContext.ButtonName
+                                            <a href="javascript:void();" @onclick="() => RemoveBookmark(bmContext)" class="text-dark ms-auto"><span class="far fa-trash-alt"></span></a>
+                                        </div>
+                                    </ItemTemplate>
+                                </ListBoxTemplates>
+                            </SfListBox>
+                        </div>
+
+                        <h6 class="mb-3">Available Bookmarks</h6>
+                        <ul class="list-group mb-4">
+                            @foreach (var bookmark in filteredAvailableBookmarks)
+                            {
+                                <li class="list-group-item d-flex align-items-center">
+                                    <span class="fa-light fa-lg fa-fw fa-@bookmark.Icon my-2 me-2"></span>@bookmark.ButtonName
+                                    <a href="javascript:void();" @onclick="() => AddBookmark(bookmark)" class="ms-auto text-dark"><span class="fa-regular fa-lg fa-plus"></span></a>
+                                </li>
+                            }
+                        </ul>
+
+                    </Content>
+                    <FooterTemplate>
+                        <button type="button" class="btn btn-secondary" @onclick="@CloseEditBookmarkModal">Cancel</button>
+                        <button type="button" class="btn btn-primary" @onclick="() => SaveBookmarks()">Save</button>
+                    </FooterTemplate>
+                </DialogTemplates>
+
+            </SfDialog>
+
+            <SfDialog Width="1000px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@isSearchCustomersModalVisible">
+                <DialogEvents OnClose="CloseSearchCustomersModal" OnOverlayClick="CloseSearchCustomersModal">
+                </DialogEvents>
+                <DialogTemplates>
+                    <Header>Customer Search</Header>
+                    <Content>
+                        <div class="mb-3">
+                            <label class="form-label" for="search-customer">
+                                Search
+                            </label>
+                            <input class="form-control" id="search-product" @bind="@searchCustomerText" @oninput="SearchCustomers" placeholder="Last Name, Phone, Email" />
+                        </div>
+                        @if (searchCustomers != null && searchCustomers.Any())
+                        {
+                            <SfGrid DataSource="@searchCustomers" AllowPaging="true" EnableVirtualization="true" class="border-x-0">
+                                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                                <GridPageSettings PageSize="50"></GridPageSettings>
+                                <GridColumns>
+                                    <GridColumn HeaderText="Last Name" Width="80px">
+                                        <Template Context="customerContext">
+                                            @{
+                                                <a href="javascript:void(0);" @onclick="@(() => DisplayCustomerDetails((customerContext as CustomersViewModel).UserGUID))">@($"{(customerContext as CustomersViewModel).LastName}")</a>
+                                            }
+                                        </Template>
+                                    </GridColumn>
+                                    <GridColumn Field=@nameof(CustomersViewModel.FirstName) HeaderText="First Name" Width="60px" />
+                                    <GridColumn HeaderText="Email" Width="120px">
+                                        <Template Context="customerContext">
+                                            @{
+                                                <a href="mailto:@($"{(customerContext as CustomersViewModel).Email}")">@($"{(customerContext as CustomersViewModel).Email}")</a>
+                                            }
+                                        </Template>
+                                    </GridColumn>
+                                    <GridColumn Field=@nameof(CustomersViewModel.HomePhone) HeaderText="Home Phone" Width="60px" />
+                                    <GridColumn Field=@nameof(CustomersViewModel.CellPhone) HeaderText="Mobile Phone" Width="60px" />
+                                </GridColumns>
+                            </SfGrid>
+                        }
+                    </Content>
+                </DialogTemplates>
+            </SfDialog>
+
+            <SfDialog Width="1000px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@isSearchOrdersModalVisible">
+                <DialogEvents OnClose="CloseSearchOrdersModal" OnOverlayClick="CloseSearchOrdersModal">
+                </DialogEvents>
+                <DialogTemplates>
+                    <Header>Order Search</Header>
+                    <Content>
+                        <div class="mb-3">
+                            <label class="form-label" for="search-customer">
+                                Search
+                            </label>
+                            <input class="form-control" id="search-product" @bind="@searchOrderText" @oninput="SearchOrders" placeholder="Order Number, Last Name, Phone, Email" />
+                        </div>
+                        @if (searchOrders != null && searchOrders.Any())
+                        {
+                            <OrdersCommonGrid Orders="searchOrders" FromAdminLayout="true" DisplayOrderDetail="@((e) => DisplayOrderDetails(e))" OffSetMinutes="offsetMins"></OrdersCommonGrid>
+                        }
+                    </Content>
+                </DialogTemplates>
+            </SfDialog>
+
+            <SiteContentModal @ref="SiteContentModal" OnDialogClose="CloseSiteContentDialog" OpenSiteContentDialog="OpenSiteContentDialog"></SiteContentModal>
+        </Authorized>
+    </AuthorizeView>
+
+    <Toast></Toast>
+</main>
+
+@code
+{
+    private List<Member> membersList = new List<Member>();
+    private int? selectedValue = 0;
+    private string selectedMemberName = null;
+    private Member member = null;
+    private Member selectedMember = null;
+    private bool showModal = false;
+    private bool isLoading = true;
+    public bool SetupGuideSidebarToggle = false;
+    private UserDetailViewModel user = null;
+    SfComboBox<string, Member> filterMembersObj { get; set; }
+    private bool BookmarkModalVisibility { get; set; } = false;
+    private bool EditBookmarkModalVisibility { get; set; } = false;
+    List<UserBookmarkModel> userBookmarks = new List<UserBookmarkModel>();
+    ObservableCollection<UserBookmarkRequestModel> assignedBookmarks = new ObservableCollection<UserBookmarkRequestModel>();
+    List<CPBookmarkModel> availableBookmarks = new List<CPBookmarkModel>();
+    List<CPBookmarkModel> filteredAvailableBookmarks = new List<CPBookmarkModel>();
+    SfListBox<string[], UserBookmarkRequestModel> BookmarksObj = new SfListBox<string[], UserBookmarkRequestModel>();
+    ObservableCollection<UserBookmarkRequestModel> removedAssignedBookmarks = new ObservableCollection<UserBookmarkRequestModel>();
+    private bool isVisible = false;
+    private bool isAddBookmark;
+    private bool isReservationsEnabledForSynergy { get; set; }
+    const string _synergyCommerce = "Synergy Commerce";
+    private bool isSearchCustomersModalVisible { get; set; }
+    private bool isSearchOrdersModalVisible { get; set; }
+    private List<CustomersViewModel> searchCustomers = new List<CustomersViewModel>();
+    private List<OrderDetailFullModel> searchOrders = new List<OrderDetailFullModel>();
+    private string searchCustomerText { get; set; }
+    private string searchOrderText { get; set; }
+    int offsetMins { get; set; }
+    private bool OpenSiteContentDialog { get; set; }
+    private SiteContentModal SiteContentModal;
+
+    //Sidebar
+    SfSidebar Sidebar;
+
+    private async Task OpenEditBookmarkModal(bool addEditBookmark)
+    {
+        isVisible = true;
+        isAddBookmark = addEditBookmark;
+        assignedBookmarks = new ObservableCollection<UserBookmarkRequestModel>();
+        removedAssignedBookmarks = new ObservableCollection<UserBookmarkRequestModel>();
+        await GetAvailableBookmarks();
+        EditBookmarkModalVisibility = true;
+        BookmarkModalVisibility = false;
+        isVisible = false;
+        StateHasChanged();
+    }
+
+    private async Task GetAvailableBookmarks()
+    {
+        var availableBookmarkResponse = await _bookmarkViewModel.GetBookmarksAsync(null, null);
+        availableBookmarks = availableBookmarkResponse?.data ?? new List<CPBookmarkModel>();
+        filteredAvailableBookmarks = availableBookmarks;
+        if (userBookmarks.Count > 0)
+        {
+            foreach (var item in userBookmarks)
+            {
+                UserBookmarkRequestModel request = new UserBookmarkRequestModel()
+                {
+                    Id = item.Id,
+                    BookmarkId = item.BookmarkId,
+                    BusinessId = item.BusinessId,
+                    SortOrder = item.SortOrder,
+                    Icon = item.Icon,
+                    ButtonName = item.ButtonName,
+                    Active = true
+                };
+                assignedBookmarks.Add(request);
+                filteredAvailableBookmarks = filteredAvailableBookmarks.Where(x => x.Id != item.BookmarkId).ToList();
+            }
+        }
+    }
+
+    private void CloseEditBookmarkModal()
+    {
+        EditBookmarkModalVisibility = false;
+    }
+
+    private async Task OpenBookmarkModal()
+    {
+        isVisible = true;
+        if (!userBookmarks.Any())
+        {
+            await GetUserBookmarks();
+        }
+        BookmarkModalVisibility = true;
+        isVisible = false;
+        StateHasChanged();
+    }
+
+    private async Task GetUserBookmarks()
+    {
+        if (member != null)
+        {
+            var bookmarkResponse = await _userViewModel.GetUserBookmarks(member.Id);
+            userBookmarks = bookmarkResponse?.data ?? new List<UserBookmarkModel>();
+            StateHasChanged();
+        }
+    }
+
+    private void CloseBookmarkModal()
+    {
+        BookmarkModalVisibility = false;
+    }
+
+    private void AddBookmark(CPBookmarkModel bookmark)
+    {
+        var existingBookmark = assignedBookmarks.FirstOrDefault(x => x.BookmarkId == bookmark.Id);
+        if (existingBookmark != null)
+        {
+            return;
+        }
+        UserBookmarkRequestModel request = new UserBookmarkRequestModel()
+        {
+            BookmarkId = bookmark.Id,
+            BusinessId = selectedMember.Id,
+            Icon = bookmark.Icon,
+            ButtonName = bookmark.ButtonName,
+            Active = true
+        };
+        assignedBookmarks.Add(request);
+        filteredAvailableBookmarks = filteredAvailableBookmarks.Where(x => x.Id != bookmark.Id).ToList();
+        StateHasChanged();
+
+        var Item = new List<UserBookmarkRequestModel>();
+        Item.Add(request);
+        BookmarksObj.AddItems(Item);
+        StateHasChanged();
+    }
+
+    private void RemoveBookmark(UserBookmarkRequestModel bookmark)
+    {
+        assignedBookmarks.Remove(bookmark);
+        bookmark.Active = false;
+        if (bookmark.Id != 0)
+        {
+            removedAssignedBookmarks.Add(bookmark);
+        }
+        var Item = new List<UserBookmarkRequestModel>
+{
+    new UserBookmarkRequestModel
+    {Id = bookmark.Id, BookmarkId = bookmark.BookmarkId, BusinessId = bookmark.BusinessId, ButtonName = bookmark.ButtonName, Icon = bookmark.Icon, SortOrder = bookmark.SortOrder}};
+        BookmarksObj.RemoveItem(Item);
+        StateHasChanged();
+
+        var existingBookmark = availableBookmarks.FirstOrDefault(x => x.Id == bookmark.BookmarkId);
+        if (existingBookmark != null)
+        {
+            filteredAvailableBookmarks.Add(existingBookmark);
+            filteredAvailableBookmarks = filteredAvailableBookmarks.OrderBy(x => x.ButtonName).ToList();
+        }
+        StateHasChanged();
+    }
+
+    private async Task SaveBookmarks()
+    {
+        if (assignedBookmarks.Count <= 0)
+        {
+            return;
+        }
+
+        isVisible = true;
+        var BookmarksListBox = BookmarksObj.GetDataList();
+        foreach (var item in BookmarksListBox.Select((value, i) => new { i, value }))
+        {
+            var bookmark = assignedBookmarks.FirstOrDefault(x => x.BookmarkId == item.value.BookmarkId);
+            bookmark.SortOrder = item.i + 1;
+        }
+
+        var assignedBookmarksRequestModel = new List<UserBookmarkRequestModel>();
+        assignedBookmarksRequestModel.AddRange(assignedBookmarks);
+
+        if (removedAssignedBookmarks.Count > 0)
+        {
+            foreach (var item in removedAssignedBookmarks)
+            {
+                assignedBookmarksRequestModel.Add(item);
+            }
+        }
+
+        var res = await _userViewModel.AddUpdateUserBookmarks(assignedBookmarksRequestModel);
+        if (res.success)
+        {
+            await GetUserBookmarks();
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            EditBookmarkModalVisibility = false;
+            BookmarkModalVisibility = true;
+        }
+        else
+        {
+            toastService.ShowToast(res.error_info.description, ToastLevel.Error);
+        }
+
+        isVisible = false;
+        StateHasChanged();
+    }
+
+    public void ShowSetupGuide()
+    {
+        SetupGuideSidebarToggle = true;
+    }
+
+    public void CloseSetupGuide()
+    {
+        SetupGuideSidebarToggle = false;
+    }
+
+    private async Task LogoutUser(bool hasReturnURL)
+    {
+        await _userService.LogoutUser();
+        if (!hasReturnURL)
+        {
+            _navigationManager.NavigateTo("/login", false);
+        }
+    }
+
+    private async Task GetMembersAsync()
+    {
+        isLoading = true;
+        while (true)
+        {
+            var authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            if (user.Identity.IsAuthenticated)
+            {
+                MembersViewModel members = await _memberViewModel.GetMembers();
+                selectedValue = members.DefaultMember;
+                membersList = members.Members;
+                if (membersList?.Count > 0)
+                {
+                    selectedMemberName = membersList.Find(x => x.Id == selectedValue).Name;
+                    selectedMember = membersList.Find(x => x.Id == selectedValue);
+                    member = selectedMember;
+                }
+                isLoading = false;
+                break;
+            }
+        }
+        StateHasChanged();
+        await GetUserBookmarks();
+        await Task.Delay(1000);
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        user = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+        MessageViewModel.OnMessage += MessageHandler;
+        Helper.ReservationsForSynergyChanged += HandleChangesForReservations;
+        MessageViewModel.OnPositionAccessChange += PositionAccessChangedHandler;
+        await GetMembersAsync();
+        base.OnInitialized();
+        StateHasChanged();
+    }
+
+    private void SelectMember(object id)
+    {
+        var memberId = (int)id;
+        member = membersList.FirstOrDefault(x => x.Id == memberId);
+    }
+
+    private void SelectMemberName()
+    {
+        member = membersList.FirstOrDefault(x => x.Name == selectedMemberName);
+    }
+
+    private void openModal()
+    {
+        showModal = true;
+    }
+
+    private void closeModal()
+    {
+        showModal = false;
+    }
+
+    private void selectAccount()
+    {
+        selectedMember = member;
+        showModal = false;
+        localStorage.SetItemAsync("currentMember", member);
+        _cellarPassAuthenticationStateProvider.ChangeCurrentMember();
+    }
+
+    private async Task OnFilterMembers(FilteringEventArgs args)
+    {
+        args.PreventDefaultAction = true;
+        var query = new Query().Where(new WhereFilter() { Field = "name", Operator = "contains", value = args.Text, IgnoreCase = true });
+
+        query = !string.IsNullOrEmpty(args.Text) ? query : new Query();
+
+        await filterMembersObj.Filter(membersList, query);
+    }
+
+    public class QuickLink
+    {
+        public string URL { get; set; }
+        public string LinkName { get; set; }
+    }
+    public List<QuickLink> QuickLinks = new List<QuickLink>()
+{
+    new QuickLink(){ URL= "/settings/business-profiles", LinkName= "Business Profiles" },
+    new QuickLink(){ URL= "/settings/club-management", LinkName= "Club Management" },
+    new QuickLink(){ URL= "/settings/team-management", LinkName= "Team Management" }
+
+    };
+
+    public void QuickLinkOnChange(Syncfusion.Blazor.DropDowns.ChangeEventArgs<string, QuickLink> args)
+    {
+        //this.ChangeValue = args.ItemData.Value;
+        _navigationManager.NavigateTo(args.ItemData.URL, false);
+    }
+
+    private async void PositionAccessChangedHandler(NotifyPositionAccessChangedModel model)
+    {
+        if(user.Id == model.UserId && model.Roles != null)
+        {
+            user.Roles = Helper.GetCommaSeparatedStringFromList(model.Roles);
+            if (user.Roles.Contains(((int)PositionName.Administrator).ToString()))
+            {
+                user.IsSuperAdmin = true;
+            }
+            else
+            {
+                user.IsSuperAdmin = false;
+            }
+
+            var positionNames = new List<string>();
+            foreach (var role in model.Roles)
+            {
+                positionNames.Add(EnumHelper.GetDescription((PositionName)Convert.ToInt32(role)));
+            }
+            user.RoleNames = Helper.GetCommaSeparatedStringFromList(positionNames.OrderBy(name => name).ToList());
+
+            await localStorage.SetItemAsync("user", user);
+            user = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+            StateHasChanged();
+        }
+    }
+
+    private void HandleChangesForReservations(bool e)
+    {
+        isReservationsEnabledForSynergy = e;
+        StateHasChanged();
+    }
+
+    private async void MessageHandler(string message)
+    {
+        if (!string.IsNullOrEmpty(message))
+        {
+            if (message == LoginStatus.NoPermission.ToString())
+            {
+                await LogoutUser(true);
+            }
+            else
+            {
+                if (message == _synergyCommerce)
+                    isReservationsEnabledForSynergy = true;
+                else
+                    isReservationsEnabledForSynergy = false;
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private void DisplaySearchCustomerModal()
+    {
+        searchCustomerText = "";
+        searchCustomers = new List<CustomersViewModel>();
+        isSearchCustomersModalVisible = true;
+    }
+
+    private void DisplaySearchOrderModal()
+    {
+        searchOrderText = "";
+        searchOrders = new List<OrderDetailFullModel>();
+        isSearchOrdersModalVisible = true;
+    }
+
+    private async Task SearchCustomers(Microsoft.AspNetCore.Components.ChangeEventArgs args)
+    {
+        searchCustomerText = args.Value.ToString();
+        if (member != null && member.Id > 0 && !string.IsNullOrWhiteSpace(searchCustomerText) && searchCustomerText.Length > 3)
+        {
+            var searchCustomersResponse = await _customerViewModel.SearchBusinessCustomers(member.Id, searchCustomerText);
+            if (searchCustomersResponse.success)
+            {
+                searchCustomers = searchCustomersResponse.data;
+            }
+        }
+        else
+        {
+            searchCustomers = new List<CustomersViewModel>();
+        }
+    }
+
+    private void CloseSearchCustomersModal()
+    {
+        searchCustomers = new List<CustomersViewModel>();
+        isSearchCustomersModalVisible = false;
+    }
+
+    private void DisplayCustomerDetails(Guid customerGuid)
+    {
+        CloseSearchCustomersModal();
+        NavigationManager.NavigateTo($"/people/customers/{customerGuid}");
+    }
+
+    private void CloseSearchOrdersModal()
+    {
+        searchOrders = new List<OrderDetailFullModel>();
+        isSearchOrdersModalVisible = false;
+    }
+
+    private async Task SearchOrders(Microsoft.AspNetCore.Components.ChangeEventArgs args)
+    {
+        if(offsetMins <= 0)
+        {
+            var getLoggedInUserData = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+            if (getLoggedInUserData is not null)
+            {
+                offsetMins = getLoggedInUserData.OffsetMinutes;
+            }
+        }
+        searchOrderText = args.Value.ToString();
+        if (member != null && member.Id > 0 && !string.IsNullOrWhiteSpace(searchOrderText) && searchOrderText.Length > 3)
+        {
+            var searchOrdersResponse = await _orderViewModel.GetSearchOrdersAsync(member.Id, -1, DateTime.UtcNow, DateTime.UtcNow, searchOrderText);
+            if (searchOrdersResponse.success)
+                searchOrders = searchOrdersResponse.data;
+        }
+        else
+        {
+            searchOrders = new List<OrderDetailFullModel>();
+        }
+    }
+
+    private void DisplayOrderDetails(Guid orderGuid)
+    {
+        CloseSearchOrdersModal();
+        NavigationManager.NavigateTo($"/store/orders/order/{orderGuid}");
+    }
+
+    private void CloseSiteContentDialog()
+    {
+        this.OpenSiteContentDialog = false;
+    }
+
+    private async Task DisplaySiteContentDialog(CPContentType cPContentType, ContentBlocks contentBlocks)
+    {
+        await SiteContentModal.DisplaySiteContent(contentBlocks, cPContentType);
+        this.OpenSiteContentDialog = true;
+    }
+
+}

@@ -1,0 +1,113 @@
+﻿@page "/experiences/ticketed-events"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ITicketingPlanViewModel _ticketingPlanViewModel
+@inject ILocalStorageService localStorage
+@inject ToastService _toastService
+@attribute [Authorize]
+
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="py-3">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-0"><a href="events-experiences" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-ticket me-2"></span>Ticketed Events</h5>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-sm btn-primary" href="experiences/ticketed-event-add">Add New</a>
+                </div>
+            </div>
+            <hr />
+        </div>
+
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@ticketedEvents" Width="100%" AllowPaging="true">
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates Context="iContext">
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && ticketedEvents.Count <= 0)
+                        {
+                            <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Ticketed Event</h6>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn Field=@nameof(TicketedEvents.Status) HeaderText="Status" TextAlign="TextAlign.Left" Width="40" />
+                    <GridColumn HeaderText="Event Name" TextAlign="TextAlign.Left" Width="50">
+                        <Template Context="iContext">
+                            @{
+                                var ticketedEvent = (iContext as TicketedEvents);
+                                @ticketedEvent.EventName
+                                <br />
+                                <div><span class="text-500 fs--2">@ticketedEvent.EventDate</span></div>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(TicketedEvents.Sold) HeaderText="Sold" TextAlign="TextAlign.Left" Width="40" />
+                    <GridColumn HeaderText="" TextAlign="TextAlign.Right" Width="30">
+                        <Template Context="iContext">
+                            @{
+                                var ticketedEvent = (iContext as TicketedEvents);
+                                <div class="font-sans-serif position-static d-inline-block">
+                                    <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                    <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                        <a class="dropdown-item" href="javascript:void(0)">Edit Event</a>
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item" href="javascript:void(0)">View Event</a>
+                                        <a class="dropdown-item" href="javascript:void(0)">Copy Event URL</a>
+                                        <a class="dropdown-item" href="javascript:void(0)">Clone Event</a>
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item text-primary" href="javascript:void(0)">Boost Event</a>
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item text-danger" href="javascript:void(0)">End Event</a>
+                                    </div>
+                                </div>
+                            }
+                        </Template>
+                    </GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    private string title = "Ticketed Events | Synergy Commerce";
+    private bool isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+
+    private class TicketedEvents
+    {
+        public string Status { get; set; }
+        public string EventName { get; set; }
+        public string EventDate { get; set; }
+        public string Sold { get; set; }
+    }
+
+    List<TicketedEvents> ticketedEvents = new List<TicketedEvents>
+{
+        new TicketedEvents{Status = "Live- Public", EventName = "2022 Passport Napa Valley", EventDate = "Sunday, July 1, 2022 at 7:00PM PDT", Sold = "50 / 200" },
+        new TicketedEvents{Status = "Draft", EventName = "Paint & Sip Party", EventDate = "Sunday, August 21, 2022 at 5:00PM PDT", Sold = "0 / 200" },
+
+    };
+}

@@ -1,0 +1,108 @@
+﻿@page "/sa/plan-features/edit"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="py-3">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-0"><a href="sa/business/plan-features" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-clipboard-check me-2"></span>locationsLimit</h5>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-sm btn-primary" href="#!">Save</a>
+                </div>
+            </div>
+            <hr />
+        </div>
+
+        <form>
+
+            <div class="mb-3">
+                <label class="form-label" for="inputFeatureName">Feature Name</label>
+                <input id="inputFeatureName" class="form-control" type="text" placeholder="Name of Feature" value="locationsLimit" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="inputFeatureTitle">Feature Title</label>
+                <input id="inputFeatureTitle" class="form-control" type="text" placeholder="The feature title" value="" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="inputFeatureDescription">Description <span class="form-text">(optional)</span></label>
+                <textarea class="form-control" rows="2" id="inputFeatureDescription" placeholder="Feature Description"></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="inputLearnMoreURL">Learn More URL</label>
+                <input id="inputLearnMoreURL" class="form-control" type="text" placeholder="We could show a list of articles here" value="" />
+            </div>
+
+            <hr class="my-4" />
+
+            <div class="mb-3">
+                <label class="form-label">Feature Image</label>
+                <div class="row d-flex align-items-center">
+                    <div class="col-md-auto">
+                        <div class="d-flex align-items-center justify-content-center mb-3 mb-md-0">
+                            <span class="far fa-image-polaroid fa-4x"></span>
+                        </div>
+                    </div>
+                    <div class="col-md">
+                        <div class="dz-message dropzone-area px-2 py-3">
+                            <div class="text-center">
+                                <span class="far fa-cloud-upload-alt me-2"></span>Upload your receipt logo<p class="mb-0 fs--1 text-400">Upload a 300x300 jpg image with <br>a maximum size of 400KB</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-4" />
+
+            <div class="mb-3">
+                <div class="row g-3 align-items-center">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" for="inputFeatureName">Min Amount</label>
+                        <input id="inputOptMinAmount" class="form-control" type="text" placeholder="Optional minimum amount" value="" />
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" for="inputOptMaxAmount">Max Amount</label>
+                        <input id="inputOptMaxAmount" class="form-control" type="text" placeholder="Optional maximum amount" value="" />
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" for="inputOptPercentage">Percentage</label>
+                        <input id="inputOptPercentage" class="form-control" type="text" placeholder="Optional percentage amount" value="" />
+                    </div>
+                </div>
+            </div>
+
+        </form>
+
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+
+    private string title = "Edit Plan Features | Synergy Commerce Super Admin  Panel";
+
+
+    [Parameter]
+    public int Id { get; set; }
+
+
+}

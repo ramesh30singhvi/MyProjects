@@ -1,0 +1,122 @@
+﻿@page "/loyalty/create-award-campaign"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject NavigationManager _navigationManager
+@inject ToastService toastService
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="loyalty/loyalty-awards" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-trophy-alt me-2"></span>Create Campaign</h5>
+                    </div>
+                    <div class="col-auto">
+                       
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="fw-bold text-500">STEP 1 OF 2</h6>
+                        <h5>Select a Program Type</h5>
+                        <p>Select a program type to determine how your customers will earn [[LoyaltyPluralName]].</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12 col-xl-6">
+                        <div class="list-group list-group-border">
+                            <a href="loyalty/create-award-campaign-visit-based" class="list-group-item list-group-item-action mb-2" aria-current="true">
+                                <h5>Visit Based</h5>
+                                <p class="fs--1">Reward customers every time they visit your location, with or without a minimum spend requirement.</p>
+                            </a>
+                            <a href="loyalty/create-award-campaign-amount-spent" class="list-group-item list-group-item-action mb-2">
+                                <h5>Amount Spent</h5>
+                                <p class="fs--1">Reward points based on the total amount spent before tax and tip. For example, 1 point per every $5 spent on a purchase.</p>
+                            </a>
+                            <a href="loyalty/create-award-campaign-product-based" class="list-group-item list-group-item-action mb-2">
+                                <h5>Products Based</h5>
+                                <p class="fs--1">Create a rewards program based on the amount they spend for specific items you’ve selected. For example, get 5, 10 and 15 points for every small, medium and large coffee purchased, respectively.</p>
+                            </a>
+                            <a href="loyalty/create-award-campaign-collection-based" class="list-group-item list-group-item-action mb-2">
+                                <h5>Collection Based</h5>
+                                <p class="fs--1">Create a rewards program based on the amount they spend for an Item Collection you’ve selected. For example, get 15 points when you purchase $15 or more from the “general merchandise” collection.</p>
+                            </a>
+                            <a href="loyalty/create-award-campaign-dollars-to-points" class="list-group-item list-group-item-action mb-2">
+                                <h5>Dollars to Points</h5>
+                                <p class="fs--1">For simple award campaigns where you want to reward customers points based on amount spent. For example, earn 1 point for every $1.00 spent.</p>
+                            </a>
+                            <a href="loyalty/create-award-campaign-bonus-points" class="list-group-item list-group-item-action mb-2">
+                                <h5>Bonus Points- Items Based</h5>
+                                <p class="fs--1">For simple award campaigns where you want to reward customers points based on amount spent. For example, earn 1 point for every $1.00 spent.</p>
+                            </a>
+                            <a href="loyalty/create-award-campaign-special-occasion" class="list-group-item list-group-item-action mb-2">
+                                <h5>Special Occasion</h5>
+                                <p class="fs--1">Award a customer on an anniversary date you define such as their birthday or annual anniversary of joining your club.</p>
+                            </a>
+                            <a href="loyalty/create-award-campaign-club-shipments" class="list-group-item list-group-item-action mb-2">
+                                <h5>Club Shipments</h5>
+                                <p class="fs--1">Reward club members when they receive a club shipment.</p>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+               
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private string title = "Create Campaign | Synergy Commerce Admin Panel";
+    private int campaignOption { get; set; } = -1;
+    private void SelectCampaignOption(ChangeEventArgs args)
+    {
+        campaignOption = Convert.ToInt32(args.Value);
+    }
+
+    private void NavigateBasedOnCampaignOption()
+    {
+        if (campaignOption == 0)
+        {
+            _navigationManager.NavigateTo("loyalty/create-award-campaign-visit-based");
+        }
+        else if (campaignOption == 1)
+        {
+            _navigationManager.NavigateTo("loyalty/create-award-campaign-amount-spent");
+        }
+        else if (campaignOption == 2)
+        {
+            _navigationManager.NavigateTo("loyalty/create-award-campaign-product-based");
+        }
+        else if (campaignOption == 3)
+        {
+            _navigationManager.NavigateTo("loyalty/create-award-campaign-collection-based");
+        }
+        else
+        {
+            toastService.ShowToast("Please select campaign option.", ToastLevel.Error);
+        }
+
+    }
+}

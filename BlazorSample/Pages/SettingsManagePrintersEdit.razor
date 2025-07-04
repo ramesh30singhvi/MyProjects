@@ -1,0 +1,153 @@
+﻿@page "/settings/manage-printers/edit/{Id:guid}"
+@page "/settings/manage-printers/create"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Enums;
+@using CellarPassAppAdmin.Client.ViewModels;
+@using CellarPassAppAdmin.Shared.Models;
+@using CellarPassAppAdmin.Shared.Entities.v4;
+@using CellarPassAppAdmin.Shared.Models.RequestModel;
+@using CellarPassAppAdmin.Shared.Models.ViewModel;
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head;
+@inject NavigationManager _navigationManager
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+
+<div class="card mb-3">
+
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings/manage-printers" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-print me-2"></span>@(Id != null ? "Edit" : "Add") Printer</h5>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-sm btn-primary" type="button">Save</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-12 col-md-6">
+                <div class="mb-3">
+                    <label class="form-label" for="inputPrinterName">Printer Name</label>
+                    <input id="inputPrinterName" class="form-control" type="text" placeholder="Printer Name" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="selPrinterLocation">Printer Location</label>
+                    <select id="selPrinterLocation" class="form-select">
+                        <option value="0" selected>[[Locations]]</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="inputLocationDescription">Location Description</label>
+                    <input id="inputLocationDescription" class="form-control" type="text" placeholder="Description (i.e. Main Bar)" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="selPrinterModel">Printer Model</label>
+                    <select id="selPrinterModel" class="form-select">
+                        <option value="0" selected>None</option>
+                        <option value="1">Star TSP650</option>
+                        <option value="2">Star TSP100</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="inputPrinterSerialNumber">Printer Serial Number</label>
+                    <input id="inputPrinterSerialNumber" class="form-control" type="text" placeholder="Printer Serial Number" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="inputPrinterIPAddress">Printer IP Address</label>
+                    <input id="inputPrinterIPAddress" class="form-control" type="text" placeholder="Printer IP Address" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Receipt Template</label>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semi-bold ms-3">Receipt Template</label>
+                        </div>
+                        <div class="col-md-4">
+                            <a class="btn btn-md btn-outline-primary" href="settings/pos/receipt">Configure Receipt</a>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-md btn-outline-primary" type="button">Print Test Receipt</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="selTicketTemplate">Ticket Template</label>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semi-bold ms-3">Ticket Template</label>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-md btn-outline-primary" type="button">Configure Ticket</button>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-md btn-outline-primary" type="button">Print Test Ticket</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex">
+                        <div class="d-flex me-3"><label class="form-label" for="chkCashDrawerAttached">Cash Drawer Attached</label></div>
+                        <div class="d-flex"><div class="form-check"><input class="form-check-input" id="chkCashDrawerAttached" type="checkbox"></div></div>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label" for="selBackupPrinter">Backup Printer</label>
+                    <select id="selBackupPrinter" class="form-select">
+                        <option value="0" selected>Kitchen Printer 1</option>
+                        <option value="1">Kitchen Printer 2</option>
+                    </select>
+                </div>
+                @*<div class="mb-3">
+                    <div class="row text-center">
+                        <div class="col">
+                            <button class="btn btn-md btn-outline-primary" type="button">Print Test Receipt</button>
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-md btn-outline-primary" type="button">Print Test Ticket</button>
+                        </div>
+                    </div>
+                </div>*@
+            </div>
+            <div class="col-12 col-md-2"></div>
+            <div class="col-12 col-md-4">
+                <div class="card shadow-none border mb-2">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Printer Status</label><br />
+                            <label class="form-label">Online, Offline, Error, Unknown</label>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Last Status Check</label><br />
+                            <label class="form-label">[[MM/DD/YY]] [[HH:MM]]</label>
+                        </div>
+                        <div class="mb-3 text-end">
+                            <button class="btn btn-md btn-outline-primary" type="button">Check Status</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private Boolean isLoading;
+    private string title = "Edit Printer | Synergy Commerce Admin Panel";
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        if (Id == null)
+        {
+            title = "Add Printer | Synergy Commerce Admin Panel";
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+}

@@ -1,0 +1,901 @@
+﻿@page "/sa/content/blog-articles-edit/{Id:guid}"
+@page "/sa/content/blog-articles-clone/{CloneFromId:guid}"
+@page "/sa/content/blog-articles-create"
+@layout SaLayout
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums;
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models
+@using Syncfusion.Blazor.RichTextEditor
+@using CellarPassAppAdmin.Shared.Models.ViewModel.SA
+@using System.Collections.ObjectModel
+@using AutoMapper
+@inject IMapper _mapper
+@inject IRegionViewModel _regionViewModel
+@inject ISaContentViewModel _saContentViewModel
+@inject ISaBlogArticleViewModel _saBlogArticleViewModel
+@inject ToastService toastService
+@inject IBusinessPropertyViewModel _propertyViewModel
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject NavigationManager _navigationManager
+@attribute [Authorize]
+
+<style>
+    .e-richtexteditor .e-rte-srctextarea {
+        height: calc(100vh - 370px);
+    }
+
+    main#main-authorized .vh-100 {
+        height: calc(100vh - 70px) !important;
+    }
+
+    .e-list-month:before {
+        content: "\e93c";
+    }
+
+    .e-list-code-view:before {
+        content: "\e350";
+    }
+
+    .e-list-grip-vertical:before {
+        content: "\e65c";
+    }
+</style>
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm Model="@blogArticle" Context="formContext">
+    <DataAnnotationsValidator />
+    <div class="py-3">
+        <div class="row justify-content-between">
+            <div class="col-md-auto mb-4 mb-md-0"><h5><a href="sa/content/blog-articles" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><i class="fa-regular fa-file-signature me-2"></i>@(Id != null ? "Edit" : CloneFromId != null ? "Clone" : "Add") Blog Article</h5></div>
+            <div class="col-md-auto">
+                @if (isSaving)
+                {
+                    <Loader />
+                }
+                <button type="button" class="btn btn-sm btn-primary" @onclick="@(() => SaveBlogArticle(formContext))" hidden="@(isSaving)">Save</button>
+            </div>
+        </div>
+        <hr />
+    </div>
+    <div class="row mb-3">
+        <div class="col-md-6 mb-3 sf-ddl">
+            <label for="selArticleStatus" class="form-label">Article Status</label>
+            <SfDropDownList id=sfItemType TValue="int" @bind-Value="blogArticle.ArticleStatus" TItem="DropdownBindingModel" AllowFiltering="true" DataSource="@articleStatusList">
+                <DropDownListEvents TItem="DropdownBindingModel" TValue="int"></DropDownListEvents>
+                <DropDownListFieldSettings Text="Value" Value="Key"></DropDownListFieldSettings>
+            </SfDropDownList>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label class="form-label" for="dpPublishedDate">Published Date</label>
+            <SfDatePicker @bind-Value="blogArticle.ArticleDate" id="dpPublishedDate" TValue="DateTime?"></SfDatePicker>
+            <ValidationMessage For="@(() => blogArticle.ArticleDate)" />
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="inputArticleTitle" class="form-label">Article Title</label>
+            <InputText @bind-Value="blogArticle.Title" type="text" class="form-control" id="inputArticleTitle"></InputText>
+            <ValidationMessage For="@(() => blogArticle.Title)" />
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="inputArticleURL" class="form-label">Article URL</label>
+            <InputText @bind-Value="blogArticle.FriendlyUrl" type="text" class="form-control" id="inputArticleURL" placeholder="Leave blank to autogenerate URL"></InputText>
+            <ValidationMessage For="@(() => blogArticle.FriendlyUrl)" />
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="inputArticleWriter" class="form-label">Article Writer</label>
+            <InputText @bind-Value="blogArticle.AuthorName" type="text" class="form-control" id="inputArticleWriter" placeholder="Authors Name"></InputText>
+            <ValidationMessage For="@(() => blogArticle.AuthorName)" />
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="row g-3">
+                <div class="col">
+                    <label for="inputArticleImage" class="form-label">Article Image</label>
+                </div>
+                <div class="col text-end">
+                    <a href="javascript:void();" @onclick="() => uploadImage()">Upload Image</a>
+                </div>
+            </div>
+            <input type="text" class="form-control" id="inputArticleImage" @bind="imgUrl">
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="inputArticleExcerpt" class="form-label">Article Excerpt</label>
+            <InputText @bind-Value="blogArticle.Excerpt" type="text" class="form-control" id="inputArticleExcerpt"></InputText>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="inputMetaTitle" class="form-label">Meta Title</label>
+            <InputText @bind-Value="blogArticle.FriendlyName" type="text" class="form-control" id="inputMetaTitle" placeholder="Leave blank to autogenerate"></InputText>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="inputMetaDescription" class="form-label">Meta Description</label>
+            <InputText @bind-Value="blogArticle.Description" type="text" class="form-control" id="inputMetaDescription" placeholder="Leave blank to autogenerate"></InputText>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="inputMetaKeywords" class="form-label">Meta Keywords</label>
+            <InputText @bind-Value="blogArticle.Keywords" type="text" class="form-control" id="inputMetaKeywords" placeholder="Leave blank to autogenerate"></InputText>
+        </div>
+        <div class="col-md-6 mb-3 sf-ddl">
+            <label class="form-label" for="selRegion">Region</label>
+            <SfDropDownList @bind-Value="blogArticle.RegionId" TItem="RegionModel" TValue="int?" Placeholder="Select a Region" DataSource="@regions">
+                <DropDownListEvents TItem="RegionModel" TValue="int?"></DropDownListEvents>
+                <DropDownListFieldSettings Text="RegionName" Value="Id"></DropDownListFieldSettings>
+            </SfDropDownList>
+            <ValidationMessage For="@(() => blogArticle.RegionId)" />
+        </div>
+        <div class="col-md-6 mb-3 sf-ddl">
+            <label class="form-label me-1">Tags</label>
+            <button type="button" class="btn btn-primary btn-sm rounded-circle px-2" @onclick="OpenTagDialog"><span class="fa-solid fa-plus"></span></button>
+            <SfMultiSelect @bind-Value="tags" TValue="int[]" TItem="CPBlogTags" DataSource="@cPBlogTags">
+                <MultiSelectFieldSettings Text="Name" Value="Id"></MultiSelectFieldSettings>
+            </SfMultiSelect>
+        </div>
+        <div class="col-md-6 mb-3 sf-ddl">
+            <label class="form-label">Categories </label>
+            <button type="button" class="btn btn-primary btn-sm rounded-circle px-2" @onclick="OpenCategoryDialog"><span class="fa-solid fa-plus"></span></button>
+            <SfMultiSelect @bind-Value="categories" TValue="int[]" TItem="CPBlogCategories" DataSource="@cPBlogCategories">
+                <MultiSelectFieldSettings Text="Name" Value="Id"></MultiSelectFieldSettings>
+            </SfMultiSelect>
+        </div>
+        <div class="col-md-6 mb-3 sf-ddl">
+            <label class="form-label" for="BlogBrand">Blog Brand</label>
+            <SfDropDownList id=sfItemType TValue="int" @bind-Value="blogArticle.BlogBrand" TItem="DropdownBindingModel" AllowFiltering="true" DataSource="@blogBrandList">
+                <DropDownListEvents TItem="DropdownBindingModel" TValue="int"></DropDownListEvents>
+                <DropDownListFieldSettings Text="Value" Value="Key"></DropDownListFieldSettings>
+            </SfDropDownList>
+        </div>
+        <div class="col-md-12 mb-3">
+            <label for="inputBlockEditor" class="form-label">Block Editor</label>
+            <div class="border border-2 p-2">
+                @if (Id == null && CloneFromId == null)
+                {
+                    <div class="alert alert-info mb-0">Save Blog to enable the Block Editor</div>
+                }
+                else
+                {
+                    @if (CloneFromId != null)
+                    {
+                        <div class="alert alert-info mb-2">Save Blog to enable the Block Editor</div>
+                    }
+                    <div class="row mb-1 @(CloneFromId != null ? "disabled-div" : "")">
+                        <div id="listbox1">
+                            @if (CloneFromId == null)
+                            {
+                                <div class="row mb-3">
+                                    <div class="col">
+                                        <button type="button" class="btn btn-sm btn-primary" @onclick="OpenAddTextBlockDialog"><span class="fa fa-file-code"></span> Add Text Block</button>
+                                        <button type="button" class="btn btn-sm btn-primary" @onclick="OpenMemberBlockDialog"><span class="fa fa-building"></span> Add Member Block</button>
+                                        @*For now we disabled this functionality because we no event DB table yet*@
+                                        <button type="button" class="btn btn-sm btn-primary disabled"><span class="fa fa-calendar-alt"></span> Add Event Block</button>
+                                    </div>
+                                </div>
+                            }
+                            <div id="listbox-control" @ondblclick="LeftDoubleClick">
+                                <SfListBox TValue="string[]" DataSource="@leftBlock" Height="290px" TItem="CPBlogArticleBlockModel" Scope="scope2" @attributes="listbox1Attr" @ref="LeftListBoxObj">
+                                    <ListBoxFieldSettings Text="BlockName" Value="Id" IconCss="CssIcon" />
+                                    <ListBoxEvents ValueChange="LeftItemSelect" OnActionComplete="ActionComplete" TItem="CPBlogArticleBlockModel" TValue="string[]"></ListBoxEvents>
+                                    <ListBoxToolbarSettings Items="@Items"></ListBoxToolbarSettings>
+                                </SfListBox>
+                            </div>
+                        </div>
+                        <div id="listbox2" class="ps-0">
+                            @if (CloneFromId == null)
+                            {
+                                <div class="row mb-3">
+                                    <div class="col">
+                                        <button type="button" @onclick="GenerateHtml" class="btn btn-sm btn-primary"><span class="fa fa-magic"></span> Generate Html</button>
+                                    </div>
+                                </div>
+                            }
+                            <div id="listbox-control" @ondblclick="RightDoubleClick">
+                                <SfListBox TValue="string[]" DataSource="@rightBlock" AllowDragAndDrop="true" Height="290px" TItem="CPBlogArticleBlockModel" Scope="scope1" @attributes="listbox2Attr" @ref="RightListBoxObj">
+                                    <ListBoxFieldSettings Text="BlockName" Value="Id" IconCss="CssIcon" />
+                                    <ListBoxEvents ValueChange="RightItemSelect" Dropped="RightBlockDrop" TItem="CPBlogArticleBlockModel" TValue="string[]"></ListBoxEvents>
+                                </SfListBox>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <SfRichTextEditor @ref="RteObj" @bind-Value="blogArticle.ArticleContent">
+        <RichTextEditorToolbarSettings Items="@SfRichTextEditorHelper.Tools" Type="ToolbarType.MultiRow" />
+        <RichTextEditorFormat Items="@SfRichTextEditorHelper.FormatItems" />
+    </SfRichTextEditor>
+</EditForm>
+
+<ImageCropper @ref="CropperModal" IsVisible="imageCroperActive" CropperConfiguration="cropperConfiguration" Cropped="OnCropped"></ImageCropper>
+<InputFile id="inputDrop" OnChange="OnInputFileChange" class="opacity-0 w-0" />
+
+@*Dialogs*@
+<EditForm Model="@cPBlogTag" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="TagDialogVisibility">
+        <DialogTemplates>
+            <Header><h5 class="modal-title" id="modalLabel">Add Tag</h5></Header>
+            <Content>
+                <div class="mb-3">
+                    <label class="form-label" for="inputTag">Tag</label>
+                    <InputText @bind-Value="cPBlogTag.TagName" id="inputTag" type="text" class="form-control" placeholder="Tag"></InputText>
+                    <ValidationMessage For="@(() => cPBlogTag.TagName)" />
+                </div>
+            </Content>
+            <FooterTemplate>
+                <button type="button" @onclick="CloseTagDialog" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" @onclick="@(() => SaveCPBlogTag(formContext))" class="btn btn-primary">Save</button>
+            </FooterTemplate>
+        </DialogTemplates>
+    </SfDialog>
+</EditForm>
+<EditForm Model="@cPBlogCategory" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="CategoryDialogVisibility">
+        <DialogTemplates>
+            <Header><h5 class="modal-title" id="modalLabel">Add Category</h5></Header>
+            <Content>
+                <div class="mb-3">
+                    <label class="form-label" for="inputCategory">Category</label>
+                    <InputText @bind-Value="cPBlogCategory.CategoryName" id="inputCategory" type="text" class="form-control" placeholder="Category"></InputText>
+                    <ValidationMessage For="@(() => cPBlogCategory.CategoryName)" />
+                </div>
+            </Content>
+            <FooterTemplate>
+                <button type="button" @onclick="CloseCategoryDialog" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" @onclick="@(() => SaveCPBlogCategory(formContext))" class="btn btn-primary">Save</button>
+            </FooterTemplate>
+        </DialogTemplates>
+    </SfDialog>
+</EditForm>
+<EditForm Model="@textBlock" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog IsModal="true" Width="700px" ShowCloseIcon="true" @bind-Visible="TextBlockModalVisibility">
+        <DialogEvents OnOverlayClick="@OnTextBlockOverlayclick" Opened="@DialogOpen"></DialogEvents>
+        <DialogTemplates>
+            <Header><h5 class="modal-title" id="modalLabel">Text Block</h5></Header>
+            <Content>
+                <div class="mb-3">
+                    <label class="form-label" for="inputBlockName">Block Name</label>
+                    <InputText @bind-Value="textBlock.BlockName" id="inputBlockName" type="text" class="form-control" placeholder="Block Name"></InputText>
+                    <ValidationMessage For="@(() => textBlock.BlockName)" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Block Content</label>
+                    <SfRichTextEditor @ref="TextBlockRteObj" @bind-Value="textBlock.BlockContent">
+                        <RichTextEditorToolbarSettings Items="@SfRichTextEditorHelper.Tools" Type="ToolbarType.MultiRow" />
+                        <RichTextEditorFormat Items="@SfRichTextEditorHelper.FormatItems" />
+                    </SfRichTextEditor>
+                </div>
+            </Content>
+            <FooterTemplate>
+                <button type="button" @onclick="CloseTextBlockDialog" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" @onclick="@(() => SaveTextBlock(formContext))" class="btn btn-primary">Save</button>
+            </FooterTemplate>
+        </DialogTemplates>
+    </SfDialog>
+</EditForm>
+<EditForm Model="@memberBlock" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="MemberBlockDialogVisibility">
+        <DialogTemplates>
+            <Header><h5 class="modal-title" id="modalLabel">Member Block</h5></Header>
+            <Content>
+                <div class="mb-3">
+                    <label class="form-label" for="inputBlockName">Block Name</label>
+                    <InputText @bind-Value="memberBlock.BlockName" id="inputBlockName" type="text" class="form-control" placeholder="Block Name"></InputText>
+                    <ValidationMessage For="@(() => memberBlock.BlockName)" />
+                </div>
+                <div class="mb-3 sf-ddl">
+                    <label for="selMembers" class="form-label">Selected Members</label>
+                    <SfMultiSelect @bind-Value="memberBlock.Members" TValue="int[]" TItem="BusinessPropertyModel" DataSource="@businessProperties">
+                        <MultiSelectFieldSettings Text="PropertyName" Value="Id"></MultiSelectFieldSettings>
+                    </SfMultiSelect>
+                </div>
+            </Content>
+            <FooterTemplate>
+                <button type="button" @onclick="CloseMemberBlockDialog" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" @onclick="@(() => SaveMemberBlock(formContext))" class="btn btn-primary">Save</button>
+            </FooterTemplate>
+        </DialogTemplates>
+    </SfDialog>
+</EditForm>
+<EditForm Model="@eventBlock" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="EventBlockDialogVisibility">
+        <DialogTemplates>
+            <Header><h5 class="modal-title" id="modalLabel">Event Block</h5></Header>
+            <Content>
+                <div class="mb-3">
+                    <label class="form-label" for="inputBlockName">Block Name</label>
+                    <InputText @bind-Value="eventBlock.BlockName" id="inputBlockName" type="text" class="form-control" placeholder="Block Name"></InputText>
+                    <ValidationMessage For="@(() => eventBlock.BlockName)" />
+                </div>
+                <div class="mb-3 sf-ddl">
+                    <label for="selMembers" class="form-label">Selected Members</label>
+                    <SfMultiSelect @bind-Value="eventBlock.Members" TValue="int[]" TItem="BusinessPropertyModel" DataSource="@businessProperties">
+                        <MultiSelectFieldSettings Text="PropertyName" Value="Id"></MultiSelectFieldSettings>
+                    </SfMultiSelect>
+                </div>
+            </Content>
+            <FooterTemplate>
+                <button type="button" @onclick="CloseEventBlockDialog" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" @onclick="@(() => SaveEventBlock(formContext))" class="btn btn-primary">Save</button>
+            </FooterTemplate>
+        </DialogTemplates>
+    </SfDialog>
+</EditForm>
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    [Parameter]
+    public Guid? CloneFromId { get; set; }
+    private string title = "Edit Blog Article | Synergy Commerce Super Admin  Panel";
+    private bool isSaving;
+    Member currentMember = null;
+    private bool SpinnerVisibility { get; set; } = false;
+    private bool CategoryDialogVisibility { get; set; } = false;
+    private bool TagDialogVisibility { get; set; } = false;
+    private bool TextBlockModalVisibility { get; set; } = false;
+    private bool MemberBlockDialogVisibility { get; set; } = false;
+    private bool EventBlockDialogVisibility { get; set; } = false;
+    private bool imageCroperActive = false;
+    private ImageCropper CropperModal { get; set; }
+    List<CPBlogCategories> cPBlogCategories = new List<CPBlogCategories>();
+    BlogArticleRequestModel blogArticle = new BlogArticleRequestModel();
+    private List<RegionModel> regions = new List<RegionModel>();
+    private ImageCropperConfiguration cropperConfiguration = new ImageCropperConfiguration();
+    List<CPBlogTags> cPBlogTags = new List<CPBlogTags>();
+    List<BusinessPropertyModel> businessProperties = new List<BusinessPropertyModel>();
+    string imgUrl = string.Empty;
+    string imgName = string.Empty;
+    SfRichTextEditor RteObj;
+    SfRichTextEditor TextBlockRteObj;
+    int[] categories = new int[] { };
+    int[] tags = new int[] { };
+    List<DropdownBindingModel> blogBrandList = new List<DropdownBindingModel>();
+    List<DropdownBindingModel> articleStatusList = new List<DropdownBindingModel>();
+    private string[] Items = new string[] { "MoveUp", "MoveDown", "MoveTo", "MoveFrom", "MoveAllTo", "MoveAllFrom" };
+    private readonly Dictionary<string, object> listbox1Attr = new Dictionary<string, object>{
+        { "id", "scope1" }
+    };
+    private readonly Dictionary<string, object> listbox2Attr = new Dictionary<string, object>{
+        { "id", "scope2" }
+    };
+    ObservableCollection<CPBlogArticleBlockModel> leftBlock = new ObservableCollection<CPBlogArticleBlockModel>();
+    ObservableCollection<CPBlogArticleBlockModel> rightBlock = new ObservableCollection<CPBlogArticleBlockModel>();
+    SfListBox<string[], CPBlogArticleBlockModel> LeftListBoxObj;
+    SfListBox<string[], CPBlogArticleBlockModel> RightListBoxObj;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+
+        blogBrandList = Enum.GetValues(typeof(BlogBrands))
+                               .Cast<BlogBrands>()
+                               .Select(t => new DropdownBindingModel
+                               {
+                                   Key = (int)t,
+                                   Value = t.ToString()
+                               }).ToList();
+        articleStatusList = Enum.GetValues(typeof(ArticleStatus))
+                               .Cast<ArticleStatus>()
+                               .Select(t => new DropdownBindingModel
+                               {
+                                   Key = (int)t,
+                                   Value = t.ToString()
+                               }).ToList();
+
+        RegionListResponse regionResponse = await _regionViewModel.GetRegions();
+        if (regionResponse.success)
+        {
+            regions = regionResponse.data;
+        }
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get business property data
+        var businessPropertyResponse = await _propertyViewModel.GetBusinessProperties(currentMember.Id);
+        businessProperties = businessPropertyResponse ?? new List<BusinessPropertyModel>();
+        var cpBlogTagRespone = await _saBlogArticleViewModel.GetCPBlogTagsAsync(null, null);
+        cPBlogTags = cpBlogTagRespone?.data ?? new List<CPBlogTags>();
+
+        var cpBlogCategoriesRespone = await _saBlogArticleViewModel.GetCPBlogCategoriesAsync(null, null);
+        cPBlogCategories = cpBlogCategoriesRespone?.data ?? new List<CPBlogCategories>();
+
+        if (Id != null || CloneFromId != null)
+        {
+            var cPBlogArticlesDetail = new CPBlogArticlesDetailResponse();
+            if (Id != null)
+            {
+                cPBlogArticlesDetail = await _saBlogArticleViewModel.GetCPBlogArticleDetailAsync(Id.Value);
+            }
+            else if (CloneFromId != null)
+            {
+                cPBlogArticlesDetail = await _saBlogArticleViewModel.GetCPBlogArticleDetailAsync(CloneFromId.Value);
+            }
+            if (cPBlogArticlesDetail.success && cPBlogArticlesDetail?.data != null)
+            {
+                blogArticle = _mapper.Map<BlogArticleRequestModel>(cPBlogArticlesDetail.data);
+                if (CloneFromId != null)
+                {
+                    blogArticle.Id = 0;
+                    blogArticle.IdGuid = Guid.Empty;
+                    title = "Clone Blog Article | Synergy Commerce Admin Panel";
+                    blogArticle.Title = blogArticle.Title + "-CLONE";
+                    blogArticle.FriendlyUrl = blogArticle.FriendlyUrl + "-CLONE";
+                }
+                categories = blogArticle.BlogArticleCategories?.Select(x => x.BlogCategoryId)?.ToArray() ?? new int[] { };
+                tags = blogArticle.BlogArticleTags?.Select(x => x.BlogTagId)?.ToArray() ?? new int[] { };
+                imgUrl = imgName = blogArticle.Image;
+                leftBlock = new ObservableCollection<CPBlogArticleBlockModel>(cPBlogArticlesDetail.data?.LeftBlocks ?? new List<CPBlogArticleBlockModel>());
+                rightBlock = new ObservableCollection<CPBlogArticleBlockModel>(cPBlogArticlesDetail.data?.RightBlocks ?? new List<CPBlogArticleBlockModel>());
+            }
+        }
+        else
+        {
+            title = "Add Blog Article | Synergy Commerce Admin Panel";
+        }
+        SpinnerVisibility = false;
+    }
+
+    private async Task uploadImage()
+    {
+        imageCroperActive = false;
+        await CropperModal.TriggerFileSelect("inputDrop");
+    }
+    async Task OnCropped(string value)
+    {
+        imgUrl = imgName;
+        blogArticle.ImageData = value;
+        imageCroperActive = false;
+    }
+    private async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        var maxAllowedFiles = 1;
+        var format = "image/png";
+        foreach (var imageFile in e.GetMultipleFiles(maxAllowedFiles))
+        {
+            imgName = imageFile.Name;
+            var buffer = new byte[imageFile.Size];
+            await imageFile.OpenReadStream().ReadAsync(buffer);
+            var imageDataUrl =
+                $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+
+            await CropperModal.OnFileChange(imageDataUrl);
+            imageCroperActive = true;
+        }
+        StateHasChanged();
+    }
+
+    public void CloseCategoryDialog() => CategoryDialogVisibility = false;
+    public void CloseTagDialog() => TagDialogVisibility = false;
+    public void CloseMemberBlockDialog() => MemberBlockDialogVisibility = false;
+    public void CloseEventBlockDialog() => EventBlockDialogVisibility = false;
+    public void CloseTextBlockDialog() => TextBlockModalVisibility = false;
+    private void OpenCategoryDialog()
+    {
+        CategoryDialogVisibility = true;
+    }
+    private void OpenTagDialog()
+    {
+        TagDialogVisibility = true;
+    }
+    private void OpenMemberBlockDialog()
+    {
+        memberBlock = new MemberBlockRequestModel();
+        MemberBlockDialogVisibility = true;
+    }
+    private void OpenEventBlockDialog()
+    {
+        eventBlock = new MemberBlockRequestModel();
+        EventBlockDialogVisibility = true;
+    }
+
+    public void OpenAddTextBlockDialog()
+    {
+        textBlock = new TextBlockRequestModel();
+        TextBlockModalVisibility = true;
+    }
+    private void OnTextBlockOverlayclick(MouseEventArgs arg)
+    {
+        TextBlockModalVisibility = false;
+    }
+    private void DialogOpen()
+    {
+        TextBlockRteObj.RefreshUIAsync();
+    }
+
+    BlogTagRequestModel cPBlogTag = new BlogTagRequestModel();
+    private async Task SaveCPBlogTag(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var cpBlogTagRespone = await _saBlogArticleViewModel.AddUpdateCPBlogTagsAsync(new CPBlogTags { Name = cPBlogTag.TagName });
+            SpinnerVisibility = false;
+            if (cpBlogTagRespone?.success ?? false)
+            {
+                cPBlogTag = new BlogTagRequestModel();
+                TagDialogVisibility = false;
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(cpBlogTagRespone.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    BlogCategoryRequestModel cPBlogCategory = new BlogCategoryRequestModel();
+    private async Task SaveCPBlogCategory(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var cpBlogCategoryRespone = await _saBlogArticleViewModel.AddUpdateCPBlogCategoriesAsync(new CPBlogCategories { Name = cPBlogCategory.CategoryName });
+            SpinnerVisibility = false;
+            if (cpBlogCategoryRespone?.success ?? false)
+            {
+                cPBlogCategory = new BlogCategoryRequestModel();
+                TagDialogVisibility = false;
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(cpBlogCategoryRespone.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    MemberBlockRequestModel memberBlock = new MemberBlockRequestModel();
+    private async Task SaveMemberBlock(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var request = new CPBlogArticleBlockRequestModel
+            {
+                Id = memberBlock.Id,
+                BlockContent = string.Empty,
+                BlockName = memberBlock.BlockName,
+                BlockType = Convert.ToInt32(BlogBlockType.MemberBlock),
+                BlogArticleId = blogArticle.Id,
+                BlogArticleBlockItems = memberBlock?.Members?.Select(x => new CPBlogArticleBlockItem { EntityId = x })?.ToList() ?? new List<CPBlogArticleBlockItem>()
+            };
+            var cpBlogTagRespone = await _saBlogArticleViewModel.AddUpdateBlogArticleBlockAsync(request);
+            SpinnerVisibility = false;
+            if (cpBlogTagRespone?.success ?? false)
+            {
+                if (memberBlock.Id <= 0)
+                {
+                    await AddBlockToLeftBlockObject(cpBlogTagRespone.data);
+                }
+                var leftRightblocks = await SetCPBlogArticleBlocksItems();
+                await GetAndUpdateListBoxDataSource(null, leftRightblocks);
+                MemberBlockDialogVisibility = false;
+                if (memberBlock.Id > 0)
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                else
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                memberBlock = new MemberBlockRequestModel();
+            }
+            else
+            {
+                toastService.ShowToast(cpBlogTagRespone.error_info.description, ToastLevel.Error);
+            }
+            StateHasChanged();
+        }
+    }
+
+    TextBlockRequestModel textBlock = new TextBlockRequestModel();
+    private async Task SaveTextBlock(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var request = new CPBlogArticleBlockRequestModel
+            {
+                BlockContent = textBlock.BlockContent ?? string.Empty,
+                BlockName = textBlock.BlockName,
+                BlockType = Convert.ToInt32(BlogBlockType.TextBlock),
+                BlogArticleId = blogArticle.Id,
+                BlogArticleBlockItems = null,
+                Id = textBlock.Id
+            };
+            var cpBlogTagRespone = await _saBlogArticleViewModel.AddUpdateBlogArticleBlockAsync(request);
+            SpinnerVisibility = false;
+            if (cpBlogTagRespone?.success ?? false)
+            {
+                if (textBlock.Id <= 0)
+                {
+                    await AddBlockToLeftBlockObject(cpBlogTagRespone.data);
+                }
+                var leftRightblocks = await SetCPBlogArticleBlocksItems();
+                await GetAndUpdateListBoxDataSource(null, leftRightblocks);
+                TextBlockModalVisibility = false;
+                if (textBlock.Id > 0)
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                else
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                textBlock = new TextBlockRequestModel();
+            }
+            else
+            {
+                toastService.ShowToast(cpBlogTagRespone.error_info.description, ToastLevel.Error);
+            }
+            StateHasChanged();
+        }
+    }
+
+    MemberBlockRequestModel eventBlock = new MemberBlockRequestModel();
+    private async Task SaveEventBlock(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var request = new CPBlogArticleBlockRequestModel
+            {
+                Id = eventBlock.Id,
+                BlockContent = string.Empty,
+                BlockName = eventBlock.BlockName,
+                BlockType = Convert.ToInt32(BlogBlockType.EventBlock),
+                BlogArticleId = blogArticle.Id,
+                BlogArticleBlockItems = eventBlock?.Members?.Select(x => new CPBlogArticleBlockItem { EntityId = x })?.ToList() ?? new List<CPBlogArticleBlockItem>()
+            };
+            var cpBlogTagRespone = await _saBlogArticleViewModel.AddUpdateBlogArticleBlockAsync(request);
+            SpinnerVisibility = false;
+            if (cpBlogTagRespone?.success ?? false)
+            {
+                if (eventBlock.Id <= 0)
+                {
+                    await AddBlockToLeftBlockObject(cpBlogTagRespone.data);
+                }
+                var leftRightblocks = await SetCPBlogArticleBlocksItems();
+                await GetAndUpdateListBoxDataSource(null, leftRightblocks);
+                EventBlockDialogVisibility = false;
+                if (eventBlock.Id > 0)
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                else
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                eventBlock = new MemberBlockRequestModel();
+            }
+            else
+            {
+                toastService.ShowToast(cpBlogTagRespone.error_info.description, ToastLevel.Error);
+            }
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Add newly added block to left side list box
+    /// </summary>
+    /// <param name="blockObject"></param>
+    /// <returns></returns>
+    private async Task AddBlockToLeftBlockObject(CPBlogArticleBlockRequestModel blockObject)
+    {
+        if (blockObject != null)
+        {
+            await LeftListBoxObj.AddItemsAsync(new List<CPBlogArticleBlockModel> {
+                    new CPBlogArticleBlockModel {
+                        Id = blockObject.Id,
+                        BlockContent = blockObject.BlockContent,
+                        BlockName = blockObject.BlockName,
+                        BlockType = blockObject.BlockType,
+                        BlogArticleId = blockObject.BlogArticleId,
+                        CssIcon =  Helper.GetBlogArticleBlockTypeIcon(blockObject.BlockType)
+                    }
+                });
+        }
+    }
+
+    /// <summary>
+    /// Add/Update/Clone Blog Article
+    /// </summary>
+    /// <param name="editContext"></param>
+    /// <returns></returns>
+    private async Task SaveBlogArticle(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            isSaving = true;
+            SpinnerVisibility = true;
+            blogArticle.BlogArticleCategories = categories?.Select(x =>
+                                               new CPBlogArticleCategory
+                                               {
+                                                   BlogCategoryId = x
+                                               })?.ToList() ?? null;
+            blogArticle.BlogArticleTags = tags?.Select(x =>
+                                               new CPBlogArticleTags
+                                               {
+                                                   BlogTagId = x
+                                               })?.ToList() ?? null;
+            blogArticle.CloneFromId = CloneFromId;
+            var result = await _saBlogArticleViewModel.AddUpdateCPBlogArticleAsync(blogArticle);
+            SpinnerVisibility = false;
+            if (result.success)
+            {
+                isSaving = false;
+                if (Id == null && CloneFromId == null)
+                {
+                    Id = result.data.IdGuid;
+                    blogArticle.Id = result.data.Id;
+                    imgUrl = imgName = result.data.Image;
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                }
+                else if (Id == null && CloneFromId != null)
+                {
+                    Id = result.data.IdGuid;
+                    blogArticle.Id = result.data.Id;
+                    imgUrl = imgName = result.data.Image;
+                    CloneFromId = null;
+                    await GetAndUpdateListBoxDataSource(result.data.Id);
+                    toastService.ShowToast(Constants.CloneMessage, ToastLevel.Success);
+                }
+                else
+                {
+                    imgUrl = imgName = result.data.Image;
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                }
+            }
+            else
+            {
+                isSaving = false;
+                toastService.ShowToast(result.error_info.description, ToastLevel.Error);
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task LeftDoubleClick()
+    {
+        if (leftSelectedId != null)
+        {
+            await GetBlockDetailById(leftSelectedId.Value);
+        }
+    }
+    private async Task RightDoubleClick()
+    {
+        if (rightSelectedId != null)
+        {
+            await GetBlockDetailById(rightSelectedId.Value);
+        }
+    }
+
+    /// <summary>
+    /// Get Block Detail By Id
+    /// </summary>
+    /// <param name="id"></param>
+    /// <returns></returns>
+    private async Task GetBlockDetailById(int id)
+    {
+        SpinnerVisibility = true;
+        var blockResponse = await _saBlogArticleViewModel.GetCPBlogArticleBlockByIdAsync(id);
+        if (blockResponse.data != null)
+        {
+            if (blockResponse.data.BlockType == Convert.ToInt32(BlogBlockType.TextBlock))
+            {
+                textBlock = _mapper.Map<TextBlockRequestModel>(blockResponse.data);
+                TextBlockModalVisibility = true;
+            }
+            else if (blockResponse.data.BlockType == Convert.ToInt32(BlogBlockType.MemberBlock))
+            {
+                memberBlock = _mapper.Map<MemberBlockRequestModel>(blockResponse.data);
+                memberBlock.Members = blockResponse.data?.BlogArticleBlockItems?.Select(x => x.EntityId)?.ToArray() ?? new int[] { };
+                MemberBlockDialogVisibility = true;
+            }
+            else if (blockResponse.data.BlockType == Convert.ToInt32(BlogBlockType.EventBlock))
+            {
+                eventBlock = _mapper.Map<MemberBlockRequestModel>(blockResponse.data);
+                eventBlock.Members = blockResponse.data?.BlogArticleBlockItems?.Select(x => x.EntityId)?.ToArray() ?? new int[] { };
+                EventBlockDialogVisibility = true;
+            }
+        }
+        SpinnerVisibility = false;
+    }
+
+    int? leftSelectedId = null;
+    private void LeftItemSelect(ListBoxChangeEventArgs<string[], CPBlogArticleBlockModel> args)
+    {
+        if (args != null && args?.Value?.Length > 0)
+        {
+            leftSelectedId = Convert.ToInt32(args.Value[0]);
+        }
+    }
+    int? rightSelectedId = null;
+    private void RightItemSelect(ListBoxChangeEventArgs<string[], CPBlogArticleBlockModel> args)
+    {
+        if (args != null && args?.Value?.Length > 0)
+        {
+            rightSelectedId = Convert.ToInt32(args.Value[0]);
+        }
+    }
+
+    /// <summary>
+    /// List Box's toolbar action
+    /// </summary>
+    /// <param name="args"></param>
+    /// <returns></returns>
+    private async Task ActionComplete(ActionCompleteEventArgs<CPBlogArticleBlockModel> args)
+    {
+        if (args != null && Items.Any(x => x == args.EventName))
+        {
+            await SetCPBlogArticleBlocksItems();
+        }
+    }
+
+    /// <summary>
+    /// Right List Box Drop Event
+    /// </summary>
+    /// <param name="args"></param>
+    /// <returns></returns>
+    private async Task RightBlockDrop(DragEventArgs<CPBlogArticleBlockModel> args)
+    {
+        await SetCPBlogArticleBlocksItems();
+    }
+
+    /// <summary>
+    /// Update list box item's position in DB
+    /// </summary>
+    /// <returns></returns>
+    private async Task<BlogArticleLeftRightBlockModel> SetCPBlogArticleBlocksItems()
+    {
+        var leftRightBlocks = new List<BlogArticleBlocksPositionRequestModel>();
+        int rightSortOrder = 0;
+        leftRightBlocks.AddRange(RightListBoxObj.GetDataList().Select(x =>
+         new BlogArticleBlocksPositionRequestModel
+         {
+             Id = x.Id,
+             SortOrder = rightSortOrder++,
+             BlogArticleId = blogArticle.Id,
+             BlockPosition = Convert.ToInt32(BlogBlockPosition.Right)
+         }).ToList());
+        int leftSortOrder = 0;
+        leftRightBlocks.AddRange(LeftListBoxObj.GetDataList().Select(x =>
+         new BlogArticleBlocksPositionRequestModel
+         {
+             Id = x.Id,
+             BlogArticleId = x.BlogArticleId,
+             SortOrder = leftSortOrder++,
+             BlockPosition = Convert.ToInt32(BlogBlockPosition.Left)
+         }).ToList());
+        var response = await _saBlogArticleViewModel.UpdateCPBlogArticleBlocksPositionAsync(leftRightBlocks);
+        return response?.data ?? new BlogArticleLeftRightBlockModel();
+    }
+
+    /// <summary>
+    /// Update both list box datasource with new/updated items
+    /// </summary>
+    /// <param name="articleId"></param>
+    /// <param name="leftRightblocks"></param>
+    /// <returns></returns>
+    private async Task GetAndUpdateListBoxDataSource(int? articleId, BlogArticleLeftRightBlockModel leftRightblocks = null)
+    {
+        if (leftRightblocks == null && articleId != null)
+        {
+            var response = await _saBlogArticleViewModel.GetCPBlogArticleBlocksAsync(articleId.Value);
+            leftRightblocks = response?.data ?? null;
+        }
+        if (leftRightblocks != null)
+        {
+            leftBlock = new ObservableCollection<CPBlogArticleBlockModel>(leftRightblocks?.LeftBlocks ?? new List<CPBlogArticleBlockModel>());
+            rightBlock = new ObservableCollection<CPBlogArticleBlockModel>(leftRightblocks?.RightBlocks ?? new List<CPBlogArticleBlockModel>());
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Generate HTML for blocks
+    /// </summary>
+    /// <returns></returns>
+    private async Task GenerateHtml()
+    {
+        SpinnerVisibility = true;
+        var generateHTMLResponse = await _saBlogArticleViewModel.GenerateBlocksHTMLAsync(blogArticle.Id);
+        blogArticle.ArticleContent = generateHTMLResponse.data;
+        SpinnerVisibility = false;
+        StateHasChanged();
+    }
+}

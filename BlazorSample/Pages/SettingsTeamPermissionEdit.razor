@@ -1,0 +1,214 @@
+﻿@page "/settings/team-management/access-positions/edit"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.Blazor.Navigations;
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+
+<div class="card">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md-auto">
+                <h5 class="mb-0"><a href="settings/team-management/access-positions" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-key me-2"></span>Bartender</h5>
+            </div>
+            <div class="col-md-auto">
+                <button class="btn btn-sm btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row my-4">
+            <div class="col-12">
+                <div class="card shadow-none border">
+                    <div class="card-body">
+                        <div class="d-flex position-relative">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" id="switchFullAccess" checked>
+                            </div>
+                            <div class="flex-1 ms-3">
+                                <label class="form-check-label" for="flexSwitchCheckChecked">Full Access</label>
+                                <p class="mb-0">Full Access permissions mode provides access to everything except managing bank accounts. Only the verified account owner can make bank account changes.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        <div class="row my-4">
+            <div class="col-12">
+                <div class="input-group">
+                    <span class="input-group-text bg-white" id="inputSearchPermissions"><span class="far fa-search"></span></span>
+                    <input type="text" class="form-control" placeholder="Search permissions" aria-label="Search Orders" aria-describedby="inputSearchPermissions">
+                </div>
+            </div>
+        </div>
+        <div class="row my-4">
+            <div class="col-12 col-lg-4 mb-4">
+                <div class="d-flex align-items-start">
+                    <div class="nav flex-column nav-pills w-100 me-3" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                        <button class="nav-link btn-sm py-0 active" id="v-pills-store-tab" data-bs-toggle="pill" data-bs-target="#v-pills-store" type="button" role="tab" aria-controls="v-pills-store" aria-selected="true">
+                            <div class="d-flex">
+                                <div class="p-2 flex-grow-1 text-start"><span class="fa-solid fa-store fa-fw me-2"></span>Store</div>
+                                <div class="p-2 text-500">Active</div>
+                            </div>
+                        </button>
+                        <button class="nav-link btn-sm py-0" id="v-pills-orders-tab" data-bs-toggle="pill" data-bs-target="#v-pills-orders" type="button" role="tab" aria-controls="v-pills-orders" aria-selected="false">
+                            <div class="d-flex">
+                                <div class="p-2 flex-grow-1 text-start"><span class="fa-solid fa-shopping-bag fa-fw me-2"></span>Orders</div>
+                                <div class="p-2 text-500">Off</div>
+                            </div>
+                        </button>
+                        <button class="nav-link btn-sm py-0" id="v-pills-reports-tab" data-bs-toggle="pill" data-bs-target="#v-pills-reports" type="button" role="tab" aria-controls="v-pills-reports" aria-selected="false">
+                            <div class="d-flex">
+                                <div class="p-2 flex-grow-1 text-start"><span class="fa-solid fa-chart-line fa-fw me-2"></span>Reports</div>
+                                <div class="p-2 text-500">Active</div>
+                            </div>
+                        </button>
+                        <button class="nav-link btn-sm py-0" id="v-pills-team-tab" data-bs-toggle="pill" data-bs-target="#v-pills-team" type="button" role="tab" aria-controls="v-pills-team" aria-selected="false">
+                            <div class="d-flex">
+                                <div class="p-2 flex-grow-1 text-start"><span class="fa-solid fa-user-tie fa-fw me-2"></span>Team Managment</div>
+                                <div class="p-2 text-500">Off</div>
+                            </div>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+            <div class="col-12 col-lg-8">
+                <div class="tab-content" id="v-pills-tabContent">
+                    <div class="tab-pane fade show active" id="v-pills-store" role="tabpanel" aria-labelledby="v-pills-store-tab">
+                        <div class="card shadow-none border">
+                            <div class="card-header border-bottom">
+                                <div class="d-flex justify-content-between">
+                                    <label class="form-check-label h5" for="switchEnableStorePermissions">Store</label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="switchEnableStorePermissions" checked>
+                                    </div>
+                                </div>
+                                <p class="fs--1 mb-0">Grant access to the store, lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+                            </div>
+                            <div class="card-body">
+                                <h6 class="text-uppercase text-500 mb-3">Basic Store Permissions</h6>
+                                <SfTreeView ID="treeMenu" TValue="PlaceholderPermissionData" AllowDragAndDrop="false" ShowCheckBox="true" CssClass="sfTree vertical-align-top">
+                                    <TreeViewFieldsSettings TValue="PlaceholderPermissionData" Id="PermissionId" Text="PermissionLabel" Child="Child" DataSource="@PlaceholderPermissionDataList" Expanded="Expanded"></TreeViewFieldsSettings>
+                                    <TreeViewTemplates TValue="PlaceholderPermissionData">
+                                        <NodeTemplate>
+                                            <div class="d-flex justify-content-between">
+                                                <h6 class="text-800 mb-1">@((context as PlaceholderPermissionData).PermissionLabel)</h6>
+                                            </div>
+                                            @if (!String.IsNullOrEmpty((context as PlaceholderPermissionData).PermissionDesc))
+                                            {
+                                                <p class="fs--1 text-500 text-wrap lh-base me-5">@((context as PlaceholderPermissionData).PermissionDesc)</p>
+                                            }
+                                        </NodeTemplate>
+                                    </TreeViewTemplates>
+                                </SfTreeView>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="v-pills-orders" role="tabpanel" aria-labelledby="v-pills-orders-tab">
+                        <div class="card shadow-none border">
+                            <div class="card-header border-bottom">
+                                <div class="d-flex justify-content-between">
+                                    <label class="form-check-label h5" for="switchEnableOrderPermissions">Orders</label>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="switchEnableOrderPermissions">
+                                    </div>
+                                </div>
+                                <p class="fs--1 mb-0">Grant access to orders, lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+                            </div>
+                            <div class="card-body">
+                                <h6 class="text-uppercase text-500 mb-3">Order Permissions</h6>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="defaultCheck1">
+                                    <label class="form-check-label" for="defaultCheck1">
+                                        Feature 1
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="" id="defaultCheck2">
+                                    <label class="form-check-label" for="defaultCheck2">
+                                        Feature 2
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="v-pills-reports" role="tabpanel" aria-labelledby="v-pills-reports-tab">...</div>
+                    <div class="tab-pane fade" id="v-pills-team" role="tabpanel" aria-labelledby="v-pills-team-tab">...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code
+{
+    private string title = "Roles & Permissions | Synergy Admin Panel";
+
+    List<PlaceholderPermissionData> PlaceholderPermissionDataList = new List<PlaceholderPermissionData>();
+
+    protected override async Task OnInitializedAsync()
+    {
+
+
+        PlaceholderPermissionDataList.Add(new PlaceholderPermissionData
+        {
+            PermissionId = "1",
+            PermissionLabel = "Create new customers",
+            Expanded = true,
+            Child = new List<PlaceholderPermissionData>()
+            {
+                new PlaceholderPermissionData { PermissionId = "11", PermissionLabel = "Import customers", PermissionDesc = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua" }
+            },
+        });
+        PlaceholderPermissionDataList.Add(new PlaceholderPermissionData
+        {
+            PermissionId = "2",
+            PermissionLabel = "Export customers",
+            Expanded = false,
+        });
+        PlaceholderPermissionDataList.Add(new PlaceholderPermissionData
+        {
+            PermissionId = "3",
+            PermissionLabel = "Update customers",
+            Expanded = false,
+        });
+        PlaceholderPermissionDataList.Add(new PlaceholderPermissionData
+        {
+            PermissionId = "4",
+            PermissionLabel = "Disable customers",
+            PermissionDesc = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua",
+            Expanded = false,
+        });
+
+
+    }
+
+    public class PlaceholderPermissionData
+    {
+        public string PermissionId { get; set; }
+        public string PermissionLabel { get; set; }
+        public string PermissionDesc { get; set; }
+        public bool Expanded { get; set; }
+        public bool Selected { get; set; }
+        public List<PlaceholderPermissionData> Child;
+
+    }
+}

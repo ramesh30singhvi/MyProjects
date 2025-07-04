@@ -1,0 +1,1348 @@
+﻿@page "/reservations/reservation"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+
+
+        <div class="card mb-3">
+            <div class="card-header border-bottom">
+                <div class="d-flex flex-wrap justify-content-center justify-content-md-between align-items-center">
+                    <h5 class="mb-3 mb-md-0"><a href="#!" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-calendar-star me-2"></span>Jonathan Elliman</h5>
+                    <ul class="nav nav-pills" id="myTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <a class="btn btn-falcon-primary me-2 active" id="rsvp-tab" data-bs-toggle="tab" data-bs-target="#rsvp" role="tab" aria-controls="rsvp" aria-selected="true" title="Reservation Details"><span class="far fa-clipboard-list-check fa-lg"></span></a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="btn btn-falcon-primary me-2" id="guest-tab" data-bs-toggle="tab" data-bs-target="#guest" role="tab" aria-controls="guest" aria-selected="false" title="Guest Details"><span class="far fa-user-circle fa-lg"></span></a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="btn btn-falcon-primary me-2" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" role="tab" aria-controls="history" aria-selected="false" title="Reservation History"><span class="far fa-history fa-lg"></span></a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <div class="dropdown font-sans-serif btn-reveal-trigger">
+                                <button class="btn btn-falcon-primary dropdown-toggle btn-reveal dropdown-caret-none" type="button" id="dropdown-top-products" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--2"></span></button>
+                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown-top-products">
+                                    <a class="dropdown-item text-info" href="#!"><span class="far fa-pencil-alt fa-fw me-1"></span>Modify</a>
+                                    <a class="dropdown-item text-success" href="#!"><span class="far fa-check fa-fw me-1"></span>Check-in</a>
+                                    <a class="dropdown-item text-warning" href="#!"><span class="far fa-hourglass fa-fw me-1"></span>Delayed</a>
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-item text-danger" href="#!"><span class="far fa-ban fa-fw me-1"></span>Cancel</a>
+                                </div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <div class="tab-content" id="myTabContent">
+                    <div class="tab-pane fade show active" id="rsvp" role="tabpanel" aria-labelledby="rsvp-tab">
+
+                        <div class="d-flex justify-content-between flex-wrap mb-4 mb-md-2">
+                            <div>
+                                <ul class="list-inline">
+                                    <li class="list-inline-item mb-2 me-4"><span class="fas fa-sparkles fa-xs me-2"></span><a href="#!" class="link-dark">Wine and Cheese Tasting</a></li>
+                                    <li class="list-inline-item mb-2 me-4"><span class="fas fa-clock fa-xs me-2"></span><a href="#!" class="link-dark">April 1, 12:00 PM – 1:00 PM (1 Hour)</a></li>
+                                    <li class="list-inline-item mb-2 me-4"><span class="fas fa-user fa-xs me-2"></span><a href="#!" class="link-dark">2</a></li>
+                                </ul>
+                            </div>
+                            <div>
+                                <span class="far fa-phone fa-xs me-2"></span><a href="#!" class="link-dark">(855) 423-4448</a>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-12 col-md-4 d-grid mb-2 mb-md-0">
+                                <a href="#!" class="btn btn-light bg-200">Confirmed<br /><span class="small">#EYSOQRTG</span></a>
+                            </div>
+                            <div class="col-12 col-md-4 d-grid mb-2 mb-md-0">
+                                <a href="#!" class="btn btn-light bg-200">Table 12<br /><span class="small">Location/Floor Plan Name</span></a>
+                            </div>
+                            <div class="col-12 col-md-4 d-grid mb-2 mb-md-0">
+                                <a href="#!" class="btn btn-light bg-200">24 Hours<br /><span class="small">Cancellation Policy</span></a>
+                            </div>
+
+                        </div>
+
+                        <div class="my-4">
+                            <h6 class="text-uppercase text-muted">Tags</h6>
+                            <div id="guestTags" class="my-2 btn-reveal-trigger">
+                                <span class="badge rounded-pill bg-white text-dark mx-1">Birthday</span><span class="badge rounded-pill badge-soft-info mx-1">VIP</span><a class="btn btn-link btn-sm btn-reveal ms-2" href="#"><span class="fas fa-pencil-alt fs--2"></span></a>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="tab-pane fade" id="guest" role="tabpanel" aria-labelledby="guest-tab">
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-sm-6 col-md-4">
+                                <div class="card overflow-hidden h-100" style="min-width: 12rem">
+                                    <div class="bg-holder bg-card" style="background-image:url(https://cdn.cellarpass.com/static/images/admin/corner-2.png);">
+                                    </div>
+                                    <!--/.bg-holder-->
+
+                                    <div class="card-body position-relative">
+                                        <h6>Guest Score</h6>
+                                        <div class="display-4 fs-4 mb-2 font-weight-normal font-sans-serif text-info">95 / 100</div><a class="font-weight-semi-bold fs--1 text-nowrap" href="#!">View All<span class="fas fa-angle-right ms-1" data-fa-transform="down-1"></span></a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-md-4">
+                                <div class="card overflow-hidden h-100" style="min-width: 12rem">
+                                    <div class="bg-holder bg-card" style="background-image: url(https://cdn.cellarpass.com/static/images/admin/corner-1.png);">
+                                    </div>
+                                    <!--/.bg-holder-->
+
+                                    <div class="card-body position-relative">
+                                        <h6>Visit Metrics</h6>
+                                        <div class="fs--2 mt-3 col-8">
+                                            <div class="d-flex flex-between-center mb-1">
+                                                <div class="d-flex align-items-center"><span class="dot bg-soft-success"></span><span class="font-weight-semi-bold">Visits</span></div>
+                                                <div class="d-xxl-none">10</div>
+                                            </div>
+                                            <div class="d-flex flex-between-center mb-1">
+                                                <div class="d-flex align-items-center"><span class="dot bg-soft-danger"></span><span class="font-weight-semi-bold">Cancelations</span></div>
+                                                <div class="d-xxl-none">1</div>
+                                            </div>
+                                            <div class="d-flex flex-between-center mb-1">
+                                                <div class="d-flex align-items-center"><span class="dot bg-soft-secondary"></span><span class="font-weight-semi-bold">No Shows</span></div>
+                                                <div class="d-xxl-none">0</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card mb-3 overflow-hidden h-100" style="min-width: 12rem">
+                                    <div class="bg-holder bg-card" style="background-image: url(https://cdn.cellarpass.com/static/images/admin/corner-3.png);">
+                                    </div>
+                                    <!--/.bg-holder-->
+
+                                    <div class="card-body position-relative">
+                                        <h6>Lifetime Value</h6>
+                                        <div class="display-4 fs-4 mb-2 font-weight-normal font-sans-serif">$866.22</div><span class="font-weight-semi-bold fs--1 text-nowrap">17 orders</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-0">
+                            <div class="col-lg-7 pr-lg-2 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+
+                                        <div class="row g-0">
+                                            <div class="col px-0 mb-4 mb-sm-0 text-center">
+                                                <div class="dropdown">
+                                                    <a class="pr-0 hover-actions-trigger" id="profileImageDropdown" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                        <div class="avatar avatar-4xl me-2">
+                                                            <img class="rounded-circle" src="https://cdn.cellarpass.com/photos/users/17_profile.jpg" alt="Jonathan Elliman Photo">
+                                                            <div class="hover-actions top-50 translate-middle-y">
+                                                                <div class="avatar avatar-4xl">
+                                                                    <div class="avatar-name rounded-circle d-flex justify-content-center align-items-center opacity-75 "><span class="far fa-pencil fs-0 top-50"></span></div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </a>
+                                                    <div class="dropdown-menu dropdown-menu-card py-0" aria-labelledby="profileImageDropdown">
+                                                        <div class="bg-white rounded-lg py-2">
+                                                            <a class="dropdown-item" href="#">Upload Image</a>
+                                                            <a class="dropdown-item text-warning" href="#">Remove Image</a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-9">
+                                                <div class="row g-0">
+                                                    <div id="profileClubMemberIcon" class="col-auto">
+                                                        <h4 title="Club Member" class="toggleTooltip"><small class="far fa-gem fa-xs me-2"></small></h4>
+                                                    </div>
+                                                    <div class="col pl-0">
+                                                        <h4 class="mb-1 btn-reveal-trigger">Jonathan Elliman<a class="btn btn-link btn-sm btn-reveal ms-2" href="#"><span class="fas fa-pencil-alt fs--1"></span></a></h4>
+                                                        <h5 class="fs-0 font-weight-normal">Title if available goes here</h5>
+                                                        <p><a href="mailto:jelliman@cellarpass.com" class="text-500">jelliman@cellarpass.com</a></p>
+                                                    </div>
+                                                </div>
+
+                                                <div id="profileIconLinks" class="d-flex justify-content-start">
+                                                    <div class="me-3 text-center">
+                                                        <div class="avatar avatar-xl">
+                                                            <div class="avatar-name rounded-circle d-flex justify-content-center align-items-center bg-300"><a href="#"><span class="far fa-comment-alt-edit fa-lg text-black"></span></a></div>
+                                                        </div>
+                                                        <div class="fs--2">Note</div>
+                                                    </div>
+                                                    <div class="me-3 text-center">
+                                                        <div class="avatar avatar-xl">
+                                                            <div class="avatar-name rounded-circle d-flex justify-content-center align-items-center bg-300"><a href="#"><span class="far fa-envelope fa-lg text-black"></span></a></div>
+                                                        </div>
+                                                        <div class="fs--2">Email</div>
+                                                    </div>
+                                                    <div class="me-3 text-center">
+                                                        <div class="avatar avatar-xl">
+                                                            <div class="avatar-name rounded-circle d-flex justify-content-center align-items-center bg-300"><a href="#"><span class="far fa-sms fa-lg text-muted"></span></a></div>
+                                                        </div>
+                                                        <div class="fs--2 text-muted">SMS</div>
+                                                    </div>
+                                                    <div class="me-3 text-center">
+                                                        <div class="avatar avatar-xl">
+                                                            <div class="avatar-name rounded-circle d-flex justify-content-center align-items-center bg-300"><a href="#"><span class="far fa-phone-alt fa-lg text-black"></span></a></div>
+                                                        </div>
+                                                        <div class="fs--2">Call</div>
+                                                    </div>
+                                                    <div class="me-3 text-center">
+                                                        <div class="avatar avatar-xl">
+                                                            <div class="avatar-name rounded-circle d-flex justify-content-center align-items-center bg-300"><a href="#"><span class="far fa-calendar-alt fa-lg text-black"></span></a></div>
+                                                        </div>
+                                                        <div class="fs--2">RSVP</div>
+                                                    </div>
+                                                    <div class="me-3 text-center">
+                                                        <a id="profileHelpMenu" href="#" class="stretched-link dropdown-toggle dropdown-caret-none" e ofa-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                            <div class="avatar avatar-xl">
+                                                                <div class="avatar-name rounded-circle d-flex justify-content-center align-items-center bg-300">
+                                                                    <span class="far fa-life-ring fa-lg text-black"></span>
+                                                                </div>
+                                                            </div>
+                                                        </a>
+                                                        <div class="fs--2">Help</div>
+                                                        <div class="dropdown-menu dropdown-menu-card" aria-labelledby="profileHelpMenu">
+                                                            <a class="dropdown-item" href="#">Send Magic Link</a>
+                                                            <a class="dropdown-item" href="#">Generate Password</a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-5 pl-lg-2 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body fs--1">
+                                        <div class="row">
+                                            <div class="col-12">
+                                                <p class="mb-4 bg-200 rounded-lg p-2">
+                                                    <span class="fas fa-birthday-cake fs-0 text-warning me-2"></span><span class="font-weight-semi-bold">Jonathan's</span> Birthday is today
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-5 col-sm-4">
+                                                <p class="font-weight-semi-bold mb-1"><span class="far fa-home me-2"></span>Hometown</p>
+                                            </div>
+                                            <div class="col">
+                                                <p class="mb-1">San Francisco, CA, USA</p>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-5 col-sm-4">
+                                                <p class="font-weight-semi-bold mb-1"><span class="far fa-heart me-2"></span>Region</p>
+                                            </div>
+                                            <div class="col">
+                                                <p class="font-italic text-muted mb-1">Not Provided</p>
+                                            </div>
+                                        </div>
+                                        <div class="border-dashed-bottom my-2"></div>
+                                        <div class="row">
+                                            <div class="col-5 col-sm-4">
+                                                <p class="font-weight-semi-bold mb-1"><span class="far fa-history me-2"></span>Last Visit</p>
+                                            </div>
+                                            <div class="col"><a href="#">02/11/2019</a></div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-5 col-sm-4">
+                                                <p class="font-weight-semi-bold mb-1"><span class="far fa-sign-in-alt fa-flip-horizontal me-2"></span>Last Login</p>
+                                            </div>
+                                            <div class="col">
+                                                11/11/2020 10:15 AM
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                    </div>
+                    <div class="tab-pane fade" id="history" role="tabpanel" aria-labelledby="history-tab">
+
+                        <h6 class="mb-4">Upcoming Reservations</h6>
+
+                        <div class="table-responsive scrollbar">
+                            <table class="table table-sm fs--1 mb-0">
+                                <thead class="bg-200 text-900">
+                                    <tr>
+                                        <th class="pr-1 align-middle white-space-nowrap">Status</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Confirm #</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Event Date</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Start Time</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Event Name</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Guest Count</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Src</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Total</th>
+                                        <th class="pr-1 align-middle data-table-row-action"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="list" id="table-reservation-body">
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill badge-soft-success" style="width:100px">Confirmed</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill bg-success" style="width:100px">Checked-In</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill bg-danger" style="width:100px">Cancelled</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill bg-secondary" style="width:100px">No Show</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill badge-soft-warning" style="width:100px">Rescheduled</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill bg-info" style="width:100px">Guest Delayed</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <h6 class="my-4">Past Reservations</h6>
+
+                        <div class="table-responsive scrollbar">
+                            <table class="table table-sm fs--1 mb-0">
+                                <thead class="bg-200 text-900">
+                                    <tr>
+                                        <th class="pr-1 align-middle white-space-nowrap">Status</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Confirm #</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Event Date</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Start Time</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Event Name</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Guest Count</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Src</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Total</th>
+                                        <th class="pr-1 align-middle data-table-row-action"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="list" id="table-reservation-body">
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill badge-soft-success" style="width:100px">Confirmed</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill badge-soft-success font-weight-bold" style="width:100px">Checked-In<span class="far fa-check ms-2"></span></span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill badge-soft-danger" style="width:100px">Cancelled</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill badge-soft-secondary" style="width:100px">No Show</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill badge-soft-warning" style="width:100px">Rescheduled</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill badge-soft-info" style="width:100px">Guest Delayed</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="row flex-between-center">
+                    <div class="col-auto">
+                        <div class="me-auto font-weight-semi-bold fs--1">Booked By: <span class="font-weight-bold text-black">Samantha Smith</span></div>
+                    </div>
+                    <div class="col-auto">
+                        <div class="font-weight-semi-bold mb-2 mb-md-0 me-4">Deposit: <span class="font-weight-bold text-black">$0.00</span></div>
+                        <div class="font-weight-semi-bold mb-2 mb-md-0">Due: <span class="font-weight-bold text-black">$0.00</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3" id="rsvpTabs">
+            <div class="card-header px-2">
+                <ul class="nav nav-tabs border-0 text-uppercase" id="guestTabs" role="tablist">
+                    <li class="nav-item"><a class="nav-link active" id="items-tab" data-bs-toggle="tab" href="#tab-items" role="tab" aria-controls="tab-items"><span class="far fa-shopping-basket d-block d-sm-none"></span><span class="d-none d-sm-block">Items</span></a></li>
+                    <li class="nav-item"><a class="nav-link" id="guests-tab" data-bs-toggle="tab" href="#tab-guests" role="tab" aria-controls="tab-guests"><span class="far fa-user d-block d-sm-none"></span><span class="d-none d-sm-block">Guests</span></a></li>
+                    <li class="nav-item"><a class="nav-link" id="notes-tab" data-bs-toggle="tab" href="#tab-notes" role="tab" aria-controls="tab-notes"><span class="far fa-comment-alt-lines d-block d-sm-none"></span><span class="d-none d-sm-block">Notes</span></a></li>
+                    <li class="nav-item"><a class="nav-link" id="payments-tab" data-bs-toggle="tab" href="#tab-payments" role="tab" aria-controls="tab-payments"><span class="far fa-credit-card d-block d-sm-none"></span><span class="d-none d-sm-block">Payments</span></a></li>
+                    <li class="nav-item"><a class="nav-link" id="changes-tab" data-bs-toggle="tab" href="#tab-changes" role="tab" aria-controls="tab-changes"><span class="far fa-calendar-edit d-block d-sm-none"></span><span class="d-none d-sm-block">Changes</span></a></li>
+                    <li class="nav-item"><a class="nav-link" id="emails-tab" data-bs-toggle="tab" href="#tab-emails" role="tab" aria-controls="tab-emails"><span class="far fa-envelope d-block d-sm-none"></span><span class="d-none d-sm-block">Email Log</span></a></li>
+                    <li class="nav-item"><a class="nav-link" id="history-tab" data-bs-toggle="tab" href="#tab-history" role="tab" aria-controls="tab-history"><span class="far fa-history d-block d-sm-none"></span><span class="d-none d-sm-block">History</span></a></li>
+                </ul>
+            </div>
+            <div class="card-body p-0 border-top">
+
+                <div class="tab-content p-3" id="rsvpTabContent">
+
+                    <div class="tab-pane fade show active" id="tab-items" role="tabpanel" aria-labelledby="items-tab">
+
+                        <div class="table-responsive fs--1">
+                            <table class="table table border-bottom">
+                                <thead class="bg-200 text-900">
+                                    <tr>
+                                        <th class="border-0">Items</th>
+                                        <th class="border-0 text-center">Quantity</th>
+                                        <th class="border-0 text-right">Price</th>
+                                        <th class="border-0 text-left">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-200">
+                                        <td class="align-middle">
+                                            <h6 class="mb-0 text-nowrap">Bouchon Tasting with Box Lunch</h6>
+                                            <p class="mb-0">Promo 'Apple'</p>
+                                            <p class="mb-0">Access Code 'LetMeIn'</p>
+                                        </td>
+                                        <td class="align-middle text-center">2</td>
+                                        <td class="align-middle text-right">$65.00*</td>
+                                        <td class="align-middle text-left">$130.00</td>
+                                    </tr>
+                                    <tr class="border-200">
+                                        <td class="bg-light font-weight-semi-bold text-900 py-1" colspan="4">Additional Items</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle">
+                                            <h6 class="mb-0 text-nowrap">Fried Chicken Sandwich</h6>
+                                            <p class="mb-0">Sonoma Chicken, Smoked Bacon Remoulade, Kosher pickle, and shredded Napa Cabbage on a Bouchon Roll. Served with Sea Salt & Vinegar Kettle Chips, organic fruit, a cookie, and Evian water</p>
+                                        </td>
+                                        <td class="align-middle text-center">1</td>
+                                        <td class="align-middle text-right">$2,100.00</td>
+                                        <td class="align-middle text-left">$2,100.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle">
+                                            <h6 class="mb-0 text-nowrap">Charcuterie Plate</h6>
+                                            <p class="mb-0">Our executive chef curates the perfect platter of local artisan cheese and sustainably-farmed meats. Serves 2 people.</p>
+                                        </td>
+                                        <td class="align-middle text-center">8</td>
+                                        <td class="align-middle text-right">$5,00.00</td>
+                                        <td class="align-middle text-left">$4,000.00</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="row g-0 justify-content-end">
+                            <div class="col-auto">
+                                <table class="table table-sm table-borderless fs--1 text-right">
+                                    <tbody>
+                                        <tr>
+                                            <th class="text-900 text-end">Subtotal:</th>
+                                            <td class="font-weight-semi-bold text-left pl-3">$6,230.00 </td>
+                                        </tr>
+                                        <tr>
+                                            <th class="text-900 text-end">Discounts:</th>
+                                            <td class="font-weight-semi-bold text-left pl-3">$6,230.00 </td>
+                                        </tr>
+                                        <tr>
+                                            <th class="text-900 text-end">Gratuity:</th>
+                                            <td class="font-weight-semi-bold text-left pl-3">$6,230.00 </td>
+                                        </tr>
+                                        <tr>
+                                            <th class="text-900 text-end">Sales Tax:</th>
+                                            <td class="font-weight-semi-bold text-left pl-3">$311.50</td>
+                                        </tr>
+                                        <tr>
+                                            <th class="text-900 text-end">Total:</th>
+                                            <td class="font-weight-semi-bold text-left pl-3">$6541.50</td>
+                                        </tr>
+                                        <tr>
+                                            <th class="text-900 text-end">Amount Received:</th>
+                                            <td class="font-weight-semi-bold text-left pl-3">$0.00</td>
+                                        </tr>
+                                        <tr class="border-top text-end">
+                                            <th class="text-900 font-weight-bold">Balance Due:</th>
+                                            <td class="font-weight-bold text-left pl-3">$6541.50</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-guests" role="tabpanel" aria-labelledby="guests-tab">
+
+                        <div class="table-responsive scrollbar">
+                            <table class="table table-sm fs--1 mb-0">
+                                <thead class="bg-200 text-900">
+                                    <tr>
+                                        <th class="pr-1 align-middle white-space-nowrap">Guest</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Email</th>
+                                        <th class="pr-1 align-middle"></th>
+                                        <th class="pr-1 align-middle"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="list" id="table-reservation-body">
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap">Jonathan Elliman</td>
+                                        <td class="align-middle white-space-nowrap">jelliman@cellarpass.com</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <span class="badge bg-soft-success text-900 text-uppercase me-2"><span class="far fa-shield-virus me-2"></span>COVID-19 survey on file - Expires 08/24/2020</span>
+                                            <span class="badge bg-soft-info text-900 text-uppercase me-2"><span class="far fa-file-contract me-2"></span>Waiver on File</span>
+                                        </td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">Edit Guest</a>
+                                                    <a class="dropdown-item" href="#!">Send Confirmation</a>
+                                                    <a class="dropdown-item" href="#!">Send Survey</a>
+                                                    <a class="dropdown-item" href="#!">Send Waiver</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap">Sarah Elliman</td>
+                                        <td class="align-middle white-space-nowrap">selliman@cellarpass.com</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <span class="badge bg-soft-danger text-900 text-uppercase me-2"><span class="far fa-shield-virus me-2"></span>COVID-19 Survey Expired</span>
+                                            <span class="badge bg-soft-info text-900 text-uppercase me-2"><span class="far fa-file-contract me-2"></span>Waiver on File</span>
+                                        </td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">Edit Guest</a>
+                                                    <a class="dropdown-item" href="#!">Send Confirmation</a>
+                                                    <a class="dropdown-item" href="#!">Send Survey</a>
+                                                    <a class="dropdown-item" href="#!">Send Waiver</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-4">
+                            <a class="btn btn-falcon-default btn-sm me-1 mb-1">
+                                <span class="far fa-user-plus me-1" data-fa-transform="shrink-3"></span>Add Guest
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-notes" role="tabpanel" aria-labelledby="notes-tab">
+
+                        <h6 class="mb-3">Internal Notes</h6>
+                        <div class="d-flex mb-2 hover-actions-trigger align-items-center bg-white rounded-lg p-2 border border-200">
+                            <span class="far fa-comment-alt-lines"></span>
+                            <div class="ms-3 flex-shrink-1 flex-grow-1">
+                                <p class="mb-1">Lorem ipsum dolor sit amet, in impedit denique mel. Eam ei congue habemus voluptua, nam sint suavitate conceptam no. Pri putent latine commodo ex, qui dolorem dissentiunt eu, vim an ferri veniam. Dicunt erroribus ad mei, at sed verterem vituperata. Vitae adolescens vel cu.</p>
+                                <div class="hover-actions right-0 top-50 translate-middle-y"><a href="#" class="btn btn-light border-300 btn-sm me-1 text-600" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Delete"><span class="fas fa-trash-alt"></span></a><a href="#" class="btn btn-light border-300 btn-sm me-1 text-600 shadow-none" type="button" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Edit"><span class="fas fa-edit"></span></a></div>
+                            </div>
+                        </div>
+
+                        <h6 class="mt-4 mb-3">Guest Notes</h6>
+                        <div class="d-flex mb-2 hover-actions-trigger align-items-center bg-white rounded-lg p-2 border border-200">
+                            <span class="far fa-comment-alt-lines"></span>
+                            <div class="ms-3 flex-shrink-1 flex-grow-1">
+                                <p class="mb-1">Lorem ipsum dolor sit amet, in impedit denique mel. Eam ei congue habemus voluptua, nam sint suavitate conceptam no. Pri putent latine commodo ex, qui dolorem dissentiunt eu, vim an ferri veniam. Dicunt erroribus ad mei, at sed verterem vituperata. Vitae adolescens vel cu.</p>
+                                <div class="hover-actions right-0 top-50 translate-middle-y"><a href="#" class="btn btn-light border-300 btn-sm me-1 text-600" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Delete"><span class="fas fa-trash-alt"></span></a><a href="#" class="btn btn-light border-300 btn-sm me-1 text-600 shadow-none" type="button" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Edit"><span class="fas fa-edit"></span></a></div>
+                            </div>
+                        </div>
+
+                        <h6 class="mt-4 mb-3">Concierge Notes</h6>
+                        <div class="d-flex mb-2 hover-actions-trigger align-items-center bg-white rounded-lg p-2 border border-200">
+                            <span class="far fa-comment-alt-lines"></span>
+                            <div class="ms-3 flex-shrink-1 flex-grow-1">
+                                <p class="mb-1"></p>
+                                <div class="hover-actions right-0 top-50 translate-middle-y"><a href="#" class="btn btn-light border-300 btn-sm me-1 text-600" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Delete"><span class="fas fa-trash-alt"></span></a><a href="#" class="btn btn-light border-300 btn-sm me-1 text-600 shadow-none" type="button" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Edit"><span class="fas fa-edit"></span></a></div>
+                            </div>
+                        </div>
+
+                        <h6 class="mt-4 mb-3">Account Notes</h6>
+                        <div class="d-flex mb-2 hover-actions-trigger align-items-center bg-white rounded-lg p-2 border border-200">
+                            <span class="far fa-comment-alt-lines"></span>
+                            <div class="ms-3 flex-shrink-1 flex-grow-1">
+                                <p class="mb-1">This guest is a whale. Be sure to assign them your best host.</p>
+                                <div class="hover-actions right-0 top-50 translate-middle-y"><a href="#" class="btn btn-light border-300 btn-sm me-1 text-600" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Delete"><span class="fas fa-trash-alt"></span></a><a href="#" class="btn btn-light border-300 btn-sm me-1 text-600 shadow-none" type="button" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Edit"><span class="fas fa-edit"></span></a></div>
+                            </div>
+                        </div>
+
+                        <div class="border-dashed-top my-4"></div>
+
+                        <h6 class="mb-3">Guest Questionnaire</h6>
+                        <div class="d-flex mb-2 hover-actions-trigger align-items-center bg-white rounded-lg p-2 border border-200">
+                            <span class="far fa-comment-dots"></span>
+                            <div class="ms-3 flex-shrink-1 flex-grow-1">
+                                <h6 class="font-weight-semi-bold">What's your favorite varietal?</h6>
+                                <p class="mb-1">Merlot</p>
+                                <div class="hover-actions right-0 top-50 translate-middle-y"><a href="#" class="btn btn-light border-300 btn-sm me-1 text-600" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Delete"><span class="fas fa-trash-alt"></span></a><a href="#" class="btn btn-light border-300 btn-sm me-1 text-600 shadow-none" type="button" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Edit"><span class="fas fa-edit"></span></a></div>
+                            </div>
+                        </div>
+                        <div class="d-flex mb-2 hover-actions-trigger align-items-center bg-white rounded-lg p-2 border border-200">
+                            <span class="far fa-comment-dots"></span>
+                            <div class="ms-3 flex-shrink-1 flex-grow-1">
+                                <h6 class="font-weight-semi-bold">Are you allergic to shelfish?</h6>
+                                <p class="mb-1">No</p>
+                                <div class="hover-actions right-0 top-50 translate-middle-y"><a href="#" class="btn btn-light border-300 btn-sm me-1 text-600" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Delete"><span class="fas fa-trash-alt"></span></a><a href="#" class="btn btn-light border-300 btn-sm me-1 text-600 shadow-none" type="button" data-bs-toggle="tooltip" data-placement="top" title="" data-original-title="Edit"><span class="fas fa-edit"></span></a></div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="tab-pane fade" id="tab-payments" role="tabpanel" aria-labelledby="payments-tab">
+
+                        <div class="card bg-light mb-4 shadow-none">
+                            <div class="card-body p-3">
+                                <p class="mb-0"><span class="far fa-credit-card me-2"></span>Jonathan Elliman - Visa  <strong>2257</strong> - 08/2022</p>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive scrollbar">
+                            <table class="table table-sm fs--1 mb-0">
+                                <thead class="bg-200 text-900">
+                                    <tr>
+                                        <th class="pr-1 align-middle white-space-nowrap"></th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Status</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Approval</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Transaction</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Date</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Card</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="list" id="table-reservation-body">
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap fs-0"><span class="badge badge rounded-pill badge-soft-success text-uppercase" style="width:100px">Sale</span></td>
+                                        <td class="align-middle white-space-nowrap">Success</td>
+                                        <td class="align-middle white-space-nowrap">123456</td>
+                                        <td class="align-middle white-space-nowrap">Abcdeofal100303</td>
+                                        <td class="align-middle white-space-nowrap">10/6/2020 11:38:47 AM</td>
+                                        <td class="align-middle white-space-nowrap">Jonathan Elliman<br />Visa 2257</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap fs-0"><span class="badge badge rounded-pill badge-soft-info text-uppercase" style="width:100px">Credit</span></td>
+                                        <td class="align-middle white-space-nowrap">Success</td>
+                                        <td class="align-middle white-space-nowrap">123456</td>
+                                        <td class="align-middle white-space-nowrap">Abcdeofal100303</td>
+                                        <td class="align-middle white-space-nowrap">10/6/2020 11:38:47 AM</td>
+                                        <td class="align-middle white-space-nowrap">Jonathan Elliman<br />Visa 2257</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap fs-0"><span class="badge badge rounded-pill badge-soft-info text-uppercase" style="width:100px">Void</span></td>
+                                        <td class="align-middle white-space-nowrap">Success</td>
+                                        <td class="align-middle white-space-nowrap">123456</td>
+                                        <td class="align-middle white-space-nowrap">Abcdeofal100303</td>
+                                        <td class="align-middle white-space-nowrap">10/6/2020 11:38:47 AM</td>
+                                        <td class="align-middle white-space-nowrap">Jonathan Elliman<br />Visa 2257</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap fs-0"><span class="badge badge rounded-pill badge-soft-danger text-uppercase" style="width:100px">Sale</span></td>
+                                        <td class="align-middle white-space-nowrap"><span class="text-uppercase">Failed</span></td>
+                                        <td class="align-middle white-space-nowrap"></td>
+                                        <td class="align-middle">Soft Decline - The authorization request was approved by the issuing bank but declined by CyberSource because it did not pass the Address Verification Service (AVS) check.</td>
+                                        <td class="align-middle white-space-nowrap">10/6/2020 11:38:47 AM</td>
+                                        <td class="align-middle white-space-nowrap">Jonathan Elliman<br />Visa 2257</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                    <div class="tab-pane fade" id="tab-changes" role="tabpanel" aria-labelledby="changes-tab">
+
+                        <div class="table-responsive scrollbar">
+                            <table class="table fs--1 mb-0">
+                                <tbody class="list" id="table-reservation-body">
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap fs-0"><span class="badge badge rounded-pill bg-success text-uppercase" style="width:100px">Checked-in</span></td>
+                                        <td class="align-middle">10 Guests - Jonathan Elliman</td>
+                                        <td class="align-middle white-space-nowrap">11/25/2020 5:45PM</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap fs-0"><span class="badge badge rounded-pill bg-primary text-uppercase" style="width:100px">Sync</span></td>
+                                        <td class="align-middle">Order upserted to Commerce7</td>
+                                        <td class="align-middle white-space-nowrap">11/25/2020 3:45PM</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap fs-0"><span class="badge badge rounded-pill badge-soft-warning text-uppercase" style="width:100px">Rescheduled</span></td>
+                                        <td class="align-middle">Ramessh Singvi</td>
+                                        <td class="align-middle white-space-nowrap">11/25/2020 3:45PM</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap fs-0"><span class="badge badge rounded-pill badge-soft-info text-uppercase" style="width:100px">Modified</span></td>
+                                        <td class="align-middle">10 Guests - Jonathan Elliman</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            11/21/2020 5:45PM
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap fs-0"><span class="badge badge rounded-pill badge-soft-success text-uppercase" style="width:100px">Reserved</span></td>
+                                        <td class="align-middle">2 Guests - Ramessh Singvi</td>
+                                        <td class="align-middle white-space-nowrap">11/21/2020 5:35PM</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                    <div class="tab-pane fade" id="tab-emails" role="tabpanel" aria-labelledby="emails-tab">
+
+                        <div class="table-responsive scrollbar">
+                            <table class="table fs--1 mb-0">
+                                <tbody class="list" id="table-reservation-body">
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap fs-0"><span class="badge badge rounded-pill bg-success text-uppercase" style="width:100px">Opened</span></td>
+                                        <td class="align-middle">RSVP Admin Confirmation Email to selliman@cellarpass.com Opened</td>
+                                        <td class="align-middle white-space-nowrap">11/25/2020 5:45PM</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap fs-0"><span class="badge badge rounded-pill bg-success text-uppercase" style="width:100px">Opened</span></td>
+                                        <td class="align-middle">RSVP Admin Confirmation Email to selliman@cellarpass.com Opened</td>
+                                        <td class="align-middle white-space-nowrap">11/25/2020 3:45PM</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap fs-0"><span class="badge badge rounded-pill badge-soft-success text-uppercase" style="width:100px">Delivered</span></td>
+                                        <td class="align-middle">RSVP Admin Confirmation Email to selliman@cellarpass.com Opened</td>
+                                        <td class="align-middle white-space-nowrap">11/25/2020 3:45PM</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap fs-0"><span class="badge badge rounded-pill badge-soft-danger text-uppercase" style="width:100px">Bounced</span></td>
+                                        <td class="align-middle">RSVP Admin Confirmation Email to selliman@cellarpass.com Bounced</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            11/21/2020 5:45PM
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap fs-0"><span class="badge badge rounded-pill badge-soft-primary text-uppercase" style="width:100px">Accepted</span></td>
+                                        <td class="align-middle">RSVP Admin Confirmation Email to selliman@cellarpass.com Accepted</td>
+                                        <td class="align-middle white-space-nowrap">11/21/2020 5:45PM</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap fs-0"><span class="badge badge rounded-pill badge-soft-info text-uppercase" style="width:100px">Queued</span></td>
+                                        <td class="align-middle">RSVP Admin Confirmation Email to selliman@cellarpass.com Queued</td>
+                                        <td class="align-middle white-space-nowrap">11/21/2020 5:35PM</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                    <div class="tab-pane fade" id="tab-history" role="tabpanel" aria-labelledby="history-tab">
+
+                        <h6 class="mb-4">Upcoming Reservations</h6>
+
+                        <div class="table-responsive scrollbar">
+                            <table class="table table-sm fs--1 mb-0">
+                                <thead class="bg-200 text-900">
+                                    <tr>
+                                        <th class="pr-1 align-middle white-space-nowrap">Status</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Confirm #</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Event Date</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Start Time</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Event Name</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Guest Count</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Src</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Total</th>
+                                        <th class="pr-1 align-middle data-table-row-action"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="list" id="table-reservation-body">
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill badge-soft-success" style="width:100px">Confirmed</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill bg-success" style="width:100px">Checked-In</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill bg-danger" style="width:100px">Cancelled</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill bg-secondary" style="width:100px">No Show</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill badge-soft-warning" style="width:100px">Rescheduled</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill bg-info" style="width:100px">Guest Delayed</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <h6 class="my-4">Past Reservations</h6>
+
+                        <div class="table-responsive scrollbar">
+                            <table class="table table-sm fs--1 mb-0">
+                                <thead class="bg-200 text-900">
+                                    <tr>
+                                        <th class="pr-1 align-middle white-space-nowrap">Status</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Confirm #</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Event Date</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Start Time</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Event Name</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Guest Count</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Src</th>
+                                        <th class="pr-1 align-middle white-space-nowrap">Total</th>
+                                        <th class="pr-1 align-middle data-table-row-action"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="list" id="table-reservation-body">
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill badge-soft-success" style="width:100px">Confirmed</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill badge-soft-success font-weight-bold" style="width:100px">Checked-In<span class="far fa-check ms-2"></span></span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill badge-soft-danger" style="width:100px">Cancelled</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill badge-soft-secondary" style="width:100px">No Show</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill badge-soft-warning" style="width:100px">Rescheduled</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="btn-reveal-trigger">
+                                        <td class="align-middle fs-0 white-space-nowrap">
+                                            <span class="badge badge rounded-pill badge-soft-info" style="width:100px">Guest Delayed</span>
+                                        </td>
+                                        <th class="align-middle white-space-nowrap"><a href="#">DFHGYLVI</a></th>
+                                        <td class="align-middle white-space-nowrap">11/2/2020</td>
+                                        <td class="align-middle white-space-nowrap">4:00 PM</td>
+                                        <td class="align-middle white-space-nowrap">Club Member Estate Tour &amp; Tasting</td>
+                                        <td class="align-middle white-space-nowrap">2 Guests</td>
+                                        <td class="align-middle white-space-nowrap">B/O</td>
+                                        <td class="align-middle">$107.75</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="dropdown font-sans-serif">
+                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                                    <a class="dropdown-item" href="#!">View</a><a class="dropdown-item" href="#!">Edit</a><a class="dropdown-item" href="#!">Refund</a>
+                                                    <div class="dropdown-divider"></div><a class="dropdown-item text-warning" href="#!">Archive</a><a class="dropdown-item text-danger" href="#!">Delete</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+            <div class="card-footer d-flex justify-content-start bg-100 fs--1">
+                <div class="font-weight-semi-bold me-4">Event Id: <span class="font-weight-bold t"><a href="#!" class="text-muted">7878</a></span></div>
+                <div class="font-weight-semi-bold">Reservation Id: <span class="font-weight-bold text-muted">13456</span></div>
+
+            </div>
+        </div>
+
+
+        <div class="card mb-3">
+            <div class="card-header">
+                <div class="row flex-between-center">
+                    <div class="col-4 col-sm-auto d-flex align-items-center pr-0">
+                        <h5 class="mb-0 text-nowrap py-2 py-xl-0">Discounts</h5>
+                    </div>
+                    <div class="col-8 col-sm-auto ms-auto text-right pl-0">
+
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0 border-top">
+
+                <div class="table-responsive scrollbar">
+                    <table class="table fs--1 mb-0">
+                        <tbody class="list" id="table-reservation-body">
+                            <tr>
+                                <th class="align-middle ">Manual discount of $56.00 applied by CellarPass Account</th>
+                                <td class="align-middle white-space-nowrap">11/25/2020 5:45PM</td>
+                            </tr>
+                            <tr>
+                                <th class="align-middle ">Manual discount of $120.00 applied by BackOffice User</th>
+                                <td class="align-middle white-space-nowrap">11/25/2020 5:45PM</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+
+        @*<TelerikTooltip TargetSelector=".toggleTooltip[title]" Position="@TooltipPosition.Top" ShowOn="@TooltipShowEvent.Hover" Id="position-tooltip"></TelerikTooltip>
+
+        <TelerikWindow Centered="true" @bind-Visible=@isDisabledModalVisible Modal="true">
+            <WindowTitle>
+                <h5 class="modal-title">Feature Disabled</h5>
+            </WindowTitle>
+            <WindowActions>
+                <WindowAction Name="Close" />
+            </WindowActions>
+            <WindowContent>
+                <p>Contact CellarPass to enable this feature.</p>
+            </WindowContent>
+
+        </TelerikWindow>*@
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    bool isDisabledModalVisible = false;
+
+    private string title = "";
+
+
+    [Parameter]
+    public int Id { get; set; }
+
+    public void ShowDisabledModal()
+    {
+        isDisabledModalVisible = true;
+    }
+
+
+   
+}

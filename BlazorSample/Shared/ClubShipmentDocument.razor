@@ -1,0 +1,39 @@
+﻿@using CellarPassAppAdmin.Shared.Models.RequestModel
+
+<SfGrid @ref="documentsGrid" DataSource="@DocumentsDetailList" Width="100%">
+    <GridColumns>
+        <GridColumn Field=@nameof(DocumentsDetail.DocumentLabel) HeaderText="Label" TextAlign="TextAlign.Left" Width="100" />
+        <GridColumn HeaderText="URL" TextAlign="TextAlign.Left" Width="100">
+            <Template>
+                @{
+                    var docContext = (context as DocumentsDetail);
+                    <a href="@docContext.DocumentURL" target="_blank">@docContext.DocumentURL</a>
+                }
+            </Template>
+        </GridColumn>
+        <GridColumn HeaderText="" TextAlign="TextAlign.Right" Width="40">
+            <Template>
+                @{
+                    <a href="javascript:void(0)" class="delete_icon" @onclick="@(() => RemoveDocument.InvokeAsync((context as DocumentsDetail)))">
+                        <span class="far fa-trash-alt"></span>
+                    </a>
+                }
+            </Template>
+        </GridColumn>
+    </GridColumns>
+</SfGrid>
+
+@code {
+    SfGrid<DocumentsDetail> documentsGrid;
+
+    [Parameter]
+    public List<DocumentsDetail> DocumentsDetailList { get; set; }
+
+    [Parameter]
+    public EventCallback<DocumentsDetail> RemoveDocument { get; set; }
+
+    public void RefreshGrid()
+    {
+        documentsGrid.Refresh();
+    }
+}

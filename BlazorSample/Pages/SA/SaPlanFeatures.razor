@@ -1,0 +1,71 @@
+﻿@page "/sa/business/plan-features"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="py-3">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-0"><a href="sa/business" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-clipboard-check me-2"></span>Plan Features</h5>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-sm btn-primary" href="#!">Add New</a>
+                </div>
+            </div>
+            <hr />
+        </div>
+
+        <div class="table-responsive scrollbar">
+            <table class="table fs--1 mb-0">
+                <thead class="bg-200 text-900">
+                    <tr>
+                        <th class="pe-1 align-middle white-space-nowrap"></th>
+                        <th class="pe-1 align-middle white-space-nowrap">Feature Name</th>
+                        <th class="pe-1 align-middle white-space-nowrap">Feature Title</th>
+                        <th class="pe-1 align-middle white-space-nowrap">Description</th>
+                        <th class="pe-1 align-middle white-space-nowrap"></th>
+                    </tr>
+                </thead>
+                <tbody class="" id="table-locations-body">
+                    <tr>
+                        <td class="align-middle white-space-nowrap"><a href="sa/plan-features/edit"><span class="far fa-pencil-alt"></span></a></td>
+                        <td class="align-middle white-space-nowrap">widgetEnabled</td>
+                        <td class="align-middle white-space-nowrap">This is the title for the disabled modal.</td>
+                        <td class="align-middle white-space-nowrap">This is the description for the disabled modal.</td>
+                        <td class="align-middle white-space-nowrap"><a href="#!"><span class="far fa-trash-alt"></span></a></td>
+                    </tr>
+                    <tr>
+                        <td class="align-middle white-space-nowrap"><a href="sa/plan-features/edit"><span class="far fa-pencil-alt"></span></a></td>
+                        <td class="align-middle white-space-nowrap">locationsLimit</td>
+                        <td class="align-middle white-space-nowrap">This is the title for the disabled modal.</td>
+                        <td class="align-middle white-space-nowrap">This is the description for the disabled modal.</td>
+                        <td class="align-middle white-space-nowrap"><a href="#!"><span class="far fa-trash-alt"></span></a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private string title = "Plan Feautres | Synergy Commerce Super Admin  Panel";
+
+}

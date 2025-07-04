@@ -1,0 +1,232 @@
+﻿@page "/settings/hours"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Entities.v4;
+@using CellarPassAppAdmin.Shared.Enums;
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ISettingsViewModel _settingsViewModel
+@inject IHoursViewModel _hoursViewModel
+@inject IBusinessPropertyViewModel _propertyViewModel
+@inject IEventViewModel _eventCalendarViewViewModel
+@inject ILocalStorageService localStorage
+@inject ToastService toastService
+@inject IBusinessPropertyViewModel _businessPropertyViewModel
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@Constants.BusinessHourTitle"></Title>
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        <div class="card shadow-none border">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md-7">
+                        <h5 class="mb-3 mb-md-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-clock me-2"></span>Business Hours</h5>
+                    </div>
+                    <div class="col-md-5 d-flex">
+                        <SfDropDownList CssClass="me-2" TValue="int" TItem="BusinessPropertyModel" @bind-Value="CurrentBusinessProperty" DataSource="businessProperties">
+                            <DropDownListEvents ValueChange="OnBusinessPropertyDropdownChange" TItem="BusinessPropertyModel" TValue="int"></DropDownListEvents>
+                            <DropDownListFieldSettings Value="Id" Text="PropertyName"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <button class="btn btn-x-sm btn-primary" @onclick="SaveBusinessHours">Save</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <form>
+                    <div class="row mb-2 align-items-center">
+                        <label for="switchByAppointmentOnly" class="col-auto col-form-label">By Appointment Only</label>
+                        <div class="col-auto">
+                            <div class="form-check form-switch ps-0">
+                                <SfSwitch id="switchByAppointmentOnly" @bind-Checked="isDisabledModalVisible" OffLabel="OFF" OnLabel="ON" ValueChange="()=>ByAppointmentChangeHandler()" TChecked="bool"></SfSwitch>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="businessHourContainer" class="@(isDisabledModalVisible ? "hideeffect" : "")">
+                        <div class="border-dashed-bottom my-3"></div>
+                        @*Using BusinessHoursDays component*@
+                        <BusinessHoursDays BusinessHourDays="businessDays"></BusinessHoursDays>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card shadow-none border my-4">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-3 mb-md-0"><span class="far fa-clock me-2"></span>Event Calendar View </h5>
+                    </div>
+                    <div class="col-md-auto"><span class="btn btn-sm btn-primary" @onclick="SaveEventCalendarView">Save</span></div>
+                </div>
+            </div>
+            <div class="card-body">
+                <form>
+                    <div id="calendarViewDaysContainer">
+                        @*Using BusinessHoursDays component*@
+                        <BusinessHoursDays BusinessHourDays="eventCalendarViewDays"></BusinessHoursDays>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    bool isDisabledModalVisible = false;
+    private bool FirstRender { get; set; }
+    private bool SpinnerVisibility { get; set; } = false;
+    Member currentMember = new Member();
+    private int CurrentBusinessProperty { get; set; }
+    List<BusinessHoursViewModel> businessDays = new List<BusinessHoursViewModel>();
+    List<BusinessPropertyModel> businessProperties = new List<BusinessPropertyModel>();
+    List<BusinessHoursViewModel> eventCalendarViewDays = new List<BusinessHoursViewModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        FirstRender = true;
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get business property data
+        var businessPropertyResponse = await _propertyViewModel.GetBusinessProperties(currentMember.Id);
+        CurrentBusinessProperty = businessPropertyResponse?.FirstOrDefault()?.Id ?? 0;
+        businessProperties = businessPropertyResponse ?? new List<BusinessPropertyModel>();
+
+        //Get business property settings for By Appointment Only
+        var businessPropertySettingsResponse = await _businessPropertyViewModel.GetBusinessPropertySettingsAsync(CurrentBusinessProperty, BusinessPropertySettingsMetaNamespace.PropertySettings, BusinessPropertySettingsMetaKey.Appointmentkey);
+        isDisabledModalVisible = Convert.ToBoolean(businessPropertySettingsResponse?.data?.MetaValue ?? "true");
+
+        //Get Business Hours View detail for all week days
+        var businessHoursResponse = await _hoursViewModel.GetBusinessHours(CurrentBusinessProperty);
+
+        //Get Event Calendar View detail for all week days
+        var eventCalendarViewResponse = await _eventCalendarViewViewModel.GetEventCalendarHours(CurrentBusinessProperty);
+
+        businessDays = businessHoursResponse?.data ?? new List<BusinessHoursViewModel>();
+        eventCalendarViewDays = eventCalendarViewResponse?.data ?? new List<BusinessHoursViewModel>();
+        SpinnerVisibility = false;
+    }
+
+    /// <summary>
+    /// Add/Update Business Setting on "By Appointment Only" toggle
+    /// </summary>
+    /// <returns></returns>
+    public async Task ByAppointmentChangeHandler()
+    {
+        SpinnerVisibility = true;
+        var response = await _businessPropertyViewModel.CreateBusinessPropertySettingsAsync(
+                   new BusinessPropertySettingsRequestModel
+                   {
+                       BusinessPropertyId = CurrentBusinessProperty,
+                       MetaNamespace = BusinessPropertySettingsMetaNamespace.PropertySettings,
+                       MetaKey = BusinessPropertySettingsMetaKey.Appointmentkey,
+                       Title = Constants.AppointmentSettingTitle,
+                       MetaValue = Convert.ToString(isDisabledModalVisible),
+                       ValueType = Convert.ToInt32(ValueTypeEnum.Boolean),
+                       Description = string.Empty
+                   });
+        SpinnerVisibility = false;
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+
+    public async Task OnBusinessPropertyDropdownChange(ChangeEventArgs<int, BusinessPropertyModel> eventArgs)
+    {
+        if (!FirstRender)
+        {
+            SpinnerVisibility = true;
+            CurrentBusinessProperty = eventArgs.ItemData.Id;
+
+            //Get business property settings for By Appointment Only
+            var businessSettingsResponse = await _businessPropertyViewModel.GetBusinessPropertySettingsAsync(CurrentBusinessProperty, BusinessPropertySettingsMetaNamespace.PropertySettings, BusinessPropertySettingsMetaKey.Appointmentkey);
+            isDisabledModalVisible = Convert.ToBoolean(businessSettingsResponse?.data?.MetaValue ?? "true");
+
+            BusinessHoursResponse businessHoursResponse = await _hoursViewModel.GetBusinessHours(CurrentBusinessProperty);
+            businessDays = businessHoursResponse?.data ?? new List<BusinessHoursViewModel>();
+
+            EventCalendarHoursResponse eventCalendarViewResponse = await _eventCalendarViewViewModel.GetEventCalendarHours(CurrentBusinessProperty);
+            eventCalendarViewDays = eventCalendarViewResponse?.data ?? new List<BusinessHoursViewModel>();
+            SpinnerVisibility = false;
+        }
+        else
+            FirstRender = false;
+    }
+
+    /// <summary>
+    /// Add/update Business Hours for all week days
+    /// In this request we will pass two BusinessHour object for both open and close times
+    /// </summary>
+    /// <returns></returns>
+    public async Task SaveBusinessHours()
+    {
+        SpinnerVisibility = true;
+        List<BusinessHour> openCloseHours = new List<BusinessHour>();
+        foreach (string dayState in new List<string>() { "Open", "Close" })
+        {
+            BusinessHour businessHour = new BusinessHour();
+            businessHour.BusinessPropertyId = CurrentBusinessProperty;
+            businessHour.OpenClosed = dayState;
+
+            businessHour = (BusinessHour)Helper.BusinessHoursDayMapping<BusinessHour>(businessDays, businessHour, dayState);
+            openCloseHours.Add(businessHour);
+        }
+        var response = await _hoursViewModel.AddUpdateBusinessHour(openCloseHours);
+        SpinnerVisibility = false;
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+
+    /// <summary>
+    ///  Add/update Event Calendar View for all week days
+    ///  In this request we will pass two EventCalendarView object for both open and close times
+    /// </summary>
+    /// <returns></returns>
+    public async Task SaveEventCalendarView()
+    {
+        SpinnerVisibility = true;
+        List<EventCalendarView> eventCalendarViews = new List<EventCalendarView>();
+        foreach (string dayState in new List<string>() { "Open", "Close" })
+        {
+            EventCalendarView eventCalendarView = new EventCalendarView();
+            eventCalendarView.BusinessPropertyId = CurrentBusinessProperty;
+            eventCalendarView.OpenClosed = dayState;
+
+            eventCalendarView = (EventCalendarView)Helper.BusinessHoursDayMapping<EventCalendarView>(eventCalendarViewDays, eventCalendarView, dayState);
+            eventCalendarViews.Add(eventCalendarView);
+        }
+        var response = await _eventCalendarViewViewModel.AddUpdateEventCalendarHours(eventCalendarViews);
+        SpinnerVisibility = false;
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+}

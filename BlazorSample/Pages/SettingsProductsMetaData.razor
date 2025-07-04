@@ -1,0 +1,390 @@
+﻿@page "/settings/product-meta-data"
+@page "/settings/club-shipment-meta-data"
+@page "/settings/customer-meta-data"
+@page "/settings/order-meta-data"
+@page "/settings/subscription-meta-data"
+@page "/settings/team-member-meta-data"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Entities.v4;
+@using Syncfusion.Blazor.DropDowns;
+@using System.Text.RegularExpressions
+@using CellarPassAppAdmin.Shared.Models.RequestModel;
+@using CellarPassAppAdmin.Shared.Enums;
+@using AutoMapper;
+@inject IMapper _mapper
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject IBusinessMetaDataViewModel _businessMetaDataViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject IGuestTagViewModel _guestTagViewModel
+@inject NavigationManager navManager
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings/meta-data-types" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-database me-2"></span>Meta Data- @headerText</h5>
+            </div>
+            <div class="col-auto" hidden="@(Category != (int)MetaDataCategory.Product)"><a href="/settings/product-type-meta-data" class="btn btn-sm btn-outline-primary">Product Type Mapping</a></div>
+            <div class="col-auto"><button class="btn btn-sm btn-primary" type="button" @onclick="@(() => OpenMetaDialog(0))">Add New</button></div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="sf-grid min-vh-75">
+            <SfGrid @ref="shipmentItemGrid" DataSource="@businessMetaDataList" Width="100%" class="border-x-0" AllowRowDragAndDrop="@allowRowDragAndDrop">
+                <GridEvents RowDropped="RowDropHandler" TValue="BusinessMetaDataModel" />
+                <GridColumns>
+                    <GridColumn Visible="false" Field=@nameof(BusinessMetaDataModel.Id) HeaderText="Id" IsPrimaryKey="true" TextAlign="TextAlign.Left" Width="20" />
+                    <GridColumn HeaderText="Meta Name" TextAlign="TextAlign.Left" Width="70">
+                        <Template Context="BusinessTagContext">
+                            @{
+                                var businessTag = (BusinessTagContext as BusinessMetaDataModel);
+                                <a href="javascript:void(0)" @onclick="@(() => OpenMetaDialog(businessTag.Id))">@businessTag.Name</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="" TextAlign="TextAlign.Left" Width="20">
+                        <Template Context="BusinessTagContext">
+                            @{
+                                var businessTag = (BusinessTagContext as BusinessMetaDataModel);
+                                if (businessTag.Category != (int)MetaDataCategory.Product)
+                                {
+                                    <button class="delete_icon" hidden="@(!businessTag.IsActive)">
+                                        <span class="far fa-eye"></span>
+                                    </button>
+                                }
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn HeaderText="Data Format" TextAlign="TextAlign.Left" Width="30">
+                        <Template Context="BusinessTagContext">
+                            @{
+                                //text (1), date (2), choice (3), price (4), url (5), boolean (6)
+                                var contentType = (BusinessTagContext as BusinessMetaDataModel).ContentType;
+                                if (contentType == (int)MetaDataContentType.Text)
+                                {
+                                    <span>Text Box</span>
+                                }
+                                else if (contentType == (int)MetaDataContentType.Date)
+                                {
+                                    <span>Date</span>
+                                }
+                                else if (contentType == (int)MetaDataContentType.Choice)
+                                {
+                                    <span>Dropdown</span>
+                                }
+                                else if (contentType == (int)MetaDataContentType.Price)
+                                {
+                                    <span>Price </span>
+                                }
+                                else if (contentType == (int)MetaDataContentType.Url)
+                                {
+                                    <span>URL</span>
+                                }
+                                else if (contentType == (int)MetaDataContentType.Boolean)
+                                {
+                                    <span>Switch</span>
+                                }
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(BusinessMetaDataModel.DataKey) HeaderText="Namespace / Key" TextAlign="TextAlign.Left" Width="70"></GridColumn>
+                    <GridColumn Field=@nameof(BusinessMetaDataModel.Description) HeaderText="Description" TextAlign="TextAlign.Left" Width="70"></GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+</div>
+
+
+<MetaDataModal @ref="ChildComponent" OnDialogClose="CloseMetaDialog" OnValidSubmit="MetaModalSubmit" MetaDialogVisible="IsMetaDialogVisible" BusinessMetaData="businessMetaData"></MetaDataModal>
+
+@code
+{
+    private bool SpinnerVisibility { get; set; } = true;
+    public string headerText = "";
+    private string title = " Meta Data | Synergy Commerce Admin Panel";
+    private bool IsMetaDialogVisible = false;
+
+    protected MetaDataModal ChildComponent;
+    private int Category;
+    private bool allowRowDragAndDrop = false;
+    SfGrid<BusinessMetaDataModel> shipmentItemGrid;
+
+    private Member currentMember = new Member();
+    ObservableCollection<BusinessMetaDataModel> businessMetaDataList = new ObservableCollection<BusinessMetaDataModel>();
+    BusinessMetaDataRequestModel businessMetaData = new BusinessMetaDataRequestModel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        //Get Current Member
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        var uri = navManager.ToAbsoluteUri(navManager.Uri).ToString().ToLower();
+
+        if (uri.Contains("/product-meta-data"))
+        {
+            Category = (int)MetaDataCategory.Product;
+            allowRowDragAndDrop = false;
+            headerText = "Products";
+        }
+        else if (uri.Contains("/club-shipment-meta-data"))
+        {
+            Category = (int)MetaDataCategory.ClubShipment;
+            allowRowDragAndDrop = true;
+            headerText = "Club Shipments";
+        }
+        else if (uri.Contains("/customer-meta-data"))
+        {
+            Category = (int)MetaDataCategory.Customer;
+            allowRowDragAndDrop = true;
+            headerText = "Customers";
+        }
+        else if (uri.Contains("/order-meta-data"))
+        {
+            Category = (int)MetaDataCategory.Order;
+            allowRowDragAndDrop = true;
+            headerText = "Orders";
+        }
+        else if (uri.Contains("/subscription-meta-data"))
+        {
+            Category = (int)MetaDataCategory.Subscription;
+            allowRowDragAndDrop = true;
+            headerText = "Subscriptions";
+        }
+        else if (uri.Contains("/team-member-meta-data"))
+        {
+            Category = (int)MetaDataCategory.TeamMember;
+            allowRowDragAndDrop = true;
+            headerText = "Team Members";
+        }
+
+        title = headerText + title;
+
+        await GetBusinessMetaData();
+        SpinnerVisibility = false;
+        StateHasChanged();
+    }
+
+    private async Task GetBusinessMetaData()
+    {
+        var response = await _businessMetaDataViewModel.GetBusinessMetaDataListAsync(currentMember.Id, Category);
+
+        if (response.data != null && response.data.Count > 0)
+        {
+            if (Category == (int)MetaDataCategory.Product)
+            {
+                response.data = response.data.OrderBy(x => x.Name).ToList();
+            }
+            else
+            {
+                response.data = response.data.OrderBy(x => x.SortOrder).ToList();
+            }
+            businessMetaDataList = new ObservableCollection<BusinessMetaDataModel>(_mapper.Map<List<BusinessMetaDataModel>>(response.data));
+        }
+    }
+
+    private void OpenMetaDialog(int id)
+    {
+        if (id > 0)
+        {
+            var response = businessMetaDataList.Where(x => x.Id == id).FirstOrDefault();
+            if (response != null)
+            {
+                businessMetaData = new BusinessMetaDataRequestModel
+                {
+                    Id = response.Id,
+                    BusinessId = response.BusinessId,
+                    Category = response.Category,
+                    Name = response.Name,
+                    Description = response.Description,
+                    ContentType = response.ContentType,
+                    ContentChoices = response.ContentChoices,
+                    DefaultValue = response.DefaultValue,
+                    IsPublic = response.IsPublic,
+                    DataKey = response.DataKey,
+                    OnLabel = response.OnLabel,
+                    OffLabel = response.OffLabel,
+                    IsActive = response.IsActive,
+                };
+                if (!string.IsNullOrEmpty(businessMetaData.ContentChoices))
+                {
+                    businessMetaData.MetaDropdownItemData = System.Text.Json.JsonSerializer.Deserialize<ObservableCollection<MetaDropdownItem>>(businessMetaData.ContentChoices);
+                }
+            }
+        }
+        else
+        {
+            businessMetaData = new BusinessMetaDataRequestModel
+            {
+                Id = 0,
+                ContentType = (int)MetaDataContentType.Text,
+                BusinessId = currentMember.Id,
+                Category = Category,
+                Description = "",
+            };
+        }
+        IsMetaDialogVisible = true;
+        StateHasChanged();
+        ChildComponent.RefreshMe();
+    }
+
+    private void CloseMetaDialog()
+    {
+        IsMetaDialogVisible = false;
+    }
+
+    private async Task MetaModalSubmit()
+    {
+        Console.WriteLine(businessMetaData.Id);
+        Console.WriteLine(businessMetaData.Name);
+
+        if (businessMetaData.Id <= 0)
+        {
+            var name = businessMetaData.Name.ToLower().Replace(" ", "_");
+            Console.WriteLine(name);
+            name = Regex.Replace(name, @"[^0-9a-zA-Z_\-.]+", "");
+            Console.WriteLine(name);
+            var fieldName = "";
+            if (businessMetaData.Category == (int)MetaDataCategory.Product)
+            {
+                fieldName = "meta_product.";
+            }
+            else if (businessMetaData.Category == (int)MetaDataCategory.ClubShipment)
+            {
+                fieldName = "meta_club_shipment.";
+            }
+            else if (businessMetaData.Category == (int)MetaDataCategory.Customer)
+            {
+                fieldName = "meta_customer.";
+            }
+            else if (businessMetaData.Category == (int)MetaDataCategory.Order)
+            {
+                fieldName = "meta_order.";
+            }
+            else if (businessMetaData.Category == (int)MetaDataCategory.Subscription)
+            {
+                fieldName = "meta_subscription.";
+            }
+            else if (businessMetaData.Category == (int)MetaDataCategory.TeamMember)
+            {
+                fieldName = "meta_team_member.";
+            }
+            Console.WriteLine(fieldName);
+            businessMetaData.DataKey = fieldName + name;
+        }
+
+        var isNameAlreadyExist = businessMetaDataList.Any(x => x.DataKey.ToLower() == businessMetaData.DataKey.ToLower() && x.Id != businessMetaData.Id);
+        if (isNameAlreadyExist)
+        {
+            toastService.ShowToast("Meta data key must be unique.", ToastLevel.Error);
+        }
+        else
+        {
+            SpinnerVisibility = true;
+            if (businessMetaData.ContentType != (int)MetaDataContentType.Choice)
+            {
+                businessMetaData.ContentChoices = "";
+                if (businessMetaData.DefaultValue == null)
+                {
+                    businessMetaData.DefaultValue = "";
+                }
+            }
+            else
+            {
+                businessMetaData.DefaultValue = "";
+            }
+            var response = await _businessMetaDataViewModel.AddUpdateBusinessMetaDataAsync(businessMetaData);
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                IsMetaDialogVisible = false;
+                await GetBusinessMetaData();
+                StateHasChanged();
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.extra_info, ToastLevel.Error);
+            }
+            SpinnerVisibility = false;
+        }
+    }
+
+    public async Task RowDropHandler(RowDragEventArgs<BusinessMetaDataModel> args)
+    {
+        var selectedID = args.Data[0].Id;
+        var dropIndex = (int)args.DropIndex + 1;
+
+        BusinessMetaDataSortRequestModel request = new BusinessMetaDataSortRequestModel();
+
+        request.BusinessMetaDataSortData = new List<BusinessMetaDataSortModel>();
+        int sortOrder = 0;
+        foreach (var item in businessMetaDataList.Where(x => x.Id != selectedID))
+        {
+            sortOrder++;
+            if (dropIndex == sortOrder)
+            {
+                sortOrder++;
+            }
+            request.BusinessMetaDataSortData.Add(new BusinessMetaDataSortModel
+            {
+                Id = item.Id,
+                SortOrder = sortOrder
+            });
+
+        }
+        request.BusinessMetaDataSortData.Add(new BusinessMetaDataSortModel
+        {
+            Id = selectedID,
+            SortOrder = dropIndex
+        });
+
+
+        BaseResponse response = await _businessMetaDataViewModel.SaveBusinessMetaDataSortOrder(request);
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        SpinnerVisibility = false;
+        StateHasChanged();
+    }
+
+
+    ////Placeholder Data
+    //public class MetaData
+    //{
+    //    public int Id { get; set; }
+    //    public string MetaName { get; set; }
+    //    public string DataFormat { get; set; }
+    //    public string Namespace { get; set; }
+    //    public string Description { get; set; }
+    //}
+    ////Placeholder Data
+    //public List<MetaData> MetaDataList = new List<MetaData>(){
+    //    new MetaData(){ Id=0, MetaName= "Vintage", DataFormat= "Date",  Namespace="my_fields.vintage", Description="Used on wine products" },
+    //    new MetaData(){ Id=1, MetaName= "Varietals", DataFormat= "Dropdown",  Namespace="my_fields.wholesale_price", Description="Stores wholesale price" },
+    //    new MetaData(){ Id=2, MetaName= "Investor Price", DataFormat= "Price",  Namespace="my_fields.investor_price", Description="Price for Investors" },
+    //    new MetaData(){ Id=3, MetaName= "Member Exclusive", DataFormat= "Switch",  Namespace="my_fields.member_exclusive", Description="Is product exclusive to members" },
+    //    new MetaData(){ Id=4, MetaName= "Robert Parker Score", DataFormat= "Text Box",  Namespace="my_fields.robert_parker_score", Description="Displays Parker score on wines" },
+    //    new MetaData(){ Id=5, MetaName= "Link to Recipe", DataFormat= "URL",  Namespace="my_fields.link_to_recipe", Description="Displays link to recipe" },
+    //    new MetaData(){ Id=6, MetaName= "Link to Book Virtual Tasting", DataFormat= "URL",  Namespace="my_fields.link_to_book", Description="Displays link to book virtual tasting" },
+    //    new MetaData(){ Id=7, MetaName = "On Demand Video", DataFormat= "URL",  Namespace="my_fields.on_demand_video", Description="Displays link to winemaker’s video" }
+    //};
+
+}

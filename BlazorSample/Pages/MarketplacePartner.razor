@@ -1,0 +1,299 @@
+﻿@page "/marketplace/partner/{Id:guid}"
+@page "/Avalara-marketplace/partner/{Id:guid}"
+@page "/ShipCompliant-marketplace/partner/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA
+@using CellarPassAppAdmin.Client.ViewModels.SA;
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Microsoft.Extensions.Configuration;
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISaIntegrationPartnerViewModel _saIntegrationPartnerViewModel
+@inject NavigationManager _navigationManager
+@inject IConfiguration configuration
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="spinnerVisibility"></SfSpinner>
+        <div class="card">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-auto">
+
+                        <div class="d-flex">
+                            <div class="p-2 flex-fill">
+                                <a href="marketplace" class="btn btn-falcon-default btn-sm px-2" title="Back"><span class="far fa-arrow-left"></span></a>
+                            </div>
+                            <div class="p-2 flex-fill">
+                                <div class="d-flex align-items-center">
+                                    <img src="@(string.IsNullOrEmpty(integrationPartner.ImageURL)? "https://via.placeholder.com/50x50.png?text=%20": integrationPartner.ImageURL)" class="rounded me-2" alt="@integrationPartner.AppName" width="50" />
+                                    <div class="flex-1 position-relative">
+                                        <h5 class="">@integrationPartner.AppName</h5>
+                                        <h6 class="">by @integrationPartner.Company</h6>
+                                        <p class="mb-1 fs--2 text-uppercase text-400">
+                                            @categories
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="col-md-auto">
+                        <button @onclick="NavigateToConfiguration" class="btn btn-outline-dark me-2">Configure</button>
+                        @if (integrationPartner.AppName == "Shippo")
+                        {
+                            <a href="https://goshippo.com/oauth/authorize?response_type=code&client_id=@shippoClientId&scope=*&state=@shippoState" class="btn btn-success">Authorize</a>
+                        }
+                        else
+                        {
+                            <a href="#!" class="btn btn-success">Installed</a>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(screenshot1URL) || !string.IsNullOrEmpty(screenshot2URL) || !string.IsNullOrEmpty(screenshot3URL))
+                {
+                    <div class="row">
+                        @if (!string.IsNullOrEmpty(screenshot1URL))
+                        {
+                            <div class="col-4" style="cursor: pointer;">
+                                <img @onclick="@(()=>OpenModal(screenshot1URL))" src="@(screenshot1URL)" class="img-fluid rounded" alt="Screenshot 1">
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(screenshot2URL))
+                        {
+                            <div class="col-4" style="cursor: pointer;">
+                                <img @onclick="@(()=>OpenModal(screenshot2URL))" src="@(screenshot2URL)" class="img-fluid rounded" alt="Screenshot 2">
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(screenshot3URL))
+                        {
+                            <div class="col-4" style="cursor: pointer;">
+                                <img @onclick="@(()=>OpenModal(screenshot3URL))" src="@(screenshot3URL)" class="img-fluid rounded" alt="Screenshot 3">
+                            </div>
+                        }
+                    </div>
+                    <hr class="mb-4" />
+                }
+
+                <div class="mb-4">
+                    <h5>Description</h5>
+                    <p>
+                        @integrationPartner.LongDesc
+                    </p>
+                </div>
+
+                <div class="mb-4">
+                    <h5>Highlights</h5>
+                    <ul class="pt-2 fs--1">
+                        @foreach (var highlight in integrationPartner?.IntegrationPartnerHighlights ?? new List<IntegrationPartnerHighlight>())
+                        {
+                            <li>@highlight.Highlight</li>
+                        }
+                    </ul>
+                </div>
+
+                <div class="mb-4">
+                    <h5>More Information</h5>
+                    <ul class="list-inline pt-3 fs--1">
+                        @if (!string.IsNullOrEmpty(integrationPartner.PrivacyPolicyURL))
+                        {
+                            <li class="list-inline-item me-4"><i class="fa-regular fa-arrow-up-right-from-square me-2"></i><a href="@integrationPartner.PrivacyPolicyURL" target="_blank">Privacy Policy</a></li>
+                        }
+                        @if (!string.IsNullOrEmpty(integrationPartner.TermsOfUseURL))
+                        {
+                            <li class="list-inline-item me-4"><i class="fa-regular fa-arrow-up-right-from-square me-2"></i><a href="@integrationPartner.TermsOfUseURL" target="_blank">Terms of Use</a></li>
+                        }
+                        @if (!string.IsNullOrEmpty(integrationPartner.SupportURL))
+                        {
+                            <li class="list-inline-item me-4"><i class="fa-regular fa-arrow-up-right-from-square me-2"></i><a href="@integrationPartner.SupportURL" target="_blank">Customer Support</a></li>
+                        }
+                        @if (!string.IsNullOrEmpty(integrationPartner.PricingInfoURL))
+                        {
+                            <li class="list-inline-item me-4"><i class="fa-regular fa-arrow-up-right-from-square me-2"></i><a href="@integrationPartner.PricingInfoURL" target="_blank">Pricing &amp; Info</a></li>
+                        }
+                    </ul>
+                </div>
+                <div class="mb-4">
+                    @if (!string.IsNullOrEmpty(integrationPartner.UserGuideURL))
+                    {
+                        <a href="@integrationPartner.UserGuideURL" target="_blank" class="btn btn-outline-dark me-2">User Guide</a>
+                    }
+                </div>
+            </div>
+        </div>
+
+    </Authorized>
+</AuthorizeView>
+
+
+
+<SfDialog IsModal="true" ShowCloseIcon="true" @bind-Visible="ModalVisibility">
+    <DialogTemplates>
+        <Content>
+            <div class="text-center">
+                <img src="@imageURL" class="" alt="Screenshot">
+            </div>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private Boolean spinnerVisibility;
+    private string title = "Marketplace Partner | Synergy Commerce Admin Panel";
+    private IntegrationPartnerRequestModel integrationPartner = new IntegrationPartnerRequestModel();
+    string categories = string.Empty;
+    string screenshot1URL = string.Empty;
+    string screenshot2URL = string.Empty;
+    string screenshot3URL = string.Empty;
+    private string shippoClientId { get; set; }
+    private string shippoState { get; set; }
+    private string shippoRedirectUri { get; set; }
+    private Member currentMember = new Member();
+    private bool ModalVisibility { get; set; } = false;
+    string imageURL = string.Empty;
+    private void OpenModal(string uRL)
+    {
+        imageURL = uRL;
+        this.ModalVisibility = true;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        spinnerVisibility = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        if (Id != null)
+        {
+            var partnerDetail = await _saIntegrationPartnerViewModel.GetIntegrationPartnerDetail(Id.Value);
+            if (partnerDetail.success && partnerDetail?.data != null)
+            {
+                integrationPartner = partnerDetail.data;
+                if (partnerDetail.data?.IntegrationPartnerCategories?.Count > 0)
+                    categories = string.Join(", ", integrationPartner?.IntegrationPartnerCategories?.Select(x => x.CategoryName)?.ToList());
+                screenshot1URL = integrationPartner.IntegrationPartnerScreenshots.Count > 0 ? integrationPartner.IntegrationPartnerScreenshots[0].ImageName : string.Empty;
+                screenshot2URL = integrationPartner.IntegrationPartnerScreenshots.Count > 1 ? integrationPartner.IntegrationPartnerScreenshots[1].ImageName : string.Empty;
+                screenshot3URL = integrationPartner.IntegrationPartnerScreenshots.Count > 2 ? integrationPartner.IntegrationPartnerScreenshots[2].ImageName : string.Empty;
+                if (integrationPartner.AppName == "Shippo")
+                {
+                    shippoClientId = configuration["App:ShippoClientId"];
+                    shippoState = currentMember.Id.ToString();
+                    shippoRedirectUri = configuration["App:ShippoRedirectUri"];
+                }
+            }
+        }
+        spinnerVisibility = false;
+    }
+
+    private void NavigateToConfiguration()
+    {
+        string fedexPartnerID = configuration["App:FedExPartnerID"];
+        string uspsPartnerID = configuration["App:USPSPartnerID"];
+        string upsPartnerID = configuration["App:UPSPartnerID"];
+        if (Id != null)
+        {
+            if (integrationPartner.AppName.ToLower() == IntegratedPartners.AdvancedManagementSystems.ToLower() || integrationPartner.AppName == IntegratedPartners.AMS.ToLower())
+            {
+                _navigationManager.NavigateTo("settings/integrated-partners/ams/" + Id.Value);
+            }
+            else if (integrationPartner.AppName.ToLower() == IntegratedPartners.BigCommerce.ToLower())
+            {
+                _navigationManager.NavigateTo("settings/integrated-partners/bigcommerce/" + Id.Value);
+            }
+            else if (integrationPartner.AppName.ToLower() == IntegratedPartners.Commerce7.ToLower())
+            {
+                _navigationManager.NavigateTo("settings/integrated-partners/commerce7/" + Id.Value);
+            }
+            else if (integrationPartner.AppName.ToLower() == IntegratedPartners.WineSoftwareByMicroworks.ToLower())
+            {
+                _navigationManager.NavigateTo("settings/integrated-partners/microworks/" + Id.Value);
+            }
+            else if (integrationPartner.AppName.ToLower() == IntegratedPartners.OrderPort.ToLower())
+            {
+                _navigationManager.NavigateTo("settings/integrated-partners/orderport/" + Id.Value);
+            }
+            else if (integrationPartner.AppName.ToLower() == IntegratedPartners.Shopify.ToLower())
+            {
+                _navigationManager.NavigateTo("settings/integrated-partners/shopify/" + Id.Value);
+            }
+            else if (integrationPartner.AppName.ToLower() == IntegratedPartners.VinSUITE.ToLower())
+            {
+                _navigationManager.NavigateTo("settings/integrated-partners/vinsuite/" + Id.Value);
+            }
+            else if (integrationPartner.AppName.ToLower() == IntegratedPartners.WineDirect.ToLower())
+            {
+                _navigationManager.NavigateTo("settings/integrated-partners/winedirect/" + Id.Value);
+            }
+            else if (integrationPartner.AppName.ToLower() == IntegratedPartners.Zoom.ToLower())
+            {
+                _navigationManager.NavigateTo("settings/integrated-partners/zoom/" + Id.Value);
+            }
+            else if (integrationPartner.AppName.ToLower() == IntegratedPartners.Mailchimp.ToLower())
+            {
+                _navigationManager.NavigateTo("settings/integrated-partners/mailchimp/" + Id.Value);
+            }
+            else if (integrationPartner.AppName.ToLower() == IntegratedPartners.Facebook.ToLower())
+            {
+                _navigationManager.NavigateTo("settings/integrated-partners/facebook/" + Id.Value);
+            }
+            else if (integrationPartner.AppName.ToLower() == IntegratedPartners.Yelp.ToLower())
+            {
+                _navigationManager.NavigateTo("settings/integrated-partners/yelp/" + Id.Value);
+            }
+            else if (integrationPartner.AppName.ToLower() == IntegratedPartners.Pinterest.ToLower())
+            {
+                _navigationManager.NavigateTo("settings/integrated-partners/pinterest/" + Id.Value);
+            }
+            else if (integrationPartner.AppName.ToLower() == IntegratedPartners.Twitter.ToLower())
+            {
+                _navigationManager.NavigateTo("settings/integrated-partners/twitter/" + Id.Value);
+            }
+            else if (integrationPartner.AppName.ToLower() == IntegratedPartners.YouTube.ToLower())
+            {
+                _navigationManager.NavigateTo("settings/integrated-partners/youTube/" + Id.Value);
+            }
+            else if (integrationPartner.AppName.ToLower() == IntegratedPartners.TripAdvisor.ToLower())
+            {
+                _navigationManager.NavigateTo("settings/integrated-partners/tripAdvisor/" + Id.Value);
+            }
+            else if (integrationPartner.AppName.ToLower() == IntegratedPartners.Instagram.ToLower())
+            {
+                _navigationManager.NavigateTo("settings/integrated-partners/instagram/" + Id.Value);
+            }
+            else if (integrationPartner.AppName.ToLower() == IntegratedPartners.ShipCompliant.ToLower() || integrationPartner.AppName.ToLower() == IntegratedPartners.Avalara.ToLower())
+            {
+                _navigationManager.NavigateTo("settings/sales-tax-service/" + Id.Value);
+            }
+            else if (Id.Value.ToString() == fedexPartnerID)
+            {
+                _navigationManager.NavigateTo("settings/configure-shipping-fedex/" + Id.Value);
+            }
+            else if (Id.Value.ToString() == uspsPartnerID)
+            {
+                _navigationManager.NavigateTo("settings/configure-shipping-usps/" + Id.Value);
+            }
+            else if (Id.Value.ToString() == upsPartnerID)
+            {
+                _navigationManager.NavigateTo("settings/configure-shipping-ups/" + Id.Value);
+            }
+            else if (integrationPartner.AppName.ToLower() == IntegratedPartners.GoogleAnalytics.ToLower())
+            {
+                _navigationManager.NavigateTo("settings/integrated-partners/google/" + Id.Value);
+            }
+        }
+    }
+}

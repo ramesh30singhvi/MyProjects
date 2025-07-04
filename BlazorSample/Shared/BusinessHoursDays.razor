@@ -1,0 +1,65 @@
+﻿@page "/businesshoursdays"
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+
+<div class="row">
+    <div class="col offset-3 ">
+        <h6>Open</h6>
+    </div>
+    <div class="col">
+        <h6>Close</h6>
+    </div>
+</div>
+@foreach (var day in BusinessHourDays)
+{
+    <div class="row my-3">
+        <div class="col-12 col-md-2">
+            <label for="@("switch"+ day.DayOfWeek)" class="col-auto col-form-label">@day.DayOfWeek</label>
+        </div>
+        <div class="col-3 col-md-1">
+            <div class="form-check form-switch ps-0">
+                <SfSwitch @bind-Checked="day.IsOpen" ValueChange="@((Syncfusion.Blazor.Buttons.ChangeEventArgs<bool> e) => OnSwitchToggleHandler(e, day))" OnLabel="Open" OffLabel="Closed" CssClass="p-2" TChecked="bool"></SfSwitch>
+            </div>
+        </div>
+        <div class="col gx-1 gx-md-4 @(day.IsOpen ? "" : "hideeffect" )">
+            <SfTimePicker CssClass="hours-time-picker" AllowEdit="false" Max="day.OpenMaxVal" @bind-Value="day.OpenDateTime" PlaceHolder="Opens at">
+                <TimePickerEvents TValue="DateTime?" ValueChange="()=>OpenValueChangeHandler(day)"></TimePickerEvents>
+            </SfTimePicker>
+        </div>
+        <div class="col gx-1 gx-md-4 @(day.IsOpen ? "" : "hideeffect" )">
+            <SfTimePicker CssClass="hours-time-picker" AllowEdit="false" Min="day.CloseMinVal" @bind-Value="day.CloseDateTime" PlaceHolder="Closes at">
+                <TimePickerEvents TValue="DateTime?" ValueChange="()=>CloseValueChangeHandler(day)"></TimePickerEvents>
+            </SfTimePicker>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public List<BusinessHoursViewModel> BusinessHourDays { get; set; }
+    /// <summary>
+    /// Set minimum range for close time dropdown
+    /// </summary>
+    /// <param name="businessDay"></param>
+    public void OpenValueChangeHandler(BusinessHoursViewModel businessDay)
+    {
+        if (businessDay.OpenDateTime != null)
+            businessDay.CloseMinVal = businessDay.OpenDateTime.Value.AddMinutes(30);
+    }
+    /// <summary>
+    ///  Set maximum range for open time dropdown
+    /// </summary>
+    /// <param name="businessDay"></param>
+    public void CloseValueChangeHandler(BusinessHoursViewModel businessDay)
+    {
+        if (businessDay.CloseDateTime != null)
+            businessDay.OpenMaxVal = businessDay.CloseDateTime.Value.AddMinutes(-30);
+    }
+
+    public void OnSwitchToggleHandler(Syncfusion.Blazor.Buttons.ChangeEventArgs<bool> e, BusinessHoursViewModel businessDay)
+    {
+        if (e.Checked && businessDay?.OpenDateTime == null)
+            businessDay.OpenDateTime = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 10, 00, 00);
+        if (e.Checked && businessDay?.CloseDateTime == null)
+            businessDay.CloseDateTime = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 17, 00, 00);
+    }
+}

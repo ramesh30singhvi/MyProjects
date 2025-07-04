@@ -1,0 +1,382 @@
+﻿@page "/settings/customer-types"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using System.ComponentModel.DataAnnotations
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel 
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using Blazored.LocalStorage
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject ISettingsViewModel _settingsViewModel
+@inject IBusinessCustomerTypesViewModel _businessCustomerTypesViewModel
+@inject ISaIntegrationPartnerViewModel _saIntegrationPartnerViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ToastService toastService
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+        @{
+            if (!string.IsNullOrWhiteSpace(settings.MetaValue) && settings.MetaValue.ToLower().Equals((integrationPartner.PartnerGUID != Guid.Empty) ? integrationPartner.PartnerGUID.ToString() : Guid.NewGuid().ToString()))
+            {
+                <div class="card mb-4">
+                    <div class="card-header border-bottom">
+                        <div class="row justify-content-between">
+                            <div class="col-md-auto">
+                                <h5 class="mb-3 mb-md-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-users me-2"></span>Customer Types</h5>
+                            </div>
+                            <div class="col-md-auto"><a class="btn btn-sm btn-primary" href="javascript:void();" @onclick="() => OpenCreateAccountTypeModal(0)">Add New</a></div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+
+                        <div class="table-responsive scrollbar">
+                            <table class="table fs--1 mb-0">
+                                <thead class="bg-200 text-900">
+                                    <tr>
+                                        <th class="pe-1 align-middle white-space-nowrap">Customer Type</th>
+                                        @* <th class="pe-1 align-middle white-space-nowrap">Club Member</th>*@
+                                        <th class="pe-1 align-middle white-space-nowrap"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="" id="table-locations-body">
+                                    @{
+                                        foreach (var customerType in customerTypes.OrderBy(x => x.Value))
+                                        {
+                                            <tr>
+                                                <td class="align-middle white-space-nowrap"><a href="javascript:void(0)" @onclick="() => OpenCreateAccountTypeModal(customerType.Id)">@(customerType.Value)</a></td>
+                                                @*<td class="align-middle white-space-nowrap"></td>*@
+                                                <td class="align-middle white-space-nowrap text-end"><a href="javascript:void(0)" @onclick="() => DeleteDialogOpen(customerType.Id)"><span class="far fa-trash-alt"></span></a></td>
+                                            </tr>
+                                        }
+
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="card">
+                    <div class="card-header border-bottom">
+                        <div class="row justify-content-between">
+                            <div class="col-md-auto">
+                                <h5 class="mb-3 mb-md-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-users me-2"></span>3rd Party Account Types</h5>
+                            </div>
+                            <div class="col-md-auto"></div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+
+                        <div class="table-responsive scrollbar">
+                            <table class="table fs--1 mb-0">
+                                <thead class="bg-200 text-900">
+                                    <tr>
+                                        <th class="pe-1 align-middle white-space-nowrap"></th>
+                                        <th class="pe-1 align-middle white-space-nowrap">Contact Type</th>
+                                        <th class="pe-1 align-middle white-space-nowrap">Default</th>
+                                        <th class="pe-1 align-middle white-space-nowrap">UUID</th>
+                                        <th class="pe-1 align-middle white-space-nowrap">Active Club</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="" id="table-locations-body">
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="form-check mb-0 d-flex align-items-center"><input class="form-check-input" type="checkbox" id="chk-enabled-1" data-bulk-select-row="data-bulk-select-row" checked></div>
+                                        </td>
+                                        <td class="align-middle white-space-nowrap">Club Member	</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="form-check"><input class="form-check-input" id="radio-default-1" type="radio" name="radioDefaultGroup" checked /></div>
+                                        </td>
+                                        <td>2f0b2210-7799-446a-9bf4-741d427fa37f</td>
+                                        <td><span class="fas fa-check"></span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="form-check mb-0 d-flex align-items-center"><input class="form-check-input" type="checkbox" id="chk-enabled-2" data-bulk-select-row="data-bulk-select-row"></div>
+                                        </td>
+                                        <td class="align-middle white-space-nowrap">Employee</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="form-check"><input class="form-check-input" id="radio-default-2" type="radio" name="radioDefaultGroup" /></div>
+                                        </td>
+                                        <td>b2e80c3f-7bf5-4e85-87fd-3c48228c7281	</td>
+                                        <td><span class="fas fa-check"></span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="form-check mb-0 d-flex align-items-center"><input class="form-check-input" type="checkbox" id="chk-enabled-3" data-bulk-select-row="data-bulk-select-row"></div>
+                                        </td>
+                                        <td class="align-middle white-space-nowrap">Investor</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="form-check"><input class="form-check-input" id="radio-default-3" type="radio" name="radioDefaultGroup" /></div>
+                                        </td>
+                                        <td>760cad00-001b-4abe-ad9f-0f50751a0910	</td>
+                                        <td><span class="fas fa-check"></span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="form-check mb-0 d-flex align-items-center"><input class="form-check-input" type="checkbox" id="chk-enabled-4" data-bulk-select-row="data-bulk-select-row"></div>
+                                        </td>
+                                        <td class="align-middle white-space-nowrap">New Customer	</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="form-check"><input class="form-check-input" id="radio-default-4" type="radio" name="radioDefaultGroup" /></div>
+                                        </td>
+                                        <td>2f0b2210-7799-446a-9bf4-741d427fa37f</td>
+                                        <td><span class="fas fa-check"></span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="form-check mb-0 d-flex align-items-center"><input class="form-check-input" type="checkbox" id="chk-enabled-5" data-bulk-select-row="data-bulk-select-row"></div>
+                                        </td>
+                                        <td class="align-middle white-space-nowrap">Platinum</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="form-check"><input class="form-check-input" id="radio-default-5" type="radio" name="radioDefaultGroup" /></div>
+                                        </td>
+                                        <td>00ba5204-3f06-4b7d-8862-936cadf6fed8	</td>
+                                        <td><span class="fas fa-check"></span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="form-check mb-0 d-flex align-items-center"><input class="form-check-input" type="checkbox" id="chk-enabled-6" data-bulk-select-row="data-bulk-select-row" checked></div>
+                                        </td>
+                                        <td class="align-middle white-space-nowrap">The Collectors Club	</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="form-check"><input class="form-check-input" id="radio-default-6" type="radio" name="radioDefaultGroup" /></div>
+                                        </td>
+                                        <td>11cc4b72-c18b-4a6c-abd9-693388e04d1b</td>
+                                        <td><span class="fas fa-check"></span></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="form-check mb-0 d-flex align-items-center"><input class="form-check-input" type="checkbox" id="chk-enabled-7" data-bulk-select-row="data-bulk-select-row" checked></div>
+                                        </td>
+                                        <td class="align-middle white-space-nowrap">The Connoisseur Club	</td>
+                                        <td class="align-middle white-space-nowrap">
+                                            <div class="form-check"><input class="form-check-input" id="radio-default-7" type="radio" name="radioDefaultGroup" /></div>
+                                        </td>
+                                        <td>08426222-4b78-4710-a909-a7cffa24e5ee	</td>
+                                        <td><span class="fas fa-check"></span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                </div>
+            }
+        }
+
+        <SfDialog Width="500px" ShowCloseIcon="true" IsModal="true" @bind-Visible="@isAccountTypeModal">
+            <DialogEvents OnOverlayClick="CloseCreateAccountTypeModal">
+            </DialogEvents>
+            <DialogTemplates>
+                <Header>@((addUpdateCustomerType.Id > 0)?"Edit":"Create") Customer Type</Header>
+                <Content>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <EditForm Model="addUpdateCustomerType" @ref="customerTypeForm" Context="formContext">
+                                <DataAnnotationsValidator />
+                                <label class="form-label" for="inputAccountType">Customer Type</label>
+                                <InputText maxlength="128" disabled="@((!string.IsNullOrWhiteSpace(addUpdateCustomerType.Value) && addUpdateCustomerType.Value.Equals(_defaultCustomerType)))" class="form-control" @bind-Value="@addUpdateCustomerType.Value" id="inputAccountType"></InputText>
+                                <ValidationMessage For="() => addUpdateCustomerType.Value" />
+                            </EditForm>
+                        </div>
+                    </div>
+                </Content>
+            </DialogTemplates>
+            <DialogButtons>
+                <DialogButton Content="Cancel" OnClick="@CloseCreateAccountTypeModal" />
+                <DialogButton Content="Save" @onclick="SaveCustomerType" IsPrimary="true" />
+            </DialogButtons>
+        </SfDialog>
+
+    </Authorized>
+</AuthorizeView>
+
+<DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="DeleteCustomerType"></DeleteConfirmation>
+
+
+@code
+{
+    bool isDisabledModalVisible = false;
+
+    private string title = "Customer Types | Synergy Commerce Admin Panel";
+    private Member currentMember = new Member();
+    private List<BusinessConfigurationOptionModel> clubServiceOptions = new List<BusinessConfigurationOptionModel>();
+    const string _clubManagement = "Club Management";
+    IntegrationPartnerModel integrationPartner = new IntegrationPartnerModel();
+    BusinessSettings settings = new BusinessSettings();
+    List<BusinessCustomerTypeModel> customerTypes = new List<BusinessCustomerTypeModel>();
+    [Parameter]
+    public int Id { get; set; }
+    private bool isAccountTypeModal = false;
+    int idForDelete = 0;
+    bool openDeleteDialog = false;
+    bool SpinnerVisibility = false;
+    EditForm customerTypeForm;
+    CustomerTypeAddUpdateModel addUpdateCustomerType = new CustomerTypeAddUpdateModel();
+    const string _defaultCustomerType = "General Customer";
+    private void OpenCreateAccountTypeModal(int id)
+    {
+        SpinnerVisibility = true;
+        if (id > 0)
+        {
+            var existingCustomerType = customerTypes.Where(x => x.Id == id).FirstOrDefault();
+            if (existingCustomerType != null)
+            {
+                addUpdateCustomerType = new CustomerTypeAddUpdateModel
+                {
+                    Id = existingCustomerType.Id,
+                    Value = existingCustomerType.Value
+                };
+            }
+        }
+        else
+        {
+            addUpdateCustomerType = new CustomerTypeAddUpdateModel();
+        }
+        isAccountTypeModal = true;
+        SpinnerVisibility = false;
+    }
+    private void CloseCreateAccountTypeModal()
+    {
+        isAccountTypeModal = false;
+    }
+
+    public class CustomerTypeAddUpdateModel
+    {
+        public int Id { get; set; }
+        [Required(ErrorMessage = "Please enter the Customer type.")]
+        public string Value { get; set; }
+    }
+
+    private void DialogClose() => openDeleteDialog = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        var getIntegrationPartnersResponse = await _saIntegrationPartnerViewModel.GetIntegrationPartnerListAsync();
+        if (getIntegrationPartnersResponse.success)
+        {
+            var check = getIntegrationPartnersResponse.data.Where(x => x.AppName.Equals(_clubManagement)).FirstOrDefault();
+            if (check != null)
+            {
+                integrationPartner = check;
+            }
+        }
+
+        var businessSettingsResponse = await _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount, BusinessSettingsMetaKey.ClubService);
+        if (businessSettingsResponse.success)
+        {
+            settings = businessSettingsResponse.data;
+        }
+
+        var getBusinessCustomerTypes = await _businessCustomerTypesViewModel.GetBusinessCustomerTypes(currentMember.Id);
+        if (getBusinessCustomerTypes.success)
+        {
+            customerTypes = getBusinessCustomerTypes.data;
+        }
+
+        SpinnerVisibility = false;
+    }
+
+    private void DeleteDialogOpen(int id)
+    {
+        idForDelete = id;
+        openDeleteDialog = true;
+    }
+
+    private async Task DeleteCustomerType()
+    {
+        SpinnerVisibility = true;
+        var deleteCustomerTypeResponse = await _businessCustomerTypesViewModel.DeleteBusinessCustomerType(idForDelete);
+        if (deleteCustomerTypeResponse.success)
+        {
+            var getResponse = await _businessCustomerTypesViewModel.GetBusinessCustomerTypes(currentMember.Id);
+            if (getResponse.success)
+            {
+                customerTypes = getResponse.data;
+            }
+            toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(deleteCustomerTypeResponse.error_info.description, ToastLevel.Error);
+        }
+        DialogClose();
+        SpinnerVisibility = false;
+    }
+
+    private async Task SaveCustomerType()
+    {
+        customerTypeForm.EditContext.Validate();
+        if (customerTypeForm.EditContext.Validate())
+        {
+
+            if (customerTypes.Any(x => x.Value.ToLower().Equals(addUpdateCustomerType.Value.ToLower()) && x.Id != addUpdateCustomerType.Id))
+            {
+                toastService.ShowToast("Customer Type already exists.", ToastLevel.Error);
+                return;
+            }
+            else
+            {
+                CloseCreateAccountTypeModal();
+                SpinnerVisibility = true;
+                var request = new AddUpdateBusinessCustomerTypeRequestModel() { BusinessId = currentMember.Id, Value = addUpdateCustomerType.Value};
+                if (addUpdateCustomerType.Id > 0)
+                {
+                    var existingType = customerTypes.Where(x => x.Id == addUpdateCustomerType.Id).FirstOrDefault();
+                    request.Id = existingType.Id;
+                }
+                var addUpdateCustomerTypeResponse = await _businessCustomerTypesViewModel.AddUpdateBusinessCustomerType(request);
+                if (addUpdateCustomerTypeResponse.success)
+                {
+                    var data = addUpdateCustomerTypeResponse.data;
+                    if ( request.Id > 0)
+                    {
+                        foreach(var type in customerTypes)
+                        {
+                            if(type.Id == request.Id)
+                            {
+                                type.Value = data.Value;
+                            }
+                        }
+                        toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                    }
+                    else
+                    {
+                        var newType = new BusinessCustomerTypeModel
+                        {
+                            Id = data.Id,
+                            BusinessId = data.BusinessId,
+                            Value = data.Value
+                        };
+                        customerTypes.Add(newType);
+                        toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                    }
+                }
+                else
+                {
+                    toastService.ShowToast(addUpdateCustomerTypeResponse.error_info.description, ToastLevel.Error);
+                }
+                SpinnerVisibility = false;
+            }
+        }
+    }
+}

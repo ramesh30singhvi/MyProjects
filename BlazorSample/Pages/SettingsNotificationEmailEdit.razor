@@ -1,0 +1,95 @@
+﻿@page "/settings/notifications/email/edit"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card mb-4">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-3 mb-md-0"><a href="settings/notifications/email" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-flag me-2"></span>Reservations</h5>
+                    </div>
+                    <div class="col-md-auto"><a class="btn btn-sm btn-primary" href="#!">Save</a></div>
+                </div>
+            </div>
+            <div class="card-body">
+
+                <form>
+                    <div class="mb-3">
+                        <label class="form-label" for="inputFieldLabel">Notification Message Name</label>
+                        <input id="inputMessageName" class="form-control" type="text" placeholder="Name" />
+                    </div>
+                    <hr class="mt-4" />
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <label class="form-label" for="inputEmailConfirmationMsg">Confirmation Message</label>
+                            <a class="btn btn-link fs--1 me-2" href="#!"><span class="far fa-eye me-1"></span>Preview</a>
+                        </div>
+                        <textarea id="inputEmailConfirmationMsg" class="form-control" rows="4" placeholder="Optional confirmation message"></textarea>
+                    </div>
+                    <hr class="mt-4" />
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <label class="form-label" for="inputEmailCancellationMsg">Cancellation Message</label>
+                            <a class="btn btn-link fs--1 me-2" href="#!"><span class="far fa-eye me-1"></span>Preview</a>
+                        </div>
+                        <textarea id="inputEmailCancellationMsg" class="form-control" rows="4" placeholder="Optional cancellation message"></textarea>
+                    </div>
+                    <hr class="mt-4" />
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <label class="form-label" for="inputEmailReminderMsg">Reminder Message</label>
+                            <a class="btn btn-link fs--1 me-2" href="#!"><span class="far fa-eye me-1"></span>Preview</a>
+                        </div>
+                        <textarea id="inputEmailReminderMsg" class="form-control" rows="4" placeholder="Optional reminder message"></textarea>
+                    </div>
+                    <hr class="mt-4" />
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <label class="form-label" for="inputEmailPostVisitMsg">Post Visit Message</label>
+                            <a class="btn btn-link fs--1 me-2" href="#!"><span class="far fa-eye me-1"></span>Preview</a>
+                        </div>
+                        <textarea id="inputEmailPostVisitMsg" class="form-control" rows="4" placeholder="Optional post visit message"></textarea>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+
+        <div class="alert alert-primary" role="alert">Get help with this page <a href="#!" target="_blank">here</a>.</div>
+
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    bool isNewNotificationModalVisible = false;
+
+    private string title = "Edit Notification | Synergy Commerce Admin Panel";
+
+    [Parameter]
+    public int Id { get; set; }
+
+    public void ShowAddNewModal()
+    {
+        isNewNotificationModalVisible = true;
+    }
+
+
+}

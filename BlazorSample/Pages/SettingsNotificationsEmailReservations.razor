@@ -1,0 +1,154 @@
+﻿@page "/settings/notifications/email/reservations"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject IEmailNotificationViewModel _emailNotificationViewModel
+@inject ToastService _toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<EditForm Model="@reservationEmailContent" Context="formContext">
+    <DataAnnotationsValidator />
+    <div class="card shadow-none border">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h5 class="mb-0"><a href="settings/notifications/email" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-calendar-star me-2"></span>Reservation Email Notifications</h5>
+                </div>
+                <div class="col-md-auto">
+                    <a class="btn btn-primary" href="javascript:void(0)" @onclick="SaveContent">Save</a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="m-3">
+                <label for="inputPreviewEmail" class="form-label mb-0">Confirmation Message</label>
+                <p class="mb-2">The confirmation message will be displayed to guests after completing their reservation and will be included in the confirmation email</p>
+                <InputTextArea @bind-Value="reservationEmailContent.ReservationConfirmation" rows="4" type="text" class="form-control" id="inputPreviewEmail" placeholder="Confirmation Message"></InputTextArea>
+            </div>
+            <div class="m-3">
+                <label for="inputPreviewEmail" class="form-label mb-0">Reminder Message</label>
+                <p class="mb-2">The reminder message will be included in the reminder email that is sent 24 hours prior to their expected arrival time.</p>
+                <InputTextArea @bind-Value="reservationEmailContent.ReservationReminder" rows="4" type="text" class="form-control" id="inputPreviewEmail" placeholder="Reminder Message"></InputTextArea>
+            </div>
+            <div class="m-3">
+                <label for="inputPreviewEmail" class="form-label mb-0">Post-visit Message</label>
+                <p class="mb-2">The post-visit message will be included in the post-visit email that is sent 48 hours prior to their expected arrival time.</p>
+                <InputTextArea @bind-Value="reservationEmailContent.ReservationPostVisit" rows="4" type="text" class="form-control" id="inputPreviewEmail" placeholder="Post-visit Message"></InputTextArea>
+            </div>
+            <div class="m-3">
+                <label for="inputPreviewEmail" class="form-label mb-0">Cancellation Message</label>
+                <p class="mb-2">The cancellation message will be included in the cancellation email that is sent 48 hours prior to their expected arrival time.</p>
+                <InputTextArea @bind-Value="reservationEmailContent.ReservationCancellation" rows="4" type="text" class="form-control" id="inputPreviewEmail" placeholder="Cancellation Message"></InputTextArea>
+            </div>
+            <div class="m-3">
+                <label for="inputPreviewEmail" class="form-label mb-0">No Show Message</label>
+                <p class="mb-2">The no show message will be included in the no show email that is sent 48 hours prior to their expected arrival time.</p>
+                <InputTextArea @bind-Value="reservationEmailContent.ReservationNoShow" rows="4" type="text" class="form-control" id="inputPreviewEmail" placeholder="No Show Message"></InputTextArea>
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code
+{
+    private string title = "Reservation Email Notifications | Synergy Commerce Admin Panel";
+    private bool isLoading = false;
+    Member currentMember = new Member();
+    UserDetailViewModel currentUser = new UserDetailViewModel();
+    ReservationEmailContent reservationEmailContent = new ReservationEmailContent();
+    List<EmailNotificationDetailModel> emailNotificationDetailModels = new List<EmailNotificationDetailModel>();
+    List<BusinessNotificationEmailModel> businessNotificationEmailModels = new List<BusinessNotificationEmailModel>();
+
+    List<NotificationsTypes> notificationTypes = new List<NotificationsTypes>{
+        NotificationsTypes.ReservationConfirmation,
+        NotificationsTypes.ReservationReminder,
+        NotificationsTypes.ReservationPostVisit,
+        NotificationsTypes.ReservationCancellation,
+        NotificationsTypes.ReservationNoShow
+};
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        currentUser = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+
+        //Get Email Notification Templates
+        var notificationDetailResponse = await _emailNotificationViewModel.GetEmailNotificationDetail(null, null, (int)EmailNotificationCategory.Reservation);
+        emailNotificationDetailModels = notificationDetailResponse?.data ?? new List<EmailNotificationDetailModel>();
+        //Get Business Email Notifications
+        await GetBusinessNotificationEmail();
+        isLoading = false;
+    }
+
+    private async Task GetBusinessNotificationEmail()
+    {
+        //Get Business Email Notifications
+        var businessEmailsResponse = await _emailNotificationViewModel.GetBusinessNotificationEmails(businessId: currentMember.Id, category: (int)EmailNotificationCategory.Reservation);
+        businessNotificationEmailModels = businessEmailsResponse?.data ?? new List<BusinessNotificationEmailModel>();
+        foreach (var type in notificationTypes)
+        {
+            var metaValue = businessNotificationEmailModels?.FirstOrDefault(x => x.NotificationType == (int)type)?.EmailContent ?? string.Empty;
+            Helper.SetPropertyValue(reservationEmailContent, type.ToString(), metaValue);//Note: NotificationType and request model property name should be same
+        }
+    }
+
+    private async Task SaveContent()
+    {
+        if (emailNotificationDetailModels == null && emailNotificationDetailModels.Count == 0)
+        {
+            _toastService.ShowToast("Notification email template is not set for this category.", ToastLevel.Error);
+            return;
+        }
+        isLoading = true;
+        List<AddUpdateBusinessEmailRequestModel> requestModels = new List<AddUpdateBusinessEmailRequestModel>();
+        foreach (var type in notificationTypes)
+        {
+            var emailNotificationDetail = emailNotificationDetailModels?.FirstOrDefault(x => x.NotificationType == type) ?? null;
+            var businessNotificationEmail = businessNotificationEmailModels?.FirstOrDefault(x => x.NotificationType == (int)type) ?? null;
+            var emailRequestModel = new AddUpdateBusinessEmailRequestModel
+            {
+                Id = businessNotificationEmail?.Id ?? null,
+                BusinessId = currentMember.Id,
+                EmailSubject = businessNotificationEmail?.EmailSubject ?? emailNotificationDetail?.EmailSubject ?? string.Empty,
+                EmailContent = Helper.GetPropertyValue(reservationEmailContent, type.ToString()).ToString(),
+                Category = (int)EmailNotificationCategory.Reservation,
+                NotificationType = (int)type,
+                FromEmail = businessNotificationEmail?.FromEmail ?? emailNotificationDetail?.FromEmail ?? "no-reply@notices.cellarpass.com",
+                FromName = businessNotificationEmail?.FromName ?? $"{currentUser.FirstName} {currentUser.LastName}",
+                OrderId = businessNotificationEmail?.OrderId ?? 0,
+                NotificationEmailId = businessNotificationEmail?.NotificationEmailId ?? emailNotificationDetail.Id,
+                NotificationEmailTemplateId = businessNotificationEmail?.NotificationEmailTemplateId ?? emailNotificationDetail.EmailTemplateId,
+            };
+            requestModels.Add(emailRequestModel);
+        }
+        var response = await _emailNotificationViewModel.AddUpdateBusinessNotificationEmail(requestModels);
+        if (response.success)
+        {
+            //Get Business Email Notifications
+            await GetBusinessNotificationEmail();
+            isLoading = false;
+            _toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            isLoading = false;
+            _toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+}

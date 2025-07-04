@@ -1,0 +1,211 @@
+﻿@page "/settings/taxes/tax-classes"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject ISettingsViewModel _settingsViewModel
+@inject IBusinessViewModel _businessViewModel
+@inject ISaIntegrationPartnerViewModel _saIntegrationPartnerViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ToastService toastService
+@attribute [Authorize]
+
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<div class="card mb-4">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="settings/taxes" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-calculator me-2"></span>Configure Tax Classes</h5>
+            </div>
+            <div class="col-auto" hidden="@(!isAvalaraActive)"><a class="btn btn-sm btn-outline-primary" href="https://taxcode.avatax.avalara.com/" target="_blank">Avalara Tax Codes</a></div>
+            <div class="col-auto"><button class="btn btn-sm btn-primary" @onclick="@(() => OpenAddTaxClassModal(null))">Add Tax Class</button></div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="theme-wizard border-bottom p-3">
+            <ul class="nav justify-content-between nav-wizard">
+                <li class="nav-item">
+                    <a class="nav-link active fw-semi-bold" href="#bootstrap-wizard-tab1" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-1"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Choose Tax Service</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab2" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-2"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Create Tax Class</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab3" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-3"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Create / Edit Product</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab4" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-4"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Assign Tax Class</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link fw-semi-bold" href="#bootstrap-wizard-tab5" data-bs-toggle="tab" data-wizard-step="data-wizard-step">
+                        <span class="nav-item-circle-parent"><span class="nav-item-circle"><span class="fas fa-5"></span></span></span>
+                        <span class="d-none d-md-block mt-1 fs--1">Save Product</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="sf-grid min-vh-75">
+            <SfGrid DataSource="@TaxClassesList" AllowPaging="false" Width="100%" @ref="TaxClassGrid">
+                <GridColumns>
+                    <GridColumn HeaderText="Tax Class" TextAlign="TextAlign.Left" Width="50">
+                        <Template>
+                            @{
+                                var model = (context as TaxClassModel);
+                                <a href="javascript:void();" @onclick="@(() => OpenAddTaxClassModal(model))">@model.TaxClassName</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(TaxClassModel.TaxCode) HeaderText="Avalara Tax Code" TextAlign="TextAlign.Left" Width="50"></GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+</div>
+
+<SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="AddTaxClassModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Add Tax Class</h5></Header>
+        <Content>
+            <div class="mb-3">
+                <label class="form-label" for="inputTaxClassName">Tax Class Name</label>
+                <input type="text" class="form-control" @bind-value="@requestModel.TaxClassName" id="inputTaxClassName" />
+            </div>
+            <div class="mb-3" hidden="@(!isAvalaraActive)">
+                <label class="form-label" for="inputAvalaraTaxCode">Avalara Tax Code</label>
+                <input type="text" class="form-control" @bind-value="@requestModel.TaxCode" id="inputAvalaraTaxCode" />
+            </div>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="@CloseAddTaxClassModal">Cancel</button>
+            <button type="button" class="btn btn-primary" @onclick="@SaveTaxClass">Save</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+    private bool SpinnerVisibility { get; set; } = false;
+    private string title = "Configure Tax Classes | Synergy Commerce Admin Panel";
+    SfGrid<TaxClassModel> TaxClassGrid;
+    private bool isLoading;
+    private List<TaxClassModel> TaxClassesList = new List<TaxClassModel>();
+    private TaxClassModel requestModel = new TaxClassModel();
+    private bool AddTaxClassModalVisibility { get; set; } = false;
+    private string taxServiceId;
+    private bool isAvalaraActive = false;
+    private Member currentMember = new Member();
+    private BusinessConfigurationOptionModel taxServiceDetail = new BusinessConfigurationOptionModel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        await GetDefaultTaxService();
+        await GetTaxClassList();
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task GetDefaultTaxService()
+    {
+        var response = await _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount, BusinessSettingsMetaKey.TaxService);
+        if (response.success && response.data != null)
+        {
+            taxServiceId = response.data.MetaValue;
+            if (!string.IsNullOrEmpty(taxServiceId))
+            {
+                await GetTaxServiceDetail();
+            }
+
+        }
+    }
+
+    private async Task GetTaxServiceDetail()
+    {
+        var response = await _businessViewModel.GetBusinessConfigurationOptionDetail(BusinessConfigurationNamespace.TaxService, taxServiceId);
+        if (response.success && response.data != null)
+        {
+            taxServiceDetail = response.data;
+            if (taxServiceDetail != null && taxServiceDetail.SettingName.ToLower() == "avalara")
+            {
+                isAvalaraActive = true;
+            }
+            else
+            {
+                await this.TaxClassGrid.HideColumns("Avalara Tax Code");
+            }
+        }
+    }
+
+    private async Task GetTaxClassList()
+    {
+        var response = await _settingsViewModel.GetBusinessTaxClassList(currentMember.Id);
+        if (response.success)
+        {
+            TaxClassesList = response.data;
+        }
+    }
+
+    private async Task SaveTaxClass()
+    {
+        isLoading = true;
+        var response = await _settingsViewModel.AddUpdateBusinessTaxClass(requestModel);
+        if (response.success)
+        {
+            await GetTaxClassList();
+            AddTaxClassModalVisibility = false;
+            toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void OpenAddTaxClassModal(TaxClassModel model)
+    {
+        isLoading = true;
+        if (model != null)
+        {
+            requestModel = new TaxClassModel()
+            {
+                Id = model.Id,
+                TaxClassName = model.TaxClassName,
+                TaxCode = model.TaxCode
+            };
+        }
+        if (!isAvalaraActive)
+        {
+            requestModel.TaxCode = string.Empty;
+        }
+        requestModel.BusinessId = currentMember.Id;
+        AddTaxClassModalVisibility = true;
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void CloseAddTaxClassModal()
+    {
+        AddTaxClassModalVisibility = false;
+    }
+}

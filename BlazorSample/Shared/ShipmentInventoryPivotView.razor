@@ -1,0 +1,30 @@
+﻿@using Syncfusion.Blazor.PivotView
+@using CellarPassAppAdmin.Shared.Models
+
+<div>
+    <SfPivotView @ref="InventoryPivot" ShowTooltip="false" TValue="ClubShipmentInventoryData">
+        <PivotViewDataSourceSettings EnableSorting="false" ExpandAll="true" DataSource="@InventoryProducts" ShowGrandTotals="false" ShowHeaderWhenEmpty=false>
+            <PivotViewRows>
+                <PivotViewRow Name="ProductName"></PivotViewRow>
+                <PivotViewRow Name="LocationTechnicalName"></PivotViewRow>
+            </PivotViewRows>
+            <PivotViewValues>
+                <PivotViewValue Name="OnHand" Caption="On Hand"></PivotViewValue>
+                <PivotViewValue Name="Needed" Caption="Needed"></PivotViewValue>
+                <PivotViewValue Name="PostBatch" Caption="Post Batch"></PivotViewValue>
+            </PivotViewValues>
+        </PivotViewDataSourceSettings>
+        <PivotViewGridSettings Width="100%" Height="100%"></PivotViewGridSettings>
+    </SfPivotView>
+</div>
+
+@code {
+    SfPivotView<ClubShipmentInventoryData> InventoryPivot;
+    [Parameter]
+    public List<ClubShipmentInventoryData> InventoryProducts { get; set; }
+
+    public async Task ResetPivotView()
+    {
+        await InventoryPivot.ResetPersistDataAsync();
+    }
+}

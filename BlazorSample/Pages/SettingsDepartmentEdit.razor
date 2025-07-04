@@ -1,0 +1,129 @@
+﻿@page "/settings/departments/edit/{Id:guid}"
+@page "/settings/departments/create"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject IDepartmentViewModel _departmentViewModel
+@inject NavigationManager _navigationManager
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+
+<div class="card mb-3">
+    <EditForm Model="@departmentRequestModel" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-3 mb-md-0"><a href="settings/departments" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-chart-tree-map me-2"></span>@heading</h5>
+                </div>
+                <div class="col-auto">
+                    @if (isSaving)
+                    {
+                        <Loader />
+                    }
+                    <button class="btn btn-sm btn-primary" type="submit" hidden="@(isSaving)">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <form>
+                <div class="mb-3">
+                    <label class="form-label" for="inputAddressSearch">Title</label>
+                    <InputText id="inputTitle" class="form-control" @bind-Value="departmentRequestModel.DepartmentName" placeholder="Enter your department title"></InputText>
+                    <ValidationMessage For="@(() => departmentRequestModel.DepartmentName)" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="inputCode">Code</label>
+                    <InputText id="inputCode" class="form-control" @bind-Value="departmentRequestModel.DepartmentCode" placeholder="The department code"></InputText>
+                    <ValidationMessage For="@(() => departmentRequestModel.DepartmentCode)" />
+                </div>
+            </form>
+        </div>
+    </EditForm>
+</div>
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private Boolean isLoading;
+    private Boolean isSaving;
+    private string title = string.Empty;
+    private string heading = string.Empty;
+    private Member currentMember;
+    private BusinessDepartmentRequestModel departmentRequestModel = new BusinessDepartmentRequestModel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        if (Id != null)
+        {
+            title = "Edit Department | Synergy Commerce Admin Panel";
+            heading = "Edit Department";
+            BusinessDepartmentResponse result = await _departmentViewModel.GetBusinessDepartmentByIdAsync(Id.Value);
+            if (result.success && result.data != null)
+            {
+                departmentRequestModel.Id = result.data.Id;
+                departmentRequestModel.DepartmentGuid = result.data.DepartmentGuid;
+                departmentRequestModel.BusinessId = result.data.BusinessId;
+                departmentRequestModel.DepartmentName = result.data.DepartmentName;
+                departmentRequestModel.DepartmentCode = result.data.DepartmentCode;
+            }
+        }
+        else
+        {
+            title = "Create Department | Synergy Commerce Admin Panel";
+            heading = "Create Department";
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void HandleValidSubmit(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SaveDepartment();
+        }
+    }
+    private async void SaveDepartment()
+    {
+        isSaving = true;
+        departmentRequestModel.BusinessId = currentMember.Id;
+        BusinessDepartmentResponse result = await _departmentViewModel.AddUpdateBusinessDepartmentAsync(departmentRequestModel);
+        isSaving = false;
+        if (result.success)
+        {
+            if (Id == null)
+            {
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                await Task.Delay(1000);
+                _navigationManager.NavigateTo("/settings/departments");
+            }
+            else
+            {
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                await Task.Delay(1000);
+                _navigationManager.NavigateTo("/settings/departments");
+            }
+        }
+        else
+        {
+            toastService.ShowToast(result.error_info.description, ToastLevel.Error);
+        }
+        StateHasChanged();
+    }
+}

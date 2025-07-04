@@ -1,0 +1,501 @@
+﻿@page "/settings/locations/{Id:guid}"
+@page "/settings/locations/create"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using PhoneNumbers;
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Entities.v4;
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IBusinessLocationViewModel _businessLocationViewModel
+@inject ICountryViewModel _countryViewModel
+@inject IStateViewModel _stateViewModel
+@inject ISettingsViewModel _settingsViewModel
+@inject IRegionViewModel _regionViewModel
+@inject IInventoryViewModel _inventoryViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject NavigationManager _navigationManager
+@inject HttpClient http
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card mb-3">
+    <EditForm OnValidSubmit="HandleValidSubmit" EditContext="editContext">
+        <DataAnnotationsValidator />
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-3 mb-md-0"><a href="/settings/locations" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-map-marker-alt me-2"></span>@(Id != null ? "Edit Location" : "Add Location")</h5>
+                </div>
+                @if (otherAvailableLocations.Count > 0)
+                {
+                    <div class="col-auto">
+                        <select class="form-select form-select-sm mb-3 mb-md-0" @onchange="RedirecttoLocation" value="@selectedLocation" aria-label="Active">
+                            <option value="" disabled selected hidden>Select a Location</option>
+                            @foreach (var item in otherAvailableLocations)
+                            {
+                                <option value="@item.LocationGUID">@item.DestinationName</option>
+                            }
+                        </select>
+                    </div>
+                }
+                <div class="col-auto">
+                    @if (isSaving)
+                    {
+                        <Loader />
+                    }
+                    <button class="btn btn-sm btn-primary" type="submit" hidden="@(isSaving)">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col">
+                    <div class="mb-3">
+                        <label class="form-label" for="inputDestinationName">Destination Name</label>
+                        <InputText id="inputDestinationName" class="form-control" @bind-Value="request.DestinationName" type="text" placeholder="Destination Name"></InputText>
+                        <ValidationMessage For="@(() => request.DestinationName)" />
+                    </div>
+                    <div class="row gx-3">
+                        <div class="mb-3 col-sm-6">
+                            <label class="form-label" for="inputLocationName">Location Name</label>
+                            <InputText id="inputLocationName" class="form-control" @bind-Value="request.LocationName" type="text" placeholder="Location Name"></InputText>
+                            <ValidationMessage For="@(() => request.LocationName)" />
+                        </div>
+                        <div class="mb-3 col-sm-6">
+                            <label class="form-label" for="inputTechnicalName">Technical Name</label>
+                            <InputText id="inputTechnicalName" class="form-control" @bind-Value="request.TechnicalName" type="text" placeholder="Technical Name"></InputText>
+                            <ValidationMessage For="@(() => request.TechnicalName)" />
+                        </div>
+                    </div>
+                    <div class="row gx-3">
+                        @if (!request.IsInventoryLocation)
+                        {
+                            <div class="mb-3 col-sm-6">
+                                <label class="form-label" for="inputWaitlistEmail">Wait List Notification Email</label>
+                                <InputText id="inputWaitlistEmail" class="form-control" @bind-Value="request.WaitListRequestAlertEmail" type="email" placeholder="Wait List Notification Email"></InputText>
+                                <ValidationMessage For="@(() => request.WaitListRequestAlertEmail)" />
+                            </div>
+
+                        }
+                        <div class="mb-3 col-sm-6">
+                            <label class="form-label" for="inputLowThresholdEmail">Low Threshold Alert Email</label>
+                            <InputText id="inputWaitlistEmail" class="form-control" @bind-Value="request.LowThresholdAlertEmail" type="email" placeholder="Low Threshold Alert Email"></InputText>
+                            <ValidationMessage For="@(() => request.LowThresholdAlertEmail)" />
+                        </div>
+                    </div>
+
+
+                    <div class="border-dashed-bottom my-3"></div>
+
+                    <AddressControl countries="@countries" states="@states" @bind-address1="@request.Address1" @bind-address2="@request.Address2" @bind-selectedCountry="@request.CountryCode" @bind-stateCode="@request.StateCode" @bind-city="@request.City" @bind-zipCode="@request.ZipCode" SelectedNewAddress="AddressChanged" />
+
+                    <div class="row gx-3">
+                        <div class="mb-3 col-sm-12">
+                            @{
+                                if (showPhoneControl)
+                                {
+                                    <CellarPassAppAdmin.Client.Shared.PhoneNumber countries="@countries" phoneMasks="@phoneMasks" phoneCountry="@request.CountryCode" @bind-phone="@request.Phone" label="Phone" />
+                                }
+
+                            }
+
+                            @*<label class="form-label" for="inputPhone">Phone</label>
+                                <InputText id="inputPhone" class="form-control" @bind-Value="request.Phone" placeholder="Phone"></InputText>
+                                <ValidationMessage For="@(() => request.Phone)" />*@
+                        </div>
+                    </div>
+
+                    <div class="border-dashed-bottom my-3"></div>
+
+                    <div class="mb-3">
+                        <label class="mb-0">Latitude | Longitude</label>
+                        <div class="input-group">
+                            <InputText id="inputLatitude" @bind-Value="request.GeoLatitude" type="text" aria-label="Latitude" class="form-control" placeholder="Latitude"></InputText>
+                            <InputText id="inputLongitude" @bind-Value="request.GeoLongitude" type="text" aria-label="Longitude" class="form-control" placeholder="Longitude"></InputText>
+                            <button class="btn btn-outline-primary" type="button" @onclick="GetGeoLocation" id="btnGetCoordinates">Get Coordinates</button>
+                        </div>
+                        <ValidationMessage For="@(() => request.GeoLatitude)" />
+                        <ValidationMessage For="@(() => request.GeoLongitude)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="inputMapsAndDirectionsURL">Maps and Directions URL</label>
+                        <div class="input-group mb-3">
+                            <input id="inputMapsAndDirectionsURL" @bind-value="request.MapDirectionUrl" class="form-control" type="text" placeholder="Maps and Directions URL" ria-describedby="btnShowMapAndDirectionsURL" />
+                            <button class="btn btn-outline-primary" type="button" @onclick="GetDirectionsUrl" id="btnShowMapAndDirectionsURL">Get URL</button>
+                        </div>
+                    </div>
+                    @if (request.IsEventLocation)
+                    {
+                        <div class="row gx-3">
+                            <div class="mb-3 col-sm-6">
+                                <label class="form-label" for="selRegion">Region</label>
+                                <SfDropDownList TItem="RegionModel" TValue="int" @bind-Value="@request.RegionId" Placeholder="Select a Region" DataSource="@regions">
+                                    <DropDownListEvents TItem="RegionModel" TValue="int" ValueChange="ChangeRegion"></DropDownListEvents>
+                                    <DropDownListFieldSettings Text="RegionName" Value="Id"></DropDownListFieldSettings>
+                                </SfDropDownList>
+                            </div>
+                            <div class="mb-3 col-sm-6">
+                                <label class="form-label" for="selSubRegion">Sub Region</label>
+                                <SfDropDownList Enabled="@enableSubRegionDropDown" TValue="int" @bind-Value="@request.SubRegionId" TItem="SubRegionModel" Placeholder="Select a Sub Region" DataSource="@subRegions">
+                                    <DropDownListFieldSettings Text="SubRegionName" Value="Id"></DropDownListFieldSettings>
+                                </SfDropDownList>
+                            </div>
+                        </div>
+                    }
+                    <div class="row gx-3">
+                        <div class="mb-3 col-sm-6">
+                            <label class="form-label" for="inputTechnicalName">Time Zone</label>
+                            <input id="inputTimeZone" class="form-control" type="text" placeholder="Time Zone" @bind-value="request.Timezone" disabled />
+                        </div>
+
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <div class="card">
+                        <div class="card-body p-0">
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between px-card py-2 border-200">
+                                    <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchWeb">Inventory Location</label></div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-switch"><input class="form-check-input" id="switchWeb" type="checkbox" @onchange="HandleInventoryLocationCheck" checked="@request.IsInventoryLocation"></div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between border-top px-card  py-2 border-200">
+                                    <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchPOS">POS</label></div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-switch"><input class="form-check-input" id="switchPOS" type="checkbox" @bind-value="request.IsPOS" checked="@request.IsPOS"></div>
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between border-top px-card py-2 border-200">
+                                    <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchClub">Event Location</label></div>
+                                    <div class="d-flex align-items-center">
+                                        <div class="form-check form-switch"><input class="form-check-input" id="switchClub" type="checkbox" @bind-value="request.IsEventLocation" checked="@request.IsEventLocation"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </EditForm>
+</div>
+<SfDialog Width="600px" IsModal="true" ShowCloseIcon="true" @bind-Visible="@SalesChannelExistWarningModalVisible">
+    <DialogTemplates>
+        <Header>Disable Inventory Location</Header>
+        <Content>
+            <div class="row">
+                <p>
+                    You have requested to disable an inventory location that is currently used by the following:
+                </p>
+                @if (salesChannels.LocationId > 0)
+                {
+                    @if (salesChannels.OMSSalesChannels.Any())
+                    {
+                        <h5>OMS</h5>
+                        <ol class="mx-4">
+                            @foreach (var channel in salesChannels.OMSSalesChannels)
+                            {
+                                <li>@channel.ProfileName</li>
+                            }
+                        </ol>
+                    }
+                    @if (salesChannels.OMSSalesChannels.Any())
+                    {
+                        <h5>POS</h5>
+                        <ol class="mx-4">
+                            @foreach (var channel in salesChannels.POSSalesChannels)
+                            {
+                                <li>@channel.ProfileName</li>
+                            }
+                        </ol>
+                    }
+                }
+            <p class="mt-3">
+                You must first remove this inventory location in order to disable it.
+            </p>
+            </div>
+        </Content>
+    </DialogTemplates>
+    <DialogButtons>
+        <DialogButton Content="Ok" CssClass="px-md-4" OnClick="() => SalesChannelExistWarningModalVisible = false" IsPrimary="true" />
+    </DialogButtons>
+</SfDialog>
+
+
+
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private Boolean isLoading;
+    private Boolean isSaving;
+    private string title = "Edit Location | Synergy Commerce Admin Panel";
+    private Member currentMember = new Member();
+    private List<CpCountry> countries = new List<CpCountry>();
+    private List<CpState> states = new List<CpState>();
+    private List<RegionModel> regions = new List<RegionModel>();
+    private List<SubRegionModel> subRegions = new List<SubRegionModel>();
+    private BusinessLocationModel location = new BusinessLocationModel();
+    private List<BusinessLocationModel> otherAvailableLocations = new List<BusinessLocationModel>();
+    private BusinessLocationRequestModel request = new BusinessLocationRequestModel();
+    private string selectedLocation = "";
+    private string fullAddress;
+    EditContext editContext;
+    private bool enableSubRegionDropDown;
+    private static PhoneNumberUtil _phoneUtil;
+    private List<PhoneMask> phoneMasks = new List<PhoneMask>();
+    bool showPhoneControl { get; set; }
+    SalesChannelsListModel salesChannels = new SalesChannelsListModel();
+    private bool SalesChannelExistWarningModalVisible { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        editContext = new EditContext(request);
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        phoneMasks = await http.GetFromJsonAsync<List<PhoneMask>>("PhoneMasks.json");
+        CountryResponse res = await _countryViewModel.GetCountries();
+        if (res.success)
+        {
+            countries = res.data;
+        }
+
+        StateResponse stateResponse = await _stateViewModel.GetStates();
+        if (stateResponse.success)
+        {
+            states = stateResponse.data;
+        }
+
+        RegionListResponse regionResponse = await _regionViewModel.GetRegions();
+        if (regionResponse.success)
+        {
+            regions = regionResponse.data;
+        }
+
+        if (Id != null)
+        {
+            BusinessLocationDetailResponse response = await _businessLocationViewModel.GetBusinessLocationDetail(Id.Value);
+            if (response.success)
+            {
+                location = response.data;
+                request.Id = location.Id;
+                request.Address1 = location.Address1;
+                request.Address2 = location.Address2;
+                request.DestinationName = location.DestinationName;
+                request.LocationName = location.LocationName;
+                request.TechnicalName = location.TechnicalName;
+                request.WaitListRequestAlertEmail = location.WaitListRequestAlertEmail;
+                request.LowThresholdAlertEmail = location.LowThresholdAlertEmail;
+                request.Active = location.Active;
+                request.IsInventoryLocation = location.IsInventoryLocation;
+                request.IsPOS = location.IsPOS;
+                request.IsEventLocation = location.IsEventLocation;
+                request.CountryCode = location.CountryCode;
+                request.Address1 = location.Address1;
+                request.Address2 = location.Address2;
+                request.City = location.City;
+                request.StateCode = location.StateCode;
+                request.ZipCode = location.ZipCode;
+                request.Phone = location.Phone;
+                request.GeoLongitude = location.GeoLongitude;
+                request.GeoLatitude = location.GeoLatitude;
+                request.Timezone = location.Timezone;
+                request.RegionId = location.RegionId;
+                request.SubRegionId = location.SubRegionId;
+                request.MapDirectionUrl = location.MapsDirectionsURL;
+                showPhoneControl = true;
+            }
+        }
+        else
+        {
+            title = "Add Location | Synergy Commerce Admin Panel";
+            request.CountryCode = "US";
+            request.StateCode = "";
+            showPhoneControl = true;
+        }
+
+        BusinessLocationResponse result = await _businessLocationViewModel.GetBusinessLocations(currentMember.Id);
+        if (result.success)
+        {
+            otherAvailableLocations = result.data;
+            if (Id != null)
+            {
+                selectedLocation = Id.Value.ToString();
+            }
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async void SaveBusinessLocation()
+    {
+        isSaving = true;
+        request.BusinessId = currentMember.Id;
+        if (!string.IsNullOrEmpty(request.CountryCode))
+        {
+            request.Country = countries.FirstOrDefault(x => x.CountryCode == request.CountryCode).Name;
+        }
+        if (!string.IsNullOrEmpty(request.StateCode))
+        {
+            request.State = states.FirstOrDefault(x => x.StateCode == request.StateCode).State;
+        }
+        var result = await _businessLocationViewModel.AddUpdateBusinessLocation(request);
+        if (result.success)
+        {
+            isSaving = false;
+            if (Id == null)
+            {
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                _navigationManager.NavigateTo("/settings/locations");
+            }
+            else
+            {
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            }
+        }
+        else
+        {
+            isSaving = false;
+            toastService.ShowToast(result.error_info.description, ToastLevel.Error);
+        }
+        StateHasChanged();
+    }
+
+    private void HandleValidSubmit()
+    {
+        if (editContext.Validate())
+        {
+            _phoneUtil = PhoneNumberUtil.GetInstance();
+            PhoneNumbers.PhoneNumber phoneNumber = _phoneUtil.Parse(request.Phone, request.CountryCode);
+            if (!_phoneUtil.IsValidNumberForRegion(phoneNumber, request.CountryCode))
+            {
+                toastService.ShowToast("Phone number is not valid for the region", ToastLevel.Error);
+                return;
+            }
+            SaveBusinessLocation();
+        }
+    }
+
+    private async void GetGeoLocation()
+    {
+        GetFullAddress();
+        if (!string.IsNullOrEmpty(fullAddress))
+        {
+            GeoLocation geoLocation = await _settingsViewModel.GetGeoLatLongByAddress(fullAddress);
+            if (!string.IsNullOrEmpty(geoLocation.lat) && !string.IsNullOrEmpty(geoLocation.lng))
+            {
+                request.GeoLatitude = geoLocation.lat;
+                request.GeoLongitude = geoLocation.lng;
+                request.Timezone = geoLocation.Timezone;
+                editContext = new EditContext(request);
+            }
+            StateHasChanged();
+        }
+    }
+
+    private void AddressChanged(bool isAddressChanged)
+    {
+        if (isAddressChanged)
+        {
+            request.GeoLatitude = "";
+            request.GeoLongitude = "";
+            request.Timezone = "";
+            request.Address2 = "";
+            request.MapDirectionUrl = "";
+        }
+        StateHasChanged();
+    }
+
+    private void RedirecttoLocation(ChangeEventArgs args)
+    {
+        var value = Guid.Parse(args.Value.ToString());
+        _navigationManager.NavigateTo("/settings/locations/" + value, forceLoad: true);
+    }
+
+    private void GetFullAddress()
+    {
+        fullAddress = "";
+        if (!String.IsNullOrEmpty(request.Address1))
+        {
+            fullAddress = request.Address1;
+        }
+        if (!String.IsNullOrEmpty(request.Address2))
+        {
+            fullAddress += ' ' + request.Address2;
+        }
+        if (!String.IsNullOrEmpty(request.City))
+        {
+            fullAddress += ' ' + request.City;
+        }
+        if (!String.IsNullOrEmpty(request.StateCode))
+        {
+            fullAddress += ' ' + request.StateCode;
+        }
+        if (!String.IsNullOrEmpty(request.ZipCode))
+        {
+            fullAddress += ' ' + request.ZipCode;
+        }
+        if (!String.IsNullOrEmpty(request.CountryCode))
+        {
+            fullAddress += ' ' + request.CountryCode;
+        }
+        StateHasChanged();
+    }
+
+    private void GetDirectionsUrl()
+    {
+        GetFullAddress();
+        if (!string.IsNullOrEmpty(fullAddress))
+        {
+            fullAddress = fullAddress.Replace(" ", "+");
+            request.MapDirectionUrl = "https://www.google.com/maps/place/" + fullAddress;
+        }
+        StateHasChanged();
+    }
+
+    public async void ChangeRegion(Syncfusion.Blazor.DropDowns.ChangeEventArgs<int, RegionModel> args)
+    {
+        enableSubRegionDropDown = false;
+        SubRegionListResponse subRegionResponse = await _regionViewModel.GetSubRegionsByRegionId(args.Value);
+        if (subRegionResponse.success)
+        {
+            subRegions = subRegionResponse.data;
+        }
+        enableSubRegionDropDown = true;
+        StateHasChanged();
+    }
+
+    private async Task HandleInventoryLocationCheck(ChangeEventArgs args)
+    {
+        request.IsInventoryLocation = Convert.ToBoolean(args.Value);
+        if (!request.IsInventoryLocation && Id.HasValue)
+        {
+            salesChannels = new SalesChannelsListModel();
+            isLoading = true;
+            var getBindedSalesChannelsResponse = await _inventoryViewModel.GetSalesChannelsForInventoryLocation(Id.Value);
+            if (getBindedSalesChannelsResponse.success)
+            {
+                var data = getBindedSalesChannelsResponse.data;
+                if (data.LocationId > 0 && (data.OMSSalesChannels.Any() || data.POSSalesChannels.Any()))
+                {
+                    salesChannels = data;
+                    SalesChannelExistWarningModalVisible = true;
+                    request.IsInventoryLocation = true;
+                }
+            }
+            isLoading = false;
+        }
+    }
+}

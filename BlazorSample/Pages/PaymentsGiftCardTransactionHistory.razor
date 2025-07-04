@@ -1,0 +1,124 @@
+﻿@page  "/payments/gift-cards/gift-card-transaction-history/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject IGiftCardTransactionViewModel _giftCardTransactionViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md-auto">
+                <h5 class="mb-0"><a href="/payments/gift-cards" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="fa-regular fa-envelope-open-dollar me-2"></span>Gift Card Transactions</h5>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0 mt-2">
+        <div class="sf-grid min-vh-75">
+            <SfGrid DataSource="@GiftCardDataItem" @ref="GiftGrid">
+                <GridTemplates>
+                    <DetailTemplate>
+                        @{
+                            var giftCard = (context as GiftCardTransactionHistoryVM);
+                            <SfGrid DataSource="@DataSourceLogs" Query="@(new Query().Where("GiftCardId", "equal", giftCard.GiftCardId))">
+                                <GridColumns>
+                                    <GridColumn Field=@nameof(TransactionModelVM.TransactionDate) HeaderText="Date" Width="200"> </GridColumn>
+                                    <GridColumn Field=@nameof(TransactionModelVM.TransacrtionStatus) HeaderText="Status" Width="110"></GridColumn>
+                                    <GridColumn Field=@nameof(TransactionModelVM.TransactionAmount) HeaderText="Amount" Width="110"></GridColumn>
+                                </GridColumns>
+                            </SfGrid>
+                        }
+                    </DetailTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn Field=@nameof(GiftCardTransactionHistoryVM.GiftCardId) HeaderText="Gift CardID" Width="200"> </GridColumn>
+                    <GridColumn Field=@nameof(GiftCardTransactionHistoryVM.TotalRedeemed) HeaderText="Total Redeemed" Width="110"></GridColumn>
+                    <GridColumn Field=@nameof(GiftCardTransactionHistoryVM.Balance) HeaderText="Balance" Width="110"></GridColumn>
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private string title = "Gift Card Transactions | Synergy Commerce Admin Panel";
+
+    private Boolean isLoading = true;
+    SfGrid<GiftCardTransactionHistoryVM> GiftGrid;
+
+    List<GiftCardTransactionHistoryVM> GiftCardDataItem = new List<GiftCardTransactionHistoryVM>();
+    List<TransactionModelVM> DataSourceLogs = new List<TransactionModelVM>();
+    private Member currentMember = new Member();
+
+    public class GiftCardTransactionHistoryVM
+    {
+        public string GiftCardId { get; set; }
+        public string TotalSold { get; set; }
+        public string TotalRedeemed { get; set; }
+        public string Balance { get; set; }
+        public string AccountNumber { get; set; }
+    }
+    public class TransactionModelVM
+    {
+        public string GiftCardId { get; set; }
+        public string TransactionDate { get; set; }
+        public int OrderId { get; set; }
+        public string TransacrtionStatus { get; set; }
+        public string TransactionAmount { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var result = await _giftCardTransactionViewModel.GetGiftCardTransactionHistory(currentMember.Id, 0, Id.ToString());
+        if (result.success)
+        {
+            foreach (var item in result.data)
+            {
+                GiftCardDataItem.Add(new GiftCardTransactionHistoryVM()
+                {
+                    GiftCardId = item.GiftCardId,
+                    AccountNumber = item.AccountNumber,
+                    Balance = "$" + item.Balance.ToString("0.00"),
+                    TotalRedeemed = "$" + item.TotalRedeemed.ToString("0.00"),
+                    TotalSold = "$" + item.TotalSold.ToString("0.00")
+                });
+
+                foreach (var log in item.TransactionLogs)
+                {
+
+                    DataSourceLogs.Add(new TransactionModelVM
+                    {
+                        GiftCardId = item.GiftCardId,
+                        OrderId = log.OrderId,
+                        TransacrtionStatus = log.TransacrtionStatus,
+                        TransactionAmount = "$" + log.TransactionAmount.ToString("0.00"),
+                        TransactionDate = log.TransactionDate.ToString("MM/dd/yyyy, hh:ss tt")
+                    });
+
+                }
+            }
+        }
+        isLoading = false;
+        StateHasChanged();
+        GiftGrid.Refresh();
+    }
+
+}

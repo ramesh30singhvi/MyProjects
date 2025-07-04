@@ -1,0 +1,2798 @@
+﻿@page "/people/club-members/{SubscriptionId:guid}"
+@page "/people/club-members/{SubscriptionId:guid}/{TabName}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using Blazored.LocalStorage
+@using Syncfusion.Blazor.DropDowns
+@using Syncfusion.Blazor.InPlaceEditor
+@using CellarPassAppAdmin.Client.Models
+@using Microsoft.Extensions.Options
+@inject IOptions<SynergyAppSettings> _synergyAppSettings
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject ICustomerViewModel _customerViewModel
+@inject IUserViewModel _userViewModel
+@inject ICountryViewModel _countryViewModel
+@inject IStateViewModel _stateViewModel
+@inject IBusinessPropertyViewModel _propertyViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject IShippingRatesViewModel _shippingRatesViewModel
+@inject IShippingCarrierViewModel _shippingCarrierViewModel
+@inject ILocalStorageService localStorage
+@inject ToastService toastService
+@inject HttpClient http
+@inject IClubViewModel _clubViewModel
+@inject IBusinessCustomerTypesViewModel _businessCustomerTypesViewModel
+@inject ITeamViewModel _teamViewModel
+@inject IPaymentViewModel _paymentViewModel
+@inject ISettingsViewModel _settingsViewModel
+@inject NavigationManager _navigationManager;
+@attribute [Authorize]
+
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+@if (customer != null)
+{
+    <Title Value="@title"></Title>
+
+    <div class="card shadow-none border mb-3">
+        <div class="card-header border-bottom">
+            <div class="row flex-between-center">
+                <div class="col">
+                    <h5 class="mb-2 mb-md-0"><a href="settings/club-members" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-gem me-2"></span>Club History - @(ClubName)</h5>
+                </div>
+                <div class="col-auto">
+                </div>
+                <div class="col-auto">
+                    <div class="dropdown font-sans-serif btn-reveal-trigger col-md-3">
+                        <button class="btn btn-sm btn-falcon-primary dropdown-toggle btn-reveal dropdown-caret-none" type="button" id="dropdown-btn-customer" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--2"></span></button>
+                        <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown-btn-customer">
+                            <a class="dropdown-item" href="javascript:void();" @onclick="@OpenUpdateUserDetailModel">Edit Customer</a>
+                            <a class="dropdown-item" hidden="@(CustomMetaDatas == null ? true : false)" href="javascript:void();" @onclick="@OpenEditMetaDataModal">Edit Meta Data</a>
+                            <a class="dropdown-item" href="javascript:void();">Send Account Activation Email</a>
+                            <a class="dropdown-item" href="javascript:void();">Send Forgot Password (Email)</a>
+                            <a class="dropdown-item" href="javascript:void();">Send Forgot Password (Magic Link)</a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item text-warning" href="javascript:void(0)" @onclick="@OpenBlockModal">Block Customer</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="row">
+                <div class="col-12 col-lg-6">
+                    <div class="d-flex flex-wrap justify-content-center justify-content-md-start align-items-center ms-3 mt-3">
+                        <div class="dropdown">
+                            <InputFile id="inputDrop" OnChange="OnInputFileChange" class="opacity-0 w-100 h-100 position-absolute" />
+                            <a class="pe-0 hover-actions-trigger" id="profileImageDropdown" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <div class="avatar avatar-4xl me-2">
+                                    @if (customer != null && !string.IsNullOrEmpty(customer.UserImageUrl))
+                                    {
+                                        @if (!String.IsNullOrEmpty(customer.ProfileImage))
+                                        {
+                                            <img class="rounded-circle" src="@(!String.IsNullOrEmpty(imgUrl) ? imgUrl : _synergyAppSettings.Value.SynergyCDNBaseUrl + "business/photos/customers/" + customer.ProfileImage + "?" + DateTime.Now)" alt="@(customer.FirstName + ' ' + customer.LastName + ' ' + "Photo")" />
+                                        }
+                                        else
+                                        {
+                                            <img class="rounded-circle" src="@(!String.IsNullOrEmpty(imgUrl) ? imgUrl : customer.UserImageUrl)" alt="@(customer.FirstName + ' ' + customer.LastName + ' ' + "Photo")" />
+                                        }
+                                    }
+                                    <div class="hover-actions top-50 translate-middle-y">
+                                        <div class="avatar avatar-4xl">
+                                            <div class="avatar-name rounded-circle d-flex justify-content-center align-items-center opacity-75 "><span class="far fa-pencil fs-0 top-50"></span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-card py-0" aria-labelledby="profileImageDropdown">
+                                <div class="bg-white rounded-lg py-2">
+                                    <a class="dropdown-item" href="javascript:void();" @onclick="() => uploadImage()">Upload Image</a>
+                                    <a class="dropdown-item text-warning" href="#">Remove Image</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ms-4">
+                            <h4 class="mb-1 btn-reveal-trigger"></h4>
+                            <h4 class="mb-1"><small class="far fa-gem fa-xs me-2"></small>@(customer != null ? customer.FirstName : "") @(customer != null ? customer.LastName : "")</h4>
+                            @if (customer != null && !string.IsNullOrEmpty(customer.Email))
+                            {
+                                <p class="ms-4 mb-2"><a href="@(customer != null ? "mailto:" + customer.Email : "#")" class="text-500">@(customer != null ? customer.Email : "")</a></p>
+                            }
+                            <p class="ms-4 mb-2">Customer Since: @customer.FormattedMappingDate</p>
+                            @if (customer.CustomerTypes.Count > 0)
+                            {
+                                <p class="ms-4 mb-3">
+                                    @{
+                                        foreach (var customerType in customer.CustomerTypes.Select((value, i) => new { i, value }))
+                                        {
+                                            if (customerType.i <= 1)
+                                            {
+                                                var getType = customer.CustomerTypes.Where(x => x.Id == customerType.value.Id).FirstOrDefault();
+                                                if (getType != null)
+                                                {
+                                                    <span class="badge badge-soft-dark bg-300 me-2">@(getType.CustomerType)</span>
+                                                }
+                                            }
+                                        }
+                                    }
+                                </p>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-6">
+                    <div id="scoreCard" class="card shadow-none border mx-3 my-3">
+                        <div class="card-body p-1">
+                            <div class="row">
+                                <div class="col-4 d-flex justify-content-center align-items-center border-end border-200">
+                                    <div class="p-2 text-center">
+                                        @if (IsCurrentSubscriptionCancelled)
+                                        {
+                                            <h6 class="fs--1 text-600 mb-2">Cancelled</h6>
+                                            <h6 class="fs--1 text-900 mb-2">@(subscriptionById.DateCancelled.Value.ToString("M/d/yyyy"))</h6>
+                                            <p class="mb-2"><a href="javascript:void();" @onclick="OpenMembershipHistoryDialog">View Detail</a></p>
+                                        }
+                                        else
+                                        {
+                                            <h6 class="fs--1 text-600 mb-2">Member Since</h6>
+                                            <h6 class="fs--1 text-900 mb-2">@(ClubMemberSince.ToString("M/d/yyyy"))</h6>
+                                            <h6 class="fs--1 text-600 mb-2">Sales Rep</h6>
+                                            <h6 class="fs--1 text-600 mb-1">@(string.IsNullOrEmpty(SalesRepName) ? "N/A" : SalesRepName)</h6>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="col-4 d-flex justify-content-center align-items-center border-end border-200">
+                                    <div class="p-2 text-center">
+                                        <h6 class="fs--1 text-600 mb-2">Total Shipments</h6>
+                                        <h6 class="fs--1 text-900 mb-2">@(TotalShipments)</h6>
+                                        <h6 class="fs--1 text-600 mb-2">Last Shipment</h6>
+                                        <h6 class="fs--1 text-600 mb-1">@(LastShipmentDate.ToString("M/d/yyyy"))</h6>
+                                    </div>
+                                </div>
+                                <div class="col-4 d-flex justify-content-center align-items-center">
+                                    <div class="p-2 text-center">
+                                        <h6 class="fs--1 text-600 mb-2">LTV</h6>
+                                        <h6 class="fs--1 text-900 mb-2">
+                                            @if (customerLTV?.LTV != null)
+                                            {
+                                                @($"${customerLTV.LTV.ToString("0.00")}")
+                                            }
+                                            else
+                                            {
+                                                @("N/A")
+                                            }
+                                        </h6>
+                                        <h6 class="fs--1 text-600 mb-2">Last Order</h6>
+                                        <h6 class="fs--1 text-600 mb-1">
+                                            @if (customerLTV?.LastOrderId > 0)
+                                            {
+                                                @($"{customerLTV.LastOrderCreatedDate.ToString("M/d/yyyy")} ${customerLTV.LastOrderGrandTotal.ToString("0.00")}")
+                                            }
+                                            else
+                                            {
+                                                @("N/A")
+                                            }
+                                        </h6>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <div class="card shadow-none border-top rounded-0 mt-3" id="profileTabs">
+                        <div class="card-body p-0">
+                            <ul class="nav nav-tabs border-bottom text-uppercase" id="guestTabs" role="tablist">
+                                <li class="nav-item"><a class="@(selectedNavTab == "tab-Shipments" ? "nav-link active" : "nav-link")" id="Shipments-tab" data-bs-toggle="tab" href="#" @onclick="@(() => SelectTab("tab-Shipments"))" role="tab" aria-controls="tab-Shipments"><span class="far fa-box d-block d-sm-none"></span><span class="d-none d-sm-block">Shipments</span></a></li>
+                                <li class="nav-item"><a class="@(selectedNavTab == "tab-subscriptions" ? "nav-link active" : "nav-link")" id="subscriptions-tab" data-bs-toggle="tab" href="#" @onclick="@(() => SelectTab("tab-subscriptions"))" role="tab" aria-controls="tab-subscriptions"><span class="far fa-gem d-block d-sm-none"></span><span class="d-none d-sm-block">Subscriptions</span></a></li>
+                                <li class="nav-item"><a class="@(selectedNavTab == "tab-metaData" ? "nav-link active" : "nav-link")" id="metaData-tab" data-bs-toggle="tab" href="#" @onclick="@(() => SelectTab("tab-metaData"))" role="tab" aria-controls="tab-metaData"><span class="far fa-database d-block d-sm-none"></span><span class="d-none d-sm-block">Meta Data</span></a></li>
+                                <li class="nav-item"><a class="@(selectedNavTab == "tab-vacationHold" ? "nav-link active" : "nav-link")" id="vacationHold-tab" data-bs-toggle="tab" href="#" @onclick="@(() => SelectTab("tab-vacationHold"))" role="tab" aria-controls="tab-vacationHold"><span class="far fa-calendar-image d-block d-sm-none"></span><span class="d-none d-sm-block">Vacation Hold</span></a></li>
+                            </ul>
+                            <div class="tab-content p-3" id="guestTabContent">
+                                <div class="@(selectedNavTab == "tab-Shipments" ? "tab-pane fade show active" : "tab-pane fade")" id="tab-Shipments" role="tabpanel" aria-labelledby="Shipments-tab">
+                                    <div class="sf-grid min-vh-75">
+                                        <SfGrid DataSource="@Shipments" AllowPaging="false" Width="100%">
+                                            <GridTemplates>
+                                                <EmptyRecordTemplate>
+                                                    @if (!isLoading && Shipments.Count <= 0)
+                                                    {
+                                                        <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                                            <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Data</h6>
+                                                        </div>
+                                                    }
+                                                </EmptyRecordTemplate>
+                                            </GridTemplates>
+                                            <GridColumns>
+                                                <GridColumn HeaderText="Processing Date" TextAlign="TextAlign.Center" Width="20">
+                                                    <Template>
+                                                        @{
+                                                            var shipmentDate = (context as ShipmentListModel);
+                                                            @shipmentDate.ShipmentDate.ToString("M/d/yyyy")
+                                                        }
+                                                    </Template>
+                                                </GridColumn>
+                                                @*<GridColumn Field=@nameof(ShipmentListModel.ShipmentDate.ToString("MM/dd/")) HeaderText="Processing Date" TextAlign="TextAlign.Center" Width="20" />*@
+                                                <GridColumn HeaderText="Shipment" TextAlign="TextAlign.Center" Width="20" />
+                                                <GridColumn Field=@nameof(ShipmentListModel.ClubName) HeaderText="Club Name" TextAlign="TextAlign.Center" Width="20" />
+                                                <GridColumn Field="@nameof(ShipmentListModel.StatusText)" HeaderText="Shipment Status" TextAlign="TextAlign.Center" Width="20">
+                                                    @*<Template>
+                                                            @{
+                                                                var pholder = (context as ShipmentListModel);
+                                                                @if (pholder.ShipmentStatus == "Pending")
+                                                                {
+                                                                    <a href="javascript:void();" @onclick="@OpenShipmentPendingModal">@pholder.ShipmentStatus</a>
+                                                                }
+                                                                else if (pholder.ShipmentStatus == "Processed")
+                                                                {
+                                                                    <a href="javascript:void();" @onclick="@OpenShipmentProcessedModal">@pholder.ShipmentStatus</a>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <a href="javascript:void();">@pholder.ShipmentStatus</a>
+                                                                }
+                                                            }
+                                                        </Template>*@
+                                                </GridColumn>
+                                                <GridColumn Field=@nameof(ShipmentListModel.ShipmentName) HeaderText="Shipment Name" TextAlign="TextAlign.Center" Width="20" />
+                                                @*<GridColumn HeaderText="Fulfillment Status" TextAlign="TextAlign.Center" Width="20">
+                                                        <Template>
+                                                            @{
+                                                                var pholder = (context as ShipmentListModel);
+                                                                @if (pholder.FulfillmentStatus == "Delivered")
+                                                                {
+                                                                    <a href="javascript:void();" @onclick="@OpenTrackingHistoryModal">@pholder.FulfillmentStatus</a>
+                                                                }
+                                                                else if (pholder.FulfillmentStatus == "Picked Up")
+                                                                {
+                                                                    <a href="javascript:void();" @onclick="@OpenPickedUpModal">@pholder.FulfillmentStatus</a>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <a href="javascript:void();">@pholder.FulfillmentStatus</a>
+                                                                }
+                                                            }
+                                                        </Template>
+                                                    </GridColumn>*@
+                                            </GridColumns>
+                                        </SfGrid>
+                                    </div>
+                                </div>
+                                <div class="@(selectedNavTab == "tab-subscriptions" ? "tab-pane fade show active" : "tab-pane fade")" id="tab-subscriptions" role="tabpanel" aria-labelledby="subscriptions-tab">
+                                    <div class="my-2">
+                                        <div class="row">
+                                            @foreach (var subscription in clubSubscriptionsList?.OrderBy(x => x.Id != CurrentSubscriptionId)?.ToList() ?? new List<ClubSubscriptionsListModel>())
+                                            {
+                                                <div class="col-12 mb-4">
+                                                    <div class="card shadow-none border h-100">
+                                                        <div class="card-header border-bottom d-flex flex-between-center py-2">
+                                                            <h6 class="mb-0">@subscription.ClubName - <span class="fs--1 text-700">Joined @ConvertDateFormat(subscription.ClubCreatedDate)</span></h6>
+                                                            <div class="dropdown font-sans-serif btn-reveal-trigger">
+                                                                <button class="btn btn-link text-600 btn-sm dropdown-toggle dropdown-caret-none btn-reveal" type="button" id="crm-closed-vs-goal" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false"><svg class="svg-inline--fa fa-ellipsis-h fa-w-16 fs--2" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="ellipsis-h" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M328 256c0 39.8-32.2 72-72 72s-72-32.2-72-72 32.2-72 72-72 72 32.2 72 72zm104-72c-39.8 0-72 32.2-72 72s32.2 72 72 72 72-32.2 72-72-32.2-72-72-72zm-352 0c-39.8 0-72 32.2-72 72s32.2 72 72 72 72-32.2 72-72-32.2-72-72-72z"></path></svg><!-- <span class="fas fa-ellipsis-h fs--2"></span> Font Awesome fontawesome.com --></button>
+                                                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="crm-closed-vs-goal">
+                                                                    @if (subscription.ClubId == subscriptionById.ClubId)
+                                                                    {
+                                                                        <a class="dropdown-item" href="javascript:void();" @onclick="@(() => SelectTab("tab-Shipments"))">View History</a>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <a class="dropdown-item" href="javascript:void();" @onclick="@(() => NavigateTo(subscription.ClubSubscriptionsGUID))">View History</a>
+                                                                    }
+                                                                    <a class="dropdown-item" href="javascript:void();" @onclick="@OpenAddTaskModal">Add Reminder + Task</a>
+                                                                    <a class="dropdown-item" href="javascript:void();" @onclick="() => OpenUpdateCreditCardModal(subscription.SubscriptionPayment, subscription.Id)">Manage Payment</a>
+                                                                    <a class="dropdown-item" href="javascript:void();" @onclick="() => OpenVacationHoldDialog(subscription.Id, subscription.ClubName, subscription.MaxHoldDays, subscription.MaxHoldsPerYear, subscription.AllowHoldPrivileges, subscription.CurrentYearVacationCount, subscription.CurrentSubscriptionVacation)">Add Vacation Hold</a>
+                                                                    <div class="dropdown-divider"></div>
+                                                                    <a class="dropdown-item text-danger" href="javascript:void();" @onclick="@(() => OpenCancelMembershipModal(subscription))">Cancel Membership</a>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="card-body">
+                                                            <div class="row">
+                                                                <div class="col-md-8">
+                                                                    <div class="row g-2">
+                                                                        <div class="col-md-6 mb-3">
+                                                                            <div class="card shadow-none border h-100">
+                                                                                <div class="card-header d-flex flex-between-center py-2">
+                                                                                    <h6 class="mb-0 text-uppercase">Billing Address</h6>
+                                                                                    @if (subscription.BillToAddress != null)
+                                                                                    {
+                                                                                        <div class="dropdown font-sans-serif btn-reveal-trigger">
+                                                                                            <button class="btn btn-link text-600 btn-sm dropdown-toggle dropdown-caret-none btn-reveal" type="button" id="dropdown-active-user" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false"><svg class="svg-inline--fa fa-ellipsis-h fa-w-16 fs--2" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="ellipsis-h" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M328 256c0 39.8-32.2 72-72 72s-72-32.2-72-72 32.2-72 72-72 72 32.2 72 72zm104-72c-39.8 0-72 32.2-72 72s32.2 72 72 72 72-32.2 72-72-32.2-72-72-72zm-352 0c-39.8 0-72 32.2-72 72s32.2 72 72 72 72-32.2 72-72-32.2-72-72-72z"></path></svg><!-- <span class="fas fa-ellipsis-h fs--2"></span> Font Awesome fontawesome.com --></button>
+                                                                                            <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown-active-user">
+                                                                                                <a class="dropdown-item" href="javascript:void();" @onclick="@(() => OpenAddUpdateAddressModal(subscription.BillToAddress.AddresGuid, subscription.Id))">Edit Address</a>
+                                                                                                <a class="dropdown-item" href="javascript:void();" @onclick="@(() => OpenAddressModal(subscription.Id))">Choose Address on File</a>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    }
+                                                                                </div>
+                                                                                <div class="card-body py-2">
+                                                                                    <p class="mb-2">
+                                                                                        @{
+                                                                                            var billToCustomerAddress = subscription.BillToAddress;
+                                                                                            if (billToCustomerAddress != null)
+                                                                                            {
+                                                                                                @(billToCustomerAddress.FirstName + " " + billToCustomerAddress.LastName)<br>
+                                                                                                @billToCustomerAddress.Address1<br>
+                                                                                                @billToCustomerAddress.Address2<br>
+                                                                                                @billToCustomerAddress.City@(", ") @billToCustomerAddress.StateCode@(", ") @billToCustomerAddress.ZipCode <br>
+                                                                                                @billToCustomerAddress.Country<br> <br>
+                                                                                                @billToCustomerAddress.PhoneFormatted
+                                                                                            }
+                                                                                        }
+                                                                                    </p>
+                                                                                    @{
+                                                                                        var paymentDetail = subscription.SubscriptionPayment;
+                                                                                        var paymentDetailhtml = $"<p class='mb-0'><span class='w-semi-bold'><span class='fa-brands fa-cc-{paymentDetail?.CardType?.Replace(" ", "")?.ToLower() ?? "credit-card"} fa-lg'></span> - {paymentDetail?.CardLastFour ?? ""} exp {paymentDetail?.CardExp ?? ""}</span></p>";
+                                                                                        @((MarkupString)paymentDetailhtml)
+                                                                                    }
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div class="col-md-6 mb-3">
+                                                                            <div class="card shadow-none border h-100">
+                                                                                <div class="card-header d-flex flex-between-center py-2">
+                                                                                    <h6 class="mb-0 text-uppercase">@(subscription.DeliveryType == ClubDeliveryType.Pickup ? "Pickup Location" : "Shipping Address")</h6>
+                                                                                    <div class="dropdown font-sans-serif btn-reveal-trigger">
+                                                                                        <button class="btn btn-link text-600 btn-sm dropdown-toggle dropdown-caret-none btn-reveal" type="button" id="dropdown-active-user" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false"><svg class="svg-inline--fa fa-ellipsis-h fa-w-16 fs--2" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="ellipsis-h" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M328 256c0 39.8-32.2 72-72 72s-72-32.2-72-72 32.2-72 72-72 72 32.2 72 72zm104-72c-39.8 0-72 32.2-72 72s32.2 72 72 72 72-32.2 72-72-32.2-72-72-72zm-352 0c-39.8 0-72 32.2-72 72s32.2 72 72 72 72-32.2 72-72-32.2-72-72-72z"></path></svg><!-- <span class="fas fa-ellipsis-h fs--2"></span> Font Awesome fontawesome.com --></button>
+                                                                                        <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown-active-user">
+                                                                                            @if (subscription.DeliveryType == ClubDeliveryType.Ship && subscription.ShipToAddress != null)
+                                                                                            {
+                                                                                                <a class="dropdown-item" href="javascript:void();" @onclick="@(() => OpenAddUpdateAddressModal(subscription.ShipToAddress.AddresGuid, subscription.Id))">Edit Address</a>
+                                                                                                <a class="dropdown-item" href="javascript:void();" @onclick="@(() => OpenAddressModal(subscription.Id))">Choose Address on File</a>
+                                                                                            }
+                                                                                            @if (subscription.AllowCustomerPickup)
+                                                                                            {
+                                                                                                <a class="dropdown-item" href="javascript:void();" @onclick="@(() => OpenCustomerPickedUpModal(subscription.ClubPickupLocations, subscription.Id))">Change to Pickup</a>
+                                                                                            }
+                                                                                            <a class="dropdown-item" href="javascript:void();" @onclick="@(() => OpenShiptoCustomerModal(subscription.Id))">Change to Shipping</a>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div class="card-body py-2">
+                                                                                    <p class="mb-2">
+                                                                                        @if (subscription.DeliveryType == ClubDeliveryType.Pickup)
+                                                                                        {
+                                                                                            var pickupLocation = subscription?.ClubPickupLocations?.FirstOrDefault(x => x.LocationId == subscription.PickupLocation);
+                                                                                            @(customer.FirstName + " " + customer.LastName)<br> @*Need to verify is it correct*@
+                                                                                            if (pickupLocation?.DisplayLocationAddress != null)
+                                                                                            {
+                                                                                                @pickupLocation.LocationName<br>
+                                                                                                @pickupLocation.Address1@(", ") @pickupLocation.City@(", ") @pickupLocation.State @(", ") @pickupLocation.ZipCode<br>
+                                                                                                @pickupLocation.PhoneFormatted
+                                                                                            }
+                                                                                        }
+                                                                                        else
+                                                                                        {
+                                                                                            var shipToCustomerAddress = subscription.ShipToAddress;
+                                                                                            if (shipToCustomerAddress != null)
+                                                                                            {
+                                                                                                @(shipToCustomerAddress.FirstName + " " + shipToCustomerAddress.LastName)<br>
+                                                                                                @shipToCustomerAddress.Address1<br>
+                                                                                                @shipToCustomerAddress.Address2<br>
+                                                                                                @shipToCustomerAddress.City@(", ") @shipToCustomerAddress.StateCode@(" ") @shipToCustomerAddress.ZipCode <br>
+                                                                                                @shipToCustomerAddress.Country<br> <br>
+                                                                                                @shipToCustomerAddress.PhoneFormatted
+                                                                                            }
+                                                                                        }
+                                                                                    </p>
+                                                                                    <div class="mt-3 sf-ddl">
+                                                                                        <h6>Shipping Preference</h6>
+                                                                                        <SfInPlaceEditor @bind-Value="@subscription.PreferredShippingOption" Type="Syncfusion.Blazor.InPlaceEditor.InputType.DropDownList" TValue="int" CssClass="ps-0">
+                                                                                            <EditorComponent>
+                                                                                                <SfDropDownList TValue="int" TItem="ShippingCarrierCodeModel" @bind-Value="@subscription.PreferredShippingOption" DataSource="@serviceCodes">
+                                                                                                    <DropDownListFieldSettings Text="ServiceCodeName" Value="Id"></DropDownListFieldSettings>
+                                                                                                </SfDropDownList>
+                                                                                                <InPlaceEditorEvents TValue="int" OnActionSuccess="@((args) => OnActionSuccessHandler(args, subscription))"></InPlaceEditorEvents>
+                                                                                            </EditorComponent>
+                                                                                        </SfInPlaceEditor>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    @if (subscription?.CurrentSubscriptionVacation?.Id > 0)
+                                                                    {
+                                                                        <div class="row">
+                                                                            <div class="col-12">
+                                                                                <p class="bg-soft-info rounded-3 mb-0 p-2">
+                                                                                    <span class="fa-regular fa-circle-pause fs--1 me-2"></span>
+                                                                                    <span class="font-weight-semi-bold text-uppercase fs--2">Vacation Hold: @ConvertDateFormat(subscription.CurrentSubscriptionVacation.VacationStart) – @ConvertDateFormat(subscription.CurrentSubscriptionVacation.VacationEnd)</span>
+                                                                                    @if (!subscription.CurrentSubscriptionVacation.AllowPrivileges)
+                                                                                    {
+                                                                                        <span class="font-weight-semi-bold fs--2 text-danger float-end">Does Not Receive Member Benefits</span>
+                                                                                    }
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    }
+                                                                </div>
+                                                                <div class="col-md-4">
+                                                                    <p class="mt-3">Joined @ConvertDateFormat(subscription.DateJoined) – @(subscription?.BusinessCustomerBilling?.FirstName ?? "") @(subscription?.BusinessCustomerBilling?.LastName ?? "")</p>
+                                                                    <div class="row mb-0">
+                                                                        @{
+                                                                            var tagsAndNote = subscriptionTagsAndNotes.FirstOrDefault(x => x.SubscriptionId == subscription.Id);
+                                                                            <label class="form-label btn-reveal-trigger" for="inputMembershipTags">
+                                                                                Membership Tags
+                                                                                <button class="btn btn-link btn-sm btn-reveal text-600" @onclick="() => OpenMemberTagsDialog(tagsAndNote)"><span class="fas fa-pencil fs--1 float-end"></span></button>
+                                                                            </label>
+                                                                            <p>
+                                                                                @if (tagsAndNote.Tags.Count == 0)
+                                                                                {
+                                                                                    <span>No tag available.</span>
+                                                                                }
+                                                                                else
+                                                                                {
+                                                                                    foreach (var item in tagsAndNote.Tags)
+                                                                                    {
+                                                                                        <span class="badge badge-soft-dark bg-300 me-2">@(item)</span>
+                                                                                    }
+                                                                                }
+                                                                            </p>
+                                                                        }
+                                                                    </div>
+                                                                    <div class="mb-3">
+                                                                        <label class="form-label">Membership Note</label>
+                                                                        <textarea @bind="@subscriptionTagsAndNotes.FirstOrDefault(x=>x.SubscriptionId == subscription.Id).Note" class="form-control" rows="5"></textarea>
+                                                                    </div>
+                                                                    <div class="mb-3 float-end">
+                                                                        <button class="btn btn-sm btn-outline-primary" @onclick="()=>AddMemberNote(subscriptionTagsAndNotes.FirstOrDefault(x=>x.SubscriptionId == subscription.Id))">Save Note</button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="@(selectedNavTab == "tab-metaData" ? "tab-pane fade show active" : "tab-pane fade")" id="tab-metaData" role="tabpanel" aria-labelledby="metaData-tab">
+                                    <div class="my-2">
+                                        <div class="row">
+                                            <div class="col-12">
+                                                @if (CustomMetaDatas != null)
+                                                {
+                                                    <CustomMetaData customBusinessMetaData="@CustomMetaDatas" isReadOnly="true" />
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="@(selectedNavTab == "tab-vacationHold" ? "tab-pane fade show active" : "tab-pane fade")" id="tab-vacationHold" role="tabpanel" aria-labelledby="vacationHold-tab">
+                                    <div class="sf-grid">
+                                        <SfGrid DataSource="@clubVacationHoldList" AllowPaging="false" Width="100%">
+                                            <GridTemplates>
+                                                <EmptyRecordTemplate>
+                                                    @if (!isLoading && clubVacationHoldList.Count <= 0)
+                                                    {
+                                                        <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                                            <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Vacations</h6>
+                                                        </div>
+                                                    }
+                                                </EmptyRecordTemplate>
+                                            </GridTemplates>
+                                            <GridColumns>
+                                                <GridColumn HeaderText="Vacation Start" TextAlign="TextAlign.Left" Width="160">
+                                                    <Template>
+                                                        @{
+                                                            var vacationData = (context as GetClubVacationHoldModel);
+                                                            @vacationData.VacationStartDate.ToString("M/d/yyyy")
+                                                        }
+                                                    </Template>
+                                                </GridColumn>
+                                                <GridColumn HeaderText="Vacation End" TextAlign="TextAlign.Left" Width="160">
+                                                    <Template>
+                                                        @{
+                                                            var vacationData = (context as GetClubVacationHoldModel);
+                                                            @vacationData.VacationEndDate.ToString("M/d/yyyy")
+                                                        }
+                                                    </Template>
+                                                </GridColumn>
+                                                <GridColumn Field="@nameof(GetClubVacationHoldModel.VacationDays)" HeaderText="Days" TextAlign="TextAlign.Center" Width="60" />
+                                                <GridColumn HeaderText="Privileges" TextAlign="TextAlign.Center" Width="100">
+                                                    <Template>
+                                                        @{
+                                                            var vacationData = (context as GetClubVacationHoldModel);
+                                                            @(vacationData.AllowPrivileges ? "Yes" : "No")
+                                                        }
+                                                    </Template>
+                                                </GridColumn>
+                                                <GridColumn HeaderText="Created" TextAlign="TextAlign.Left" Width="200">
+                                                    <Template>
+                                                        @{
+                                                            var vacationData = (context as GetClubVacationHoldModel);
+                                                            {
+                                                                @vacationData.DateCreated.ToString("M/d/yyyy")
+                                                                <br />
+                                                                @(vacationData.CreatedByFirstName + " " + vacationData.CreatedByLastName)
+                                                            }
+                                                        }
+                                                    </Template>
+                                                </GridColumn>
+                                            </GridColumns>
+                                        </SfGrid>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <ImageCropper @ref="CropperModal" IsVisible="imageCroperActive" CropperConfiguration="cropperConfiguration" Cropped="OnCropped"></ImageCropper>
+}
+
+<!--#region Dialogs -->
+<SfDialog IsModal="true" Width="400px" ShowCloseIcon="true" @bind-Visible="BlockModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Block Customer</h5></Header>
+        <Content>
+            <div class="mb-3">
+                <label class="form-label" for="selReason">Reason</label>
+                <select id="selReason" class="form-select">
+                    <option selected>Select Reason</option>
+                    <option value="1">One</option>
+                    <option value="2">Two</option>
+                    <option value="3">Three</option>
+                </select>
+            </div>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="@CloseBlockModal">Close</button>
+            <button type="button" class="btn btn-primary">Save</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+<SfDialog IsModal="true" ShowCloseIcon="true" CssClass="syncfusion-dialog-size syncfusion-dialog-size-md" @bind-Visible="AddressModalVisibility">
+    <DialogEvents Opened="@onOpenAddressModalFocus"></DialogEvents>
+    <DialogTemplates>
+        <Header>
+            <h5>Default Address</h5>
+        </Header>
+        <Content>
+            @if (customer != null)
+            {
+                <div class="row">
+                    @if (customer.Address?.FirstOrDefault(x => x.IsDefaultBilling) != null)
+                    {
+                        var defaultBillingAddress = customer.Address.FirstOrDefault(x => x.IsDefaultBilling);
+                        <div class="col-sm-6 mb-5">
+                            <h6 class="fw-bold">Default Billing Address</h6>
+                            <div class="card shadow-none border h-100">
+                                <div class="card-body">
+                                    <button class="btn btn-sm btn-falcon-primary float-end mt-n2 dropdown-toggle btn-reveal dropdown-caret-none" type="button" id="dropdown-btn-customer" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--2"></span></button>
+                                    <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown-btn-customer">
+                                        <a class="dropdown-item" href="javascript:void();" @onclick="@(() => OpenAddUpdateAddressModal(defaultBillingAddress.AddresGuid))">Edit Address</a>
+                                        <a class="dropdown-item" href="javascript:void();" @onclick="@(() => RemoveCustomerAddress(defaultBillingAddress.AddresGuid))">Delete Address</a>
+                                    </div>
+                                    <p class="text-start">
+                                        @defaultBillingAddress.FirstName @defaultBillingAddress.LastName<br />
+                                        @if (!string.IsNullOrEmpty(defaultBillingAddress.Company))
+                                        {
+                                            @defaultBillingAddress.Company<br />
+                                        }
+                                        @defaultBillingAddress.Address1<br />
+                                        @if (!string.IsNullOrEmpty(defaultBillingAddress.Address2))
+                                        {
+                                            @defaultBillingAddress.Address2<br />
+                                        }
+                                        @defaultBillingAddress.City, @defaultBillingAddress.State @defaultBillingAddress.ZipCode<br />
+                                        @defaultBillingAddress.Country<br /><br />
+                                        @defaultBillingAddress.PhoneFormatted
+                                    </p>
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="@(() => UpdateSubscriptionBillShipAddress(defaultBillingAddress.Id, ClubAddressType.ShipTo))">Use for Shipping</button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    @if (customer.Address?.FirstOrDefault(x => x.IsDefaultShipping) != null)
+                    {
+                        var defaultShippingAddress = customer.Address.FirstOrDefault(x => x.IsDefaultShipping);
+                        <div class="col-sm-6 mb-5">
+                            <h6 class="fw-bold">Default Shipping Address</h6>
+                            <div class="card shadow-none border h-100">
+                                <div class="card-body">
+                                    <button class="btn btn-sm btn-falcon-primary float-end mt-n2 dropdown-toggle btn-reveal dropdown-caret-none" type="button" id="dropdown-btn-customer" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--2"></span></button>
+                                    <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown-btn-customer">
+                                        <a class="dropdown-item" href="javascript:void();" @onclick="@(() => OpenAddUpdateAddressModal(defaultShippingAddress.AddresGuid))">Edit Address</a>
+                                        <a class="dropdown-item" href="javascript:void();" @onclick="@(() => RemoveCustomerAddress(defaultShippingAddress.AddresGuid))">Delete Address</a>
+                                    </div>
+                                    <p class="text-start">
+                                        @defaultShippingAddress.FirstName @defaultShippingAddress.LastName<br />
+                                        @if (!string.IsNullOrEmpty(defaultShippingAddress.Company))
+                                        {
+                                            @defaultShippingAddress.Company<br />
+                                        }
+                                        @defaultShippingAddress.Address1<br />
+                                        @if (!string.IsNullOrEmpty(defaultShippingAddress.Address2))
+                                        {
+                                            @defaultShippingAddress.Address2<br />
+                                        }
+                                        @defaultShippingAddress.City, @defaultShippingAddress.State @defaultShippingAddress.ZipCode<br />
+                                        @defaultShippingAddress.Country<br /><br />
+                                        @defaultShippingAddress.PhoneFormatted
+                                    </p>
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="@(() => UpdateSubscriptionBillShipAddress(defaultShippingAddress.Id, ClubAddressType.BillTo))">Use for Purchases</button>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+                @if (customer.Address?.Where(x => !x.IsDefaultBilling && !x.IsDefaultShipping)?.FirstOrDefault() != null)
+                {
+                    <div class="row">
+                        <h6 class="fw-bold">Other Addresses</h6>
+                        @foreach (var item in customer.Address.Where(x => !x.IsDefaultBilling && !x.IsDefaultShipping).Select((value, i) => new { i, value }))
+                        {
+                            <div class="col-sm-6 mb-3">
+                                <div class="card shadow-none border h-100">
+                                    <div class="card-body">
+                                        <button class="btn btn-sm btn-falcon-primary float-end mt-n2 dropdown-toggle btn-reveal dropdown-caret-none" type="button" id="dropdown-btn-customer" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--2"></span></button>
+                                        <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown-btn-customer">
+                                            <a class="dropdown-item" href="javascript:void();" @onclick="@(() => OpenAddUpdateAddressModal(item.value.AddresGuid))">Edit Address</a>
+                                            <a class="dropdown-item" href="javascript:void();" @onclick="@(() => RemoveCustomerAddress(item.value.AddresGuid))">Delete Address</a>
+                                        </div>
+                                        <p class="text-start">
+                                            @item.value.FirstName @item.value.LastName<br />
+                                            @if (!string.IsNullOrEmpty(@item.value.Company))
+                                            {
+                                                @item.value.Company<br />
+                                            }
+                                            @item.value.Address1<br />
+                                            @if (!string.IsNullOrEmpty(item.value.Address2))
+                                            {
+                                                @item.value.Address2<br />
+                                            }
+                                            @item.value.City, @item.value.State @item.value.ZipCode<br />
+                                            @item.value.Country<br /><br />
+                                            @item.value.PhoneFormatted
+                                        </p>
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="@(() => UpdateSubscriptionBillShipAddress(item.value.Id, ClubAddressType.BillTo))">Use for Purchases</button>
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="@(() => UpdateSubscriptionBillShipAddress(item.value.Id, ClubAddressType.ShipTo))">Use for Shipping</button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            }
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-primary float-start" @onclick="@(() => OpenAddUpdateAddressModal(null))">Add New</button>
+            <button type="button" class="btn btn-secondary" @onclick="@CloseAddressModal">Close</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+<SfDialog IsModal="true" CssClass="syncfusion-dialog-size syncfusion-dialog-size-sm" ShowCloseIcon="true" @bind-Visible="UpdateAddressModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">@(addressRequestModel.AddressGUID != null ? "Update Address" : "Add New Address")</h5></Header>
+        <Content>
+            <EditForm Model="@addressRequestModel" Context="addressFormContext">
+                <DataAnnotationsValidator />
+                <div class="row gx-2">
+                    <div class="col-sm-6 mb-3">
+                        <label class="form-label" for="inputFirstName">First Name</label>
+                        <InputText id="inputFirstName" class="form-control" @bind-Value="@addressRequestModel.FirstName" placeholder="First Name" />
+                        <ValidationMessage For="@(() => addressRequestModel.FirstName)" />
+                    </div>
+                    <div class="col-sm-6 mb-3">
+                        <label class="form-label" for="inputLastName">Last Name</label>
+                        <InputText id="inputLastName" class="form-control" @bind-Value="@addressRequestModel.LastName" placeholder="Last Name" />
+                        <ValidationMessage For="@(() => addressRequestModel.LastName)" />
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Company</label>
+                    <input type="text" class="form-control" @bind-value="@addressRequestModel.Company" id="inputCompany" placeholder="Company" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Date of Birth</label>
+                    <SfMaskedTextBox Placeholder='Date of Birth' Mask="00/00/0000" @bind-Value="@UserAddressDob" @ref="UserAddressDobObj"></SfMaskedTextBox>
+                </div>
+                <div class="mb-3">
+                    <AddressControl countries="@countries" states="@states" @bind-address1="@addressRequestModel.Address1" @bind-address2="@addressRequestModel.Address2" @bind-selectedCountry="@addressRequestModel.CountryCode" @bind-stateCode="@addressRequestModel.StateCode" @bind-city="@addressRequestModel.City" @bind-zipCode="@addressRequestModel.ZipCode" />
+                </div>
+                @if (showPhoneControl)
+                {
+                    <div class="mb-3">
+                        <PhoneNumber phoneCountry="@addressRequestModel.PhoneCountry" phoneMasks="@phoneMasks" countries="@countries" @bind-phone="@addressRequestModel.Phone" label="Phone" @ref="phone" />
+                    </div>
+                }
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="chkDefaultBilling" @bind="addressRequestModel.IsDefaultBilling">
+                        <label class="form-check-label" for="chkDefaultBilling">
+                            Set as Default Purchase Address
+                        </label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="chkDefaultShipping" @bind="addressRequestModel.IsDefaultShipping">
+                        <label class="form-check-label" for="chkDefaultShipping">
+                            Set as Default Shipping Address
+                        </label>
+                    </div>
+                </div>
+
+                <hr />
+                <div class="float-end pb-3">
+                    <button type="button" class="btn btn-secondary" @onclick="@CloseUpdateAddressModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="@(() => HandleValidSubmit(addressFormContext))">Save</button>
+                </div>
+            </EditForm>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+<SfDialog IsModal="true" CssClass="syncfusion-dialog-size syncfusion-dialog-size-sm" ShowCloseIcon="true" @bind-Visible="UpdateUserDetailModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Update User Detail</h5></Header>
+        <Content>
+            <EditForm Model="@userRequestModel" Context="userFormContext">
+                <DataAnnotationsValidator />
+                <div class="row gx-2">
+                    <div class="col-sm-6 mb-3">
+                        <label class="form-label" for="inputFirstName">First Name</label>
+                        <InputText id="inputFirstName" class="form-control" @bind-Value="@userRequestModel.FirstName" placeholder="First Name" />
+                        <ValidationMessage For="@(() => userRequestModel.FirstName)" />
+                    </div>
+                    <div class="col-sm-6 mb-3">
+                        <label class="form-label" for="inputLastName">Last Name</label>
+                        <InputText id="inputLastName" class="form-control" @bind-Value="@userRequestModel.LastName" placeholder="Last Name" />
+                        <ValidationMessage For="@(() => userRequestModel.LastName)" />
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Company</label>
+                    <input type="text" class="form-control" @bind-value="@userRequestModel.Company" id="inputCompany" placeholder="Company" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="text" class="form-control" @bind-value="@userRequestModel.Email" id="inputEmail" placeholder="Email Address" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Date of Birth</label>
+                    <SfMaskedTextBox Placeholder='Date of Birth' Mask="00/00/0000" @bind-Value="@UserDob" @ref="UserDobObj"></SfMaskedTextBox>
+                </div>
+                @if (showPhoneControl)
+                {
+                    <div class="mb-3">
+                        <PhoneNumber PhoneCountry="@userRequestModel.PhoneCountry" phoneMasks="@phoneMasks" countries="@countries" @bind-phone="@userRequestModel.Phone" label="Mobile Phone" />
+                    </div>
+                    <div class="mb-3">
+                        <PhoneNumber PhoneCountry="@userRequestModel.HomePhoneCountry" phoneMasks="@phoneMasks" countries="@countries" @bind-phone="@userRequestModel.HomePhone" label="Home Phone" />
+                    </div>
+                    <div class="mb-3">
+                        <PhoneNumber PhoneCountry="@userRequestModel.WorkPhoneCountry" phoneMasks="@phoneMasks" countries="@countries" @bind-phone="@userRequestModel.WorkPhone" label="Work Phone" />
+                    </div>
+                }
+                <hr />
+                <div class="float-end pb-3">
+                    <button type="button" class="btn btn-secondary" @onclick="@CloseUpdateUserDetailModel">Close</button>
+                    <button type="button" class="btn btn-primary" @onclick="@(() => SaveUserDetail(userFormContext))">Save</button>
+                </div>
+            </EditForm>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+
+<SfDialog IsModal="true" Width="400px" ShowCloseIcon="true" @bind-Visible="UpdateCreditCardModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">@(isAddCreditCard? "Add Credit Card" : "Update Credit Card")</h5></Header>
+        <Content>
+            <EditForm Model="creditCard" OnValidSubmit="SaveCreditCard">
+                <DataAnnotationsValidator />
+                <div class="mb-3">
+                    <label class="form-label" for="inputCreditCardNumber">Credit Card Number</label>
+                    <SfMaskedTextBox Created="@CCInputCreatedHandler" @ref="creditCardInput" ID="inputCreditCardNumber" Mask="@_defaultCreditCardMask" PromptChar="@promptCharacter" @bind-Value="@creditCard.CreditCardNumber" CssClass="form-control form-control-sm" Placeholder="Card Number"></SfMaskedTextBox>
+                    <ValidationMessage For="() => creditCard.CreditCardNumber" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="inputCardholderName">Cardholder Name</label>
+                    <InputText @bind-Value="@creditCard.CardHolderName" placeholder="Cardholder Name" class="form-control" id="inputCardholderName" />
+                    <ValidationMessage For="() => creditCard.CardHolderName" />
+                </div>
+                <div class="row">
+                    <div class="col-sm-6 mb-3">
+                        <label class="form-label">Expiration Date</label>
+                        <InputText @bind-Value="@creditCard.ExpirationMonth" class="form-control" id="inputMonth" placeholder="Month" />
+                        <ValidationMessage For="() => creditCard.ExpirationMonth" />
+                    </div>
+                    <div class="col-sm-6 mb-3">
+                        <label class="form-label"></label>
+                        <InputText @bind-Value="@creditCard.ExpirationYear" class="form-control mt-2" id="inputYear" placeholder="Year" />
+                        <ValidationMessage For="() => creditCard.ExpirationYear" />
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-6 mb-3">
+                        <label class="form-label">CVV</label>
+                        <InputText @bind-Value="@creditCard.CVV" class="form-control" id="inputCVV" placeholder="CVV" />
+                        <ValidationMessage For="() => creditCard.CVV" />
+                    </div>
+                </div>
+                <div class="modal-footer p-0 pt-3">
+                    <button type="button" class="btn btn-secondary" @onclick="@CloseUpdateCreditCardModal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </EditForm>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+<EditForm Model="@addEditVacationRequest" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="VacationHoldDialogVisibility">
+        <DialogTemplates>
+            <Header><h5 class="modal-title" id="modalLabel">Vacation Hold Request</h5></Header>
+            <Content>
+                <div class="row">
+                    <div class="col-12 mb-3 sf-ddl">
+                        <label class="form-label">@vacationHoldClubName</label>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="inputStartDate">Start Date</label>
+                        <SfDatePicker TValue="DateTime?" @bind-Value="addEditVacationRequest.VacationStartDate">
+                            <DatePickerEvents TValue="DateTime?" ValueChange="()=>DateChangeHandler(addEditVacationRequest)"></DatePickerEvents>
+                        </SfDatePicker>
+                        <ValidationMessage For="@(() => addEditVacationRequest.VacationStartDate)" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="inputEndDate">End Date</label>
+                        <SfDatePicker TValue="DateTime?" @bind-Value="addEditVacationRequest.VacationEndDate">
+                            <DatePickerEvents TValue="DateTime?" ValueChange="()=>DateChangeHandler(addEditVacationRequest)"></DatePickerEvents>
+                        </SfDatePicker>
+                        <ValidationMessage For="@(() => addEditVacationRequest.VacationEndDate)" />
+                    </div>
+                    @if (!isInMaximumVacationDaysRange)
+                    {
+                        <div class="col-md-12 mb-3">
+                            <div class="validation-message">You have exceeds the 'Maximum Vacation Days limit' i.e @maximumVacationDays day(s).</div>
+                        </div>
+                    }
+                    <div class="col-md-12 mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="chkRetainMemberPrivileges" checked="@addEditVacationRequest.AllowPrivileges" @bind-value="@addEditVacationRequest.AllowPrivileges">
+                            <label class="form-check-label" for="chkRetainMemberPrivileges">Retain Member Privileges</label>
+                        </div>
+                    </div>
+                </div>
+            </Content>
+            <FooterTemplate>
+                @if (currentSubscriptionVacation != null)
+                {
+                    <button type="button" @onclick="CancelVacationHold" class="btn btn-danger float-start">Cancel Hold</button>
+                }
+                <button type="button" @onclick="CloseVacationHoldDialog" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" @onclick="@(() => AddUpdateVacationHold(formContext))" class="btn btn-primary">Save</button>
+            </FooterTemplate>
+        </DialogTemplates>
+    </SfDialog>
+</EditForm>
+
+<EditForm Model="@cancelClubMembershipRequest" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="CancelMembershipModalVisibility">
+        <DialogTemplates>
+            <Header><h5 class="modal-title" id="modalLabel">Cancel Membership</h5></Header>
+            <Content>
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Club Name</label><br />
+                        <label class="form-label fw-normal">@CancellationClubName</label>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label" for="dpCancelDate">Min Shipments</label>
+                        <label class="form-label fw-normal">@MinShipments</label>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label" for="dpCancelDate">Shipments Received</label>
+                        <label class="form-label fw-normal">@ShipmentsReceived</label>
+                    </div>
+                    <div class="col-12 mb-3 sf-ddl">
+                        <label class="form-label" for="selReasonforCancellation">Reason for Cancellation</label>
+                        <SfDropDownList TValue="int" TItem="ClubCancellationReasonListModel" @bind-Value="@cancelClubMembershipRequest.CancelReasonId" DataSource="@clubCancellationReasonList">
+                            <DropDownListFieldSettings Text="CancelReason" Value="Id"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                        <ValidationMessage For="@(() => cancelClubMembershipRequest.CancelReasonId)" />
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label" for="dpCancelDate">Effective Date</label>
+                        <SfDatePicker id="dpCancelDate" @bind-Value="cancelClubMembershipRequest.CancelEffectiveDate"></SfDatePicker>
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label">Cancellation Notes</label>
+                        <textarea class="form-control" @bind="cancelClubMembershipRequest.CancelNote" @bind:event="oninput" maxlength="@MAXCancellationNotesCount" rows="3" />
+                        <label class="form-label">@(MAXCancellationNotesCount - cancelClubMembershipRequest.CancelNote.Count()) Remaining</label>
+                    </div>
+                </div>
+            </Content>
+            <FooterTemplate>
+                <button type="button" class="btn btn-secondary" @onclick="@CloseCancelMembershipModal">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="()=>CancelMembership(formContext)">Confirm</button>
+            </FooterTemplate>
+        </DialogTemplates>
+    </SfDialog>
+</EditForm>
+
+<SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="MembershipCancelledModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Cancel Membership</h5></Header>
+        <Content>
+            <div class="row">
+                <div class="mb-3">
+                    <label class="fw-normal m-0">Membership Cancelled</label>
+                </div>
+                <div class="mb-1">
+                    <h6 class="fw-normal mb-0">Club Name: @CancellationClubName</h6>
+                </div>
+                <div class="mb-3">
+                    <h6 class="fw-normal m-0">Effective Date: @CancellationClubDate</h6>
+                </div>
+            </div>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="CloseMembershipCancelledModal">Close</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+<SfDialog IsModal="true" ShowCloseIcon="true" CssClass="syncfusion-dialog-size syncfusion-dialog-size-md" @bind-Visible="MemberShipAddressModalVisibility">
+    <DialogEvents Opened="@onOpenAddressModalFocus"></DialogEvents>
+    <DialogTemplates>
+        <Header>
+            <h5>[[ClubName]] Address</h5>
+        </Header>
+        <Content>
+            @if (customer != null)
+            {
+                <div class="row">
+                    @if (customer.Address.Where(x => x.IsDefaultBilling == true).FirstOrDefault() != null)
+                    {
+                        <div class="col-sm-6">
+                            <h6 class="fw-bold">Default Billing Address</h6>
+                            @foreach (var item in customer.Address)
+                            {
+                                @if (item.IsDefaultBilling)
+                                {
+                                    <div class="card shadow-none border h-100">
+                                        <div class="card-body">
+                                            <button class="btn btn-link  float-end mt-n2" @onclick="@(() => OpenAddUpdateAddressModal(item.AddresGuid))"><span class="fas fa-pencil fs--1"></span></button>
+                                            <p class="text-start mb-0">
+                                                @item.FirstName @item.LastName<br />
+                                                @if (!string.IsNullOrEmpty(@item.Company))
+                                                {
+                                                    @item.Company<br />
+                                                }
+                                                @item.Address1<br />
+                                                @if (!string.IsNullOrEmpty(item.Address2))
+                                                {
+                                                    @item.Address2<br />
+                                                }
+                                                @item.City, @item.State @item.ZipCode<br />
+                                                @item.Country<br /><br />
+                                                @item.PhoneFormatted
+                                            </p>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    }
+                    @if (customer.Address.Where(x => x.IsDefaultShipping == true).FirstOrDefault() != null)
+                    {
+                        <div class="col-sm-6">
+                            <h6 class="fw-bold">Default Shipping Address</h6>
+                            @foreach (var item in customer.Address)
+                            {
+                                @if (item.IsDefaultShipping)
+                                {
+                                    <div class="card shadow-none border h-100">
+                                        <div class="card-body">
+                                            <button class="btn btn-link  float-end mt-n2" @onclick="@(() => OpenAddUpdateAddressModal(item.AddresGuid))"><span class="fas fa-pencil fs--1"></span></button>
+                                            <p class="text-start mb-0">
+                                                @item.FirstName @item.LastName<br />
+                                                @if (!string.IsNullOrEmpty(@item.Company))
+                                                {
+                                                    @item.Company<br />
+                                                }
+                                                @item.Address1<br />
+                                                @if (!string.IsNullOrEmpty(item.Address2))
+                                                {
+                                                    @item.Address2<br />
+                                                }
+                                                @item.City, @item.State @item.ZipCode<br />
+                                                @item.Country<br /><br />
+                                                @item.PhoneFormatted
+                                            </p>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    }
+                </div>
+                @if (customer.Address.Where(x => !x.IsDefaultBilling && !x.IsDefaultShipping).FirstOrDefault() != null)
+                {
+                    <div class="row mt-5">
+                        @foreach (var item in customer.Address.Where(x => !x.IsDefaultBilling && !x.IsDefaultShipping).Select((value, i) => new { i, value }))
+                        {
+                            <h6 class="fw-bold" hidden="@(item.i > 0)">Other Addresses</h6>
+                            <div class="col-sm-6 mb-3">
+                                <div class="card shadow-none border h-100">
+                                    <div class="card-body">
+                                        <button class="btn btn-link  float-end mt-n2" @onclick="@(() => OpenAddUpdateAddressModal(item.value.AddresGuid))"><span class="fas fa-pencil fs--1"></span></button>
+                                        <p class="text-start">
+                                            @item.value.FirstName @item.value.LastName<br />
+                                            @if (!string.IsNullOrEmpty(@item.value.Company))
+                                            {
+                                                @item.value.Company<br />
+                                            }
+                                            @item.value.Address1<br />
+                                            @if (!string.IsNullOrEmpty(item.value.Address2))
+                                            {
+                                                @item.value.Address2<br />
+                                            }
+                                            @item.value.City, @item.value.State @item.value.ZipCode<br />
+                                            @item.value.Country<br /><br />
+                                            @item.value.PhoneFormatted
+                                        </p>
+                                        <button class="btn btn-sm btn-outline-primary">Use for Purchases</button>
+                                        <button class="btn btn-sm btn-outline-primary">Use for Shipping</button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            }
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-primary float-start">Add New</button>
+            <button type="button" class="btn btn-secondary" @onclick="@CloseMemberShipAddressModal">Cancel</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+<SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="ShipmentPendingModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Shipment (pending)</h5></Header>
+        <Content>
+            <div class="row">
+            </div>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="@CloseShipmentPendingModal">Cancel</button>
+            <button type="button" class="btn btn-primary">Save</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+<SfDialog IsModal="true" Width="650px" ShowCloseIcon="true" @bind-Visible="ShipmentProcessedModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Shipment Details</h5></Header>
+        <Content>
+            <div class="row timeline timeline-primary timeline-current g-3 pb-card">
+                <div class="col-auto ps-4 ms-2">
+                    <div class="ps-2">
+                        <div class="icon-item icon-item-sm rounded-circle bg-200 shadow-none"><span class="text-primary far fa-heart-rate"></span></div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="row gx-0 border-bottom pb-card">
+                        <div class="col">
+                            <h6 class="text-800 mb-1">Order Created</h6>
+                            <p class="fs--1 text-600 mb-0">POS</p>
+                        </div>
+                        <div class="col-auto">
+                            <p class="fs--2 text-500 mb-0">December 29, 2021 05:34 AM</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row timeline timeline-primary timeline-current g-3 pb-card">
+                <div class="col-auto ps-4 ms-2">
+                    <div class="ps-2">
+                        <div class="icon-item icon-item-sm rounded-circle bg-200 shadow-none"><span class="text-primary far fa-heart-rate"></span></div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="row gx-0 border-bottom pb-card">
+                        <div class="col">
+                            <h6 class="text-800 mb-1">Order Receipt Sent</h6>
+                            <p class="fs--1 text-600 mb-0">Order receipt sent to javedkalaniya@gmail.com</p>
+                        </div>
+                        <div class="col-auto">
+                            <p class="fs--2 text-500 mb-0">December 29, 2021 05:34 AM</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row timeline timeline-primary timeline-current g-3 pb-card">
+                <div class="col-auto ps-4 ms-2">
+                    <div class="ps-2">
+                        <div class="icon-item icon-item-sm rounded-circle bg-200 shadow-none"><span class="text-primary far fa-heart-rate"></span></div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="row gx-0 border-bottom pb-card">
+                        <div class="col">
+                            <h6 class="text-800 mb-1">Order Receipt Sent</h6>
+                            <p class="fs--1 text-600 mb-0">Order receipt sent to javedkalaniya@gmail.com</p>
+                        </div>
+                        <div class="col-auto">
+                            <p class="fs--2 text-500 mb-0">December 29, 2021 08:51 AM</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row timeline timeline-primary timeline-current g-3 pb-card">
+                <div class="col-auto ps-4 ms-2">
+                    <div class="ps-2">
+                        <div class="icon-item icon-item-sm rounded-circle bg-200 shadow-none"><span class="text-primary far fa-heart-rate"></span></div>
+                    </div>
+                </div>
+                <div class="col">
+                    <div class="row gx-0 pb-card">
+                        <div class="col">
+                            <h6 class="text-800 mb-1">Order Receipt Sent</h6>
+                            <p class="fs--1 text-600 mb-0">Order receipt sent to javedkalaniya@gmail.com</p>
+                        </div>
+                        <div class="col-auto">
+                            <p class="fs--2 text-500 mb-0">December 29, 2021 08:52 AM</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+<SfDialog IsModal="true" Width="700px" ShowCloseIcon="true" @bind-Visible="TrackingHistoryModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Tracking History</h5></Header>
+        <Content>
+            <div class="row">
+                <div class="col-md-5 border-end border-2 ps-4">
+                    <div class="mb-4">
+                        <h5>Package Details</h5>
+                    </div>
+                    <div class="mb-3">
+                        <p class="mb-0 fw-semi-bold">Tracking Number</p>
+                        <p class="mb-0">1Z6832FX4245007578</p>
+                    </div>
+                    <div class="mb-3">
+                        <p class="mb-0 fw-semi-bold">Service</p>
+                        <p class="mb-0"><a href="javascript:void();">UPS Ground <span class="far fa-external-link-alt fa-fw me-1"></span></a></p>
+                    </div>
+                    <div class="mb-3">
+                        <p class="mb-0 fw-semi-bold">Weight</p>
+                        <p class="mb-0">6.00 LBS</p>
+                    </div>
+                    <div class="mb-3">
+                        <p class="mb-0 fw-semi-bold">Shipment Category</p>
+                        <p class="mb-0">Package</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-4">
+                        <h5>History</h5>
+                    </div>
+                    <div class="mb-3">
+                        <p class="mb-0">12/29/2021</p>
+                        <p class="mb-0">10:25 A.M.</p>
+                    </div>
+                    <div class="mb-3">
+                        <p class="mb-0">12/28/2021</p>
+                        <p class="mb-0">02:43 A.M.</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-4">
+                        <h5>&nbsp;</h5>
+                    </div>
+                    <div class="mb-3">
+                        <p class="mb-0 fw-semi-bold">On the Way</p>
+                        <p class="mb-0">Medford, OR, Unites States</p>
+                    </div>
+                    <div class="mb-3">
+                        <p class="mb-0 fw-semi-bold">Label Created</p>
+                        <p class="mb-0">Unites States</p>
+                    </div>
+                </div>
+            </div>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+<SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="PickedUpModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Picked Up</h5></Header>
+        <Content>
+            <div class="row">
+            </div>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="@ClosePickedUpModal">Cancel</button>
+            <button type="button" class="btn btn-primary">Save</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+<SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="CustomerPickedUpModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Customer Pickup</h5></Header>
+        <Content>
+            @if (pickupLocations?.Count == 1)
+            {
+                <div class="mb-3">
+                    <p>You have selected to change the fulfillment for this membership to Customer Pickup.</p>
+                </div>
+            }
+            else
+            {
+                <div class="mb-3 sf-ddl">
+                    <label class="form-label">Customer Pickup Location</label>
+                    <SfDropDownList id=sfLocationAddress TValue="int?" @bind-Value="selectedPickUpLocation" TItem="GetClubPickupLocationModel" Placeholder="Select Pickup Location" AllowFiltering="true" DataSource="@pickupLocations">
+                        <DropDownListFieldSettings Text="DisplayLocationAddress" Value="LocationId"></DropDownListFieldSettings>
+                    </SfDropDownList>
+                </div>
+            }
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary me-2" @onclick="@CloseCustomerPickedUpModal">Cancel</button>
+            @if (pickupLocations?.Count == 1)
+            {
+                selectedPickUpLocation = pickupLocations?.FirstOrDefault()?.LocationId;
+                <button type="button" class="btn btn-primary" @onclick="()=>ChangeToCustomerPickup(ClubDeliveryType.Pickup)">Confirm</button>
+            }
+            else
+            {
+                <button type="button" class="btn btn-primary" @onclick="()=>ChangeToCustomerPickup(ClubDeliveryType.Pickup)">Save</button>
+            }
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+<SfDialog IsModal="true" ShowCloseIcon="true" CssClass="syncfusion-dialog-size syncfusion-dialog-size-md" @bind-Visible="ShiptoCustomerModalVisibility">
+    <DialogEvents Opened="@onOpenAddressModalFocus"></DialogEvents>
+    <DialogTemplates>
+        <Header>
+            <h5>Ship to Customer</h5>
+        </Header>
+        <Content>
+            <h6 class="fw-semi-bold">Choose Ship To Address</h6>
+            <div class="row">
+                @foreach (var address in customer?.Address?.ToList() ?? new List<UserAddressModel>())
+                {
+                    <div class="col-sm-6 mb-5">
+                        <div class="card shadow-none border h-100">
+                            <div class="card-body">
+                                <button class="btn btn-sm btn-falcon-primary float-end mt-n2 dropdown-toggle btn-reveal dropdown-caret-none" type="button" id="dropdown-btn-customer" data-bs-toggle="dropdown" data-boundary="viewport" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--2"></span></button>
+                                <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown-btn-customer">
+                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => OpenAddUpdateAddressModal(address.AddresGuid, null, true))">Edit Address</a>
+                                    <a class="dropdown-item" href="javascript:void();" @onclick="@(() => RemoveCustomerAddress(address.AddresGuid))">Delete Address</a>
+                                </div>
+                                <p class="text-start">
+                                    @address.FirstName @address.LastName<br />
+                                    @if (!string.IsNullOrEmpty(address.Company))
+                                    {
+                                        @address.Company<br />
+                                    }
+                                    @address.Address1<br />
+                                    @if (!string.IsNullOrEmpty(address.Address2))
+                                    {
+                                        @address.Address2<br />
+                                    }
+                                    @address.City, @address.State @address.ZipCode<br />
+                                    @address.Country<br /><br />
+                                    @address.PhoneFormatted
+                                </p>
+                                <button class="btn btn-sm btn-outline-primary" @onclick="@(() => UpdateSubscriptionBillShipAddress(address.Id, ClubAddressType.ShipTo, true))">Use for Shipping</button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-primary float-start" @onclick="@(() => OpenAddUpdateAddressModal(null, null, true))">Add New</button>
+            <button type="button" class="btn btn-secondary" @onclick="@CloseShiptoCustomerModal">Close</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+<SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="AddTaskModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Add Task</h5></Header>
+        <Content>
+            <div class="mb-3">
+                <select class="form-select" @bind="@taskType">
+                    <option value="AccountFollowUp" selected>Account Follow Up</option>
+                    <option value="Reminder">Reminder</option>
+                    <option value="Task">Task</option>
+                </select>
+            </div>
+            @if (taskType == "Reminder")
+            {
+                <div class="mb-3">
+                    <SfDatePicker id="dpReminderDate" TValue="DateTime?" Placeholder="Choose Start Date"></SfDatePicker>
+                </div>
+            }
+            <div class="mb-3">
+                <label class="form-label">Notes</label>
+                <textarea class="form-control" @bind="note" @bind:event="oninput" maxlength="@MAXNoteCount" rows="3" placeholder="Enter the note" />
+                <label class="form-label">(@(MAXNoteCount - note.Count()) Remaining)</label>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="inputNotifyTeamMembers">Notify Team Members</label>
+                <SfMultiSelect Id="tags-multiselect" @bind-Value="@teamMembersData" TValue="List<string>" TItem="MembershipTagData" AllowCustomValue=true DataSource="@MembershipTagDataList">
+                    <MultiSelectFieldSettings Text="Name" Value="ID"></MultiSelectFieldSettings>
+                </SfMultiSelect>
+            </div>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="@CloseAddTaskModal">Cancel</button>
+            <button type="button" class="btn btn-primary">Save</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+<SfDialog Width="500px" IsModal="true" ShowCloseIcon="false" @bind-Visible="@IsMemberTagsDialogVisible">
+    <DialogTemplates>
+        <Header>
+            Membership Tags
+        </Header>
+        <Content>
+            @if (subscriptionTagsModel != null)
+            {
+                <div class="row">
+                    <div class="mb-3 sf-ddl">
+                        <SfMultiSelect Id="tags-multiselect" Placeholder="Select one or more membership tag" @bind-Value="@subscriptionTagsModel.Tags" TValue="List<string>" TItem="ClubSubscriptionTagListModel" DataSource="@clubSubscriptionTags">
+                            <MultiSelectFieldSettings Text="Value" Value="Value"></MultiSelectFieldSettings>
+                        </SfMultiSelect>
+                    </div>
+                </div>
+            }
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-sm btn-secondary" @onclick="@CloseMemberTagsDialog">Close</button>
+            <button type="button" class="btn btn-sm btn-primary" @onclick="UpdateMemberTags">Save</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+<SfDialog Width="400px" IsModal="true" ShowCloseIcon="false" @bind-Visible="@IsAuthorizationFailedModalVisible">
+    <DialogTemplates>
+        <Header>Credit Card Authorization Failed</Header>
+        <Content>
+            <div class="row">
+                <p>We’re sorry, but the credit card was declined.</p>
+                <p>Please review the credit card number and cardholder details and try again.</p>
+            </div>
+        </Content>
+    </DialogTemplates>
+    <DialogButtons>
+        <DialogButton Content="Ok" OnClick="HideAuthorizationFailedModal" IsPrimary="true" />
+    </DialogButtons>
+</SfDialog>
+
+<SfDialog IsModal="true" Width="800px" ShowCloseIcon="true" @bind-Visible="MembershipHistoryDialogVisibility">
+    <DialogEvents Closed="@CloseMembershipHistoryDialog"></DialogEvents>
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Membership History</h5></Header>
+        <Content>
+            <div class="row">
+                <div class="col-12 mb-3">
+                    <label class="form-label">Club Name</label><br />
+                    <label class="form-label fw-normal">@subscriptionById?.ClubName</label>
+                </div>
+                <div class="col-6 mb-3">
+                    <label class="form-label" for="dpCancelDate">Join Date</label><br />
+                    <label class="form-label fw-normal">@subscriptionById?.DateJoined.ToString("M/d/yyyy")</label>
+                </div>
+                <div class="col-6 mb-3">
+                    <label class="form-label" for="dpCancelDate">Cancel Date</label><br />
+                    <label class="form-label fw-normal">@subscriptionById?.DateCancelled?.ToString("M/d/yyyy")</label>
+                </div>
+                <div class="col-6 mb-3">
+                    <label class="form-label" for="dpCancelDate">Sales Rep</label><br />
+                    <label class="form-label fw-normal">
+                        @if (subscriptionById?.SubscriptionSalesRep != null)
+                        {
+                            @($"{subscriptionById?.SubscriptionSalesRep.FirstName} {subscriptionById?.SubscriptionSalesRep.LastName}- {subscriptionById?.SignupSourceTypeText}")
+                        }
+                        else
+                        {
+                            @("N/A")
+                        }
+                    </label>
+                </div>
+                <div class="col-6 mb-3">
+                    <label class="form-label" for="dpCancelDate">Cancel Reason</label><br />
+                    <label class="form-label fw-normal">
+                        @(string.IsNullOrEmpty(subscriptionById?.CancelReason) ? "N/A" : subscriptionById.CancelReason)
+                    </label>
+                </div>
+                <div class="col-12 mb-3">
+                    <label class="form-label">Membership Tags</label><br />
+                    <label class="form-label fw-normal">
+                        @if (subscriptionById?.SubscriptionTags != null && subscriptionById.SubscriptionTags.Count > 0)
+                        {
+                            @(String.Join(", ", subscriptionById.SubscriptionTags.Select(x=>x.TagValue).ToList()))
+                        }
+                        else
+                        {
+                            @("N/A")
+                        }
+                    </label>
+                </div>
+                <div class="col-12 mb-3">
+                    <label class="form-label">Membership Notes</label><br />
+                    @if (subscriptionById?.SubscriptionNotes != null && subscriptionById.SubscriptionNotes.Count > 0)
+                    {
+                        foreach (var note in subscriptionById.SubscriptionNotes)
+                        {
+                            <div class="d-flex mb-2 align-items-center bg-white border rounded-3 p-2">
+                                <span class="far fa-comment-alt-lines"></span>
+                                <div class="ms-3 flex-shrink-1 flex-grow-1">
+                                    <p class="mb-1">@note.Note</p>
+                                    <div class="fs--1"><span class="text-600 fs--2">@note.TeamMemberFirstName @note.TeamMemberLastName</span><span class="text-500 fs--2 ms-2">@note.NoteDate.ToString("dddd, MMMM dd, yyyy")</span></div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="form-label fw-normal">N/A</p>
+                    }
+                </div>
+            </div>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+<SfDialog IsModal="true" ShowCloseIcon="true" CssClass="syncfusion-dialog-size syncfusion-dialog-size-md" @bind-Visible="EditMetaDataModalVisibility">
+    <DialogTemplates>
+        <Header>
+            <h5>Edit Meta Data</h5>
+        </Header>
+        <Content>
+            @if (subscriptionById != null)
+            {
+                @if (CustomMetaDatas != null)
+                {
+                    <CustomMetaData customBusinessMetaData="@CustomMetaDatas" isReadOnly="false" />
+                }
+            }
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="@CloseEditMetaDataModal">Close</button>
+            <button type="button" class="btn btn-primary" @onclick="@(() => SaveEditMetaData())">Save</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+<!--#endregion Dialogs -->
+@code
+{
+    #region Parameters and On Load
+    [Parameter]
+    public Guid SubscriptionId { get; set; }
+    [Parameter]
+    public string TabName { get; set; } = "Shipments";
+    public Guid CustomerGuid { get; set; }
+    public int CurrentSubscriptionId { get; set; }
+    private bool BlockModalVisibility { get; set; } = false;
+    private bool AddressModalVisibility { get; set; } = false;
+    private bool UpdateAddressModalVisibility { get; set; } = false;
+    private bool MemberShipAddressModalVisibility { get; set; } = false;
+    private bool UpdateUserDetailModalVisibility { get; set; } = false;
+    private bool ShipmentPendingModalVisibility { get; set; } = false;
+    private bool ShipmentProcessedModalVisibility { get; set; } = false;
+    private bool TrackingHistoryModalVisibility { get; set; } = false;
+    private bool PickedUpModalVisibility { get; set; } = false;
+    private bool ShiptoCustomerModalVisibility { get; set; } = false;
+    private bool AddTaskModalVisibility { get; set; } = false;
+    private bool EditMetaDataModalVisibility { get; set; } = false;
+    string note = "";
+    const int MAXNoteCount = 512;
+    private string taskType;
+    private UserAddressRequestModel addressRequestModel = new UserAddressRequestModel { CountryCode = "US" };
+    private UpdateUserRequestModel userRequestModel = new UpdateUserRequestModel();
+    private List<CpCountry> countries = new List<CpCountry>();
+    private List<CpState> states = new List<CpState>();
+    private Member currentMember = new Member();
+    UserDetailModel loggedInUser = new UserDetailModel();
+    private CustomerDetailViewModel customer = null;
+    private string title = "";
+    private ImageUploaderModal Modal { get; set; }
+    string imgUrl;
+    private bool imageCroperActive = false;
+    private ImageCropperConfiguration cropperConfiguration = new ImageCropperConfiguration();
+    private ImageCropper CropperModal { get; set; }
+    private bool isLoading;
+    private bool showPhoneControl;
+    private PhoneNumber phone;
+    private List<PhoneMask> phoneMasks = new List<PhoneMask>();
+    SfMaskedTextBox UserAddressDobObj;
+    SfMaskedTextBox UserDobObj;
+    private string UserAddressDob;
+    private string UserDob;
+    private string selectedNavTab = "tab-Shipments";
+    List<ClubSubscriptionsListModel> clubSubscriptionsList = new List<ClubSubscriptionsListModel>();
+    ClubSubscriptionsListModel subscriptionById = null;
+    List<ShippingRateModel> shippingRates = new List<ShippingRateModel>();
+    List<ShippingCarrierCodeModel> serviceCodes = new List<ShippingCarrierCodeModel>();
+    List<ClubSubscriptionTagListModel> clubSubscriptionTags = new List<ClubSubscriptionTagListModel>();
+    TeamDetailViewModel teamDetail = new TeamDetailViewModel();
+    public List<CustomBusinessMetaDataModel> CustomMetaDatas = new List<CustomBusinessMetaDataModel>();
+    private DateTime ClubMemberSince { get; set; }
+    private DateTime LastShipmentDate { get; set; }
+    private string SalesRepName { get; set; }
+    private int TotalShipments { get; set; }
+    private string ClubName { get; set; }
+    private bool IsCurrentSubscriptionCancelled { get; set; }
+    private CustomerLTVModel customerLTV = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var getUserData = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+        var userByEmail = await _userViewModel.GetUserByEmail(getUserData.Email);
+        if (userByEmail.success)
+            loggedInUser = userByEmail.data;
+
+        var customerTeam = await _teamViewModel.GetBusinessTeamDetail(loggedInUser.UserGUID);
+        teamDetail = customerTeam?.data ?? new TeamDetailViewModel();
+
+        var countriesResponse = await _countryViewModel.GetCountries();
+        countries = countriesResponse?.data ?? new List<CpCountry>();
+
+        var statesResponse = await _stateViewModel.GetStates();
+        states = statesResponse?.data ?? new List<CpState>();
+
+        //Get Phone Masks
+        phoneMasks = await http.GetFromJsonAsync<List<PhoneMask>>("PhoneMasks.json");
+
+        var cancellationReasonListResponse = await _clubViewModel.GetClubCancellationReasonListAsync(currentMember.Id);
+        clubCancellationReasonList = cancellationReasonListResponse?.data ?? new List<ClubCancellationReasonListModel>();
+
+        //Get shipping Rates
+        var shippingRatesResponse = await _shippingRatesViewModel.GetShippingRates(currentMember.Id);
+        if (shippingRatesResponse.success)
+        {
+            shippingRates = shippingRatesResponse.data;
+        }
+
+        //Get Shipping Carrier Service Codes
+        var shippingServiceCodesResponse = await _shippingCarrierViewModel.GetAllShippingCarrierServiceCodes();
+        if (shippingServiceCodesResponse.success)
+        {
+            foreach (var rate in shippingRates)
+            {
+                if (rate.IsClubSalesChannel)
+                {
+                    if (!serviceCodes.Any(x => x.Id == rate.ShippingServiceCode))
+                    {
+                        serviceCodes.Add(shippingServiceCodesResponse.data.Where(x => x.Id == rate.ShippingServiceCode).FirstOrDefault());
+                    }
+                }
+            }
+            serviceCodes = serviceCodes.OrderBy(x => x.ShippingCarrier).ThenBy(y => y.ServiceCodeName).ToList();
+        }
+
+        //Get Tags
+        var clubSubscriptionTagsResponse = await _businessCustomerTypesViewModel.GetBusinessCustomerTypes(currentMember.Id);
+        clubSubscriptionTags = clubSubscriptionTagsResponse?.data?.Select(x => new ClubSubscriptionTagListModel { Value = x.Value }).ToList() ?? new List<ClubSubscriptionTagListModel>();
+
+        //Get Club Subscription by Id
+        var clubSubscriptionResponse = await _clubViewModel.GetClubSubscriptions(null, SubscriptionId);
+        subscriptionById = clubSubscriptionResponse?.data?.FirstOrDefault() ?? null;
+        if (subscriptionById != null && subscriptionById.BusinessCustomerBilling != null)
+        {
+            CurrentSubscriptionId = subscriptionById.Id;
+            CustomerGuid = subscriptionById.BusinessCustomerBilling.CustomerGUID;
+
+            if (subscriptionById.MetaDatas != null && subscriptionById.MetaDatas.Count > 0)
+            {
+                foreach (var item in subscriptionById.MetaDatas)
+                {
+                    if (!string.IsNullOrEmpty(item.ContentChoices))
+                    {
+                        item.MetaDropdownItemData = System.Text.Json.JsonSerializer.Deserialize<List<MetaDropdownItem>>(item.ContentChoices);
+                    }
+                }
+                CustomMetaDatas = subscriptionById.MetaDatas;
+            }
+            else { CustomMetaDatas = new List<CustomBusinessMetaDataModel>(); }
+
+            //Get Customer Detail
+            await GetCustomerDetail();
+
+            //Get Club Subscriptions
+            await GetClubSubscriptions();
+
+            if (subscriptionById.SubscriptionSalesRep != null)
+                SalesRepName = subscriptionById.SubscriptionSalesRep?.FirstName + " " + subscriptionById.SubscriptionSalesRep?.LastName;
+            ClubName = subscriptionById.ClubName ?? string.Empty;
+            var getShipmementData = await _clubViewModel.GetShipmentListAsync(currentMember.Id, subscriptionById.ClubGUID.ToString(), string.Empty);
+            if (getShipmementData.success)
+            {
+                Shipments = getShipmementData.data;
+            }
+            if (subscriptionById.DateCancelled != null && subscriptionById.DateCancelled < DateTime.Now.Date)
+            {
+                IsCurrentSubscriptionCancelled = true;
+            }
+            if (customer != null)
+            {
+                var customerLTVResponse = await _clubViewModel.GetCustomerLTV(customer.Id);
+                customerLTV = customerLTVResponse?.data ?? null;
+            }
+        }
+        SelectTab(!string.IsNullOrEmpty(TabName) ? "tab-" + TabName : "tab-Shipments");
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task GetCustomerDetail()
+    {
+        CustomerDetailResponse response = await _customerViewModel.GetBusinessCustomerDetail(CustomerGuid);
+        if (response.success && response.data != null)
+        {
+            customer = response.data;
+            title = customer.FirstName + " " + customer.LastName + " | Synergy Commerce Admin Panel";
+        }
+        StateHasChanged();
+    }
+
+    private async Task GetClubSubscriptions()
+    {
+        var clubSubscriptionList = await _clubViewModel.GetClubSubscriptions(CustomerGuid);
+        clubSubscriptionsList = clubSubscriptionList?.data.OrderByDescending(x => x.DateJoined).ToList() ?? new List<ClubSubscriptionsListModel>();
+        subscriptionTagsAndNotes = clubSubscriptionsList?.Select(x => new SubscriptionTagsAndNote
+        {
+            SubscriptionId = x.Id,
+            Note = string.Empty,
+            Tags = x.SubscriptionTags?.Select(t => t.TagValue)?.ToList() ?? new List<string>()
+        }).ToList();
+
+        //Get Number of total shipment
+        TotalShipments += clubSubscriptionsList?.Where(x => x.IsGiftSubscription)?.Sum(x => x.GiftShipments) ?? 0;
+        TotalShipments += clubSubscriptionsList?.Where(x => !x.IsGiftSubscription)?.Sum(x => x.MinShipments) ?? 0;
+
+        var lastCreatedSubscription = clubSubscriptionsList?.FirstOrDefault();
+        if (lastCreatedSubscription != null)
+        {
+            LastShipmentDate = lastCreatedSubscription.DateJoined;
+        }
+
+        var FirstCreatedSubscription = clubSubscriptionsList?.Last();
+        if (FirstCreatedSubscription != null)
+        {
+            ClubMemberSince = FirstCreatedSubscription.DateJoined;
+        }
+        StateHasChanged();
+    }
+    #endregion
+
+    #region Open/Close Dialog and Other
+    private string ConvertDateFormat(DateTime dateTime)
+    {
+        if (dateTime != DateTime.MinValue && loggedInUser != null)
+        {
+            return dateTime.ToString("MM/dd/yyyy");
+        }
+        return string.Empty;
+    }
+    private void OpenShipmentPendingModal()
+    {
+        this.ShipmentPendingModalVisibility = true;
+    }
+    private void CloseShipmentPendingModal()
+    {
+        this.ShipmentPendingModalVisibility = false;
+    }
+    private void OpenShipmentProcessedModal()
+    {
+        this.ShipmentProcessedModalVisibility = true;
+    }
+    private void CloseShipmentProcessedModal()
+    {
+        this.ShipmentProcessedModalVisibility = false;
+    }
+    private void OpenTrackingHistoryModal()
+    {
+        this.TrackingHistoryModalVisibility = true;
+    }
+    private void CloseTrackingHistoryModal()
+    {
+        this.TrackingHistoryModalVisibility = false;
+    }
+    private void OpenPickedUpModal()
+    {
+        this.PickedUpModalVisibility = true;
+    }
+    private void ClosePickedUpModal()
+    {
+        this.PickedUpModalVisibility = false;
+    }
+
+    private void OpenShiptoCustomerModal(int? subscriptionId = null)
+    {
+        addressSubscriptionId = subscriptionId ?? addressSubscriptionId; //If subscriptionId is null then assign previous value
+        this.ShiptoCustomerModalVisibility = true;
+    }
+    private void CloseShiptoCustomerModal()
+    {
+        this.ShiptoCustomerModalVisibility = false;
+    }
+    private void OpenAddTaskModal()
+    {
+        this.AddTaskModalVisibility = true;
+    }
+    private void CloseAddTaskModal()
+    {
+        this.AddTaskModalVisibility = false;
+    }
+    private void OpenBlockModal()
+    {
+        this.BlockModalVisibility = true;
+    }
+    private void CloseBlockModal()
+    {
+        this.BlockModalVisibility = false;
+    }
+    public async void SelectTab(string selectedTab)
+    {
+        selectedNavTab = selectedTab;
+
+        if (selectedTab == "tab-Shipments")
+        {
+
+        }
+        else if (selectedTab == "tab-subscriptions")
+        {
+            //Get Club Subscriptions
+            if (!clubSubscriptionsList.Any())
+            {
+                isLoading = true;
+                await GetClubSubscriptions();
+                isLoading = false;
+            }
+        }
+        else if (selectedTab == "tab-metaData")
+        {
+            title = customer.FirstName + " " + customer.LastName + " | Reservations";
+        }
+        else if (selectedTab == "tab-vacationHold")
+        {
+            isLoading = true;
+            await GetVacationHold();
+            isLoading = false;
+        }
+        StateHasChanged();
+    }
+    private void OpenMemberShipAddressModal()
+    {
+        isLoading = true;
+        this.MemberShipAddressModalVisibility = true;
+        isLoading = false;
+        StateHasChanged();
+    }
+    private void CloseMemberShipAddressModal()
+    {
+        this.MemberShipAddressModalVisibility = false;
+    }
+
+    private void onOpenAddressModalFocus(Syncfusion.Blazor.Popups.OpenEventArgs args)
+    {
+        args.PreventFocus = true;
+    }
+
+    private bool MembershipHistoryDialogVisibility { get; set; }
+    private void OpenMembershipHistoryDialog() => MembershipHistoryDialogVisibility = true;
+    private void CloseMembershipHistoryDialog() => MembershipHistoryDialogVisibility = false;
+    #endregion
+
+    #region Credit Card
+    private bool UpdateCreditCardModalVisibility { get; set; } = false;
+    private bool isAddCreditCard = false;
+    SfMaskedTextBox creditCardInput;
+    const string _defaultCreditCardMask = "[1-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]";
+    private char promptCharacter = 'X';
+    CreditCardRequestModel creditCard = new CreditCardRequestModel();
+    public bool IsAuthorizationFailedModalVisible { get; set; }
+    private AddUpdatePaymentMethodRequestModel addUpdatePaymentMethodRequest = new AddUpdatePaymentMethodRequestModel();
+    private async Task CCInputCreatedHandler(Object args)
+    {
+        if (creditCardInput != null)
+            await creditCardInput.FocusIn();
+    }
+    private void OpenUpdateCreditCardModal(SubscriptionPaymentModel subscriptionPayment, int subscriptionId)
+    {
+        isAddCreditCard = subscriptionPayment == null;
+        addUpdatePaymentMethodRequest = new AddUpdatePaymentMethodRequestModel
+        {
+            Id = subscriptionPayment?.PaymentId ?? null,
+            SubscriptionId = subscriptionId
+        };
+        creditCard = new CreditCardRequestModel();
+        UpdateCreditCardModalVisibility = true;
+    }
+
+    private void CloseUpdateCreditCardModal()
+    {
+        UpdateCreditCardModalVisibility = false;
+        creditCard = new CreditCardRequestModel();
+    }
+    private async Task SaveCreditCard()
+    {
+        isLoading = true;
+        //Tokenize Credit Card
+        var isCardTokenzied = await TokenizeCreditCard(creditCard);
+        //If Card Tokenzied Successfully then add/update info to DB
+        if (isCardTokenzied)
+        {
+            isLoading = true;
+            var response = await _clubViewModel.AddUpdateSubscriptionPaymentDetail(addUpdatePaymentMethodRequest);
+            isLoading = false;
+            if (response.success && response.data != null)
+            {
+                toastService.ShowToast(isAddCreditCard ? Constants.SaveMessage : Constants.UpdateMessage, ToastLevel.Success);
+                await GetClubSubscriptions();
+                CloseUpdateCreditCardModal();
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+        isLoading = false;
+    }
+    private async Task<bool> TokenizeCreditCard(CreditCardRequestModel cc)
+    {
+        isLoading = true;
+        //Get Payment Profile
+        var response = await _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.Payments, BusinessSettingsMetaKey.PaymentProfile);
+        var paymentProfileId = response?.data?.MetaValue ?? string.Empty;
+        if (string.IsNullOrEmpty(paymentProfileId))
+        {
+            isLoading = false;
+            toastService.ShowToast("The payment Profile is not set yet.", ToastLevel.Error);
+            return false;
+        }
+        var tokenziedCardResponse = await _paymentViewModel.TokenzieCard(new TokenizeCardRequestModel
+        {
+            Cust_Name = customer.FirstName + " " + customer.LastName,
+            BusinessId = currentMember.Id,
+            BusinessPaymentProfileId = string.IsNullOrEmpty(paymentProfileId) ? 0 : Convert.ToInt32(paymentProfileId),
+            Card_Token = string.Empty,
+            Number = creditCard.CreditCardNumber,
+            Card_Last_Four_Digits = creditCard.CreditCardNumber.Substring(creditCard.CreditCardNumber.Length - 4),
+            Card_Type = Helper.GetCardType(creditCard.CreditCardNumber),
+            Exp_Month = creditCard.ExpirationMonth,
+            Exp_Year = creditCard.ExpirationYear,
+            BusinessCustomerId = customer.Id,
+            SaveCard = true,
+            Ignore_AVS_Error = true,
+            Cvv2 = creditCard.CVV,
+            IsDefault = true
+        });
+        isLoading = false;
+        if (!tokenziedCardResponse.success || tokenziedCardResponse.data == null || string.IsNullOrEmpty(tokenziedCardResponse.data.Card_Token))
+        {
+            toastService.ShowToast(tokenziedCardResponse.data.ErrorMessage, ToastLevel.Error);
+            ShowAuthorizationFailedModal();
+            return false;
+        }
+        else
+        {
+            //Bind payment method data
+            addUpdatePaymentMethodRequest.TokenSource = 0;
+            addUpdatePaymentMethodRequest.CardToken = tokenziedCardResponse.data.Card_Token;
+            addUpdatePaymentMethodRequest.TokenSourceCustomerId = tokenziedCardResponse.data.Cust_Id;
+            addUpdatePaymentMethodRequest.CardType = tokenziedCardResponse.data.Card_Type;
+            addUpdatePaymentMethodRequest.CardExp = creditCard.ExpirationMonth + "/" + creditCard.ExpirationYear;
+            addUpdatePaymentMethodRequest.CardLastFour = tokenziedCardResponse.data.Last_Four_Digits;
+            addUpdatePaymentMethodRequest.BusinessPaymentProviderProfileId = string.IsNullOrEmpty(paymentProfileId) ? 0 : Convert.ToInt32(paymentProfileId);
+
+            toastService.ShowToast("Tokenize Successfully.", ToastLevel.Success);
+            return true;
+        }
+    }
+    private void ShowAuthorizationFailedModal()
+    {
+        UpdateCreditCardModalVisibility = false;
+        IsAuthorizationFailedModalVisible = true;
+    }
+    private void HideAuthorizationFailedModal()
+    {
+        IsAuthorizationFailedModalVisible = false;
+        UpdateCreditCardModalVisibility = true;
+    }
+    #endregion
+
+    #region Customer Address
+    private void OpenAddressModal(int? subscriptionId = null)
+    {
+        isLoading = true;
+        addressSubscriptionId = subscriptionId ?? addressSubscriptionId; //If subscriptionId is null then assign previous value
+        this.AddressModalVisibility = true;
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void CloseAddressModal()
+    {
+        this.AddressModalVisibility = false;
+    }
+
+    private int? addressSubscriptionId = null;
+    private bool isFromShippingDialog = false;
+    private async Task OpenAddUpdateAddressModal(Guid? addressGuid, int? subscriptionId = null, bool fromShippingDialog = false)
+    {
+        isLoading = true;
+        addressSubscriptionId = subscriptionId ?? addressSubscriptionId; //If subscriptionId is null then assign previous value
+        isFromShippingDialog = fromShippingDialog;
+        if (addressGuid != null && addressGuid != Guid.Empty)
+        {
+            var customerAddress = await _customerViewModel.GetCustomerAddressDetail(addressGuid.Value);
+            if (customerAddress != null && customerAddress.success)
+            {
+                addressRequestModel = JsonConvert.DeserializeObject<UserAddressRequestModel>(JsonConvert.SerializeObject(customerAddress.data));
+                addressRequestModel.AddressGUID = addressGuid;
+                addressRequestModel.UserGUID = CustomerGuid;
+                addressRequestModel.Phone = customerAddress.data.PhoneFormatted;
+                addressRequestModel.PhoneCountry = "US";
+                if (string.IsNullOrEmpty(customerAddress.data.Phone))
+                {
+                    string[] splittedPhone = customerAddress.data.Phone.Split("| ");
+                    if (splittedPhone.Length > 1)
+                    {
+                        addressRequestModel.PhoneCountry = splittedPhone[1].Trim();
+                    }
+                }
+                if (addressRequestModel.DOB.HasValue)
+                {
+                    UserAddressDob = addressRequestModel.DOB.Value.ToString("MM/dd/yyyy");
+                }
+            }
+        }
+        else
+        {
+            addressRequestModel = new UserAddressRequestModel()
+            {
+                CountryCode = "US",
+                PhoneCountry = "US",
+                StateCode = "",
+                UserGUID = CustomerGuid,
+                Active = true
+            };
+            UserAddressDob = string.Empty;
+        }
+        AddressModalVisibility = false;
+        MemberShipAddressModalVisibility = false;
+        UpdateAddressModalVisibility = true;
+        ShiptoCustomerModalVisibility = false;
+        showPhoneControl = true;
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void CloseUpdateAddressModal()
+    {
+        UpdateAddressModalVisibility = false;
+        AddressModalVisibility = true;
+        StateHasChanged();
+    }
+
+    private void HandleValidSubmit(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            if (string.IsNullOrEmpty(addressRequestModel.Phone))
+            {
+                toastService.ShowToast("Please enter the Phone number.", ToastLevel.Error);
+                return;
+            }
+            SaveCustomerAddress();
+        }
+    }
+
+    private async void SaveCustomerAddress()
+    {
+        isLoading = true;
+        if (!string.IsNullOrEmpty(addressRequestModel.StateCode))
+        {
+            addressRequestModel.State = states.Where(x => x.StateCode == addressRequestModel.StateCode).FirstOrDefault()?.State;
+        }
+        if (!string.IsNullOrEmpty(addressRequestModel.CountryCode))
+        {
+            addressRequestModel.Country = countries.Where(x => x.CountryCode == addressRequestModel.CountryCode).FirstOrDefault()?.Name;
+        }
+        if (!String.IsNullOrEmpty(UserAddressDob))
+        {
+            var dob = UserAddressDobObj.GetMaskedValue();
+            addressRequestModel.DOB = Convert.ToDateTime(dob);
+        }
+        var response = await _customerViewModel.AddUpdateCustomerAddress(addressRequestModel);
+        if (response.success)
+        {
+            await GetCustomerDetail();
+            if (addressRequestModel.AddressGUID == Guid.Empty)
+            {
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            }
+            UpdateAddressModalVisibility = false;
+            if (selectedNavTab == "tab-subscriptions")//When we will update subscriptions address
+            {
+                await GetClubSubscriptions();
+            }
+            if (isFromShippingDialog)
+                ShiptoCustomerModalVisibility = true;
+            else
+                AddressModalVisibility = true;
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async void UpdateDefaultBillingAddress(Guid addressguid)
+    {
+        isLoading = true;
+        var response = await _userViewModel.UpdateUserDefaultBillingAddress(addressguid);
+        if (response.success)
+        {
+            await GetCustomerDetail();
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async void UpdateDefaultShippingAddress(Guid addressguid)
+    {
+        isLoading = true;
+        var response = await _userViewModel.UpdateUserDefaultShippingAddress(addressguid);
+        if (response.success)
+        {
+            await GetCustomerDetail();
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+    private async void UpdateSubscriptionBillShipAddress(int addressId, ClubAddressType addressType, bool fromShippingDialog = false)
+    {
+        isFromShippingDialog = fromShippingDialog;
+        if (addressSubscriptionId != null)
+        {
+            isLoading = true;
+            var response = new BaseResponse();
+            if (isFromShippingDialog)//Update Delivery Type if we are updating from Change Ship To Dialog
+            {
+                updateDeliveryTypeRequest = new UpdateSubscriptionDeliveryTypeRequestModel
+                {
+                    SubscriptionId = addressSubscriptionId.Value,
+                    DeliveryType = ClubDeliveryType.Ship,
+                    AddressId = addressId
+                };
+                response = await _clubViewModel.UpdateSubscriptionDeliveryType(updateDeliveryTypeRequest);
+            }
+            else
+            {
+                var requestModel = new UpdateBillShipToAddressRequestModel
+                {
+                    SubscriptionId = addressSubscriptionId.Value,
+                    AddressId = addressId,
+                    AddressType = addressType
+                };
+                response = await _clubViewModel.UpdateSubscriptionBillShipAddress(requestModel);
+            }
+            if (response.success)
+            {
+                await GetClubSubscriptions();
+                AddressModalVisibility = false;
+                ShiptoCustomerModalVisibility = false;
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+            isLoading = false;
+            addressSubscriptionId = null;
+            StateHasChanged();
+        }
+    }
+    #endregion
+
+    #region User/Customer
+    private async Task OpenUpdateUserDetailModel()
+    {
+        isLoading = true;
+        userRequestModel = new UpdateUserRequestModel()
+        {
+            UserGUID = CustomerGuid,
+            FirstName = customer.FirstName,
+            LastName = customer.LastName,
+            Company = customer.Company,
+            Email = customer.Email,
+            DOB = customer.DOB,
+            Phone = customer.CellPhone,
+            HomePhone = customer.HomePhoneFormatted,
+            WorkPhone = customer.WorkPhoneFormatted
+        };
+
+        if (userRequestModel.DOB.HasValue)
+        {
+            UserDob = userRequestModel.DOB.Value.ToString("MM/dd/yyyy");
+        }
+        else
+        {
+            UserDob = string.Empty;
+        }
+
+        if (!string.IsNullOrEmpty(customer.Phone))
+        {
+            string[] splittedPhone = customer.Phone.Split("| ");
+            if (splittedPhone.Length > 1)
+            {
+                userRequestModel.PhoneCountry = splittedPhone[1].Trim();
+            }
+            else
+            {
+                userRequestModel.PhoneCountry = "US";
+            }
+        }
+        else
+        {
+            userRequestModel.PhoneCountry = "US";
+        }
+
+        if (!string.IsNullOrEmpty(customer.HomePhone))
+        {
+            string[] splittedPhone = customer.HomePhone.Split("| ");
+            if (splittedPhone.Length > 1)
+            {
+                userRequestModel.HomePhoneCountry = splittedPhone[1].Trim();
+            }
+            else
+            {
+                userRequestModel.HomePhoneCountry = "US";
+            }
+        }
+        else
+        {
+            userRequestModel.HomePhoneCountry = "US";
+        }
+
+        if (!string.IsNullOrEmpty(customer.WorkPhone))
+        {
+            string[] splittedPhone = customer.WorkPhone.Split("| ");
+            if (splittedPhone.Length > 1)
+            {
+                userRequestModel.WorkPhoneCountry = splittedPhone[1].Trim();
+            }
+            else
+            {
+                userRequestModel.WorkPhoneCountry = "US";
+            }
+        }
+        else
+        {
+            userRequestModel.WorkPhoneCountry = "US";
+        }
+
+        if (countries.Count <= 0)
+        {
+            CountryResponse res = await _countryViewModel.GetCountries();
+            if (res.success)
+            {
+                countries = res.data;
+            }
+        }
+
+        if (phoneMasks.Count <= 0)
+        {
+            phoneMasks = await http.GetFromJsonAsync<List<PhoneMask>>("PhoneMasks.json");
+        }
+
+        showPhoneControl = true;
+        UpdateUserDetailModalVisibility = true;
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void CloseUpdateUserDetailModel()
+    {
+        UpdateUserDetailModalVisibility = false;
+        StateHasChanged();
+    }
+    private async void SaveUserDetail(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            if (string.IsNullOrEmpty(userRequestModel.Phone) && string.IsNullOrEmpty(userRequestModel.HomePhone) && string.IsNullOrEmpty(userRequestModel.WorkPhone))
+            {
+                toastService.ShowToast("Please enter at least one phone number.", ToastLevel.Error);
+                return;
+            }
+            isLoading = true;
+            if (!String.IsNullOrEmpty(UserDob))
+            {
+                var dob = UserDobObj.GetMaskedValue();
+                userRequestModel.DOB = Convert.ToDateTime(dob);
+            }
+            var response = await _userViewModel.UpdateUserDetail(userRequestModel);
+            if (response.success)
+            {
+                await GetCustomerDetail();
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                UpdateUserDetailModalVisibility = false;
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async void RemoveCustomerAddress(Guid addressguid)
+    {
+        isLoading = true;
+        var response = await _customerViewModel.RemoveCustomerAddress(addressguid);
+        if (response.success)
+        {
+            await GetCustomerDetail();
+            toastService.ShowToast(Constants.DeleteMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    #endregion
+
+    #region Image
+    private async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        var maxAllowedFiles = 1;
+        var format = "image/png";
+        foreach (var imageFile in e.GetMultipleFiles(maxAllowedFiles))
+        {
+            var buffer = new byte[imageFile.Size];
+            await imageFile.OpenReadStream(buffer.LongLength).ReadAsync(buffer);
+            var imageDataUrl =
+                $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+
+            await CropperModal.OnFileChange(imageDataUrl);
+            imageCroperActive = true;
+        }
+        StateHasChanged();
+    }
+
+    async Task OnCropped(string value)
+    {
+        imgUrl = value;
+        imageCroperActive = false;
+
+        if (customer.Id > 0)
+        {
+            ImageUploadRequestModel requestModel = new ImageUploadRequestModel()
+            {
+                Image = value,
+                UserGUID = CustomerGuid
+            };
+            UploadImageResponse response = await _loginViewModel.UploadUserProfileImage(requestModel);
+            if (response.success)
+            {
+                customer.UserImageUrl = response.data.item_image_url;
+                customer.ProfileImage = response.data.image_file_name;
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task uploadImage()
+    {
+        imageCroperActive = false;
+        await CropperModal.TriggerFileSelect("inputDrop");
+    }
+    #endregion Image
+
+    //public class ShipmentData
+    //{
+    //    public string ProcessingDate { get; set; }
+    //    public string ClubName { get; set; }
+    //    public string ShipmentStatus { get; set; }
+    //    public string ShipmentName { get; set; }
+    //    public string FulfillmentStatus { get; set; }
+    //}
+
+    //public List<ShipmentData> ShipmentDataList = new List<ShipmentData>(){
+    //new ShipmentData(){ ProcessingDate= "1/1/2022", ClubName= "Red Wines Club", ShipmentStatus="Pending", ShipmentName = "January 2022 Shipment", FulfillmentStatus = ""},
+    //new ShipmentData(){ ProcessingDate= "12/1/2022", ClubName= "Red Wines Club", ShipmentStatus="Processed", ShipmentName = "Winter 2021 Shipment", FulfillmentStatus = "Delivered"},
+    //new ShipmentData(){ ProcessingDate= "11/1/2022", ClubName= "Red Wines Club", ShipmentStatus="Processed", ShipmentName = "Fall 2021 Shipment", FulfillmentStatus = "Picked Up"},
+    //new ShipmentData(){ ProcessingDate= "10/1/2022", ClubName= "Red Wines Club", ShipmentStatus="Processed", ShipmentName = "October 2021 Shipment", FulfillmentStatus = "Picked Up"},
+    //new ShipmentData(){ ProcessingDate= "10/1/2022", ClubName= "Red Wines Club", ShipmentStatus="Processed", ShipmentName = "October 2021 Shipment", FulfillmentStatus = "Picked Up"},
+    //new ShipmentData(){ ProcessingDate= "9/1/2022", ClubName= "Red Wines Club", ShipmentStatus="Skipped", ShipmentName = "September 2021 Shipment", FulfillmentStatus = ""},
+    //new ShipmentData(){ ProcessingDate= "8/1/2022", ClubName= "Red Wines Club", ShipmentStatus="Error", ShipmentName = "August 2021 Shipment", FulfillmentStatus = ""},
+    //};
+
+    public List<ShipmentListModel> Shipments = new List<ShipmentListModel>();
+
+    private List<string> tags = new List<string>();
+    public class MembershipTagData
+    {
+        public string ID { get; set; }
+        public string Name { get; set; }
+    }
+    public List<MembershipTagData> MembershipTagDataList = new List<MembershipTagData>(){
+    new MembershipTagData(){ ID= "0", Name= "Jonathan Elliman" },
+    new MembershipTagData(){ ID= "1", Name= "Sarah Elliman" },
+    new MembershipTagData(){ ID= "2", Name= "Tim Holtermann" }
+    };
+
+    private List<string> teamMembersData = new List<string>();
+    public class TeamMembersData
+    {
+        public string ID { get; set; }
+        public string Name { get; set; }
+    }
+    public List<TeamMembersData> TeamMembersDataList = new List<TeamMembersData>(){
+    new TeamMembersData(){ ID= "0", Name= "Cabernet" },
+    new TeamMembersData(){ ID= "1", Name= "Zinfandel" }
+    };
+
+    #region Tab Subscriptions
+    private async Task OnActionSuccessHandler(Syncfusion.Blazor.InPlaceEditor.ActionEventArgs<int> args, ClubSubscriptionsListModel clubSubscription)
+    {
+        if (args != null && clubSubscription != null)
+        {
+            isLoading = true;
+            var response = await _clubViewModel.UpdateSubscriptionShippingPreference(new UpdateShippingPreferenceRequestModel
+            {
+                SubscriptionId = clubSubscription.Id,
+                ShippingOptionId = args.Value
+            });
+            isLoading = false;
+            if (response.success)
+            {
+                toastService.ShowToast("Shipping Preference " + Constants.UpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+    private async Task NavigateTo(Guid subscriptionsGuid)
+    {
+        _navigationManager.NavigateTo($"people/club-members/{subscriptionsGuid}/Shipments", true);
+        //await OnInitializedAsync();
+    }
+    #endregion
+
+    #region Cancelling a Club Membership
+    private bool CancelMembershipModalVisibility { get; set; } = false;
+    private bool MembershipCancelledModalVisibility { get; set; } = false;
+    CancelClubMembershipRequestModel cancelClubMembershipRequest = new CancelClubMembershipRequestModel();
+    const int MAXCancellationNotesCount = 512;
+    List<ClubCancellationReasonListModel> clubCancellationReasonList = new List<ClubCancellationReasonListModel>();
+    public string MinShipments { get; set; } = "";
+    public string ShipmentsReceived { get; set; } = "";
+    public string CancellationClubName { get; set; }
+    public string CancellationClubDate { get; set; }
+    private int? subscriptionIdToCancel = null;
+    private async Task OpenCancelMembershipModal(ClubSubscriptionsListModel clubSubscription)
+    {
+        subscriptionIdToCancel = clubSubscription.Id;
+        ShipmentsReceived = Convert.ToString(clubSubscription.GiftShipments);
+        CancellationClubName = clubSubscription.ClubName;
+        var clubDetail = await _clubViewModel.GetClubDetailsAsync(clubSubscription.ClubId, string.Empty);
+        if (clubDetail?.data?.RequireMinShipments ?? false)
+        {
+            MinShipments = Convert.ToString(clubDetail.data.MinShipments);
+        }
+        else
+        {
+            MinShipments = "N/A";
+        }
+        CancelMembershipModalVisibility = true;
+    }
+    private void CloseCancelMembershipModal()
+    {
+        cancelClubMembershipRequest = new CancelClubMembershipRequestModel();
+        subscriptionIdToCancel = null;
+        CancelMembershipModalVisibility = false;
+    }
+    private void OpenMembershipCancelledModal()
+    {
+        MembershipCancelledModalVisibility = true;
+    }
+    private void CloseMembershipCancelledModal()
+    {
+        CancellationClubName = CancellationClubDate = string.Empty;
+        MembershipCancelledModalVisibility = false;
+    }
+    private async Task CancelMembership(EditContext editContext)
+    {
+        if (subscriptionIdToCancel.HasValue && editContext.Validate())
+        {
+            isLoading = true;
+            cancelClubMembershipRequest.BusinessClubSubscriptionId = subscriptionIdToCancel.Value;
+            cancelClubMembershipRequest.CancelledByUserID = loggedInUser.Id;
+            CancellationClubDate = cancelClubMembershipRequest.CancelEffectiveDate.ToString("M/d/yyyy");
+            var cancelClubMembershipResponse = await _clubViewModel.CancelClubMembershipAsync(cancelClubMembershipRequest);
+            isLoading = false;
+            if (cancelClubMembershipResponse.success)
+            {
+                toastService.ShowToast("Membership cancelled successfully.", ToastLevel.Success);
+                await GetClubSubscriptions();
+                CloseCancelMembershipModal();
+                OpenMembershipCancelledModal();
+            }
+            else
+            {
+                toastService.ShowToast(cancelClubMembershipResponse.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+    #endregion
+
+    #region Vacation Hold
+    private bool VacationHoldDialogVisibility { get; set; } = false;
+    private AddEditVacationRequestModel addEditVacationRequest = new AddEditVacationRequestModel();
+    private string vacationHoldClubName = string.Empty;
+    private bool isInMaximumVacationDaysRange = true;
+    private int maximumVacationDays = 0;
+    private int maximumVacationPerYear = 0;
+    private int currentYearVacationCount = 0;
+    private ClubSubscriptionVacation currentSubscriptionVacation = null;
+    private void CloseVacationHoldDialog()
+    {
+        vacationHoldClubName = string.Empty;
+        addEditVacationRequest = new AddEditVacationRequestModel();
+        VacationHoldDialogVisibility = false;
+        isInMaximumVacationDaysRange = true;
+        maximumVacationDays = 0;
+        maximumVacationPerYear = 0;
+        currentYearVacationCount = 0;
+        currentSubscriptionVacation = null;
+    }
+    private void OpenVacationHoldDialog(int clubSubscriptionId, string clubName, int vacationDays, int vacationPerYear, bool allowHoldPrivileges, int vacationCount, ClubSubscriptionVacation activeVacation)
+    {
+        currentSubscriptionVacation = activeVacation;
+        vacationHoldClubName = clubName;
+        maximumVacationDays = vacationDays;
+        maximumVacationPerYear = vacationPerYear;
+        currentYearVacationCount = vacationCount;
+        addEditVacationRequest.BusinessClubSubscriptionId = clubSubscriptionId;
+        addEditVacationRequest.AllowPrivileges = allowHoldPrivileges;
+        if (currentSubscriptionVacation != null && currentSubscriptionVacation.Id > 0)
+        {
+            addEditVacationRequest.Id = currentSubscriptionVacation.Id;
+            addEditVacationRequest.VacationStartDate = currentSubscriptionVacation.VacationStart;
+            addEditVacationRequest.VacationEndDate = currentSubscriptionVacation.VacationEnd;
+            addEditVacationRequest.AllowPrivileges = currentSubscriptionVacation.AllowPrivileges;
+        }
+        VacationHoldDialogVisibility = true;
+        isInMaximumVacationDaysRange = true;
+    }
+    //Maximum Vacation Days
+    public void DateChangeHandler(AddEditVacationRequestModel vacationRequestModel)
+    {
+        if (vacationRequestModel.VacationStartDate != null && vacationRequestModel.VacationEndDate != null)
+        {
+            int diffrence = (vacationRequestModel.VacationEndDate.Value.Date - vacationRequestModel.VacationStartDate.Value.Date).Days;
+            isInMaximumVacationDaysRange = maximumVacationDays > diffrence;
+        }
+    }
+    private async Task AddUpdateVacationHold(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            if (!isInMaximumVacationDaysRange)
+                return;
+            if (currentYearVacationCount >= maximumVacationPerYear && addEditVacationRequest.Id == 0)
+            {
+                toastService.ShowToast($"Vacation hold exceeds {maximumVacationPerYear} vacations per year.", ToastLevel.Error);
+                CloseVacationHoldDialog();
+                return;
+            }
+            isLoading = true;
+            addEditVacationRequest.UserId = loggedInUser.Id;
+            var addEditVacationResponse = await _clubViewModel.AddEditVacationAsync(addEditVacationRequest);
+            isLoading = false;
+            if (addEditVacationResponse.success)
+            {
+                if (addEditVacationRequest.Id > 0)
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                else
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                await GetClubSubscriptions();
+                CloseVacationHoldDialog();
+            }
+            else
+            {
+                toastService.ShowToast(addEditVacationResponse.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+    private async Task CancelVacationHold()
+    {
+        if (currentSubscriptionVacation != null)
+        {
+            isLoading = true;
+            BaseResponse cancelVacationResponse = new BaseResponse();
+            if (currentSubscriptionVacation.VacationStart.Date > DateTime.UtcNow.Date)
+            {
+                cancelVacationResponse = await _clubViewModel.DeleteVacation(currentSubscriptionVacation.Id);
+            }
+            else
+            {
+                cancelVacationResponse = await _clubViewModel.CancelVacationHold(currentSubscriptionVacation.Id);
+            }
+            isLoading = false;
+            if (cancelVacationResponse.success)
+            {
+                toastService.ShowToast("Vacation Hold cancelled successfully", ToastLevel.Success);
+                await GetClubSubscriptions();
+                CloseVacationHoldDialog();
+            }
+            else
+            {
+                toastService.ShowToast(cancelVacationResponse.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+    #endregion
+
+    #region Customer Pickup
+    private bool CustomerPickedUpModalVisibility { get; set; } = false;
+    private List<GetClubPickupLocationModel> pickupLocations = new List<GetClubPickupLocationModel>();
+    private UpdateSubscriptionDeliveryTypeRequestModel updateDeliveryTypeRequest = null;
+    private int? selectedPickUpLocation = null;
+    private void OpenCustomerPickedUpModal(List<GetClubPickupLocationModel> locations, int SubscriptionId)
+    {
+        pickupLocations = locations ?? new List<GetClubPickupLocationModel>();
+        updateDeliveryTypeRequest = new UpdateSubscriptionDeliveryTypeRequestModel { SubscriptionId = SubscriptionId };
+        CustomerPickedUpModalVisibility = true;
+    }
+    private void CloseCustomerPickedUpModal()
+    {
+        CustomerPickedUpModalVisibility = false;
+        updateDeliveryTypeRequest = null;
+        selectedPickUpLocation = null;
+        pickupLocations = new List<GetClubPickupLocationModel>();
+    }
+    private async Task ChangeToCustomerPickup(ClubDeliveryType deliveryType)
+    {
+        if (selectedPickUpLocation == null || selectedPickUpLocation == 0)
+        {
+            toastService.ShowToast("Please select pickup location.", ToastLevel.Error);
+            return;
+        }
+        if (updateDeliveryTypeRequest != null)
+        {
+            updateDeliveryTypeRequest.DeliveryType = deliveryType;
+            updateDeliveryTypeRequest.AddressId = selectedPickUpLocation.Value;
+            isLoading = true;
+            var response = await _clubViewModel.UpdateSubscriptionDeliveryType(updateDeliveryTypeRequest);
+            isLoading = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                await GetClubSubscriptions();
+                CloseCustomerPickedUpModal();
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+    #endregion
+
+    #region Subscription Tags And Notes
+    List<SubscriptionTagsAndNote> subscriptionTagsAndNotes = new List<SubscriptionTagsAndNote>();
+    public class SubscriptionTagsAndNote
+    {
+        public int SubscriptionId { get; set; }
+        public List<string> Tags { get; set; }
+        public string Note { get; set; }
+    }
+    private async Task AddMemberNote(SubscriptionTagsAndNote tagsAndNoteModel)
+    {
+        if (!string.IsNullOrEmpty(tagsAndNoteModel?.Note ?? string.Empty))
+        {
+            isLoading = true;
+            var request = new AddSubscriptionNoteRequestModel
+            {
+                SubscriptionId = tagsAndNoteModel.SubscriptionId,
+                BusinessTeamId = teamDetail?.Team ?? 0,
+                Note = tagsAndNoteModel.Note,
+                NoteType = (int)ClubSubscriptionNoteType.internalNote
+            };
+            var response = await _clubViewModel.AddClubSubscriptionNote(request);
+            isLoading = false;
+            if (response.success)
+            {
+                tagsAndNoteModel.Note = string.Empty;
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    private bool IsMemberTagsDialogVisible { get; set; }
+    private SubscriptionTagsAndNote subscriptionTagsModel = null;
+    private List<string> selectedSubscriptionTags = new List<string>();
+    private void OpenMemberTagsDialog(SubscriptionTagsAndNote tagsAndNoteModel)
+    {
+        if (tagsAndNoteModel != null)
+        {
+            subscriptionTagsModel = new SubscriptionTagsAndNote
+            {
+                Note = tagsAndNoteModel.Note,
+                SubscriptionId = tagsAndNoteModel.SubscriptionId,
+                Tags = tagsAndNoteModel.Tags ?? new List<string>()
+            };
+            IsMemberTagsDialogVisible = true;
+        }
+    }
+    private void CloseMemberTagsDialog()
+    {
+        IsMemberTagsDialogVisible = false;
+        subscriptionTagsModel = null;
+    }
+    private async Task UpdateMemberTags()
+    {
+        if (subscriptionTagsModel != null)
+        {
+            isLoading = true;
+            var request = new UpdateSubscriptionTagsRequestModel
+            {
+                SubscriptionId = subscriptionTagsModel.SubscriptionId,
+                BusinessId = currentMember?.Id ?? 0,
+                SubscriptionTags = subscriptionTagsModel.Tags ?? new List<string>(),
+            };
+            var response = await _clubViewModel.UpdateClubSubscriptionTags(request);
+            isLoading = false;
+            if (response.success)
+            {
+                //Update Tags to Membership Tag section
+                var itemIndex = subscriptionTagsAndNotes.FindIndex(x => x.SubscriptionId == subscriptionTagsModel.SubscriptionId);
+                var item = subscriptionTagsAndNotes.ElementAt(itemIndex);
+                item.Tags = subscriptionTagsModel.Tags ?? new List<string>();
+
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                CloseMemberTagsDialog();
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+
+    }
+    #endregion
+
+    #region Tab Vacation Hold
+    private List<GetClubVacationHoldModel> clubVacationHoldList = new List<GetClubVacationHoldModel>();
+    private async Task GetVacationHold()
+    {
+        if (subscriptionById != null)
+        {
+            var vacationHoldListResponse = await _clubViewModel.GetVacationHoldByClubId(subscriptionById.ClubId);
+            clubVacationHoldList = vacationHoldListResponse?.data ?? new List<GetClubVacationHoldModel>();
+        }
+    }
+    #endregion
+
+    private void OpenEditMetaDataModal()
+    {
+        isLoading = true;
+        this.EditMetaDataModalVisibility = true;
+        isLoading = false;
+        StateHasChanged();
+    }
+    private void CloseEditMetaDataModal()
+    {
+        this.EditMetaDataModalVisibility = false;
+    }
+
+    private async void SaveEditMetaData()
+    {
+        isLoading = true;
+
+        List<BusinessClubSubscriptionMetaRequestModel> CustomMetaData = new List<BusinessClubSubscriptionMetaRequestModel>();
+        foreach (var item in CustomMetaDatas)
+        {
+            BusinessClubSubscriptionMetaRequestModel metaDataModel = new BusinessClubSubscriptionMetaRequestModel()
+            {
+                Id = item.Id,
+                BusinessClubSubscriptionId = CurrentSubscriptionId,
+                MetaNamespace = "CustomSubscriptionMeta",
+                MetaKey = item.BusinessMetaDataId.ToString(),
+                MetaValue = item.DefaultValue,
+                ValueType = (int)ValueTypeEnum.String,
+                Title = string.Empty,
+                Description = string.Empty
+            };
+            if (item.ContentType == (int)MetaDataContentType.Date)
+            {
+                if (item.DateDefaultValue.HasValue)
+                {
+                    metaDataModel.MetaValue = ((DateTime)item.DateDefaultValue).ToLongDateString();
+                }
+            }
+            if (item.ContentType == (int)MetaDataContentType.Price)
+            {
+                metaDataModel.MetaValue = item.PriceDefaultValue.ToString();
+                metaDataModel.ValueType = (int)ValueTypeEnum.Integer;
+            }
+            if (item.ContentType == (int)MetaDataContentType.Boolean)
+            {
+                metaDataModel.MetaValue = item.SwitchDefaultValue ? "true" : "false";
+                metaDataModel.ValueType = (int)ValueTypeEnum.Boolean;
+            }
+            CustomMetaData.Add(metaDataModel);
+        }
+        var response = await _clubViewModel.AddUpdateBusinessClubSubscriptionMetaListAsync(CustomMetaData);
+        if (response.success)
+        {
+            toastService.ShowToast("Custom metadata saved successfully.", ToastLevel.Success);
+            CloseEditMetaDataModal();
+            await GetCustomerDetail();
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+}

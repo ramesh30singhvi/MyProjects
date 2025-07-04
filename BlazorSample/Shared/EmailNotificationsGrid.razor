@@ -1,0 +1,46 @@
+﻿@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Enums
+
+<div class="min-vh-75 sf-grid">
+    <SfGrid DataSource="@EmailNotifications" AllowPaging="false" AllowTextWrap="true" Width="100%" class="border-x-0">
+        <GridPageSettings PageSize="50"></GridPageSettings>
+        <GridColumns>
+            <GridColumn HeaderText="Email Name" TextAlign="TextAlign.Left" Width="400px">
+                <Template>
+                    @{
+                        var notification = (context as EmailNotificationsModel);
+                        if (notification.Category == EmailNotificationCategory.Order)
+                        {
+                            <a href="settings/notifications/email/@notification.Category.ToString().ToLower()/edit/@notification.IdGUID">@(notification.EmailName)</a>
+                        }
+                        else ///////////////////When all pages will completed then we will use only one anchor tag
+                        {
+                            <a href="settings/notifications/email/club/edit">@(notification.EmailName)</a>
+                        }
+                    }
+                </Template>
+            </GridColumn>
+            <GridColumn HeaderText="Subject" TextAlign="TextAlign.Left" Width="200px">
+                <Template>
+                    @{
+                        var notification = (context as EmailNotificationsModel);
+                        @(notification.EmailSubject)
+                    }
+                </Template>
+            </GridColumn>
+            <GridColumn HeaderText="From Email" Width="100px">
+                <Template>
+                    @{
+                        var notification = (context as EmailNotificationsModel);
+                        @(notification.FromEmail)
+                    }
+                </Template>
+            </GridColumn>
+        </GridColumns>
+    </SfGrid>
+</div>
+
+@code {
+    [Parameter]
+    public List<EmailNotificationsModel> EmailNotifications { get; set; }
+}

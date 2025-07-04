@@ -1,0 +1,112 @@
+﻿@page "/sa/reservation-utility"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Client.ViewModels
+@inject IBusinessViewModel _businessViewModel
+@attribute [Authorize]
+
+
+<AuthorizeView>
+    <Authorized>
+        <SfSpinner @bind-Visible="isLoading"></SfSpinner>
+        <Title Value="@title"></Title>
+
+        <div class="py-3">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-0"><a href="/sa/configuration" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a>Reservation Utility</h5>
+                </div>
+            </div>
+            <hr />
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="row mb-3">
+                    <div class="col col-10">
+                        <label class="form-label">Booking Code / Reservation Id</label>
+                        <input type="text" class="form-control" id="inputBookingCode">
+                    </div>
+                    <div class="col col-2">
+                        <label class="form-label">&nbsp;</label><br />
+                        <button type="button" class="btn btn-sm btn-primary">Search</button>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col col-5">
+                        <label class="form-label">Total Due</label>
+                        <input type="text" class="form-control" id="inputTotalDue">
+                    </div>
+                    <div class="col col-5">
+                        <label class="form-label">Amount Paid</label>
+                        <input type="text" class="form-control" id="inputAmountPaid">
+                    </div>
+                    <div class="col col-2">
+                        <label class="form-label">&nbsp;</label><br />
+                        <button type="button" class="btn btn-sm btn-primary">Update</button>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col col-5">
+                        <label class="form-label">Status</label>
+                        <select id="selStatus" class="form-select">
+                            <option selected="selected" value="0">Confirmed</option>
+                            <option value="1">Checked-in</option>
+                            <option value="2">Cancelled</option>
+                            <option value="3">No Show</option>
+                            <option value="4">Rescheduled</option>
+                            <option value="5">Guest Delayed</option>
+                            <option value="6">Updated</option>
+                            <option value="7">Yelp Temporary</option>
+                            <option value="8">Initiated</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <h5>Reservation Detail</h5>
+                <div class="min-vh-75 sf-grid">
+                    <SfGrid DataSource="@PlaceholderList" AllowPaging="false" Width="100%">
+                        <GridColumns>
+                            <GridColumn Field=@nameof(PlaceholderData.RvspId) HeaderText="Rvsp Id" TextAlign="TextAlign.Left" Width="40"></GridColumn>
+                            <GridColumn HeaderText="Status" TextAlign="TextAlign.Center" Width="30">
+                                <Template Context="iContext">
+                                    @{
+                                        <span class="badge bg-warning rounded-pill">&nbsp;</span>
+                                    }
+                                </Template>
+                            </GridColumn>
+                           <GridColumn Field=@nameof(PlaceholderData.BookingCode) HeaderText="Booking Code" TextAlign="TextAlign.Left" Width="60"></GridColumn>
+                            <GridColumn Field=@nameof(PlaceholderData.Member) HeaderText="Member" TextAlign="TextAlign.Left" Width="40"></GridColumn>
+                            <GridColumn Field=@nameof(PlaceholderData.TotalDue) HeaderText="Total Due" TextAlign="TextAlign.Left" Width="40"></GridColumn>
+                            <GridColumn Field=@nameof(PlaceholderData.AmountPaid) HeaderText="Amount Paid" TextAlign="TextAlign.Left" Width="50"></GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+        </div>
+        <div class="row mb-3">
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+@code
+{
+    private string title = "Reservation Utility | Synergy Commerce Admin Panel";
+    private bool isLoading = false;
+
+
+    public class PlaceholderData
+    {
+        public string RvspId { get; set; }
+        public string Status { get; set; }
+        public string BookingCode { get; set; }
+        public string Member { get; set; }
+        public string TotalDue { get; set; }
+        public string AmountPaid { get; set; }
+    }
+
+    public List<PlaceholderData> PlaceholderList = new List<PlaceholderData>(){
+        new PlaceholderData(){ RvspId= "2865996", Status= "", BookingCode= "LNCSPPND", Member= "CellarPass", TotalDue= "10775.00", AmountPaid= "0"  },
+  };
+
+}

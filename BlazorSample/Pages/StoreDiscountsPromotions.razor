@@ -1,0 +1,372 @@
+﻿@page  "/store/discounts-promotions"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Enums
+@inject ToastService toastService
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject IDiscountViewModel _discountViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col">
+                <h5 class="mb-3 mb-sm-0"><span class="fa-regular fa-tag me-2"></span>Discounts & Promotions</h5>
+            </div>
+            <div class="col-auto">
+                <a href="store/discount-collections" class="btn btn-sm btn-outline-primary me-2">Discount Collections</a>
+                <button class="btn btn-sm btn-primary" @onclick="@OpenModal">Add New</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <ul class="nav nav-tabs mt-1 text-uppercase">
+            <li class="nav-item"><a class="nav-link active" id="Active-tab" data-bs-toggle="tab" href="#tab-Active" role="tab" aria-controls="tab-Active" aria-selected="false" @onclick='()=>OnStatusClick("Active")'>Active</a></li>
+            <li class="nav-item"><a class="nav-link" id="Upcoming-tab" data-bs-toggle="tab" href="#tab-Upcoming" role="tab" aria-controls="tab-Upcoming" aria-selected="false" @onclick='()=>OnStatusClick("Upcoming")'>Upcoming</a></li>
+            <li class="nav-item"><a class="nav-link" id="Expired-tab" data-bs-toggle="tab" href="#tab-Expired" role="tab" aria-controls="tab-Expired" aria-selected="false" @onclick='()=>OnStatusClick("Expired")'>Expired</a></li>
+            <li class="nav-item"><a class="nav-link" id="All-tab" data-bs-toggle="tab" href="#tab-All" role="tab" aria-controls="tab-All" aria-selected="true" @onclick='()=>OnStatusClick("All")'>All</a></li>
+        </ul>
+        <div class="px-3">
+            <div class="row my-3">
+                <div class="col-12 col-md-6">
+                    <label class="form-label" for="inputGroupSearch">Search</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                        <input type="text" class="form-control" @bind-value="SearchText" @oninput="async (EventArgs) =>{await SearchDiscounts(EventArgs.Value.ToString());}" placeholder="Search Promotions" aria-label="Search Promotions">
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label">Active Dates</label>
+                    <form class="d-flex align-items-center">
+                        <div class="me-2">
+                            <SfDatePicker Placeholder="Start Date" TValue="DateTime?" @bind-Value="StartDate" aria-label="Start Date" CssClass="form-control form-control-sm">
+                                <DatePickerEvents TValue="DateTime?" ValueChange="GetBusinessDiscounts"></DatePickerEvents>
+                            </SfDatePicker>
+                        </div>
+                        <div>
+                            <SfDatePicker Placeholder="End Date" TValue="DateTime?" @bind-Value="EndDate" aria-label="End Date" CssClass="form-control form-control-sm">
+                                <DatePickerEvents TValue="DateTime?" ValueChange="GetBusinessDiscounts"></DatePickerEvents>
+                            </SfDatePicker>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="tab-content border-x border-bottom p-3 mb-2" id="productTabContent">
+            <div class="tab-pane fade show active custom_table_scroll" id="tab-Active" role="tabpanel" aria-labelledby="Active-tab">
+                <div class="sf-grid min-vh-75">
+                    <SfGrid DataSource="@businessDiscounts" AllowPaging="false" Width="100%">
+                        <GridTemplates>
+                            <EmptyRecordTemplate>
+                                @if (!isLoading && businessDiscounts.Count <= 0)
+                                {
+                                    <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                        <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Data</h6>
+                                    </div>
+                                }
+                            </EmptyRecordTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            <GridColumn HeaderText="Name" TextAlign="TextAlign.Left" Width="80">
+                                <Template>
+                                    @{
+                                        var discountData = (context as BusinessDiscountListModel);
+                                        <a href="/store/edit-manual-discount/@discountData.IdGUID">@($"{discountData.DiscountName}")</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(BusinessDiscountListModel.DiscountType) HeaderText="Type" TextAlign="TextAlign.Left" Width="50" />
+                            <GridColumn Field="@nameof(BusinessDiscountListModel.DateTimeStart)" HeaderText="Start Date" Type="ColumnType.Date" Format="M/d/yyyy h:mm tt" TextAlign="TextAlign.Left" Width="50"/>
+                            <GridColumn Field="@nameof(BusinessDiscountListModel.DateTimeEnd)" HeaderText="End Date" Type="ColumnType.Date" Format="M/d/yyyy h:mm tt" TextAlign="TextAlign.Left" Width="50"/>
+                            <GridColumn Field=@nameof(BusinessDiscountListModel.DiscountCode) HeaderText="Promo Code" TextAlign="TextAlign.Left" Width="50" />
+                            <GridColumn HeaderText="" Width="30">
+                                <Template>
+                                    @{
+                                        var discountData = (context as BusinessDiscountListModel);
+
+                                        <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                        <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                            <a class="dropdown-item" @onclick="()=>SetDiscountToInactive(discountData.Id)" href="javascript:void();">Set as Inactive</a>
+                                            <a class="dropdown-item" href="javascript:void();">View Performance</a>
+                                            <a class="dropdown-item" href="javascript:void();">Share via Email</a>
+                                            <a class="dropdown-item" href="javascript:void();">Share via SMS</a>
+                                        </div>
+                                    }
+                                </Template>
+                            </GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+            <div class="tab-pane fade custom_table_scroll" id="tab-Upcoming" role="tabpanel" aria-labelledby="Upcoming-tab">
+                <SfGrid DataSource="@businessDiscounts" AllowPaging="false" Width="100%">
+                    <GridTemplates>
+                        <EmptyRecordTemplate>
+                            @if (!isLoading && businessDiscounts.Count <= 0)
+                            {
+                                <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                    <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Data</h6>
+                                </div>
+                            }
+                        </EmptyRecordTemplate>
+                    </GridTemplates>
+                    <GridColumns>
+                        <GridColumn HeaderText="Name" TextAlign="TextAlign.Left" Width="80">
+                            <Template>
+                                @{
+                                    var discountData = (context as BusinessDiscountListModel);
+                                    <a href="/store/edit-manual-discount/@discountData.IdGUID">@($"{discountData.DiscountName}")</a>
+
+                                }
+                            </Template>
+                        </GridColumn>
+                        <GridColumn Field=@nameof(BusinessDiscountListModel.DiscountType) HeaderText="Type" TextAlign="TextAlign.Left" Width="50" />
+                        <GridColumn Field="@nameof(BusinessDiscountListModel.DateTimeStart)" HeaderText="Start Date" Type="ColumnType.Date" Format="M/d/yyyy h:mm tt" TextAlign="TextAlign.Left" Width="50" />
+                        <GridColumn Field="@nameof(BusinessDiscountListModel.DateTimeEnd)" HeaderText="End Date" Type="ColumnType.Date" Format="M/d/yyyy h:mm tt" TextAlign="TextAlign.Left" Width="50" />
+                        <GridColumn Field=@nameof(BusinessDiscountListModel.DiscountCode) HeaderText="Promo Code" TextAlign="TextAlign.Left" Width="50" />
+                        <GridColumn HeaderText="" Width="30">
+                            <Template>
+                                @{
+                                    var discountData = (context as BusinessDiscountListModel);
+
+                                    <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                    <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                        <a class="dropdown-item" href="javascript:void();">View Performance</a>
+                                        <a class="dropdown-item" href="javascript:void();">Share via Email</a>
+                                        <a class="dropdown-item" href="javascript:void();">Share via SMS</a>
+                                    </div>
+                                }
+                            </Template>
+                        </GridColumn>
+                    </GridColumns>
+                </SfGrid>
+            </div>
+            <div class="tab-pane fade custom_table_scroll" id="tab-Expired" role="tabpanel" aria-labelledby="Expired-tab">
+                <SfGrid DataSource="@businessDiscounts" AllowPaging="false" Width="100%">
+                    <GridTemplates>
+                        <EmptyRecordTemplate>
+                            @if (!isLoading && businessDiscounts.Count <= 0)
+                            {
+                                <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                    <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Data</h6>
+                                </div>
+                            }
+                        </EmptyRecordTemplate>
+                    </GridTemplates>
+                    <GridColumns>
+                        <GridColumn HeaderText="Name" TextAlign="TextAlign.Left" Width="80">
+                            <Template>
+                                @{
+                                    var discountData = (context as BusinessDiscountListModel);
+                                    <a href="/store/edit-manual-discount/@discountData.IdGUID">@($"{discountData.DiscountName}")</a>
+                                }
+                            </Template>
+                        </GridColumn>
+                        <GridColumn Field=@nameof(BusinessDiscountListModel.DiscountType) HeaderText="Type" TextAlign="TextAlign.Left" Width="50" />
+                        <GridColumn Field="@nameof(BusinessDiscountListModel.DateTimeStart)" HeaderText="Start Date" Type="ColumnType.Date" Format="M/d/yyyy h:mm tt" TextAlign="TextAlign.Left" Width="50" />
+                        <GridColumn Field="@nameof(BusinessDiscountListModel.DateTimeEnd)" HeaderText="End Date" Type="ColumnType.Date" Format="M/d/yyyy h:mm tt" TextAlign="TextAlign.Left" Width="50" />
+                        <GridColumn Field=@nameof(BusinessDiscountListModel.DiscountCode) HeaderText="Promo Code" TextAlign="TextAlign.Left" Width="50" />
+                        <GridColumn HeaderText="" Width="30">
+                            <Template>
+                                @{
+                                    var discountData = (context as BusinessDiscountListModel);
+
+                                    <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                    <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                        <a class="dropdown-item" href="javascript:void();">View Performance</a>
+                                        <a class="dropdown-item" href="javascript:void();">Share via Email</a>
+                                        <a class="dropdown-item" href="javascript:void();">Share via SMS</a>
+                                    </div>
+                                }
+                            </Template>
+                        </GridColumn>
+                    </GridColumns>
+                </SfGrid>
+            </div>
+            <div class="tab-pane fade custom_table_scroll" id="tab-All" role="tabpanel" aria-labelledby="All-tab">
+                <SfGrid DataSource="@businessDiscounts" AllowPaging="false" Width="100%">
+                    <GridTemplates>
+                        <EmptyRecordTemplate>
+                            @if (!isLoading && businessDiscounts.Count <= 0)
+                            {
+                                <div class="min-vh-75 font-weight-black fs-8 text-center my-4">
+                                    <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Data</h6>
+                                </div>
+                            }
+                        </EmptyRecordTemplate>
+                    </GridTemplates>
+                    <GridColumns>
+                        <GridColumn HeaderText="Status" TextAlign="TextAlign.Left" Width="30">
+                            <Template>
+                                @{
+                                    var discountData = (context as BusinessDiscountListModel);
+                                    <div class="d-flex justify-content-start">
+                                        @if (discountData.DateTimeStart <= DateTime.UtcNow && (discountData.DateTimeEnd == null || discountData.DateTimeEnd >= DateTime.UtcNow))
+                                        {
+                                            <SfTooltip>
+                                                <TooltipTemplates><Content>Active</Content></TooltipTemplates>
+                                                <span class="badge bg-success p-2 rounded-pill">Active</span>
+                                            </SfTooltip>
+
+                                        }
+                                        @if (discountData.DateTimeEnd != null && discountData.DateTimeEnd <= DateTime.UtcNow)
+                                        {
+                                            <SfTooltip>
+                                                <TooltipTemplates><Content>Expired</Content></TooltipTemplates>
+                                                <span class="badge bg-danger p-2 rounded-pill">Expired</span>
+                                            </SfTooltip>
+                                        }
+                                        @if (discountData.DateTimeStart > DateTime.UtcNow)
+                                        {
+                                            <SfTooltip>
+                                                <TooltipTemplates><Content>Upcoming</Content></TooltipTemplates>
+                                                <span class="badge bg-warning p-2 rounded-pill">Upcoming</span>
+                                            </SfTooltip>
+                                        }
+                                    </div>
+                                }
+                            </Template>
+                        </GridColumn>
+                        <GridColumn HeaderText="Name" TextAlign="TextAlign.Left" Width="80">
+                            <Template>
+                                @{
+                                    var discountData = (context as BusinessDiscountListModel);
+                                    <a href="/store/edit-manual-discount/@discountData.IdGUID">@($"{discountData.DiscountName}")</a>
+                                }
+                            </Template>
+                        </GridColumn>
+                        <GridColumn Field=@nameof(BusinessDiscountListModel.DiscountType) HeaderText="Type" TextAlign="TextAlign.Left" Width="50" />
+                        <GridColumn Field="@nameof(BusinessDiscountListModel.DateTimeStart)" HeaderText="Start Date" Type="ColumnType.Date" Format="M/d/yyyy h:mm tt" TextAlign="TextAlign.Left" Width="50" />
+                        <GridColumn Field="@nameof(BusinessDiscountListModel.DateTimeEnd)" HeaderText="End Date" Type="ColumnType.Date" Format="M/d/yyyy h:mm tt" TextAlign="TextAlign.Left" Width="50" />
+                        <GridColumn Field=@nameof(BusinessDiscountListModel.DiscountCode) HeaderText="Promo Code" TextAlign="TextAlign.Left" Width="50" />
+                        <GridColumn HeaderText="" Width="30">
+                            <Template>
+                                @{
+                                    var discountData = (context as BusinessDiscountListModel);
+
+                                    <button class="btn btn-link text-600 btn-sm dropdown-toggle btn-reveal float-end" type="button" id="dropdown0" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false"><span class="fas fa-ellipsis-h fs--1"></span></button>
+                                    <div class="dropdown-menu dropdown-menu-end border py-2" aria-labelledby="dropdown0">
+                                        @if (discountData.DateTimeStart <= DateTime.UtcNow && (discountData.DateTimeEnd == null || discountData.DateTimeEnd >= DateTime.UtcNow))
+                                        {
+                                            <a class="dropdown-item" @onclick="()=>SetDiscountToInactive(discountData.Id)" href="javascript:void();">Set as Inactive</a>
+                                        }
+                                        <a class="dropdown-item" href="javascript:void();">View Performance</a>
+                                        <a class="dropdown-item" href="javascript:void();">Share via Email</a>
+                                        <a class="dropdown-item" href="javascript:void();">Share via SMS</a>
+                                    </div>
+                                }
+                            </Template>
+                        </GridColumn>
+                    </GridColumns>
+                </SfGrid>
+            </div>
+        </div>
+    </div>
+</div>
+
+<SfDialog IsModal="true" Width="600px" ShowCloseIcon="true" @bind-Visible="ModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Select a Discount Type</h5></Header>
+        <Content>
+            <div class="p-3">
+                <a class="border row mb-3 p-2 text-decoration-none cursor-pointer border-2 text-black" href="/store/create-manual-discount">
+                    <div class="col-sm-12">
+                        <p class="mb-3">Discount Code</p>
+                        <p class="mb-1">Customers will receive a discount when they manually enter a code at checkout or use a promo code URL.</p>
+                    </div>
+                </a>
+                <a class="border row p-2 text-decoration-none cursor-pointer border-2 text-black" href="javascript:void();">
+                    <div class="col-sm-12">
+                        <p class="mb-3">Automated Discount</p>
+                        <p class="mb-1">Customers will automatically receive a discount when items are added to their shopping cart.</p>
+                    </div>
+                </a>
+            </div>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+    private string title = "Discounts & Promotions | Synergy Commerce Admin Panel";
+    private Member currentMember;
+    private Boolean isLoading = false;
+    private bool ModalVisibility { get; set; } = false;
+    private DateTime? StartDate { get; set; }
+    private DateTime? EndDate { get; set; }
+    public string Status { get; set; } = "Active";
+    public string SearchText { get; set; } = string.Empty;
+    public List<BusinessDiscountListModel> businessDiscounts = new List<BusinessDiscountListModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        await GetBusinessDiscounts();
+    }
+
+    private async Task GetBusinessDiscounts()
+    {
+        isLoading = true;
+        var businessDiscountResponse = await _discountViewModel.GetDiscounts(currentMember.Id, StartDate, EndDate, Status, SearchText);
+        if (businessDiscountResponse.success)
+        {
+            businessDiscounts = businessDiscountResponse.data;
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task SearchDiscounts(string searchText)
+    {
+        SearchText = searchText;
+        await GetBusinessDiscounts();
+    }
+
+    private async Task OnStatusClick(string status)
+    {
+        Status = status;
+        await GetBusinessDiscounts();
+    }
+
+    private async Task SetDiscountToInactive(int id)
+    {
+        SetInactiveDiscountRequestModel inactiveDiscountRequest = new SetInactiveDiscountRequestModel
+        {
+            Id = id
+        };
+        var response = await _discountViewModel.SetDiscountToInactive(inactiveDiscountRequest);
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            await GetBusinessDiscounts();
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+
+    private void OpenModal()
+    {
+        this.ModalVisibility = true;
+    }
+
+    private void CloseModal()
+    {
+        this.ModalVisibility = false;
+    }
+}

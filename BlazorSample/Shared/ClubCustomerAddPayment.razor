@@ -1,0 +1,69 @@
+﻿@using CellarPassAppAdmin.Shared.Models.RequestModel
+
+<div class="col-12 col-md-6 mt-4">
+    <EditForm Model="CreditCard" OnValidSubmit="Submit">
+        <DataAnnotationsValidator />
+        <div class="mb-3">
+            <label class="form-label" for="inputCreditCardNumber">Credit Card Number</label>
+            <SfMaskedTextBox Created="@CCInputCreatedHandler" @ref="creditCardInput" ID="inputCreditCardNumber" Mask="@((HideCVV)?_lastFourDigitsMask:_defaultCreditCardMask)" PromptChar="@((HideCVV)?editPromptChar:promptCharacter)" @bind-Value="@CreditCard.CreditCardNumber" CssClass="form-control form-control-sm" Placeholder="Card Number"></SfMaskedTextBox>
+            <ValidationMessage For="() => CreditCard.CreditCardNumber" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="inputCardholderName">Cardholder Name</label>
+            <InputText @bind-Value="@CreditCard.CardHolderName" placeholder="Cardholder Name" class="form-control" id="inputCardholderName" />
+            <ValidationMessage For="() => CreditCard.CardHolderName" />
+        </div>
+        <div class="row">
+            <div class="col-sm-6 mb-3">
+                <label class="form-label">Expiration Date</label>
+                <InputText @bind-Value="@CreditCard.ExpirationMonth" class="form-control" id="inputMonth" placeholder="Month" />
+                <ValidationMessage For="() => CreditCard.ExpirationMonth" />
+            </div>
+            <div class="col-sm-6 mb-3">
+                <label class="form-label"></label><br />
+                <InputText @bind-Value="@CreditCard.ExpirationYear" class="form-control mt-2" id="inputYear" placeholder="Year" />
+                <ValidationMessage For="() => CreditCard.ExpirationYear" />
+            </div>
+        </div>
+        @if (!HideCVV)
+        {
+            <div class="row">
+                <div class="col-sm-6 mb-3">
+                    <label class="form-label">CVV</label>
+                    <InputText @bind-Value="@CreditCard.CVV" class="form-control" id="inputCVV" placeholder="CVV" />
+                    <ValidationMessage For="() => CreditCard.CVV" />
+                </div>
+            </div>
+        }
+
+        <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    SfMaskedTextBox creditCardInput;
+    const string _defaultCreditCardMask = "[1-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]";
+    const string _lastFourDigitsMask = "[X][X][X][X]-[X][X][X][X]-[X][X][X][X]-[0-9][0-9][0-9][0-9]";
+    private char promptCharacter = 'X';
+    private char editPromptChar = 'x';
+    private async Task CCInputCreatedHandler(Object args)
+    {
+        if (creditCardInput != null)
+            await creditCardInput.FocusIn();
+    }
+
+    [Parameter]
+    public bool HideCVV { get; set; }
+    [Parameter]
+    public CreditCardRequestModel CreditCard { get; set; }
+
+    [Parameter]
+    public EventCallback<CreditCardRequestModel> SaveCreditCard { get; set; }
+
+    private async Task Submit()
+    {
+        await SaveCreditCard.InvokeAsync(CreditCard);
+    }
+}

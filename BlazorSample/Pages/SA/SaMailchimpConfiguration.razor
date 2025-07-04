@@ -1,0 +1,177 @@
+﻿@page "/sa/mailchimp-configuration"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Client.ViewModels
+@inject IBusinessViewModel _businessViewModel
+@attribute [Authorize]
+
+
+<AuthorizeView>
+    <Authorized>
+        <SfSpinner @bind-Visible="isLoading"></SfSpinner>
+        <Title Value="@title"></Title>
+
+        <div class="py-3">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-0"><a href="/sa/configuration" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a>Mailchimp Configuration</h5>
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-sm btn-primary">Save</button>
+                </div>
+            </div>
+            <hr />
+        </div>
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="row mb-3">
+                    <div class="col col-9">
+                        <label class="form-label">API Key</label>
+                        <input type="text" class="form-control" value="2d472f3ee451d701c38150807f2aeef6-us13" id="txtMailChimpApiKey">
+                    </div>
+                    <div class="col col-3">
+                        <label class="form-label">&nbsp;</label><br />
+                        <button class="btn  btn-sm btn-primary">Update Key</button>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col col-6">
+                        <label class="form-label">Admin Users</label>
+                        <input type="text" class="form-control" value="CellarPass Users" id="txtAdminListName">
+
+                    </div>
+                    <div class="col col-6">
+                        <label class="form-label">&nbsp;</label>
+                        <select class="form-select" id="ddlAdminList">
+                            <option value="">Please Select</option>
+                            <option value="07d11ad2e8">CellarPass Concierges</option>
+                            <option value="211300157d">Test Send List</option>
+                            <option value="41322e3619">CellarPass Demonstrations</option>
+                            <option value="7c108e564d">CellarPass Special Offer</option>
+                            <option selected="selected" value="a721f6e639">CellarPass Administrators</option>
+                            <option value="b6e048bace">Billing</option>
+                            <option  value="cb963bcba4">CellarPass Newsletter</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col col-6">
+                        <label class="form-label">New Guests</label>
+                        <input type="text" class="form-control" value="CellarPass Newsletter" id="txtGuestListName">
+                    </div>
+                    <div class="col col-6">
+                        <label class="form-label">&nbsp;</label>
+                        <select class="form-select" id="ddlGuestList">
+                            <option value="">Please Select</option>
+                            <option value="07d11ad2e8">CellarPass Concierges</option>
+                            <option value="211300157d">Test Send List</option>
+                            <option value="41322e3619">CellarPass Demonstrations</option>
+                            <option value="7c108e564d">CellarPass Special Offer</option>
+                            <option value="a721f6e639">CellarPass Administrators</option>
+                            <option value="b6e048bace">Billing</option>
+                            <option selected="selected" value="cb963bcba4">CellarPass Newsletter</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col col-6">
+                        <label class="form-label">Newsletter</label>
+                        <input type="text" class="form-control" value="CellarPass Newsletter" id="txtNewsletterListName">
+                    </div>
+                    <div class="col col-6">
+                        <label class="form-label">&nbsp;</label>
+                        <select class="form-select" id="ddlNewsletterList">
+                            <option value="">Please Select</option>
+                            <option value="07d11ad2e8">CellarPass Concierges</option>
+                            <option value="211300157d">Test Send List</option>
+                            <option value="41322e3619">CellarPass Demonstrations</option>
+                            <option value="7c108e564d">CellarPass Special Offer</option>
+                            <option value="a721f6e639">CellarPass Administrators</option>
+                            <option value="b6e048bace">Billing</option>
+                            <option selected="selected" value="cb963bcba4">CellarPass Newsletter</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col col-6">
+                        <label class="form-label">Special Offers</label>
+                        <input type="text" class="form-control" value="Special Offers Newsletter" id="txtSpecialOffersListName">
+                    </div>
+                    <div class="col col-6">
+                        <label class="form-label">&nbsp;</label>
+                        <select class="form-select" id="ddlSpecialOffersList">
+                            <option value="">Please Select</option>
+                            <option value="07d11ad2e8">CellarPass Concierges</option>
+                            <option value="211300157d">Test Send List</option>
+                            <option value="41322e3619">CellarPass Demonstrations</option>
+                            <option value="7c108e564d">CellarPass Special Offer</option>
+                            <option value="a721f6e639">CellarPass Administrators</option>
+                            <option value="b6e048bace">Billing</option>
+                            <option selected="selected" value="cb963bcba4">CellarPass Newsletter</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col col-6">
+                        <label class="form-label">Billing</label>
+                        <input type="text" class="form-control" value="CellarPass Billing" id="txtBillingListName">
+                    </div>
+                    <div class="col col-6">
+                        <label class="form-label">&nbsp;</label>
+                        <select class="form-select" id="ddlBillingList">
+                            <option value="">Please Select</option>
+                            <option value="07d11ad2e8">CellarPass Concierges</option>
+                            <option value="211300157d">Test Send List</option>
+                            <option value="41322e3619">CellarPass Demonstrations</option>
+                            <option value="7c108e564d">CellarPass Special Offer</option>
+                            <option value="a721f6e639">CellarPass Administrators</option>
+                            <option selected="selected" value="b6e048bace">Billing</option>
+                            <option value="cb963bcba4">CellarPass Newsletter</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col col-6">
+                        <label class="form-label">Concierge</label>
+                        <input type="text" class="form-control" value="CellarPass Concierges" id="txtConciergeListName">
+                    </div>
+                    <div class="col col-6">
+                        <label class="form-label">&nbsp;</label>
+                        <select class="form-select" id="ddlConciergeList">
+                            <option value="">Please Select</option>
+                            <option selected="selected" value="07d11ad2e8">CellarPass Concierges</option>
+                            <option value="211300157d">Test Send List</option>
+                            <option value="41322e3619">CellarPass Demonstrations</option>
+                            <option value="7c108e564d">CellarPass Special Offer</option>
+                            <option value="a721f6e639">CellarPass Administrators</option>
+                            <option value="b6e048bace">Billing</option>
+                            <option  value="cb963bcba4">CellarPass Newsletter</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <h5>Merge Tags <a href="http://kb.mailchimp.com/merge-tags/using/getting-started-with-merge-tags" target="_blank" class="small">(help)</a></h5>
+                <hr class="mb-3" />
+                <div>
+                    <label><span class="fa fa-fw fa-tag"></span> Available Tags</label>
+                    <ul class="list-inline fs--1">
+                        <li>*|EMAIL|*</li>
+                        <li>*|FNAME|*</li>
+                        <li>*|LNAME|*</li>
+                        <li>*|CUSTOM01|*</li>
+                        <li>*|CUSTOM02|*</li>
+                    </ul>
+                    <label><span><i>Note: Not all tags will be available to all lists</i></span></label>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+@code
+{
+    private string title = "Mailchimp Configuration | Synergy Commerce Admin Panel";
+    private bool isLoading = false;
+
+}

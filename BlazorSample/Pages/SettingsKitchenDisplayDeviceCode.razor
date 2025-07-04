@@ -1,0 +1,79 @@
+﻿@page  "/settings/kitchen-display-device-code"
+@layout AuthorizedLayout
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head;
+@inject NavigationManager _navigationManager
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+
+<div class="card mb-3">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="/settings/add-kitchen-display-device" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-desktop me-2"></span>Add Kitchen Display</h5>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-sm btn-primary" type="button">Add Device</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row align-items-center h-100">
+            <div class="col-7 col-md-7 col-sm-12 mx-auto">
+                <h5>Device Name</h5>
+                <div class="border">
+                    <div class="row p-3 pb-0">
+                        <div class="col-6 align-self-end">
+                            <h5>[[DeviceType]] added.</h5>
+                            <p>Now sign-in with your device code.</p>
+                        </div>
+                        <div class="col-6">
+                            <img src="Image/kitchen-display-device-code.png" height="100" class="img-fluid w-100" alt="Name of Image">
+                        </div>
+                    </div>
+                    <hr class="m-0" />
+                    <div class="row m-3">
+                        <div class="col-6">
+                            <ul class="timeline">
+                                <li>
+                                    <div class="timeline-badge"><img src="Image/kitchen-display-device-code-app.png" height="50" class="img-fluid w-100" alt="Name of Image"></div>
+                                    <div class="ps-4">
+                                        <h6 class="mb-0">1. DOWNLOAD & INSTALL KITCHEN DISPLAY APP</h6>
+                                        <p class="mb-0 fs--2">Install the CellarPass Kitchen Display app from the App Store on the iPad you will be using as a kitchen display.</p>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="timeline-badge"><img src="Image/kitchen-display-device-code-app.png" height="50" class="img-fluid w-100" alt="Name of Image"></div>
+                                    <div class="ps-4">
+                                        <h6 class="mb-0">2. Sign-in to the App</h6>
+                                        <p class="mb-0 fs--2">
+                                            The device code is unique to the device and can only be assigned to one kitchen display.
+                                            Send Device Code
+                                        </p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-6 align-self-end">
+                            <div class="mb-3">
+                                <div class="input-group mb-3">
+                                    <span class="input-group-text bg-800 text-white flex-fill justify-content-center">Y123A567X910</span>
+                                    <button class="btn btn-outline-primary" type="button"><span class="far fa-copy me-2"></span></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code
+{
+    private Boolean isLoading;
+    private string title = "Add Kitchen Display | Synergy Commerce Admin Panel";
+
+}

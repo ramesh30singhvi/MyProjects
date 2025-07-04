@@ -1,0 +1,78 @@
+﻿@page  "/payments/gift-cards"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.QueryBuilder
+@using Syncfusion.Blazor.DropDowns
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@inject IProductViewModel _productViewModel
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<Feedback PageSection="PageSection.GiftCards"></Feedback>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col">
+                <h5 class="mb-0"><a href="/settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="fa-regular fa-envelope-open-dollar me-2"></span>Gift Cards</h5>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row my-4">
+            <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="fas fa-chart-line fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="reports/gift-card-transaction-history">Transaction History</a></h6>
+                        <p class="fs--2">View transactions and gift card balances.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="fas fa-money-check-alt fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="/payments/gift-card-manager">Gift Card Manager</a></h6>
+                        <p class="fs--2">View origin of gift cards.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="far fa-cog fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="/payments/gift-card-settings">Gift Card Settings</a></h6>
+                        <p class="fs--2">Configure gift card settings and amounts.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="far fa-cloud-download-alt fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="gift-cards/batch-manager">Batch Manager</a></h6>
+                        <p class="fs--2">Create batches for pre-printed gift cards.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@code {
+    private string title = "Gift Cards | Synergy Commerce Admin Panel";
+
+}

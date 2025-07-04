@@ -1,0 +1,41 @@
+﻿<SfDialog IsModal="true" Width="400px" ShowCloseIcon="true" @bind-Visible="OpenDeleteDialog">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Confirmation</h5> </Header>
+        <Content>
+            <div class="col-12 text-center">
+                <i class="far fa-trash-alt fa-5x text-primary my-4"></i>
+            </div>
+            <div class="col-12 text-center fs-1 fw-normal h6">
+                Are you sure want to delete?
+            </div>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="DialogClose">No</button>
+            <button type="button" class="btn btn-primary" @onclick="DeleteConfired">Yes</button>
+        </FooterTemplate>
+    </DialogTemplates>
+    <DialogEvents Closed="@DialogClose"></DialogEvents>
+    <DialogAnimationSettings Effect="@DialogEffect.Zoom"></DialogAnimationSettings>
+</SfDialog>
+
+
+@code {
+    [Parameter]
+    public bool OpenDeleteDialog { get; set; }
+
+    [Parameter]
+    public EventCallback OnDialogClose { get; set; }
+
+    protected async Task DialogClose()
+    {
+        await OnDialogClose.InvokeAsync();
+    }
+
+    [Parameter]
+    public EventCallback OnDeleteConfirmed { get; set; }
+
+    protected async Task DeleteConfired()
+    {
+        await OnDeleteConfirmed.InvokeAsync();
+    }
+}

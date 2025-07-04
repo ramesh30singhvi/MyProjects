@@ -1,0 +1,271 @@
+﻿@page "/people/concierges/edit/{Id:guid}"
+@page "/people/concierges/create"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Enums;
+@using CellarPassAppAdmin.Client.ViewModels;
+@using CellarPassAppAdmin.Shared.Models;
+@using CellarPassAppAdmin.Shared.Entities.v4;
+@using CellarPassAppAdmin.Shared.Models.RequestModel;
+@using CellarPassAppAdmin.Shared.Models.ViewModel;
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head;
+@inject ICountryViewModel _countryViewModel
+@inject IStateViewModel _stateViewModel
+@inject IConciergeViewModel _conciergeViewModel
+@inject NavigationManager _navigationManager
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+
+<div class="card shadow-none border">
+    <EditForm Model="@request" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between align-items-center">
+                <div class="col-md">
+                    <h5 class="mb-3 mb-md-0"><a href="people/concierges" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-user-tie me-2"></span>@(Id != null ? "Edit" : "Add") Concierge</h5>
+                </div>
+                <div class="col-auto">
+                    @if (isSaving)
+                    {
+                        <Loader />
+                    }
+                    <button class="btn btn-sm btn-primary" type="submit" hidden="@(isSaving)">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col">
+                    <div class="mb-3">
+                        <label class="form-label" for="inputConciergeCompany">Company</label>
+                        <InputText id="inputConciergeCompany" class="form-control" @bind-Value="request.ConciergeCompany" placeholder="Company Name"></InputText>
+                        <ValidationMessage For="@(() => request.ConciergeCompany)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="inputConciergeTitle">Position/Title</label>
+                        <input id="inputConciergeTitle" class="form-control" type="text" @bind-value="request.Title" placeholder="Position/Title" />
+                    </div>
+
+                    <div class="border-dashed-bottom mt-4 mb-3"></div>
+
+                    <AddressControl countries="@countries" states="@states" @bind-address1="@request.Address1" @bind-address2="@request.Address2" @bind-selectedCountry="@request.CountryCode" @bind-stateCode="@request.StateCode" @bind-city="@request.City" @bind-zipCode="@request.ZipCode" @ref="address" SelectedNewAddress="AddressChanged" />
+                </div>
+                <div class="col">
+                    <div class="mb-3">
+                        <label class="form-label" for="inputConciergeName">First Name</label>
+                        <input id="inputConciergeName" class="form-control" @bind-value="request.FirstName" type="text" placeholder="First Name" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="inputConciergeContact">Last Name</label>
+                        <input id="inputConciergeContact" class="form-control" type="text" @bind-value="request.LastName" placeholder="Last Name" />
+                    </div>
+                    @if (!string.IsNullOrEmpty(request.BusinessPhoneCountry))
+                    {
+                        <div class="mb-3">
+                            <PhoneNumber PhoneCountry="@request.BusinessPhoneCountry" @bind-phone="@request.BusinessPhone" id="inputBusinessPhone" selCountryId="selBusinessPhoneCountry" label="Work Phone" @ref="businessPhone" />
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(request.PhoneCountry))
+                    {
+                        <div class="mb-3">
+                            <PhoneNumber PhoneCountry="@request.PhoneCountry" @bind-phone="@request.Phone" label="Mobile Phone" @ref="phone" />
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label" for="inputConciergeContact">Contact Email</label>
+                        <input id="inputConciergeContact" class="form-control" type="email" @bind-value="request.Email" placeholder="Email Address" />
+                        <ValidationMessage For="@(() => request.Email)" />
+                    </div>
+
+                    @if (conciergeTypes != null && conciergeTypes.Count > 0)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label" for="selConciergeType">Concierge Type</label>
+                            <select id="selConciergeType" @bind="@request.ConciergeType" class="form-select">
+
+                                @foreach (var item in conciergeTypes)
+                                {
+                                    <option value="@item.Value">@item.Name</option>
+                                }
+                            </select>
+                        </div>
+                    }
+                </div>
+            </div>
+
+
+        </div>
+    </EditForm>
+</div>
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private Boolean isLoading;
+    private Boolean isSaving;
+    private string title = "Edit Concierge | Synergy Commerce Admin Panel";
+    private ConciergeModel concierge = new ConciergeModel();
+    private List<CpCountry> countries = new List<CpCountry>();
+    private List<CpState> states = new List<CpState>();
+    private List<ConciergeTypeModel> conciergeTypes = new List<ConciergeTypeModel>();
+    private ConciergeRequestModel request = new ConciergeRequestModel();
+    private AddressControl address;
+    private PhoneNumber phone;
+    private PhoneNumber businessPhone;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        CountryResponse res = await _countryViewModel.GetCountries();
+        if (res.success)
+        {
+            countries = res.data;
+        }
+
+        StateResponse stateResponse = await _stateViewModel.GetStates();
+        if (stateResponse.success)
+        {
+            states = stateResponse.data;
+        }
+
+        conciergeTypes = _conciergeViewModel.GetConciergeTypes();
+
+        if (Id != null)
+        {
+            ConciergeDetailResponse result = await _conciergeViewModel.GetCPConciergeById(Id.Value);
+            if (result.success)
+            {
+                concierge = result.data;
+                request.Id = concierge.Id;
+                request.ConciergeType = concierge.ConciergeType;
+                request.Title = concierge.Title;
+                request.FirstName = concierge.FirstName;
+                request.LastName = concierge.LastName;
+                request.IsActive = concierge.IsActive;
+                request.ConciergeCompany = concierge.ConciergeCompany;
+                request.Email = concierge.Email;
+                request.Address1 = concierge.Address1;
+                request.Address2 = concierge.Address2;
+                request.City = concierge.City;
+                request.StateCode = concierge.StateCode;
+                request.CountryCode = concierge.CountryCode;
+                request.ZipCode = concierge.ZipCode;
+                request.Phone = concierge.PhoneFormatted;
+                request.BusinessPhone = concierge.BusinessPhoneFormatted;
+                if (!string.IsNullOrEmpty(concierge.Phone))
+                {
+                    string[] splittedPhone = concierge.Phone.Split("| ");
+                    if (splittedPhone.Length > 1)
+                    {
+                        request.PhoneCountry = splittedPhone[1].Trim();
+                    }
+                    else
+                    {
+                        request.PhoneCountry = "US";
+                    }
+                }
+
+                if (string.IsNullOrEmpty(request.PhoneCountry))
+                {
+                    request.PhoneCountry = "US";
+                }
+
+                if (!string.IsNullOrEmpty(concierge.BusinessPhone))
+                {
+                    string[] splittedPhone = concierge.BusinessPhone.Split("| ");
+                    if (splittedPhone.Length > 1)
+                    {
+                        request.BusinessPhoneCountry = splittedPhone[1].Trim();
+                    }
+                    else
+                    {
+                        request.BusinessPhoneCountry = "US";
+                    }
+                }
+
+                if (string.IsNullOrEmpty(request.BusinessPhoneCountry))
+                {
+                    request.BusinessPhoneCountry = "US";
+                }
+            }
+        }
+        else
+        {
+            title = "Add Concierge | Synergy Commerce Admin Panel";
+            request.CountryCode = "US";
+            request.StateCode = "";
+            request.PhoneCountry = "US";
+            request.BusinessPhoneCountry = "US";
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async void SaveConcierge()
+    {
+        isSaving = true;
+        request.PhoneCountry = phone.phoneCountry;
+        request.Phone = phone.phone;
+        if (!string.IsNullOrEmpty(address.googleBusinessPhone) && !string.IsNullOrEmpty(address.googleBusinessPhoneCountry))
+        {
+            request.BusinessPhoneCountry = address.googleBusinessPhoneCountry;
+            request.BusinessPhone = address.googleBusinessPhone;
+        }
+        else
+        {
+            request.BusinessPhoneCountry = businessPhone.phoneCountry;
+            request.BusinessPhone = businessPhone.phone;
+        }
+        if (!string.IsNullOrEmpty(request.CountryCode))
+        {
+            request.Country = countries.FirstOrDefault(x => x.CountryCode == request.CountryCode).Name;
+        }
+        if (!string.IsNullOrEmpty(request.StateCode))
+        {
+            request.State = states.FirstOrDefault(x => x.StateCode == request.StateCode).State;
+        }
+        var result = await _conciergeViewModel.AddUpdateCPConcierge(request);
+        if (result.success)
+        {
+            isSaving = false;
+            if (Id == null)
+            {
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                _navigationManager.NavigateTo("/people/concierges");
+            }
+            else
+            {
+                request.Phone = result.data.PhoneFormatted;
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            }
+        }
+        else
+        {
+            isSaving = false;
+            toastService.ShowToast(result.error_info.description, ToastLevel.Error);
+        }
+        StateHasChanged();
+    }
+
+    private void HandleValidSubmit(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SaveConcierge();
+        }
+    }
+
+    private void AddressChanged(bool isAddressChanged)
+    {
+        if (isAddressChanged)
+        {
+            request.Address2 = "";
+        }
+        StateHasChanged();
+    }
+}

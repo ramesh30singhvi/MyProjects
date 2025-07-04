@@ -1,0 +1,162 @@
+﻿@page "/settings/store-policies"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.Blazor.RichTextEditor
+@inject ICPSettingViewModel _cPSettingViewModel
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<style>
+    .no_content.e-richtexteditor .e-rte-content .e-content {
+        min-height: 200px;
+    }
+
+    .e-richtexteditor .e-rte-srctextarea {
+        height: calc(100vh - 370px);
+    }
+
+    main#main-authorized .vh-100 {
+        height: calc(100vh - 70px) !important;
+    }
+</style>
+
+<SfSpinner @bind-Visible="spinnerVisibility"></SfSpinner>
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        @if (!isLoading)
+                {
+        <div class="card shadow-none border mb-3">
+            <div class="card-header">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-file-signature me-2"></span>Store Policies</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h5 class="mb-3">Refund Policy</h5>
+                    <SfRichTextEditor @bind-Value="refundPolicy" CssClass="no_content">
+                        <RichTextEditorToolbarSettings Items="@SfRichTextEditorHelper.Tools" Type="ToolbarType.MultiRow"></RichTextEditorToolbarSettings>
+                        <RichTextEditorFormat Items="@SfRichTextEditorHelper.FormatItems" />
+                    </SfRichTextEditor>
+                    <button class="btn btn-sm btn-primary mt-2" @onclick="SaveRefundPolicy">Create from template</button>
+                    <hr />
+                </div>
+                <div class="mb-3">
+                    <h5 class="mb-3">Shipping Policy</h5>
+                    <SfRichTextEditor @bind-Value="shippingPolicy" CssClass="no_content">
+                        <RichTextEditorToolbarSettings Items="@SfRichTextEditorHelper.Tools" Type="ToolbarType.MultiRow"></RichTextEditorToolbarSettings>
+                        <RichTextEditorFormat Items="@SfRichTextEditorHelper.FormatItems" />
+                    </SfRichTextEditor>
+                    <button class="btn btn-sm btn-primary mt-2" @onclick="SaveShippingPolicy">Create from template</button>
+                    <hr />
+                </div>
+                <div class="mb-3">
+                    <h5 class="mb-3">Privacy Policy</h5>
+                    <SfRichTextEditor @bind-Value="privacyPolicy" CssClass="no_content">
+                        <RichTextEditorToolbarSettings Items="@SfRichTextEditorHelper.Tools" Type="ToolbarType.MultiRow"></RichTextEditorToolbarSettings>
+                        <RichTextEditorFormat Items="@SfRichTextEditorHelper.FormatItems" />
+                    </SfRichTextEditor>
+                    <button class="btn btn-sm btn-primary mt-2">Replace from template</button>
+                    <hr />
+                </div>
+                <div class="mb-3">
+                    <h5 class="mb-3">Terms & Conditions</h5>
+                    <SfRichTextEditor @bind-Value="termsConditions" CssClass="no_content">
+                        <RichTextEditorToolbarSettings Items="@SfRichTextEditorHelper.Tools" Type="ToolbarType.MultiRow"></RichTextEditorToolbarSettings>
+                        <RichTextEditorFormat Items="@SfRichTextEditorHelper.FormatItems" />
+                    </SfRichTextEditor>
+                </div>
+            </div>
+        </div>
+        }
+
+    </Authorized>
+</AuthorizeView>
+
+@code
+{
+    private string title = "Store Policies | Synergy Commerce Admin Panel";
+    private string refundPolicy;
+    private string shippingPolicy;
+    private string privacyPolicy;
+    private string termsConditions;
+    private bool spinnerVisibility;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        spinnerVisibility = true;
+        var response = await _cPSettingViewModel.GetCPSettingListAsync(CPSettingMetaNamespace.PolicyTemplate);
+        if (response.success && response.data != null)
+        {
+            refundPolicy = response?.data?.Where(x => x.MetaKey == CPSettingMetaKey.PolicyRefundTemplate)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+            shippingPolicy = response?.data?.Where(x => x.MetaKey == CPSettingMetaKey.PolicyShippingTemplate)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+        }
+        isLoading = false;
+        spinnerVisibility = false;
+        StateHasChanged();
+    }
+
+    private async Task SaveRefundPolicy()
+    {
+        spinnerVisibility = true;
+        var request = new CPSettingRequestModel
+        {
+            MetaNamespace = CPSettingMetaNamespace.PolicyTemplate,
+            MetaKey = CPSettingMetaKey.PolicyRefundTemplate,
+            MetaValue = refundPolicy,
+            ValueType = (int)ValueTypeEnum.String,
+            Title = string.Empty,
+            Description = string.Empty
+        };
+
+        var response = await _cPSettingViewModel.AddUpdateCPSettingAsync(request);
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        spinnerVisibility = false;
+        StateHasChanged();
+    }
+
+    private async Task SaveShippingPolicy()
+    {
+        spinnerVisibility = true;
+        var request = new CPSettingRequestModel
+        {
+            MetaNamespace = CPSettingMetaNamespace.PolicyTemplate,
+            MetaKey = CPSettingMetaKey.PolicyShippingTemplate,
+            MetaValue = shippingPolicy,
+            ValueType = (int)ValueTypeEnum.String,
+            Title = string.Empty,
+            Description = string.Empty
+        };
+
+        var response = await _cPSettingViewModel.AddUpdateCPSettingAsync(request);
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.PolicyUpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        spinnerVisibility = false;
+        StateHasChanged();
+    }
+}

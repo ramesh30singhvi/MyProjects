@@ -1,0 +1,257 @@
+﻿@page "/settings/shipping-classes"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Syncfusion.Blazor
+@using Microsoft.Extensions.Configuration;
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject HttpClient _httpClient
+@inject ToastService toastService
+@inject IConfiguration _configuration
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject IShippingClassViewModel _shippingClassViewModel
+@inject ILocalStorageService localStorage
+@inject ToastService toastService
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized Context="ShippingClass">
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="isLoading"></SfSpinner>
+        <div class="card shadow-none border">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="settings/shipping" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-boxes me-2"></span>Shipping Classes</h5>
+                    </div>
+                    <div class="col-auto">
+                        <a class="btn btn-sm btn-primary" href="javascript:void(0)" @onclick="@AddClass">Add Class</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="min-vh-75 sf-grid">
+                    <SfGrid ID="Grid" @ref="Grid" TValue="ShippingClassModel" AllowPaging="true" AllowFiltering="false" Width="100%" class="border-x-0">
+                        <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" Mode="EditMode.Dialog"></GridEditSettings>
+                        <GridEvents RowSelected="RowSelectHandler" TValue="ShippingClassModel"></GridEvents>
+
+                        <SfDataManager Url="@_gridDataUrl" Adaptor="Adaptors.WebApiAdaptor"></SfDataManager>
+                        <GridPageSettings PageSize="10"></GridPageSettings>
+                        <GridTemplates>
+                            <EmptyRecordTemplate>
+                                @if (!isLoading)
+                                {
+                                    <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                        <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Classes Available</h6>
+                                        <button type="button" class="btn btn-outline-primary">Get Started</button>
+                                    </div>
+                                }
+                            </EmptyRecordTemplate>
+                        </GridTemplates>
+                        <GridColumns>
+                            <GridColumn HeaderText="Class" TextAlign="TextAlign.Left" Width="100">
+                                <Template>
+                                    @{
+                                        var className = (context as ShippingClassModel).Class;
+                                        <a href="javascript:void(0)" @onclick="@EditClass">@(className)</a>
+                                    }
+                                </Template>
+                            </GridColumn>
+                            <GridColumn HeaderText="Handling Fee" TextAlign="TextAlign.Center" Width="80">
+                                <Template>
+                                    @{
+                                        var handlingFee = (context as ShippingClassModel).HandlingFee;
+                                    }
+                                    $@(handlingFee.ToString("n2"))
+                                </Template>
+                            </GridColumn>
+                            <GridColumn Field=@nameof(ShippingClassModel.QtyPack) HeaderText="Qty / Pack" TextAlign="TextAlign.Center" Width="80"></GridColumn>
+                            <GridColumn Field=@nameof(ShippingClassModel.PackCase) HeaderText="Pack / Case" TextAlign="TextAlign.Center" Width="80"></GridColumn>
+                            <GridColumn HeaderText="" TextAlign="TextAlign.Center" Width="50">
+                                <Template>
+                                    @{
+                                        var id = (context as ShippingClassModel).Id;
+                                        <button class="delete_icon" @onclick="()=>DeleteDialogOpen(id)">
+                                            <span class="far fa-trash-alt"></span>
+                                        </button>
+                                    }
+                                </Template>
+                            </GridColumn>
+                        </GridColumns>
+                    </SfGrid>
+                </div>
+            </div>
+            <div class="card-footer">
+            </div>
+        </div>
+
+        <DeleteConfirmation OpenDeleteDialog="openDeleteDialog" OnDialogClose="DialogClose" OnDeleteConfirmed="DeleteClass"></DeleteConfirmation>
+
+        <SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="ModalVisibility">
+            <DialogTemplates>
+                <Header><h5 class="modal-title" id="modalLabel">@(editClass? "Edit Shipping Class" : "Add Shipping Class")</h5></Header>
+                <Content>
+                    <EditForm Model="shippingClass" OnValidSubmit="@SaveShippingClass">
+                        <DataAnnotationsValidator />
+                        <content>
+                            <div class="mb-3">
+                                <label class="form-label" for="inputShippingClass">Shipping Class</label>
+                                <InputText id="inputShippingClass" Placeholder="Enter shipping class" @bind-Value="@shippingClass.Class" class="form-control" />
+                                <ValidationMessage For="() => shippingClass.Class" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="inputHandlingCharge">Handling Charge</label>
+                                <SfNumericTextBox CssClass="form-control" Placeholder="Enter handling charge" TValue="decimal" Format="c2" ValidateDecimalOnType="true" Min="Convert.ToDecimal(0.00)" Decimals=2 ShowSpinButton="false" @bind-Value=@shippingClass.HandlingFee></SfNumericTextBox>
+                                <ValidationMessage For="() => shippingClass.HandlingFee" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="inputQtyPack">Qty / Pack</label>
+                                <InputNumber min="0" id="inputQtyPack" Placeholder="Enter quantity" @bind-Value="@shippingClass.QtyPack" class="form-control" />
+                                <ValidationMessage For="() => shippingClass.QtyPack" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="inputPackCase">Pack / Case</label>
+                                <InputNumber min="0" id="inputPackCase" Placeholder="Enter pack" @bind-Value="@shippingClass.PackCase" class="form-control" />
+                                <ValidationMessage For="() => shippingClass.PackCase" />
+                            </div>
+                        </content>
+
+                        <div class="e-footer-content px-0">
+                            <button type="button" class="btn btn-secondary" @onclick="@CloseModal">Close</button>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </div>
+                    </EditForm>
+                </Content>
+            </DialogTemplates>
+        </SfDialog>
+    </Authorized>
+</AuthorizeView>
+
+@code
+{
+    private string title = "Shipping Classes | Synergy Commerce Admin Panel";
+    private string _gridDataUrl;
+    SfGrid<ShippingClassModel> Grid;
+    private Boolean isLoading = false;
+    bool openDeleteDialog = false;
+    private bool ModalVisibility { get; set; } = false;
+    ShippingClassModel shippingClass = new ShippingClassModel();
+    private double rowindex = 0;
+    private Member currentMember = new Member();
+    bool editRow = false;
+    int deleteRow { get; set; }
+    bool editClass = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        _gridDataUrl = _configuration["App:SettingsApiUrl"] + "ShippingClass/get-shipping-classes/"+currentMember.Id;
+        var userToken = await localStorage.GetItemAsStringAsync("token");
+        userToken = userToken.Replace("\"", string.Empty);
+        _httpClient.DefaultRequestHeaders.Remove("Authorization");
+        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {userToken}");
+    }
+
+    public void RowSelectHandler(RowSelectEventArgs<ShippingClassModel> args)
+    {
+        if (editRow == true)
+        {
+            var reqShippingClass = args.Data;
+            shippingClass = new ShippingClassModel
+            {
+                Id = reqShippingClass.Id,
+                Class = reqShippingClass.Class,
+                HandlingFee = reqShippingClass.HandlingFee,
+                PackCase = reqShippingClass.PackCase,
+                QtyPack = reqShippingClass.QtyPack
+            };
+            rowindex = args.RowIndex;
+            editClass = true;
+            OpenModal();
+        }
+
+    }
+
+    private void EditClass()
+    {
+        editRow = true;
+    }
+
+    private void AddClass()
+    {
+        shippingClass = new ShippingClassModel();
+        editClass = false;
+        OpenModal();
+    }
+
+    private void DialogClose() => openDeleteDialog = false;
+
+    private void DeleteDialogOpen(int id)
+    {
+        deleteRow = id;
+        openDeleteDialog = true;
+    }
+
+    private async Task DeleteClass()
+    {
+        openDeleteDialog = false;
+        isLoading = true;
+        var deleteResponse = await _shippingClassViewModel.DeleteShippingClass(deleteRow);
+        if (deleteResponse.success)
+        {
+            Grid.Refresh();
+            toastService.ShowToast(Constants.RemoveMessage, ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(deleteResponse.error_info.description, ToastLevel.Error);
+        }
+
+        isLoading = false;
+    }
+
+    private void OpenModal()
+    {
+        this.ModalVisibility = true;
+        editRow = false;
+
+    }
+    private async Task CloseModal()
+    {
+        this.ModalVisibility = false;
+        await Grid.ClearRowSelectionAsync();
+    }
+
+    private async Task SaveShippingClass()
+    {
+        isLoading = true;
+        shippingClass.BusinessId = currentMember.Id;
+        var response = await _shippingClassViewModel.AddUpdateShippingClassAsync(shippingClass);
+        await CloseModal();
+        if (response.success)
+        {
+            if (shippingClass.Id == 0)
+            {
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                Grid.Refresh();
+            }
+            else
+            {
+                await Grid.UpdateRowAsync(rowindex, response.data);
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            }
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+
+        isLoading = false;
+    }
+}

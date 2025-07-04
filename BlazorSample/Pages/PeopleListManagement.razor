@@ -1,0 +1,75 @@
+﻿@page "/people/list-management"
+@layout AuthorizedLayout
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><span class="far fa-address-book me-2"></span>List Manager</h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary"  href="/people/list-management-edit">Add List</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@lists" AllowPaging="true" Width="100%" class="border-x-0">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && lists.Count <= 0)
+                        {
+                            <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Drawers Available</h6>
+                                <button type="button" class="btn btn-outline-primary">Get Started</button>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn HeaderText="LIST NAME" TextAlign="TextAlign.Left" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="150px">
+                        <Template>
+                            @{
+                                var listName = (context as ListModel).ListName;
+                                <a href="/people/list-management-edit">@($"{listName}")</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(ListModel.TotalContact) HeaderText="NUMBER OF CONTACTS" TextAlign="TextAlign.Center" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="100px" />
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+    <div class="card-footer">
+    </div>
+</div>
+
+@code
+{
+    private string title = "List Manager | Synergy Commerce Admin Panel";
+    private Boolean isLoading = false;
+    private class ListModel
+    {
+        public string ListName { get; set; }
+        public string TotalContact { get; set; }
+    }
+    private List<ListModel> lists = new List<ListModel>() {
+        new ListModel(){ ListName= "Harvest Party", TotalContact= "2" },
+        new ListModel(){ ListName= "V3 Holiday Party Test", TotalContact= "5" },
+        new ListModel(){ ListName= "Winwmaker Dinner", TotalContact= "2" },
+        new ListModel(){ ListName= "Club Members", TotalContact= "2" },
+        new ListModel(){ ListName= "Winwmaker Dinner 6/23/17", TotalContact= "1" },
+        new ListModel(){ ListName= "Winwmaker Lunch 6/24/17", TotalContact= "3" },
+    };
+
+
+}

@@ -1,0 +1,171 @@
+﻿@page "/sa/business/ticketing-plan/edit/{Id:guid}"
+@page "/sa/business/ticketing-plan/add"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models.ViewModel.SA
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using AutoMapper
+@inject IMapper _mapper
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject IServiceAgreementsViewModel _serviceAgreementsViewModel
+@inject ILocalStorageService localStorage
+@inject ITicketingPlanViewModel _ticketingPlanViewModel
+@inject ToastService _toastService
+@attribute [Authorize]
+
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <EditForm Model="@ticketingPlanRequest" Context="formContext">
+            <DataAnnotationsValidator />
+            <div class="py-3">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-0"><a href="/sa/business/ticketing-plans" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-ticket me-2"></span>@actionType Ticketing Plan</h5>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-sm btn-primary" @onclick="()=> Save(formContext)">Save</button>
+                    </div>
+                </div>
+                <hr />
+            </div>
+
+            <form class="pb-4">
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <div class="form-check form-switch">
+                            <input id="switchEnabled" @bind-value="ticketingPlanRequest.Active" class="form-check-input" type="checkbox" checked="@(ticketingPlanRequest.Active)">
+                            <label for="switchEnabled" class="form-check-label">Plan Active</label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputPlanName" class="form-label">Plan Name</label>
+                        <InputText @bind-Value="ticketingPlanRequest.Name" type="text" id="inputPlanName" class="form-control" placeholder="Plan Name"></InputText>
+                        <ValidationMessage For="()=> ticketingPlanRequest.Name"></ValidationMessage>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputVisaProcessing" class="form-label">Visa Processing</label>
+                        <SfNumericTextBox @bind-Value="ticketingPlanRequest.VisaProcessingFee" TValue="decimal" Format="p2" ValidateDecimalOnType="true" Decimals=4 ShowSpinButton="false"></SfNumericTextBox>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputPerTicketFee" class="form-label">Per Ticket Fee</label>
+                        <SfNumericTextBox @bind-Value="ticketingPlanRequest.PerTicketFee" TValue="decimal" Format="c2" ValidateDecimalOnType="true" Decimals=2 ShowSpinButton="false"></SfNumericTextBox>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputMasterCardProcessing" class="form-label">MasterCard Processing</label>
+                        <SfNumericTextBox @bind-Value="ticketingPlanRequest.MasterCardProcessingFee" TValue="decimal" Format="p2" ValidateDecimalOnType="true" Decimals=4 ShowSpinButton="false"></SfNumericTextBox>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputServiceFee" class="form-label">Service Fee</label>
+                        <SfNumericTextBox @bind-Value="ticketingPlanRequest.ServiceFee" TValue="decimal" Format="p2" ValidateDecimalOnType="true" Decimals=4 ShowSpinButton="false"></SfNumericTextBox>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputAMEXProcessing" class="form-label">AMEX Processing</label>
+                        <SfNumericTextBox @bind-Value="ticketingPlanRequest.AmexProcessingFee" TValue="decimal" Format="p2" ValidateDecimalOnType="true" Decimals=4 ShowSpinButton="false"></SfNumericTextBox>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputAddOnFee" class="form-label">Add-On Fee</label>
+                        <SfNumericTextBox @bind-Value="ticketingPlanRequest.AddOnFee" TValue="decimal" Format="c2" ValidateDecimalOnType="true" Decimals=2 ShowSpinButton="false"></SfNumericTextBox>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="inputDiscoverCardProcessing" class="form-label">Discover Card Processing</label>
+                        <SfNumericTextBox @bind-Value="ticketingPlanRequest.DiscoverProcessingFee" TValue="decimal" Format="p2" ValidateDecimalOnType="true" Decimals=4 ShowSpinButton="false"></SfNumericTextBox>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="inputPlanDescription" class="form-label">Plan Description</label>
+                                <InputTextArea @bind-Value="ticketingPlanRequest.Description" type="text" id="inputPlanDescription" rows="4" class="form-control" placeholder="Plan Description"></InputTextArea>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-2">
+                                    <label for="inputMaxFee" class="form-label">Max Fee</label>
+                                    <SfNumericTextBox @bind-Value="ticketingPlanRequest.MaxFee" TValue="decimal" Format="c2" ValidateDecimalOnType="true" Decimals=2 ShowSpinButton="false"></SfNumericTextBox>
+                                </div>
+                                <div class="sf-ddl">
+                                    <label for="inputServiceAgreement" class="form-label">Service Agreement</label>
+                                    <SfDropDownList ID="inputServiceAgreement" @bind-Value="ticketingPlanRequest.ServiceAgreementId" TValue="int" TItem="ServiceAgreementModel" Placeholder="Select Service Agreement" AllowFiltering="true" DataSource="@serviceAgreements">
+                                        <DropDownListFieldSettings Text="InternalName" Value="Id"></DropDownListFieldSettings>
+                                    </SfDropDownList>
+                                    <ValidationMessage For="()=> ticketingPlanRequest.ServiceAgreementId"></ValidationMessage>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </EditForm>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = string.Empty;
+    private string actionType = "Add";
+    private bool isLoading = false;
+
+    private List<ServiceAgreementModel> serviceAgreements = new List<ServiceAgreementModel>();
+    TicketingPlanRequestModel ticketingPlanRequest = new TicketingPlanRequestModel();
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        //Get Service Agreements
+        var serviceAgreementsResponse = await _serviceAgreementsViewModel.GetServiceAgreements();
+        serviceAgreements = serviceAgreementsResponse?.data ?? new List<ServiceAgreementModel>();
+
+        if (Id != null)
+        {
+            var ticketingPlanResponse = await _ticketingPlanViewModel.GetTicketingPlanById(Id.Value);
+            if (ticketingPlanResponse.success && ticketingPlanResponse.data != null)
+            {
+                ticketingPlanRequest = _mapper.Map<TicketingPlanRequestModel>(ticketingPlanResponse.data);
+                actionType = "Edit";
+            }
+        }
+        title = $"{actionType} Ticketing Plan | Synergy Commerce Super Admin Panel";
+        isLoading = false;
+    }
+
+    private async Task Save(EditContext context)
+    {
+        if (context.Validate())
+        {
+            isLoading = true;
+            var response = await _ticketingPlanViewModel.AddUpdateTicketingPlan(ticketingPlanRequest);
+            isLoading = false;
+            if (response.success && response.data != null)
+            {
+                if (Id != null)
+                {
+                    _toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                }
+                else
+                {
+                    actionType = "Edit";
+                    title = $"{actionType} Ticketing Plan | Synergy Commerce Super Admin Panel";
+                    Id = response.data.IdGuid;
+                    ticketingPlanRequest.Id = response.data.Id;
+                    _toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                }
+            }
+            else
+            {
+                _toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+}
+

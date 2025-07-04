@@ -1,0 +1,227 @@
+using Blazored.LocalStorage;
+using CellarPassAppAdmin.Client.Models;
+using CellarPassAppAdmin.Client.Services;
+using CellarPassAppAdmin.Client.Services.MarketPlace;
+using CellarPassAppAdmin.Client.Services.SA;
+using CellarPassAppAdmin.Client.ViewModels;
+using CellarPassAppAdmin.Client.ViewModels.SA;
+using CellarPassAppAdmin.DAL.Repositories.Setting;
+using CellarPassAppAdmin.Shared.Services;
+using CellarPassAppAdmin.Shared.Services.Marketplace;
+using CellarPassAppAdmin.Shared.Services.SA;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Syncfusion.Blazor;
+using System;
+using System.Net.Http;
+using System.Threading.Tasks;
+
+namespace CellarPassAppAdmin.Client
+{
+    public class Program
+    {
+        public static async Task Main(string[] args)
+        {
+
+            //Trial License
+            //Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("NDE5MjEyQDMxMzkyZTMxMmUzMGxRaW53Nk1UQkNhUnoyM3lNQ2xkS2IvMVlQcUpmeUVOUS96RjZuTituSEE9;NDE5MjEzQDMxMzkyZTMxMmUzMGtFSFg3dEFRUUhNWEg1ell4N21aaGNOcTk1MlFldWdXdjZYamVBckVkQkE9;NDE5MjE0QDMxMzkyZTMxMmUzMGUwR1pQMXZHRmZvNFF4TEdTTWs3SlZyTm9xbks3a2hFODhTR1ZrcFZKZk09;NDE5MjE1QDMxMzkyZTMxMmUzMGMyeGd5UVoyb0prTDJPV1hjQUk2MktSRkRkb0ZjYWtibHI0VEo0M3djZHM9;NDE5MjE2QDMxMzkyZTMxMmUzME93QzJaMm00bDhCNmgwL3NuN0Q0TTZ4RzlHVUF4cXV4NDVnT0d2SDI4THM9;NDE5MjE3QDMxMzkyZTMxMmUzMGdXbTYxUFBKMFNhWmVIM0dobkx6dGdnZ1NhYW1xK2NhTG1qNzh3cEZTdFE9;NDE5MjE4QDMxMzkyZTMxMmUzMEV4U09qV1RlNWhyL09CVkJTYm5vN3pSQVZHcjJFUVVkdEgwVzFadWc1K3c9;NDE5MjE5QDMxMzkyZTMxMmUzMFJpdDN5dTVMeWpWb1NZVnlxbVU0T1Npc3RsN3dKNHRDYVdUUy9sRzFDZWc9;NDE5MjIwQDMxMzkyZTMxMmUzMGpOSWlRaFA3dzZ1dmxyUE5VMVA2dHZUYVZSdGtjVkRPbSs2cWo1cldpNm89;NDE5MjIxQDMxMzkyZTMxMmUzMGxYQmd4VmFqd2tUM3RTck50L1hRNE1kR3BVREZmbFhyQURzYTlCVEpUd3M9");
+            Syncfusion.Licensing.SyncfusionLicenseProvider.RegisterLicense("NDgxOTU3QDMxMzkyZTMyMmUzMFpTTEdmcEtuZXN1NDM3elFRVVU5T2R5TUpWU1M0SUZUN0ZQMjNDTDBLYWM9; NDgxOTU4QDMxMzkyZTMyMmUzMFFaWHoyOEVnVW9iZVBtUkd3MWVBRFFKR2JQSzJFSnB1b1lQRWhtZWR2cTg9; NDgxOTU5QDMxMzkyZTMyMmUzMGY4bGNqd0JLTjFadjNId2NJNjdjc2ZZRDFBMThpVVU0dU5xVE45OFNtR1E9; NDgxOTYwQDMxMzkyZTMyMmUzME9RM0VHRHV4MzN1cDJVc29seHp0OWZsZFdiMllDVkdZdUd0MSswbVJPaDA9; NDgxOTYxQDMxMzkyZTMyMmUzMExKQkora3dLSkVIWGF0VjUxRllKU0hTMERha2FvQ2kzTVZ4cEROMFZRbW89; NDgxOTYyQDMxMzkyZTMyMmUzMGVyY1BFWUltV0NTaVp5ZUxtSVc5VnBnUDdTUThmTW9OQjE5d0dPQVZaWTg9; NDgxOTYzQDMxMzkyZTMyMmUzMEpDWVNDYUNkcnFMS1RuUGV6MWxJQ3Rqd2dYU0lIb0VZZlJWTHFNajhEVEk9; NDgxOTY0QDMxMzkyZTMyMmUzMEVxVllpNDRBZXVXYVFLVkgxclJWby9VYlEzU1ErNVArVk13cm9QSFhPNTg9; NDgxOTY1QDMxMzkyZTMyMmUzMGdSbzFlOVU4dW1zRU9hM0V2VTM5Nkl6M1J6Nk94M1YyeVJMRGRSSVVCdnM9; NDgxOTY2QDMxMzkyZTMyMmUzMEphaEFGdmJaS1NQUVBLb1Q4c3R2bVQyL0VZa1VQRjYvU2YwVUxIMlFxV2M9");
+
+            var builder = WebAssemblyHostBuilder.CreateDefault(args);
+            builder.RootComponents.Add<App>("#app");
+
+            // Add Automapper
+            builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+
+            builder.Services.AddOptions();
+            builder.Services.AddAuthorizationCore();
+            builder.Services.AddBlazoredLocalStorage();
+            builder.Services.AddSyncfusionBlazor();
+            builder.Services.AddScoped<ApiAuthenticationStateProvider>();
+            builder.Services.AddScoped<AuthenticationStateProvider>(provider => provider.GetRequiredService<ApiAuthenticationStateProvider>());
+            builder.Services.AddScoped<ICellarPassAuthenticationStateProvider>(provider => provider.GetRequiredService<ApiAuthenticationStateProvider>());
+            builder.Services.AddScoped<IUserService, UserService>();
+            builder.Services.AddScoped<IMemberService, MemberService>();
+            builder.Services.AddScoped<ITicketService, TicketService>();
+            builder.Services.AddScoped<IProductServiceV2, ProductServiceV2>();
+            builder.Services.AddScoped<IProductService, ProductService>();
+            builder.Services.AddScoped<IPOSService, POSService>();
+            builder.Services.AddScoped<ClipboardService>();
+            builder.Services.AddScoped<IFloorPlanService, FloorPlanService>();
+            builder.Services.AddScoped<IMessageLogService, MessageLogService>();
+            builder.Services.AddScoped<IReservationService, ReservationService>();
+            builder.Services.AddScoped<ICoversReportService, CoversReportService>();
+            builder.Services.AddScoped<ILogService, LogService>();
+            builder.Services.AddScoped<IBusinessService, BusinessService>();
+            builder.Services.AddScoped<ICountryService, CountryService>();
+            builder.Services.AddScoped<IStateService, StateService>();
+            builder.Services.AddScoped<IEventService, EventService>();
+            builder.Services.AddScoped<IVendorService, VendorService>();
+            builder.Services.AddScoped<ISettingsService, SettingsService>();
+            builder.Services.AddScoped<ITeamService, TeamService>();
+            builder.Services.AddScoped<ICustomerService, CustomerService>();
+            builder.Services.AddScoped<IHoursService, HoursService>();
+            builder.Services.AddScoped<IBusinessPropertyService, BusinessPropertyService>();
+            builder.Services.AddScoped<IConciergeService, ConciergeService>();
+            builder.Services.AddScoped<IDepartmentService, DepartmentService>();
+            builder.Services.AddScoped<IGuestTagService, GuestTagService>();
+            builder.Services.AddScoped<IPOSLicenceService, POSLicenceService>();
+            builder.Services.AddScoped<IPOSDeviceSettingService, POSDeviceSettingService>();
+            builder.Services.AddScoped<ISocialSharingService, SocialSharingService>();
+            builder.Services.AddScoped<ISafetyPledgeService, SafetyPledgeService>();
+            builder.Services.AddScoped<IBusinessPageService, BusinessPageService>();
+            builder.Services.AddScoped<IBusinessGalleryService, BusinessGalleryService>();
+            builder.Services.AddScoped<IBusinessLocationService, BusinessLocationService>();
+            builder.Services.AddScoped<IBusinessPropertyService, BusinessPropertyService>();
+            builder.Services.AddScoped<IBusinessAddressService, BusinessAddressService>();
+            builder.Services.AddScoped<IBusinessTypeService, BusinessTypeService>();
+            builder.Services.AddScoped<IRegionService, RegionService>();
+            builder.Services.AddScoped<ISaContentService, SaContentService>();
+            builder.Services.AddScoped<IPOSProfileService, POSProfileService>();
+            builder.Services.AddScoped<ICompanyLogoService, CompanyLogoService>();
+            builder.Services.AddScoped<IPaymentProfileService, PaymentProfileService>();
+            builder.Services.AddScoped<ISaIntegrationPartnerService, SaIntegrationPartnerService>();
+            builder.Services.AddScoped<IWebReceiptService, WebReceiptService>();
+            builder.Services.AddScoped<IShippoService, ShippoService>();
+            builder.Services.AddScoped<ISystemUpdatesService, SystemUpdatesService>();
+            builder.Services.AddScoped<ILegalArticleService, LegalArticleService>();
+            builder.Services.AddScoped<IServiceAgreementService, ServiceAgreementService>();
+            builder.Services.AddScoped<ISaSystemNotificationsService, SaSystemNotificationsService>();
+            builder.Services.AddScoped<ISaPressReleaseService, SaPressReleaseService>();
+            builder.Services.AddScoped<IShippingClassService, ShippingClassService>();
+            builder.Services.AddScoped<IOrderService, OrderService>();
+            builder.Services.AddScoped<ISaBlogArticleService, SaBlogArticleService>();
+            builder.Services.AddScoped<IShippingRatesService, ShippingRatesService>();
+            builder.Services.AddScoped<ICPSettingService, CPSettingService>();
+            builder.Services.AddScoped<IPeopleUserService, PeopleUserService>();
+            builder.Services.AddScoped<IBookmarkService, BookmarkService>();
+            builder.Services.AddScoped<ICalendarNoteService, CalendarNoteService>();
+            builder.Services.AddScoped<IClubService, ClubService>();
+            builder.Services.AddScoped<IShiftBreakService, ShiftBreakService>();
+            builder.Services.AddScoped<IPositionNameService, PositionNameService>();
+            builder.Services.AddScoped<IBusinessPositionNameService, BusinessPositionNameService>();
+            builder.Services.AddScoped<ISalesOrderService, SalesOrderService>();
+            builder.Services.AddScoped<IBusinessTeamShiftService, BusinessTeamShiftService>();
+            builder.Services.AddScoped<IPaymentService, PaymentService>();
+            builder.Services.AddScoped<IBusinessTeamCompensationService, BusinessTeamCompensationService>();
+            builder.Services.AddScoped<IBusinessTeamPositionService, BusinessTeamPositionService>();
+            builder.Services.AddScoped<IShippingZoneService, ShippingZoneService>();
+            builder.Services.AddScoped<IShippingCarrierService, ShippingCarrierService>();
+            builder.Services.AddScoped<IPreferredShippingOptionsService, PreferredShippingOptionsService>();
+            builder.Services.AddScoped<IBusinessReceiptProfileService, BusinessReceiptProfileService>();
+            builder.Services.AddScoped<IPOSCashDrawersService, POSCashDrawersService>();
+            builder.Services.AddScoped<IBusinessMenuService, BusinessMenuService>();
+            builder.Services.AddScoped<IBusinessModifierGroupService, BusinessModifierGroupService>();
+            builder.Services.AddScoped<IWeatherFeedService, WeatherFeedService>();
+            builder.Services.AddScoped<IStoreCollectionService, StoreCollectionService>();
+            builder.Services.AddScoped<IInventoryService, InventoryService>();
+            builder.Services.AddScoped<IDiscountService, DiscountService>();
+            builder.Services.AddScoped<IBusinessCustomerTypesService, BusinessCustomerTypesService>();
+            builder.Services.AddScoped<IProductModifierGroupService, ProductModifierGroupService>();
+            builder.Services.AddScoped<IOrderSettingsService, OrderSettingsService>();
+            builder.Services.AddScoped<INotificationPreferencesService, NotificationPreferencesService>();
+            builder.Services.AddScoped<IBusinessMetaDataService, BusinessMetaDataService>();
+            builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>();
+            builder.Services.AddScoped<ITicketingPlanService, TicketingPlanService>();
+            builder.Services.AddScoped<ITicketingEventService, TicketingEventService>();
+            builder.Services.AddScoped<IAlternateTemporaryLoginService, AlternateTemporaryLoginService>();
+
+            builder.Services.AddScoped<IApiManager, ApiManager>();
+            builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://api.synergycommerce.io/") });
+            //builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://localhost:44302/") });
+            builder.Services.AddScoped<ILoginViewModel, LoginViewModel>();
+            builder.Services.AddScoped<IMemberViewModel, MemberViewModel>();
+            builder.Services.AddScoped<ITicketViewModel, TicketViewModel>();
+            builder.Services.AddScoped<IProductViewModel, ProductViewModel>();
+            builder.Services.AddScoped<IPOSViewModel, POSViewModel>();
+            builder.Services.AddScoped<IFloorPlanViewModel, FloorPlanViewModel>();
+            builder.Services.AddScoped<IMessageLogViewModel, MessageLogViewModel>();
+            builder.Services.AddScoped<IReservationViewModel, ReservationViewModel>();
+            builder.Services.AddScoped<ICoversReportViewModel, CoversReportViewModel>();
+            builder.Services.AddScoped<ILogViewModel, LogViewModel>();
+            builder.Services.AddScoped<IBusinessViewModel, BusinessViewModel>();
+            builder.Services.AddScoped<ICountryViewModel, CountryViewModel>();
+            builder.Services.AddScoped<IStateViewModel, StateViewModel>();
+            builder.Services.AddScoped<IEventViewModel, EventViewModel>();
+            builder.Services.AddScoped<IVendorViewModel, VendorViewModel>();
+            builder.Services.AddScoped<ISettingsViewModel, SettingsViewModel>();
+            builder.Services.AddScoped<ITeamViewModel, TeamViewModel>();
+            builder.Services.AddScoped<ICustomerViewModel, CustomerViewModel>();
+            builder.Services.AddScoped<IHoursViewModel, HoursViewModel>();
+            builder.Services.AddScoped<IBusinessPropertyViewModel, BusinessPropertyViewModel>();
+            builder.Services.AddScoped<IConciergeViewModel, ConciergeViewModel>();
+            builder.Services.AddScoped<IDepartmentViewModel, DepartmentViewModel>();
+            builder.Services.AddScoped<IGuestTagViewModel, GuestTagViewModel>();
+            builder.Services.AddScoped<IUserViewModel, UserViewModel>();
+            builder.Services.AddScoped<ISocialSharingViewModel, SocialSharingViewModel>();
+            builder.Services.AddScoped<ISafetyPledgeViewModel, SafetyPledgeViewModel>();
+            builder.Services.AddScoped<IBusinessLocationViewModel, BusinessLocationViewModel>();
+            builder.Services.AddScoped<IRegionViewModel, RegionViewModel>();
+            builder.Services.AddScoped<ISaContentViewModel, SaContentViewModel>();
+            builder.Services.AddScoped<IPOSProfileViewModel, POSProfileViewModel>();
+            builder.Services.AddScoped<ISaIntegrationPartnerViewModel, SaIntegrationPartnerViewModel>();
+            builder.Services.AddScoped<IBusinessTypeViewModel, BusinesstypeViewModel>();
+            builder.Services.AddScoped<IBusinessAddressViewModel, BusinessAddressesViewModel>();
+            builder.Services.AddScoped<IBusinessGalleryViewModel, BusinessgalleryViewModel>();
+            builder.Services.AddScoped<IBusinessPageViewModel, BusinesspageViewModel>();
+            builder.Services.AddScoped<IPaymentProfileViewModel, PaymentprofileViewModel>();
+            builder.Services.AddScoped<IPOSDeviceSettingViewModel, PosDeviceSettingViewModel>();
+            builder.Services.AddScoped<IWebReceiptViewModel, WebreceiptViewModel>();
+            builder.Services.AddScoped<ICompanyLogoViewModel, CompanylogoViewModel>();
+            builder.Services.AddScoped<IPOSLicenseViewModel, PosLicenceViewModel>();
+            builder.Services.AddScoped<ISystemUpdatesViewModel, SystemUpdatesViewModel>();
+            builder.Services.AddScoped<ILegalArticleViewModel, LegalArticleViewModel>();
+            builder.Services.AddScoped<IServiceAgreementsViewModel, ServiceAgreementsViewModel>();
+            builder.Services.AddScoped<ISaSystemNotificationsViewModel, SaSystemNotificationsViewModel>();
+            builder.Services.AddScoped<ISaPressReleaseViewModel, SaPressReleaseViewModel>();
+            builder.Services.AddScoped<IShippingClassViewModel, ShippingClassViewModel>();
+            builder.Services.AddScoped<IOrderViewModel, OrderViewModel>();
+            builder.Services.AddScoped<ISaBlogArticleViewModel, SaBlogArticleViewModel>();
+            builder.Services.AddScoped<IShippingRatesViewModel, ShippingRatesViewModel>();
+            builder.Services.AddScoped<ICPSettingViewModel, CPSettingViewModel>();
+            builder.Services.AddScoped<IBookmarkViewModel, BookmarkViewModel>();
+            builder.Services.AddScoped<ICalendarNoteViewModel, CalendarNoteViewModel>();
+            builder.Services.AddScoped<IClubViewModel, ClubViewModel>();
+            builder.Services.AddScoped<IShiftBreakViewModel, ShiftBreakViewModel>();
+            builder.Services.AddScoped<IPositionNameViewModel, PositionNameViewModel>();
+            builder.Services.AddScoped<IBusinessPositionNameViewModel, BusinessPositionNameViewModel>();
+            builder.Services.AddScoped<ISalesOrderViewModel, SalesOrderViewModel>();
+            builder.Services.AddScoped<IBusinessTeamShiftViewModel, BusinessTeamShiftViewModel>();
+            builder.Services.AddScoped<IPaymentViewModel, PaymentViewModel>();
+            builder.Services.AddScoped<IBusinessTeamCompensationViewModel, BusinessTeamCompensationViewModel>();
+            builder.Services.AddScoped<IBusinessTeamPositionViewModel, BusinessTeamPositionViewModel>();
+            builder.Services.AddScoped<IShippingZoneViewModel, ShippingZoneViewModel>();
+            builder.Services.AddScoped<IShippingCarrierViewModel, ShippingCarrierViewModel>();
+            builder.Services.AddScoped<IPreferredShippingOptionsViewModel, PreferredShippingOptionsViewModel>();
+            builder.Services.AddScoped<IBusinessReceiptProfileViewModel, BusinessReceiptProfileViewModel>();
+            builder.Services.AddScoped<IPOSCashDrawerViewModel, POSCashDrawerViewModel>();
+            builder.Services.AddScoped<IBusinessMenuViewModel, BusinessMenuViewModel>();
+            builder.Services.AddScoped<IBusinessModifierGroupViewModel, BusinessModifierGroupViewModel>();
+            builder.Services.AddScoped<IWeatherFeedViewModel, WeatherFeedViewModel>();
+            builder.Services.AddScoped<IGiftCardTransactionViewModel, GiftCardTransactionViewModel>();
+            builder.Services.AddScoped<IGiftCardBatchViewModel, GiftCardBatchViewModel>();
+            builder.Services.AddScoped<IStoreCollectionViewModel, StoreCollectionViewModel>();
+            builder.Services.AddScoped<IInventoryViewModel, InventoryViewModel>();
+            builder.Services.AddScoped<IDiscountViewModel, DiscountViewModel>();
+            builder.Services.AddScoped<IBusinessCustomerTypesViewModel, BusinessCustomerTypesViewModel>();
+            builder.Services.AddScoped<IProductModifierGroupViewModel, ProductModifierGroupViewModel>();
+            builder.Services.AddScoped<IOrderSettingsViewModel, OrderSettingsViewModel>();
+            builder.Services.AddScoped<INotificationPreferencesViewModel, NotificationPreferencesViewModel>();
+            builder.Services.AddScoped<IBusinessMetaDataViewModel, BusinessMetaDataViewModel>();
+            builder.Services.AddScoped<IEmailNotificationViewModel, EmailNotificationViewModel>();
+            builder.Services.AddScoped<IMessageViewModel, MessageViewModel>();
+            builder.Services.AddScoped<ITicketingPlanViewModel, TicketingPlanViewModel>();
+            builder.Services.AddScoped<ITicketingEventViewModel, TicketingEventViewModel>();
+            builder.Services.AddScoped<IAlternateTemporaryLoginViewModel, AlternateTemporaryLoginViewModel>();
+            builder.Services.AddSingleton<ToastService>();
+
+            //Get SynergyAppSettings
+            builder.Services.Configure<SynergyAppSettings>(option => builder.Configuration.GetSection("SynergyAppSettings").Bind(option));
+
+            await builder.Build().RunAsync();
+
+        }
+    }
+}

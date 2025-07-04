@@ -1,0 +1,787 @@
+﻿@page "/settings/menu/menus/{Id:guid}"
+@page "/settings/menu/menus/create"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using Syncfusion.Blazor.Navigations
+@using CellarPassAppAdmin.Client.Models
+@using Microsoft.Extensions.Options;
+@inject IOptions<SynergyAppSettings> _synergyAppSettings
+@inject IBusinessMenuViewModel _businessMenuViewModel
+@inject IProductViewModel _productViewModel
+@inject IJSRuntime JSRuntime
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+
+<div class="card shadow-none border">
+    <EditForm Model="@request" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h5 class="mb-3 mb-md-0"><a href="settings/menu/menus" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-burger-glass me-2"></span>Menus</h5>
+                </div>
+                <div class="col-md-auto"><button class="btn btn-sm btn-primary" type="submit">Save</button></div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="card rounded-0 shadow-none mb-4" id="sectionAvalara">
+                <div class="card-header border-bottom">
+                    <div class="row flex-between-center">
+                        <div class="col-6 d-flex align-items-center pe-0">
+                            <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="far fa-burger-glass me-2"></span>Menu</h5>
+                        </div>
+                        <div class="col-auto">
+                            <a href="#!" class="btn btn-link"><span class="far fa-qrcode me-2"></span>QR Code</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="row">
+                        <div class="col-12 col-xl-8">
+                            <div class="px-card py-4">
+                                <form>
+                                    <div class="row mb-3 g-3">
+                                        <div class="col-12 col-md-6">
+                                            <label for="inputMenuName" class="form-label">Menu Name</label>
+                                            <InputText id="inputMenuName" class="form-control" @bind-Value="request.MenuName"></InputText>
+                                            <ValidationMessage For="@(() => request.MenuName)" />
+                                        </div>
+                                        <div class="col-12 col-md-6">
+                                            <label for="inputMenuShortName" class="form-label">Menu Short Name</label>
+                                            <InputText id="inputMenuShortName" class="form-control" @bind-Value="request.MenuShortName"></InputText>
+                                            <ValidationMessage For="@(() => request.MenuShortName)" />
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="inputMenuDesc" class="form-label">Menu Description</label>
+                                        <InputTextArea id="inputMenuDesc" class="form-control" @bind-Value="request.MenuDescription" rows="4"></InputTextArea>
+                                        <ValidationMessage For="@(() => request.MenuDescription)" />
+                                    </div>                                   
+                                </form>
+                            </div>
+                        </div>
+                        <div class="col-12 col-xl-4">
+                            <div class="card shadow-none border mt-4 me-4">
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label for="selMenuStatus" class="form-label">Menu Status</label>
+                                        <InputSelect @bind-Value="@request.MenuStatus" class="form-select">
+                                            @foreach (var payType in menuStatusList)
+                                            {
+                                                <option value="@payType.Key">@payType.Value</option>
+                                            }
+                                        </InputSelect>
+                                        <ValidationMessage For="@(() => request.MenuStatus)" />
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label" for="selItemtStatus">Menu Use Category</label>
+                                        <div class="d-flex justify-content-between px-card py-2 border-200">
+                                            <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchTakeout">Takeout</label></div>
+                                            <div class="d-flex align-items-center">
+                                                <div class="form-check form-switch"><input class="form-check-input" id="switchTakeout" type="checkbox" @bind-value="request.TakeOutEnabled" checked="@request.TakeOutEnabled"></div>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex justify-content-between border-top px-card  py-2 border-200">
+                                            <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchDelivery">Delivery</label></div>
+                                            <div class="d-flex align-items-center">
+                                                <div class="form-check form-switch"><input class="form-check-input" id="switchDelivery" type="checkbox" @bind-value="request.DeliveryEnabled" checked="@request.DeliveryEnabled"></div>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex justify-content-between border-top px-card py-2 border-200">
+                                            <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchDineIn">Dine In</label></div>
+                                            <div class="d-flex align-items-center">
+                                                <div class="form-check form-switch"><input class="form-check-input" id="switchDineIn" type="checkbox" @bind-value="request.DineInEnabled" checked="@request.DineInEnabled"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="sfMenuColorPicker" class="form-label">Menu Color</label>
+                                        <div class="my-2">
+                                            <SfColorPicker id="sfMenuColorPicker" Mode="Syncfusion.Blazor.Inputs.ColorPickerMode.Palette" ShowButtons="false" @bind-Value="@request.MenuColor"></SfColorPicker>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+    <div class="card shadow-none border-top rounded-0">
+        <div class="card-header border-bottom">
+            <div class="row flex-between-center">
+                <div class="col-auto col-sm-auto d-flex align-items-center pe-0">
+                    <h5 class="mb-0 text-nowrap py-2 py-xl-0"><span class="fa-regular fa-layer-group me-2"></span>Groups</h5>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-12 col-xl-8">
+                    <div class="row justify-content-between">
+                        <div class="col-md-auto">
+                            <label class="mb-3 mb-md-0">Groups</label>
+                        </div>
+                        @if (businessMenu != null)
+                        {
+                            <div class="col-md-auto"><a class="btn btn-sm btn-outline-primary" href="javascript:void(0)" @onclick="()=>OpenGroupModal(null)">Add Group</a></div>
+                        }
+                    </div>
+                    <div class="my-3">
+                        <SfListBox TValue="string[]" DataSource="@businessMenuGroups" TItem="BusinessMenuGroupModel" AllowDragAndDrop="false" CssClass="rounded cp-list cp-no-selection">
+                            <ListBoxEvents TValue="string[]" TItem="BusinessMenuGroupModel"></ListBoxEvents>
+                            <ListBoxTemplates TItem="BusinessMenuGroupModel">
+                                <ItemTemplate>
+                                    <div class="d-flex justify-content-start align-items-center">
+                                        <span class="flex-fill"><span class="fa-solid fa-hyphen text-400 me-2" hidden="@((context as BusinessMenuGroupModel).ParentId == 0)"></span><a href="javascript:void(0)" @onclick="()=>OpenGroupModal((context as BusinessMenuGroupModel).Id)">@((context as BusinessMenuGroupModel).GroupName)</a></span>
+                                        <a href="javascript:void();" @onclick="()=>OpenProductsModal((context as BusinessMenuGroupModel).Id,(context as BusinessMenuGroupModel).GroupName)" class="me-4">Manage Items</a>
+                                        <a href="javascript:void();" @onclick="()=>DeleteGroup((context as BusinessMenuGroupModel).Id)" class="text-dark"><span class="far fa-trash-alt fa-sm"></span></a>
+                                    </div>
+                                </ItemTemplate>
+                            </ListBoxTemplates>
+                        </SfListBox>
+                        <a href="javascript:void(0)" @onclick="@OpenSortModal" class="btn btn-link me-2 fs--1"><span class="fa-regular fa-bring-forward me-2"></span>Arrange Groups</a>
+                        <a href="javascript:void(0)" @onclick="@AlphabetizeSortItem" class="btn btn-link fs--1"><span class="fa-regular fa-arrow-down-a-z me-2"></span>Alphabetize</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="SortModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">Arrange Menu Groups</h5></Header>
+        <Content>
+            <p>Click and drag to arrange menu groups.</p>
+            <div class="mb-3 border">
+                <SfTreeView ID="tree2" TValue="PlaceholderData" AllowDragAndDrop="true">
+                    <TreeViewFieldsSettings TValue="PlaceholderData" Id="Id" Text="GroupName" Child="Children" DataSource="@groupDataList" Expanded="Expanded"></TreeViewFieldsSettings>
+                    <TreeViewEvents TValue="PlaceholderData" OnNodeDragStop="OnDragStop"></TreeViewEvents>
+                </SfTreeView>
+            </div>
+        </Content>
+        <FooterTemplate>
+            <button type="button" class="btn btn-secondary" @onclick="@CloseSortModal">Close</button>
+            <button type="button" class="btn btn-primary" @onclick="@(()=>SaveArrangeMenu())">Save</button>
+        </FooterTemplate>
+    </DialogTemplates>
+</SfDialog>
+
+<EditForm Model="@groupRequest" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="GroupModalVisibility">
+        <DialogTemplates>
+            <Header><h5 class="modal-title" id="modalLabel">Menu Group</h5></Header>
+            <Content>
+                <div class="mb-3">
+                    <label class="form-label" for="inputGroupName">Group Name</label>
+                    <InputText id="inputGroupName" class="form-control" @bind-Value="@groupRequest.GroupName"></InputText>
+                    <ValidationMessage For="@(() => groupRequest.GroupName)" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="sfGroupColorPicker">Group Color</label>
+                    <div class="my-2">
+                        <SfColorPicker id="sfMenuColorPicker" Mode="Syncfusion.Blazor.Inputs.ColorPickerMode.Palette" ShowButtons="false" @bind-Value="@groupRequest.GroupColor"></SfColorPicker>
+                    </div>
+                </div>
+            </Content>
+            <FooterTemplate>
+                <button type="button" class="btn btn-secondary" @onclick="@CloseGroupModal">Close</button>
+                <button class="btn btn-primary" @onclick="@(()=>CreateMenuGroup(formContext))">Save</button>
+            </FooterTemplate>
+        </DialogTemplates>
+    </SfDialog>
+</EditForm>
+
+<EditForm Model="@groupItemRequest" Context="formContext">
+    <DataAnnotationsValidator />
+    <SfDialog IsModal="true" Width="900px" ShowCloseIcon="true" @bind-Visible="ProductsModalVisibility">
+        <DialogTemplates>
+            <Header><h5 class="modal-title" id="modalLabel">@groupName : Products</h5></Header>
+            <Content>
+
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label class="form-label" for="inputAddressSearch">Search</label>
+                        <SfComboBox ID="inputGroupSearch" @bind-Value="@selectedProduct" @ref="filterProductsObj" AllowFiltering=true Placeholder="Search Products" DataSource="@products">
+                            <ComboBoxEvents TItem="ProductListModel" TValue="string" ValueChange="SelectProduct" Filtering="OnFilterProducts"></ComboBoxEvents>
+                            <ComboBoxFieldSettings Value="ProductTitle"></ComboBoxFieldSettings>
+                        </SfComboBox>
+                    </div>
+                </div>
+                <SfListBox @ref="listGroupItem" ID="listGroupItem" TValue="string[]" DataSource="@businessMenuGroupItems" TItem="BusinessMenuGroupItemModel" AllowDragAndDrop="true" CssClass="rounded cp-list cp-no-selection">
+                    <ListBoxFieldSettings Text="SortOrder" />
+                    <ListBoxEvents TValue="string[]" TItem="BusinessMenuGroupItemModel"></ListBoxEvents>
+                    <ListBoxTemplates TItem="BusinessMenuGroupItemModel">
+                        <ItemTemplate>
+                            <div class="d-flex justify-content-start align-items-center">
+                                <span class="far fa-sort me-2"></span>
+                                <div class="row flex-fill mx-2">
+                                    <div class="col-12 col-md-8 mb-2 pt-2">
+                                        <div class="d-flex justify-content-start align-items-center">
+                                            <span class="img-thumbnail far fa-image-polaroid fa-4x me-2" width="108" height="108" hidden="@(!string.IsNullOrEmpty((context as BusinessMenuGroupItemModel).ProductImageURL))"></span>
+                                            <img class="img-fluid img-thumbnail me-2" width="120" height="120" alt="@((context as BusinessMenuGroupItemModel).ProductTitle)" src="@((context as BusinessMenuGroupItemModel).ProductImageURL)" hidden="@(string.IsNullOrEmpty((context as BusinessMenuGroupItemModel).ProductImageURL))" />
+                                            <span class="flex-fill">@((context as BusinessMenuGroupItemModel).ProductTitle)</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-2">
+                                        <label for="exampleFormControlInput1" class="form-label">Retail Price</label><br />
+                                        $@((context as BusinessMenuGroupItemModel).RetailPrice.ToString("0.00"))
+                                    </div>
+                                    <div class="col-12 col-md-2">
+                                        <label for="exampleFormControlInput1" class="form-label">Menu Price</label>
+                                        <SfNumericTextBox @bind-Value="((context as BusinessMenuGroupItemModel).Price)" TValue="decimal" ValidateDecimalOnType="true" Decimals=2 ShowSpinButton="false"></SfNumericTextBox>
+                                    </div>
+                                </div>
+                                <a href="javascript:void();" @onclick="@(() => RemoveProduct((context as BusinessMenuGroupItemModel)))" class="text-dark"><span class="far fa-trash-alt"></span></a>
+                            </div>
+                        </ItemTemplate>
+                    </ListBoxTemplates>
+                </SfListBox>
+            </Content>
+            <FooterTemplate>
+                <button type="button" class="btn btn-secondary" @onclick="@CloseProductsModal">Close</button>
+                <button class="btn btn-primary" @onclick="@(()=>SaveItemPrice())">Save</button>
+            </FooterTemplate>
+        </DialogTemplates>
+    </SfDialog>
+</EditForm>
+
+@code
+{
+    private string title = "Menus | Synergy Admin Panel";
+
+    [Parameter]
+    public Guid? Id { get; set; }
+
+    private Boolean isLoading = true;
+
+    private bool SortModalVisibility { get; set; } = false;
+    private bool GroupModalVisibility { get; set; } = false;
+    private bool ProductsModalVisibility { get; set; } = false;
+
+    private BusinessMenuModel businessMenu = new BusinessMenuModel();
+    private BusinessMenuRequestModel request = new BusinessMenuRequestModel();
+    private BusinessMenuGroupRequestModel groupRequest = new BusinessMenuGroupRequestModel();
+    private BusinessMenuGroupItemRequestModel groupItemRequest = new BusinessMenuGroupItemRequestModel();
+    private List<BusinessMenuGroupModel> businessMenuGroups = new List<BusinessMenuGroupModel>();
+
+    private string selectedProduct;
+    private string groupName;
+    SfComboBox<string, ProductListModel> filterProductsObj { get; set; }
+    List<ProductListModel> products = new List<ProductListModel>();
+    private Member currentMember;
+    List<BusinessMenuGroupItemModel> businessMenuGroupItems = new List<BusinessMenuGroupItemModel>();
+    private BusinessMenuGroupItemModel existingCollectionProduct = null;
+
+    List<PlaceholderData> PlaceholderDataList = new List<PlaceholderData>();
+    List<PlaceholderData> groupDataList = new List<PlaceholderData>();
+
+    SfListBox<string[], BusinessMenuGroupItemModel> listGroupItem;
+
+    List<DropdownBindingModel> menuStatusList = Enum.GetValues(typeof(MenuStatus))
+                .Cast<MenuStatus>()
+                .Select(t => new DropdownBindingModel
+                {
+                    Key = (int)t,
+                    Value = Helper.GetDisplayName(t)
+                }).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id.HasValue)
+        {
+            await GetMenu(Id.Value);
+        }
+        else
+        {
+            request.MenuColor = "#4DB6AC";
+        }
+
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        SearchProductResponse productResponse = await _productViewModel.SearchProducts(currentMember.Id, true, "");
+        if (productResponse.success)
+        {
+            products = productResponse.data;
+            if (products.Count > 0)
+            {
+                products = products.OrderBy(x => x.ProductTitle).ToList();
+            }
+        }
+
+
+
+        isLoading = false;
+    }
+
+    private void SortData()
+    {
+        groupDataList = new List<PlaceholderData>();
+        foreach (var item in businessMenuGroups.Where(x => x.ParentId == 0).OrderBy(x => x.SortOrder))
+        {
+            if (item.ParentId == 0)
+            {
+                List<PlaceholderData> childGroup = new List<PlaceholderData>();
+                foreach (var subItem in businessMenuGroups.Where(x => x.ParentId == item.Id).OrderBy(x => x.SortOrder))
+                {
+                    childGroup.Add(new PlaceholderData { Id = subItem.Id, GroupName = subItem.GroupName, parent = item.Id });
+                }
+                groupDataList.Add(new PlaceholderData { Id = item.Id, GroupName = item.GroupName, Expanded = true, Children = childGroup });
+            }
+        }
+    }
+
+    public void OnDragStop(DragAndDropEventArgs args)
+    {
+        int dragID = Convert.ToInt32(args.DraggedNodeData.Id);
+        int dropID = Convert.ToInt32(args.DroppedNodeData.Id);
+        bool isChild = false;
+
+        var draggedNode = groupDataList.Where(x => x.Id == dragID).FirstOrDefault();
+        if (draggedNode == null)
+        {
+            draggedNode = groupDataList.SelectMany(x => x.Children).Where(x => x.Id == dragID).FirstOrDefault();
+            isChild = true;
+        }
+
+        if (draggedNode != null)
+        {
+            var droppedNode = groupDataList.Where(x => x.Id == dropID).FirstOrDefault();
+            if ((droppedNode != null && droppedNode.parent != 0) || (args.DropIndicator == "e-drop-next" && draggedNode.parent == 0))
+            {
+                if (args.DropIndicator == "e-drop-next" && draggedNode.parent == 0 && droppedNode.parent == 0)
+                {
+                }
+                else
+                {
+                    args.Cancel = true;
+                }
+            }
+            else
+            {
+                if (draggedNode.parent != 0)
+                {
+                    if (isChild)
+                    {
+                        foreach (var item in groupDataList)
+                        {
+                            if (item.Children != null)
+                            {
+                                item.Children.RemoveAll(x => x.Id == draggedNode.Id);
+                            }
+                        }
+                        draggedNode.parent = 0;
+                        groupDataList.Add(draggedNode);
+                    }
+                    else
+                    {
+                        groupDataList.Where(x => x.Id == dragID).SingleOrDefault().parent = 0;
+                    }
+                }
+                else
+                {
+                    if (dropID != 0)
+                    {
+                        groupDataList.RemoveAll(x => x.Id == draggedNode.Id);
+                        draggedNode.parent = dropID;
+                        groupDataList.Where(x => x.Id == dropID).FirstOrDefault().Children.Add(draggedNode);
+                    }
+                }
+            }
+        }
+    }
+
+    private void OpenSortModal()
+    {
+        SortData();
+        this.SortModalVisibility = true;
+    }
+
+    private void CloseSortModal()
+    {
+        this.SortModalVisibility = false;
+    }
+
+    private void AlphabetizeSortItem()
+    {
+        var data = new List<BusinessMenuGroupModel>();
+        foreach (var item in businessMenuGroups.Where(x => x.ParentId == 0).OrderBy(x => x.GroupName))
+        {
+            data.Add(item);
+            if (item.ParentId == 0)
+            {
+                foreach (var subItem in businessMenuGroups.Where(x => x.ParentId == item.Id).OrderBy(x => x.GroupName))
+                {
+                    data.Add(subItem);
+                }
+            }
+        }
+        businessMenuGroups = data;
+    }
+
+    private void OpenGroupModal(int? groupId)
+    {
+        if (groupId != null)
+        {
+            var data = businessMenuGroups.Where(x => x.Id == groupId).FirstOrDefault();
+            if (data != null)
+            {
+                groupRequest.Id = data.Id;
+                groupRequest.BusinessMenuId = data.BusinessMenuId;
+                groupRequest.GroupName = data.GroupName;
+                groupRequest.GroupColor = data.GroupColor;
+                groupRequest.ParentId = data.ParentId;
+                groupRequest.SortOrder = data.SortOrder;
+            }
+        }
+        else
+        {
+            groupRequest.GroupColor = "#4DB6AC";
+            groupRequest.BusinessMenuId = businessMenu.Id;
+            groupRequest.ParentId = 0;
+            groupRequest.SortOrder = 0;
+        }
+        this.GroupModalVisibility = true;
+        StateHasChanged();
+    }
+
+    private void CloseGroupModal()
+    {
+        groupRequest = new BusinessMenuGroupRequestModel();
+        this.GroupModalVisibility = false;
+    }
+
+    private async Task OpenProductsModal(int id, string name)
+    {
+        groupName = name;
+        groupItemRequest.BusinessMenuGroupId = id;
+        await GetMenuGroupItems(id);
+        this.ProductsModalVisibility = true;
+        StateHasChanged();
+    }
+
+    private void CloseProductsModal()
+    {
+        this.ProductsModalVisibility = false;
+    }
+
+    private async Task GetMenu(Guid id)
+    {
+        BusinessMenuResponse result = await _businessMenuViewModel.GetBusinessMenuAsync(null, id);
+        if (result.success && result.data != null)
+        {
+            businessMenu = result.data;
+            request.Id = businessMenu.Id;
+            request.MenuName = businessMenu.MenuName;
+            request.MenuShortName = businessMenu.MenuShortName;
+            request.MenuDescription = businessMenu.MenuDescription;
+            request.MenuColor = businessMenu.MenuColor;
+            request.MenuStatus = businessMenu.MenuStatus;
+            request.TakeOutEnabled = businessMenu.TakeOutEnabled;
+            request.DeliveryEnabled = businessMenu.DeliveryEnabled;
+            request.DineInEnabled = businessMenu.DineInEnabled;
+            await GetMenuGroups();
+        }
+        else
+        {
+            request.MenuColor = "#4DB6AC";
+        }
+    }
+
+    private async Task GetMenuGroups()
+    {
+        var groupResult = await _businessMenuViewModel.GetBusinessMenuGroupListAsync(businessMenu.Id);
+        if (groupResult.success && groupResult.data != null)
+        {
+            businessMenuGroups = groupResult.data;
+            SortMenuGroups();
+        }
+    }
+
+    private void SortMenuGroups()
+    {
+        var data = new List<BusinessMenuGroupModel>();
+        foreach (var item in businessMenuGroups.Where(x=>x.ParentId == 0).OrderBy(x => x.SortOrder))
+        {
+            data.Add(item);
+            if (item.ParentId == 0)
+            {
+                foreach (var subItem in businessMenuGroups.Where(x => x.ParentId == item.Id).OrderBy(x => x.SortOrder))
+                {
+                    data.Add(subItem);
+                }
+            }
+        }
+        businessMenuGroups = data;
+    }
+
+
+    private async Task GetMenuGroupItems(int id)
+    {
+        var result = await _businessMenuViewModel.GetBusinessMenuGroupItemListAsync(id,null);
+        if (result.success && result.data != null)
+        {
+            businessMenuGroupItems = new List<BusinessMenuGroupItemModel>();
+            foreach (var item in result.data.OrderBy(x => x.SortOrder))
+            {
+                var product = products.Where(x => x.Id == item.Product_Id).FirstOrDefault();
+                if (product != null)
+                {
+                    item.ProductImageURL = product.ProductImageURL;
+                    item.ProductTitle = product.ProductTitle;
+                    item.RetailPrice = product.RetailPrice;
+                    item.Price = item.Price == 0 ? product.RetailPrice : item.Price;
+                }
+                businessMenuGroupItems.Add(item);
+            }
+        }
+    }
+
+    private async void HandleValidSubmit(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            isLoading = true;
+            var result = await _businessMenuViewModel.AddUpdateBusinessMenuAsync(request);
+            if (result.success)
+            {
+                await GetMenu(result.data.IdGUID);
+                isLoading = false;
+                if (Id == null)
+                {
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                }
+                else
+                {
+                    toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+                }
+            }
+            else
+            {
+                isLoading = false;
+                toastService.ShowToast(result.error_info.description, ToastLevel.Error);
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task CreateMenuGroup(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            Console.WriteLine(groupRequest.GroupName);
+            var isNameAlreadyExist = businessMenuGroups.Any(x => x.GroupName.ToLower() == groupRequest.GroupName.ToLower() && x.Id != groupRequest.Id);
+            if (isNameAlreadyExist)
+            {
+                toastService.ShowToast("Group names must be unique.", ToastLevel.Error);
+            }
+            else
+            {
+                isLoading = true;
+
+                var response = await _businessMenuViewModel.AddUpdateBusinessMenuGroupAsync(groupRequest);
+                isLoading = false;
+                if (response.success)
+                {
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                    CloseGroupModal();
+                    await GetMenuGroups();
+                }
+                else
+                {
+                    toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+                }
+            }
+        }
+        StateHasChanged();
+    }
+
+    private async Task DeleteGroup(int id)
+    {
+        isLoading = true;
+        var response = await _businessMenuViewModel.DeleteBusinessMenuGroupByIdAsync(id);
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.DeleteMessage, ToastLevel.Success);
+            businessMenuGroups = response.data;
+            SortMenuGroups();
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task SelectProduct()
+    {
+        if (!string.IsNullOrEmpty(selectedProduct))
+        {
+            var product = products.Where(x => x.ProductTitle.ToLower() == selectedProduct.ToLower()).FirstOrDefault();
+            if (businessMenuGroupItems != null && businessMenuGroupItems.Count > 0)
+            {
+                existingCollectionProduct = businessMenuGroupItems.Where(x => x.ProductTitle.ToLower() == selectedProduct.ToLower()).FirstOrDefault();
+            }
+
+            if (product != null && existingCollectionProduct == null)
+            {
+                BusinessMenuGroupItemRequestModel businessMenuGroupItemRequestModel = new BusinessMenuGroupItemRequestModel()
+                {
+                    BusinessMenuGroupId = groupItemRequest.BusinessMenuGroupId,
+                    Product_Id = product.Id,
+                    Price = product.RetailPrice,
+                    SortOrder = 0
+                };
+                var response = await _businessMenuViewModel.AddUpdateBusinessMenuGroupItemAsync(businessMenuGroupItemRequestModel);
+                if (response.success)
+                {
+                    toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                    await GetMenuGroupItems(groupItemRequest.BusinessMenuGroupId);
+                }
+                else
+                {
+                    toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+                }
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    private async void OnFilterProducts(FilteringEventArgs args)
+    {
+        args.PreventDefaultAction = true;
+        var query = new Query().Where(new WhereFilter() { Field = "ProductTitle", Operator = "contains", value = args.Text, IgnoreCase = true });
+
+        query = !string.IsNullOrEmpty(args.Text) ? query : new Query();
+
+        await filterProductsObj.Filter(products, query);
+    }
+
+    private async void RemoveProduct(BusinessMenuGroupItemModel data)
+    {
+        isLoading = true;
+        var response = await _businessMenuViewModel.DeleteBusinessMenuGroupItemByIdAsync(data.Id);
+        if (response.success)
+        {
+            toastService.ShowToast(Constants.DeleteMessage, ToastLevel.Success);
+            await GetMenuGroupItems(data.BusinessMenuGroupId);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task SaveArrangeMenu()
+    {
+        List<ArrangeBusinessMenuGroupRequestModel> requestModels = new List<ArrangeBusinessMenuGroupRequestModel>();
+        int sortOrder = 0;
+        foreach (var item in groupDataList)
+        {
+            sortOrder++;
+            requestModels.Add(new ArrangeBusinessMenuGroupRequestModel { Id = item.Id, ParentId = item.parent, SortOrder = sortOrder });
+            if (item.Children != null)
+            {
+                foreach (var childItem in item.Children)
+                {
+                    sortOrder++;
+                    requestModels.Add(new ArrangeBusinessMenuGroupRequestModel { Id = childItem.Id, ParentId = childItem.parent, SortOrder = sortOrder });
+                }
+            }
+        }
+        if (requestModels.Count > 0)
+        {
+            isLoading = true;
+            var response = await _businessMenuViewModel.ArrangeBusinessMenuGroupAsync(requestModels);
+            isLoading = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                businessMenuGroups = response.data;
+                SortMenuGroups();
+                StateHasChanged();
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+        CloseSortModal();
+    }
+
+    private async Task SaveItemPrice()
+    {
+
+        var listboxData = listGroupItem.GetDataList();
+        List<BusinessMenuGroupItemRequestModel> requestModels = new List<BusinessMenuGroupItemRequestModel>();
+        int sortOrder = 0;
+        foreach (var item in listboxData)
+        {
+            sortOrder++;
+            requestModels.Add(new BusinessMenuGroupItemRequestModel
+            {
+                Id = item.Id,
+                BusinessMenuGroupId = item.BusinessMenuGroupId,
+                Product_Id = item.Product_Id,
+                Price = item.Price,
+                SortOrder = sortOrder
+            });
+        }
+
+        if (requestModels.Count > 0)
+        {
+            isLoading = true;
+            var response = await _businessMenuViewModel.ArrangeBusinessMenuGroupItemAsync(requestModels);
+            isLoading = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SaveMessage, ToastLevel.Success);
+                StateHasChanged();
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+        CloseProductsModal();
+    }
+
+
+    public List<PlaceholderData> PlaceholderGroupDataList = new List<PlaceholderData>()
+{
+        new PlaceholderData(){ Id = 1, GroupName = "Appetizers", parent=0 },
+        new PlaceholderData(){ Id = 2, GroupName = "Salads", parent=0 },
+        new PlaceholderData(){ Id = 3, GroupName = "Entrées", parent=0 },
+        new PlaceholderData(){ Id = 5, GroupName = "Burgers", parent=3 },
+        new PlaceholderData(){ Id = 4, GroupName = "Dessert", parent=0 },
+
+     };
+
+
+    public class PlaceholderData
+    {
+        public int Id { get; set; }
+        public string GroupName { get; set; }
+        public bool Expanded { get; set; }
+        public int parent { get; set; }
+        public List<PlaceholderData> Children;
+    }
+
+}

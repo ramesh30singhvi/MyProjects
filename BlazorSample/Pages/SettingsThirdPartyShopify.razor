@@ -1,0 +1,141 @@
+﻿@page "/settings/integrated-partners/shopify/{Id:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Entities.v4
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm Model="@shopify" Context="formContext" Class="row g-3">
+    <DataAnnotationsValidator />
+    <div class="card">
+        <div class="card-header border-bottom">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h5 class="mb-0"><a href="marketplace/partner/@Id" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-brands fa-shopify me-2"></span>Shopify</h5>
+                </div>
+                <div class="col-md-auto">
+                    <button @onclick="@(() => TestLogin(formContext))" class="btn btn-sm btn-outline-secondary me-2" hidden="@(SetTestLoginBtnVisibility())">Test Login</button>
+                    <button class="btn btn-sm btn-primary" @onclick="@(() => SaveShopify(formContext))">Save</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="inputShopifyPublishKey" class="form-label">Private App Publish Key</label>
+                <InputText class="form-control" @bind-Value="shopify.PrivateAppPublishKey" id="inputShopifyPublishKey" type="text" placeholder="Publish Key"></InputText>
+                <ValidationMessage For="@(() => shopify.PrivateAppPublishKey)" />
+            </div>
+            <div class="mb-3">
+                <label for="inputShopifySecretKey" class="form-label">Private App Secret Key</label>
+                <InputText class="form-control" @bind-Value="shopify.PrivateAppSecretKey" id="inputShopifySecretKey" type="text" placeholder="Secret Key"></InputText>
+                <ValidationMessage For="@(() => shopify.PrivateAppSecretKey)" />
+            </div>
+            <div class="mb-3">
+                <label for="inputShopifyPassword" class="form-label">Private App Password</label>
+                <InputText class="form-control" @bind-Value="shopify.PrivateAppPassword" id="inputShopifyPassword" type="password" placeholder="Password"></InputText>
+                <ValidationMessage For="@(() => shopify.PrivateAppPassword)" />
+            </div>
+            <div class="mb-3">
+                <label for="inputShopifyStoreName" class="form-label">Private App Store Name</label>
+                <InputText class="form-control" @bind-Value="shopify.PrivateAppStoreName" id="inputShopifyStoreName" type="text" placeholder="Store Name"></InputText>
+                <ValidationMessage For="@(() => shopify.PrivateAppStoreName)" />
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code
+{
+    [Parameter]
+    public Guid? Id { get; set; }
+    private string title = "Shopify | Synergy Commerce Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    Member currentMember = new Member();
+    ShopifyRequestModel shopify = new ShopifyRequestModel();
+    List<string> shopifyMetaKeys = new List<string>(){
+      BusinessSettingsMetaKey.ShopifyPrivateAppPassword,
+      BusinessSettingsMetaKey.ShopifyPrivateAppPublishKey,
+      BusinessSettingsMetaKey.ShopifyPrivateAppSecretKey,
+      BusinessSettingsMetaKey.ShopifyPrivateAppStoreName
+    };
+
+    protected bool SetTestLoginBtnVisibility()
+    {
+        if (!string.IsNullOrEmpty(shopify.PrivateAppPassword) &&
+            !string.IsNullOrEmpty(shopify.PrivateAppPublishKey) &&
+            !string.IsNullOrEmpty(shopify.PrivateAppSecretKey) &&
+            !string.IsNullOrEmpty(shopify.PrivateAppStoreName))
+        {
+            return false;
+        }
+        else
+            return true;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        //Get business settings for Shopify
+        var response = await _settingsViewModel.GetBusinessSettingsListAsync(currentMember.Id, BusinessSettingsMetaNamespace.Shopify);
+        foreach (var metaKey in shopifyMetaKeys)
+        {
+            var metaValue = response?.data?.Where(x => x.MetaKey == metaKey)?.FirstOrDefault()?.MetaValue ?? string.Empty;
+            Helper.SetPropertyValue(shopify, metaKey, metaValue);//Note: meta key and request model property name should be same
+        }
+        SetTestLoginBtnVisibility();
+        SpinnerVisibility = false;
+    }
+    private async Task TestLogin(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var response = await _settingsViewModel.ShopifyTestLogin(currentMember.Id);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.LoginSuccessful, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(string.IsNullOrEmpty(response.error_info.description) ? Constants.LoginFailed : response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    public async Task SaveShopify(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var businessSettings = await Helper.BusinessSettingsMapping(shopify, currentMember.Id, BusinessSettingsMetaNamespace.Shopify, shopifyMetaKeys);
+            var response = await _settingsViewModel.CreateBusinessSettingListAsync(businessSettings);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+}

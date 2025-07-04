@@ -1,0 +1,112 @@
+﻿@page "/settings/ticketing"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between">
+            <div class="col-md-auto">
+                <h5 class="mb-0"><a href="settings" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-ticket me-2"></span>Ticketing </h5>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-sm btn-primary" href="javascript:void(0)">Sell Tickets</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+
+        <div class="row my-4">
+            <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="fa-regular fa-calendars fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="/tickets/event-manager-tickets">Manage Events</a></h6>
+                        <p class="fs--2">Create &amp; manage your ticketed events.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="fa-regular fa-chart-line fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="ticketing/sales-manager">Sales Manager</a></h6>
+                        <p class="fs--2">View ticket purchases.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="fa-regular fa-magnifying-glass fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="/tickets/search-orders">Search Orders</a></h6>
+                        <p class="fs--2">Search and manage your ticketed orders.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="fa-regular fa-file-contract fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/ticketing/policies">Event Policies</a></h6>
+                        <p class="fs--2">Create &amp; manage your event policies.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="fa-regular fa-cart-shopping fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="tickets/sell-tickets-event-list">Sell Tickets</a></h6>
+                        <p class="fs--2">Sell tickets to your special events.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="fa-regular fa-calculator fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="ticketing/fee-calculator">Ticketing Fee Calculator</a></h6>
+                        <p class="fs--2">Calculate your potential earnings.</p>
+                    </div>
+                </div>
+            </div>
+              <div class="col-sm-6 col-md-4 mb-3">
+                <div class="d-flex position-relative mb-2">
+                    <span class="fa-regular fa-hand-holding-usd fa-2x fa-fw me-2"></span>
+                    <div class="flex-1">
+                        <h6 class="fs-0 mb-0"><a class="stretched-link" href="settings/sales-channels/ticketing/payments">Payments</a></h6>
+                        <p class="fs--2">Configure payment gateway for Ticketing.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code
+{
+    private string title = "Ticketing Settings | Synergy Admin Panel";
+
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+
+}

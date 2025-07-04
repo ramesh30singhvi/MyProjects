@@ -1,0 +1,97 @@
+﻿@page "/settings/pos/closing-procedures"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+
+        <div class="card shadow-none border">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-0"><a href="settings/pos" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="fa-regular fa-arrow-left me-1"></span></a><span class="fa-regular fa-calendar-times me-2"></span>Closing Procedures</h5>
+                    </div>
+                    <div class="col-md-auto">
+                        <div class="col-md-auto">
+                            <div class="row">
+                                <div class="col-md-8 col-sm-6">
+                                    <select id="selBusinessProfiles" class="form-select">
+                                        <option value="EncoreWinery" selected>Encore Winery</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 col-sm-6">
+                                    <a class="btn btn-sm btn-primary" href="javascript:void(0)">Save</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12 col-xl-6">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-n1">
+                                <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchCloseAllOpenPOSOrders">Close All Open POS Orders</label></div>
+                                <div class="d-flex align-items-center">
+                                    <div class="form-check form-switch"><input class="form-check-input" id="switchCloseAllOpenPOSOrders" type="checkbox" checked="@isCloseAllOpenPOSOrders" @bind-value="@isCloseAllOpenPOSOrders"></div>
+                                </div>
+                            </div>
+                            <label class="form-label"><span class="form-text">All POS orders must be closed before running Close of Day procedures.</span></label>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-n1">
+                                <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchUpdateAllManuallyEnteredTips">Update All Manually-entered Tips</label></div>
+                                <div class="d-flex align-items-center">
+                                    <div class="form-check form-switch"><input class="form-check-input" id="switchUpdateAllManuallyEnteredTips" type="checkbox" checked="@isUpdateAllManuallyEnteredTips" @bind-value="@isUpdateAllManuallyEnteredTips"></div>
+                                </div>
+                            </div>
+                            <label class="form-label"><span class="form-text">All credit card tips must be entered before running Close of Day procedures.</span></label>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-n1">
+                                <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchTerminateAllCashDrawers">Terminate All Cash Drawers</label></div>
+                                <div class="d-flex align-items-center">
+                                    <div class="form-check form-switch"><input class="form-check-input" id="switchTerminateAllCashDrawers" type="checkbox" checked="@isTerminateAllCashDrawers" @bind-value="@isTerminateAllCashDrawers"></div>
+                                </div>
+                            </div>
+                            <label class="form-label"><span class="form-text">All cash drawers must be closed out before running Close of Day procedures.</span></label>
+                        </div>
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-n1">
+                                <div class="d-flex align-items-center fw-bold"><label class="form-label mb-0" for="switchClockOutAllEmployees">Clock Out All Employees</label></div>
+                                <div class="d-flex align-items-center">
+                                    <div class="form-check form-switch"><input class="form-check-input" id="switchClockOutAllEmployees" type="checkbox" checked="@isClockOutAllEmployees" @bind-value="@isClockOutAllEmployees"></div>
+                                </div>
+                            </div>
+                            <label class="form-label"><span class="form-text">All employees must be clocked out running Close of Day procedures.</span></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+{
+    private string title = "Closing Procedures | Synergy Commerce Admin Panel";
+    private bool isCloseAllOpenPOSOrders;
+    private bool isUpdateAllManuallyEnteredTips;
+    private bool isTerminateAllCashDrawers;
+    private bool isClockOutAllEmployees;
+}

@@ -1,0 +1,236 @@
+﻿@page "/settings/notifications/email/order/edit/{NotificationEmailGuid:guid}"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@using CellarPassAppAdmin.Shared.Helpers
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject IEmailNotificationViewModel _emailNotificationViewModel
+@inject ToastService _toastService
+@inject ISettingsViewModel _settingsViewModel
+@inject ISaSystemNotificationsViewModel _saSystemNotificationsViewModel
+@attribute [Authorize]
+
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<Title Value="@title"></Title>
+@if (emailNotificationDetail != null)
+{
+    <EditForm Model="@businessEmailRequestModel" Context="formContext">
+        <DataAnnotationsValidator />
+        <div class="card shadow-none border">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between">
+                    <div class="col-md-auto">
+                        <h5 class="mb-0"><a href="settings/notifications/email/orders" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-gem me-2"></span>@heading Email</h5>
+                    </div>
+                    <div class="col-md-auto">
+                        <a class="btn btn-outline-dark@(businessNotificationEmail == null ? " disabled-div" : "")" @onclick="() => PreviewEmail()" href="javascript:void(0)"><span class="fa-regular fa-eye me-2"></span>Preview</a>
+                        <a class="btn btn-primary" @onclick="() => SaveBusinessNotificationEmail(formContext)" href="javascript:void(0)">Save</a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row d-flex justify-content-between align-items-center">
+                    <div class="col-12 col-md-10">
+                        <p>Email will send for @heading.</p>
+                    </div>
+                    <div class="col-auto">
+                        <div class="form-check form-switch">
+                            <input id="switchEnabled" @onchange="UpdateStatus" class="form-check-input" disabled="@(businessNotificationEmail == null)" type="checkbox" checked="@(businessNotificationEmail?.Active ?? false)">
+                            @if (businessNotificationEmail != null && businessNotificationEmail.Active)
+                            {
+                                <label for="switchEnabled" class="form-check-label">Enabled</label>
+                            }
+                            else
+                            {
+                                <label for="switchDisabled" class="form-check-label">Disabled</label>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <hr />
+                @*Using common component EmailNotificationEditForm for edit form*@
+                <EmailNotificationEditForm @bind-EmailContent="businessEmailRequestModel.EmailContent"
+                                           @bind-FromEmail="businessEmailRequestModel.FromEmail"
+                                           @bind-FromName="businessEmailRequestModel.FromName"
+                                           @bind-EmailSubject="businessEmailRequestModel.EmailSubject"
+                                           @bind-OrderId="businessEmailRequestModel.OrderId"
+                                           NotificationEmailVariables="@NotificationEmailVariables"></EmailNotificationEditForm>
+                <button class="btn btn-outline-primary" @onclick="@ShowConfirmReplaceDlg">Replace with template</button>
+            </div>
+        </div>
+    </EditForm>
+}
+<SfDialog @bind-Visible="@ConfirmReplaceDlgVisible" Width="400px" IsModal="true" ShowCloseIcon="true">
+    <DialogTemplates>
+        <Header>
+            Replace with default content
+        </Header>
+        <Content>
+            Your current email content will be replaced with default content.
+        </Content>
+    </DialogTemplates>
+    <DialogButtons>
+        <DialogButton Content="Cancel" OnClick="@HideConfirmReplaceDlg" />
+        <DialogButton Content="Replace" IsPrimary="true" OnClick="@ConfirmReplace" />
+    </DialogButtons>
+</SfDialog>
+
+@code
+{
+    #region Parameters and On Load
+    [Parameter]
+    public Guid NotificationEmailGuid { get; set; }
+    private string title = "Edit Order Email Notification | Synergy Commerce Admin Panel";
+    private string heading = string.Empty;
+    private bool isLoading = false;
+    Member currentMember = new Member();
+    UserDetailViewModel currentUser = new UserDetailViewModel();
+    private bool ConfirmReplaceDlgVisible { get; set; } = false;
+    EmailNotificationDetailModel emailNotificationDetail = null;
+    BusinessNotificationEmailModel businessNotificationEmail = null;
+    AddUpdateBusinessEmailRequestModel businessEmailRequestModel = new AddUpdateBusinessEmailRequestModel();
+    List<NotificationEmailVariableModel> NotificationEmailVariables = new List<NotificationEmailVariableModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        //Get current member information
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+
+        currentUser = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+
+        var notificationDetailResponse = await _emailNotificationViewModel.GetEmailNotificationDetail(NotificationEmailGuid);
+        emailNotificationDetail = notificationDetailResponse?.data?.FirstOrDefault() ?? new EmailNotificationDetailModel();
+
+        if (emailNotificationDetail != null)
+        {
+            NotificationEmailVariables = emailNotificationDetail.NotificationEmailVariables ?? new List<NotificationEmailVariableModel>();
+            heading = Helper.GetDisplayName(emailNotificationDetail.NotificationType);
+            var businessNotificationEmailResponse = await _emailNotificationViewModel.GetBusinessNotificationEmails(currentMember.Id, emailNotificationDetail.Id);
+            businessNotificationEmail = businessNotificationEmailResponse?.data?.FirstOrDefault() ?? null;
+            if (businessNotificationEmail != null)
+            {
+                businessEmailRequestModel.EmailContent = businessNotificationEmail.EmailContent;
+                businessEmailRequestModel.EmailSubject = businessNotificationEmail.EmailSubject;
+                businessEmailRequestModel.FromEmail = businessNotificationEmail.FromEmail;
+                businessEmailRequestModel.FromName = businessNotificationEmail.FromName;
+                businessEmailRequestModel.OrderId = businessNotificationEmail.OrderId;
+
+            }
+            else
+            {
+                businessEmailRequestModel.EmailContent = emailNotificationDetail.EmailContent;
+                businessEmailRequestModel.EmailSubject = emailNotificationDetail.EmailSubject;
+                //If there is no data for business notification email then we will bind default "Default From Email" and "Default From Name"
+                var emailPreferencesSettingResponse = await _settingsViewModel.GetBusinessSettingsListAsync(currentMember.Id, BusinessSettingsMetaNamespace.EmailPreferences);
+                businessEmailRequestModel.FromEmail = emailPreferencesSettingResponse?.data?.FirstOrDefault(x => x.MetaKey == BusinessSettingsMetaKey.DefaultFromEmail)?.MetaValue ?? string.Empty;
+                businessEmailRequestModel.FromName = emailPreferencesSettingResponse?.data?.FirstOrDefault(x => x.MetaKey == BusinessSettingsMetaKey.DefaultFromName)?.MetaValue ?? string.Empty;
+                businessEmailRequestModel.OrderId = 0;
+            }
+        }
+        isLoading = false;
+    }
+    #endregion
+
+    #region Content Replace
+    private void ShowConfirmReplaceDlg()
+    {
+        this.ConfirmReplaceDlgVisible = true;
+    }
+    private void HideConfirmReplaceDlg(Object e)
+    {
+        this.ConfirmReplaceDlgVisible = false;
+    }
+    private void ConfirmReplace()
+    {
+        //Replace the content with default
+        businessEmailRequestModel.EmailContent = emailNotificationDetail.EmailContent;
+        //Then hide the dialog
+        this.ConfirmReplaceDlgVisible = false;
+    }
+    #endregion
+
+    #region Save Business Notification Email
+    private async Task SaveBusinessNotificationEmail(EditContext formContext)
+    {
+        if (businessEmailRequestModel != null)
+        {
+            businessEmailRequestModel.BusinessId = currentMember.Id;
+            if (!businessEmailRequestModel.EmailContent.Contains("{{OrderDetailBlock}}"))
+            {
+                _toastService.ShowToast("Please include {{OrderDetailBlock}} tag to email content.", ToastLevel.Error);
+                return;
+            }
+            if (formContext.Validate())
+            {
+                isLoading = true;
+                businessEmailRequestModel.Id = businessNotificationEmail == null ? null : businessNotificationEmail.Id;
+                businessEmailRequestModel.NotificationEmailId = emailNotificationDetail.Id;
+                businessEmailRequestModel.NotificationEmailTemplateId = emailNotificationDetail.EmailTemplateId;
+                businessEmailRequestModel.NotificationType = (int)emailNotificationDetail.NotificationType;
+                businessEmailRequestModel.Category = (int)emailNotificationDetail.Category;
+                var response = await _emailNotificationViewModel.AddUpdateBusinessNotificationEmail(new List<AddUpdateBusinessEmailRequestModel> { businessEmailRequestModel });
+                isLoading = false;
+                if (response.success)
+                {
+                    _toastService.ShowToast(businessNotificationEmail == null ? Constants.SaveMessage : Constants.UpdateMessage, ToastLevel.Success);
+                }
+                else
+                {
+                    _toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+                }
+            }
+        }
+    }
+    private async Task UpdateStatus(ChangeEventArgs args)
+    {
+        isLoading = true;
+        businessNotificationEmail.Active = (bool)args.Value;
+        var response = await _emailNotificationViewModel.UpdateBusinessNotificationEmailStatus(businessNotificationEmail.IdGUID, (bool)args.Value);
+        isLoading = false;
+        if (response.success)
+        {
+            _toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+        }
+        else
+        {
+            _toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+    #endregion
+
+    #region Send Preview Email
+    protected async Task PreviewEmail()
+    {
+        isLoading = true;
+        var response = await _saSystemNotificationsViewModel.SendPreviewEmailToBusQueue(new PreviewEmailRequestModel
+        {
+            IsPreviewEmail = true,
+            Email = currentUser.Email,
+            RefId = string.Empty,
+            NotificationType = (int)emailNotificationDetail.NotificationType
+        });
+        isLoading = false;
+        if (response.success)
+        {
+            _toastService.ShowToast("Preview email sent.", ToastLevel.Success);
+        }
+        else
+        {
+            _toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+    #endregion
+}

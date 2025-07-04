@@ -1,0 +1,143 @@
+﻿@page "/settings/content/brand/image"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IBusinessViewModel _businessViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ICompanyLogoViewModel _companyLogoViewModel
+@attribute [Authorize]
+
+<AuthorizeView>
+    <Authorized>
+        <Title Value="@title"></Title>
+        <SfSpinner @bind-Visible="isLoading"></SfSpinner>
+        <div class="card mb-3">
+            <div class="card-header border-bottom">
+                <div class="row justify-content-between align-items-center">
+                    <div class="col-md">
+                        <h5 class="mb-3 mb-md-0"><a href="settings/content/brand" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-image me-2"></span>Company Logo</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+
+                <div class="row" hidden="@(String.IsNullOrEmpty(imgUrl))">
+                    <div class="col-12 col-md-4">
+                        <div class="card cover-image mb-4">
+                            <InputFile id="inputDrop" OnChange="OnInputFileChange" class="opacity-0 w-100 h-100 position-absolute" />
+                            <a href="javascript:void();" @onclick="() => uploadImage()">
+                                <img class="card-img-top" src="@(!String.IsNullOrEmpty(imgUrl) ? imgUrl :"https://cdn.cellarpass.com/photos/profiles/26_thumbnail_crop.jpg?clearcache=189")" width="480" alt="Business Banner Image">
+                            </a>
+                            <label class="cover-image-file-input d-flex align-items-center" for="upload-cover-image" @onclick="() => uploadImage()">
+                                <span class="far fa-cloud-upload-alt fa-2x me-2"></span>Change business image
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row" hidden="@(!String.IsNullOrEmpty(imgUrl))">
+                    <div class="col-12 col-md-4">
+                        <div id="galleryImageUpload" class="my-4" @onclick="() => uploadImage()">
+                            <div class="dz-message dropzone-area px-2 py-3">
+                                <div class="text-center">
+                                    <div class="far fa-cloud-upload-alt fa-4x d-block mx-auto mb-4"></div>
+                                    <p><span class="far fa-image fa-lg me-2"></span>Upload your business image</p><p class="fs--1 text-400">Upload a 480 x 284 jpg image with <br>a maximum size of 400KB</p>
+                                    <p class="fs--1">Drag and drop your files here or click to open file loading dialogue...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <ImageCropper @ref="CropperModal" IsVisible="imageCroperActive" CropperConfiguration="cropperConfiguration" Cropped="OnCropped"></ImageCropper>
+
+        @*<ImageUploaderModal @ref="Modal" Cropped="OnCropped"></ImageUploaderModal>*@
+    </Authorized>
+</AuthorizeView>
+
+
+@code
+
+{
+
+    private string title = "Brand Image | Synergy Commerce Admin Panel";
+    private bool isLoading { get; set; }
+    private Member currentMember = new Member();
+    private ImageUploaderModal Modal { get; set; }
+    string imgUrl;
+    private ImageCropperConfiguration cropperConfiguration = new ImageCropperConfiguration();
+    private ImageCropper CropperModal { get; set; }
+    private bool imageCroperActive = false;
+    private string selectedFileName = null;
+    BusinessPageViewModel BusinessContent = new BusinessPageViewModel();
+    CompanyLogoRequestViewModel companyLogo = new CompanyLogoRequestViewModel();
+    BusinessDetailModel businessDetail = new BusinessDetailModel();
+
+    const string _BusinessLogoNamespace = "PropertyContent";
+    const string _BusinessLogoMetaKey = "LogoImageName";
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        var businessDetailResponse = await _businessViewModel.GetBusinessDetail(Guid.Empty, currentMember.Id);
+        businessDetail = businessDetailResponse?.data ?? new BusinessDetailModel();
+        var response = await _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, _BusinessLogoNamespace, _BusinessLogoMetaKey);
+        imgUrl = response.data.MetaValue;
+        StateHasChanged();
+        isLoading = false;
+    }
+
+    private async Task OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        var maxAllowedFiles = 1;
+        var format = "image/png";
+        foreach (var imageFile in e.GetMultipleFiles(maxAllowedFiles))
+        {
+            //companyLogo.Title = imageFile.Name;
+
+            var buffer = new byte[imageFile.Size];
+            await imageFile.OpenReadStream(buffer.LongLength).ReadAsync(buffer);
+            var imageDataUrl =
+                $"data:{format};base64,{Convert.ToBase64String(buffer)}";
+
+            await CropperModal.OnFileChange(imageDataUrl);
+            imageCroperActive = true;
+        }
+        StateHasChanged();
+    }
+
+    async Task OnCropped(string value)
+    {
+        imageCroperActive = false;
+        var base64 = value.Substring(value.IndexOf(',') + 1);
+        //companyLogo.Title = string.Format("{0}_{1}.{2}", DateTime.UtcNow.Ticks, currentMember.Id, companyLogo.Title.Substring(companyLogo.Title.LastIndexOf('.') + 1));
+        companyLogo.ImageContent = base64;
+        companyLogo.BusinessId = currentMember.Id;
+        companyLogo.BusinessGuid = businessDetail.BusinessGuid;
+        if (currentMember.Id > 0)
+        {
+            var response = await _companyLogoViewModel.SaveCompanyLogo(companyLogo);
+            imgUrl = response.ImageName;
+        }
+        StateHasChanged();
+    }
+
+    private async Task uploadImage()
+    {
+        imageCroperActive = false;
+        await CropperModal.TriggerFileSelect("inputDrop");
+    }
+
+}

@@ -1,0 +1,678 @@
+﻿@page "/"
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using System.Collections.Generic
+@using System.Net.Http.Headers
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.WebUtilities
+@inject NavigationManager NavigationManager
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Helpers
+@inject AuthenticationStateProvider _authenticationStateProvider
+@layout AuthorizedLayout
+@inject ISystemUpdatesViewModel _systemUpdatesViewModel
+@inject IRegionViewModel _regionViewModel
+@inject ILocalStorageService localStorage
+@inject IUserViewModel _userViewModel
+@inject IBusinessViewModel _businessViewModel
+@inject ICustomerViewModel _customerViewModel
+@inject IOrderViewModel _orderViewModel
+@inject ISettingsViewModel _settingsViewModel
+@inject IWeatherFeedViewModel _weatherFeedViewModel
+@inject IBusinessViewModel _businessViewModel
+@inject IClubViewModel _clubViewModel
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+@inject IMessageViewModel MessageViewModel
+
+@*<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>*@
+<div class="row g-0 my-2">
+    @{
+        var space = GetWidthSpacing();
+    }
+    <div class="col-6 mb-3 pe-lg-2 @(space)">
+        <a href="javascript:void(0)" @onclick="DisplayNewCustomers">
+            <div class="card shadow-none border p-3">
+                <div class="row g-0 h-100 align-items-center">
+                    <div class="col-auto">
+                        <div class="d-flex align-items-center">
+                            <div class="icon-item icon-item-sm shadow-none bg-soft-primary"><span class="fs--2 fa-solid fa-user text-primary"></span></div>
+                            <div class="text-center">
+                                <h6 class="mb-0 mx-3">New Customers</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col d-flex justify-content-end align-items-center">
+                        @if (SpinnerVisibility)
+                        {
+                            <div>
+                                <div class="spinner-grow spinner-grow-sm" role="status"><span class="sr-only">Loading...</span></div>
+                                <em>Loading...</em>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="mb-0">@newCustomersCount</p>
+                        }
+
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 pe-lg-2 mb-3 @(space)">
+        <a href="javascript:void(0)" @onclick="DisplayRecentOrders">
+            <div class="card shadow-none border p-3">
+                <div class="row g-0 h-100 align-items-center">
+                    <div class="col-auto">
+                        <div class="d-flex align-items-center">
+                            <div class="icon-item icon-item-sm shadow-none bg-soft-success"><span class="fs--2 fa-solid fa-basket-shopping-simple text-success"></span></div>
+                            <div class="text-center">
+                                <h6 class="mb-0 mx-3">Recent Orders</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col d-flex justify-content-end align-items-center">
+                        @if (SpinnerVisibility)
+                        {
+                            <div>
+                                <div class="spinner-grow spinner-grow-sm" role="status"><span class="sr-only">Loading...</span></div>
+                                <em>Loading...</em>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="mb-0">@recentOrdersCount</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    @if (clubServiceSettingName == _synergyCommerce)
+    {
+        <div class="col-6 mb-3 pe-lg-2 @(space)">
+            <a href="javascript:void(0)" @onclick="DisplayNewClubMembers">
+                <div class="card shadow-none border p-3">
+                    <div class="row g-0 h-100 align-items-center">
+                        <div class="col-auto">
+                            <div class="d-flex align-items-center">
+                                <div class="icon-item icon-item-sm shadow-none bg-soft-info"><span class="fs--2 fa-solid fa-gem text-info"></span></div>
+                                <div class="text-center">
+                                    <h6 class="mb-0 mx-3">New Club Members</h6>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col d-flex justify-content-end align-items-center">
+                            @if (SpinnerVisibility)
+                            {
+                                <div>
+                                    <div class="spinner-grow spinner-grow-sm" role="status"><span class="sr-only">Loading...</span></div>
+                                    <em>Loading...</em>
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="mb-0">@newClubMembersCount</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    }
+    @if (reservationsServiceSettingName == _synergyCommerce)
+    {
+        <div class="col-6 mb-3 pe-lg-2 @(space)">
+            <div class="card shadow-none border p-3">
+                <div class="row g-0 h-100 align-items-center">
+                    <div class="col-auto">
+                        <div class="d-flex align-items-center">
+                            <div class="icon-item icon-item-sm shadow-none bg-soft-secondary"><span class="fs--2 fa-solid fa-calendar-star text-secondary"></span></div>
+                            <div class="text-center">
+                                <h6 class="mb-0 mx-3">New Reservations</h6>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col d-flex justify-content-end align-items-center">
+                        @if (SpinnerVisibility)
+                        {
+                            <div>
+                                <div class="spinner-grow spinner-grow-sm" role="status"><span class="sr-only">Loading...</span></div>
+                                <em>Loading...</em>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="mb-0">@newReservationsCount</p>
+                        }
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<div class="row g-0">
+    <div class="col-lg-6 pe-lg-2 mb-3">
+        <div class="card shadow-none border h-lg-100">
+            <div class="card-header d-flex flex-between-center bg-light py-2">
+                <h6 class="mb-0">System Updates</h6>
+                @if (systemUpdates.Count > 3)
+                {
+                    <a class="py-1 fs--2 text-uppercase" href="/system-updates">View All Updates</a>
+                }
+            </div>
+            @if (systemUpdates.Count > 0)
+            {
+                <div class="card-body p-0">
+                    @for (int systemUpdateData = 0; systemUpdateData < systemUpdates.Count; systemUpdateData++)
+                    {
+                        @if (systemUpdateData > 2)
+                        {
+                            break;
+                        }
+                        <a class="border-bottom-0 notification list-group-item-action rounded-0 border-x-0 border-300" target="_blank" href="@systemUpdates[systemUpdateData].ArticleURL">
+                            <div class="notification-body">
+                                <span class="notification-time">@systemUpdates[systemUpdateData].ArticlePublishDate.ToString("MMMM d, yyyy")</span>
+                                <p class="mt-2 mb-0">@systemUpdates[systemUpdateData].Article</p>
+                            </div>
+                        </a>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="card-body" p-0>
+                    @if (SpinnerVisibility)
+                    {
+                        <div class="mt-8 text-center">
+                            <div class="spinner-grow spinner-grow-sm" role="status"><span class="sr-only">Loading...</span></div>
+                            <em>Loading...</em>
+                        </div>
+                    }
+                    else
+                    {
+                        <p>No records to display</p>
+                    }
+                </div>
+            }
+
+        </div>
+    </div>
+    <div class="col-lg-3 pe-lg-2 mb-3">
+        <div class="card shadow-none border h-lg-100">
+            <div class="card-header d-flex flex-between-center bg-light btn-reveal-trigger py-2">
+                <h6 class="mb-0">Customer Trends - Last 30 Days</h6><a class="btn btn-link btn-sm btn-reveal text-600" href="!"><span class="fal fa-chart-line"></span></a>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless fs--1 mb-0">
+                    <tbody>
+                        <tr class="border-bottom">
+                            <th class="ps-0">
+                                Total Customers
+                            </th>
+                            <th class="pe-0 text-end">@(customerTrends.TotalCustomers.ToString())</th>
+                        </tr>
+                        <tr class="border-bottom">
+                            <th class="ps-0">
+                                First-time Customers
+                            </th>
+                            <th class="pe-0 text-end">@customerTrends.FirstTimeCustomers.ToString() / @((customerTrends.FirstTimeCustomers > 0 && customerTrends.TotalCustomers > 0)? Math.Round(((double)customerTrends.FirstTimeCustomers / customerTrends.TotalCustomers) * 100, 2):"XX")%</th>
+                        </tr>
+                        <tr class="border-bottom">
+                            <th class="ps-0">
+                                Repeat Customers
+                            </th>
+                            <th class="pe-0 text-end">@customerTrends.RepeatCustomers.ToString() / @((customerTrends.RepeatCustomers > 0 && customerTrends.TotalCustomers > 0)? Math.Round(((double)customerTrends.RepeatCustomers / customerTrends.TotalCustomers) * 100, 2):"XX")%</th>
+                        </tr>
+                        <tr class="border-bottom">
+                            <th class="ps-0">
+                                Walk-ins
+                            </th>
+                        </tr>
+                        <tr class="border-bottom">
+                            <th class="ps-0">
+                                No Shows
+                            </th>
+                            <th class="pe-0 text-end">3</th>
+                        </tr>
+                        <tr>
+                            <th class="ps-0">
+                                Experience Reviews
+                            </th>
+                            <th class="pe-0 text-end">451</th>
+                        </tr>
+                    </tbody>
+
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 pe-lg-2 mb-3">
+        <div class="card shadow-none border h-lg-100">
+            <div class="card-header d-flex flex-between-center bg-light btn-reveal-trigger py-2">
+                <h6 class="mb-0">Sales Trends - Last 30 Days</h6><a class="btn btn-link btn-sm btn-reveal text-600" href="!"><span class="fal fa-chart-line"></span></a>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless fs--1 mb-0">
+                    <tr class="border-bottom">
+                        <th class="ps-0">
+                            Total Orders
+                        </th>
+                        <th class="pe-0 text-end">431</th>
+                    </tr>
+                    <tr class="border-bottom">
+                        <th class="ps-0">
+                            Total Sales
+                        </th>
+                        <th class="pe-0 text-end">$37,546.23</th>
+                    </tr>
+                    <tr class="border-bottom">
+                        <th class="ps-0">
+                            Average Spend / Visit
+                        </th>
+                        <th class="pe-0 text-end">$163.12</th>
+                    </tr>
+                    <tr class="border-bottom">
+                        <th class="ps-0">
+                            Average Visits / Customer
+                        </th>
+                        <th class="pe-0 text-end">11</th>
+                    </tr>
+                    <tr class="border-bottom">
+                        <th class="ps-0">
+                            Product Reviews
+                        </th>
+                        <th class="pe-0 text-end">124</th>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="row g-0">
+    <div class="col-lg-6 pe-lg-2 mb-3">
+        <div class="card shadow-none border h-lg-100">
+            <div class="card-header d-flex flex-between-center bg-light py-2">
+                <h6 class="mb-0">Popular Articles</h6><a class="py-1 fs--2 text-uppercase" href="https://cellarpasssupport.zendesk.com/hc/en-us/sections/13915949766036-Synergy-Commerce">View All Articles</a>
+            </div>
+            <div class="card-body p-0 pb-4">
+                <a class="border-bottom-0 notification list-group-item-action rounded-0 border-x-0 border-300" href="#!">
+                    <div class="notification-body">
+                        <span class="notification-time">July 20, 2023</span>
+                        <p class="mt-2 mb-0">Attracting Better-qualified Guests</p>
+                    </div>
+                </a>
+                <a class="border-bottom-0 notification list-group-item-action rounded-0 border-x-0 border-300" href="#!">
+                    <div class="notification-body">
+                        <span class="notification-time">July 10, 2023</span>
+                        <p class="mt-2 mb-0">Proven Strategies to Reducing “No Shows”</p>
+                    </div>
+                </a>
+                <a class="border-bottom-0 notification list-group-item-action rounded-0 border-x-0 border-300" href="#!">
+                    <div class="notification-body">
+                        <span class="notification-time">June 8, 2023</span>
+                        <p class="mt-2 mb-0">Handling Credit Card Chargebacks Like  a Pro</p>
+                    </div>
+                </a>
+                <a class="border-bottom-0 notification list-group-item-action rounded-0 border-x-0 border-300" href="#!">
+                    <div class="notification-body">
+                        <span class="notification-time">June 7, 2023</span>
+                        <p class="mt-2 mb-0">Customizing the Embedded Booking Widget</p>
+                    </div>
+                </a>
+                <a class="border-bottom-0 notification list-group-item-action rounded-0 border-x-0 border-300" href="#!">
+                    <div class="notification-body">
+                        <span class="notification-time">May 5, 2023</span>
+                        <p class="mt-2 mb-0">Best Practices for Managing Guests Lists for Club Pickup Parties</p>
+                    </div>
+                </a>
+                <a class="border-bottom-0 notification list-group-item-action rounded-0 border-x-0 border-300" href="#!">
+                    <div class="notification-body">
+                        <span class="notification-time">May 4, 2023</span>
+                        <p class="mt-2 mb-0">Setting Up Google Analytics to Track Purchase Conversions</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 pe-lg-2 mb-3">
+        <div class="row g-0">
+            <div class="col-lg-6 col-xl-12 pe-lg-2 pe-xl-0 mb-3">
+                <div class="card shadow-none border h-100">
+                    @{
+                        if (_noOfDaysOfWeatherInfo > 0)
+                        {
+                            <div class="card-header d-flex flex-between-center bg-light py-2">
+                                <h6 class="mb-0">Weather- @((! string.IsNullOrWhiteSpace(businessWeatherFeed.WeatherFeedAddress)? businessWeatherFeed.WeatherFeedAddress:"Napa Valley"))</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-0 h-100 align-items-center">
+                                    <div class="col-auto">
+                                        <div class="d-flex align-items-center">
+                                            <div>
+                                                <span class="far fa-sun fa-3x me-3"></span>
+                                            </div>
+                                            <div class="text-center">
+                                                <div class="fs-4 fw-normal font-sans-serif text-primary mb-1 lh-1">
+                                                    @{
+                                                        int todayTemp = 0;
+                                                        var todayFeed = weatherFeed.properties?.periods?.Where(x => x.startTime.Date == DateTime.UtcNow.AddMinutes(loggedInUser.OffsetMinutes).Date).ToList();
+                                                        if (todayFeed != null && todayFeed.Any())
+                                                        {
+                                                            todayTemp = todayFeed.Max(x => x.temperature);
+                                                        }
+                                                    }
+                                                    @((todayTemp > 0)?todayTemp:"91")&deg;
+                                                </div>
+                                                <div class="fs--1 text-800">Today's High</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @if(_noOfDaysOfWeatherInfo > 1)
+                                    {
+                                        <div class="col d-flex justify-content-end align-items-center">
+                                            @for (int day = 2; day <= _noOfDaysOfWeatherInfo; day++)
+                                            {
+                                                @if (day >= 3)
+                                                {
+                                                    <span class="fal fa-horizontal-rule fa-2x fa-rotate-90 text-400 mx-2"></span>
+                                                }
+                                                <div class="d-flex align-items-center flex-column">
+                                                    <div class="fs--1 text-800 fw-semi-bold mb-2">
+                                                        @DateTime.UtcNow.AddMinutes(loggedInUser.OffsetMinutes).AddDays(day - 1).DayOfWeek.ToString().Substring(0, 3)
+                                                    </div>
+                                                    <div class="text-800 fw-semi-bold">
+                                                        @{
+                                                            int requiredDayTemp = 0;
+                                                            var requiredDayFeed = weatherFeed.properties?.periods?.Where(x => x.startTime.Date == DateTime.UtcNow.AddMinutes(loggedInUser.OffsetMinutes).Date.AddDays(day - 1)).ToList();
+                                                            if (requiredDayFeed != null && requiredDayFeed.Any())
+                                                            {
+                                                                requiredDayTemp = requiredDayFeed.Max(x => x.temperature);
+                                                            }
+                                                            else
+                                                            {
+                                                                Random random = new Random();
+                                                                requiredDayTemp = random.Next(80, 90);
+                                                            }
+                                                        }
+                                                        @(requiredDayTemp)&deg;
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+            <div class="col-lg-6 col-xl-12 pe-lg-2 pe-xl-0 mb-3 mb-lg-0">
+                <div class="card shadow-none border h-100">
+                    <div class="card-header d-flex flex-between-center bg-light py-2">
+                        <h6 class="mb-0">Upcoming Webinars</h6><a class="py-1 fs--2 text-uppercase" href="#!">View All Webinars</a>
+                    </div>
+                    <div class="card-body fs--1">
+                        <div class="d-flex btn-reveal-trigger">
+                            <div class="calendar"><span class="calendar-month">January</span><span class="calendar-day">13</span></div>
+                            <div class="flex-1 position-relative ps-3">
+                                <h6 class="fs-0 mb-0"><a href="#!">Using the Upsell, Flex, & Add-Ons feature Webinar</a></h6>
+                                <p class="mb-1">Presented by <a href="#!" class="text-700">CellarPass</a></p>
+                                <p class="text-1000 mb-0">January 5, 2024 10:30 AM <span class="text-600">PACIFIC</span></p>
+                                <div class="border-dashed-bottom my-3"></div>
+                            </div>
+                        </div>
+                        <div class="d-flex btn-reveal-trigger">
+                            <div class="calendar"><span class="calendar-month">January</span><span class="calendar-day">5</span></div>
+                            <div class="flex-1 position-relative ps-3">
+                                <h6 class="fs-0 mb-0"><a href="#!">Using the CellarPass Guest Link Pro App for Managing Reservations</a></h6>
+                                <p class="mb-1">Presented by <a href="#!" class="text-700">CellarPass</a></p>
+                                <p class="text-1000 mb-0">January 13, 2024 10:00 AM <span class="text-600">PACIFIC</span></p>
+                                <div class="border-dashed-bottom my-3"></div>
+                            </div>
+                        </div>
+                        <div class="d-flex btn-reveal-trigger">
+                            <div class="calendar"><span class="calendar-month">February</span><span class="calendar-day">16</span></div>
+                            <div class="flex-1 position-relative ps-3">
+                                <h6 class="fs-0 mb-0"><a href="#!">Building a Successful Special Event Season on CellarPass</a></h6>
+                                <p class="mb-1">Presented by <a href="#!" class="text-700">CellarPass</a></p>
+                                <p class="text-1000 mb-0">February 16, 2024 10:00 AM <span class="text-600">PACIFIC</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-0">
+    <div class="col-lg-612 pe-lg-2 mb-3">
+        <div class="card shadow-none border mb-3 mb-lg-0 h-100">
+            <div class="card-header bg-light py-2">
+                <h6 class="mb-0">Popular Products</h6>
+            </div>
+            <div class="card-body p-0 pb-4">
+                <div class="row list">
+                    <div class="col-6 col-sm-4 col-lg-2 p-3 h-100 text-center">
+                        <a href="#!"><i class="fal fa-calendar-star fa-3x text-800 mb-2"></i></a>
+                        <h6 class="mb-1">
+                            <a href="#!" class="link-dark">Reservations</a>
+                        </h6>
+                    </div>
+                    <div class="col-6 col-sm-4 col-lg-2 p-3 h-100 text-center">
+                        <a href="#!"><i class="fal fa-credit-card fa-3x text-800 mb-2"></i></a>
+                        <h6 class="mb-1">
+                            <a href="#!" class="link-dark">Payment Services</a>
+                        </h6>
+                    </div>
+                    <div class="col-6 col-sm-4 col-lg-2 p-3 h-100 text-center">
+                        <a href="#!"><i class="fal fa-chair fa-3x text-800 mb-2"></i></a>
+                        <h6 class="mb-1">
+                            <a href="#!" class="link-dark">Table Management</a>
+                        </h6>
+                    </div>
+                    <div class="col-6 col-sm-4 col-lg-2 p-3 h-100 text-center">
+                        <a href="#!"><i class="fal fa-cash-register fa-3x text-800 mb-2"></i></a>
+                        <h6 class="mb-1">
+                            <a href="#!" class="link-dark">CellarPass for Retail</a>
+                        </h6>
+                    </div>
+                    <div class="col-6 col-sm-4 col-lg-2 p-3 h-100 text-center">
+                        <a href="#!"><i class="fal fa-ticket-alt fa-3x text-800 mb-2"></i></a>
+                        <h6 class="mb-1">
+                            <a href="#!" class="link-dark">Ticketed Events</a>
+                        </h6>
+                    </div>
+                    <div class="col-6 col-sm-4 col-lg-2 p-3 h-100 text-center">
+                        <a href="#!"><i class="fal fa-mobile-android fa-3x text-800 mb-2"></i></a>
+                        <h6 class="mb-1">
+                            <a href="#!" class="link-dark">Guest Link Pro</a>
+                        </h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@*<AuthorizeView Roles="Guest">
+    <p>You can only see this if selected member have Guest role.</p>
+    </AuthorizeView>
+    <AuthorizeView Roles="System Administrator">
+    <p>You can only see this if you're in the Super Administrator role.</p>
+    </AuthorizeView>
+    <AuthorizeView Roles="Winery Administrator">
+    <p>You can only see this if you're in the Winery Administrator role.</p>
+    </AuthorizeView>*@
+@code {
+
+    private string title = "Home Page | Cellarpass";
+    private bool SpinnerVisibility { get; set; }
+    private Member currentMember = new Member();
+    List<SystemUpdatesListModel> systemUpdates = new List<SystemUpdatesListModel>();
+    WeatherFeed weatherFeed = new WeatherFeed();
+    UserDetailViewModel loggedInUser = new UserDetailViewModel();
+    BusinessWeatherFeedModel businessWeatherFeed = new BusinessWeatherFeedModel();
+    BusinessCustomerTrendModel customerTrends = new BusinessCustomerTrendModel();
+    const string _weatherAPIUrl = "https://api.weather.gov/points/";
+    private int newCustomersCount { get; set; }
+    private int recentOrdersCount { get; set; }
+    private int newClubMembersCount { get; set; }
+    private int newReservationsCount { get; set; }
+    const string _synergyCommerce = "Synergy Commerce";
+    private bool isClubServiceSettingsSaved { get; set; }
+    private string clubServiceSettingName = "";
+    private bool isReservationsServiceSettingsSaved { get; set; }
+    private string reservationsServiceSettingName = "";
+    DateRange dateRange;
+    const int _noOfDaysOfWeatherInfo = 6;
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+        currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+        loggedInUser = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+
+        // Trying to fetch the Current Member if it is delayed in adding to local storage
+        if (currentMember == null || currentMember.Id <= 0)
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                currentMember = await _cellarPassAuthenticationStateProvider.GetCurrentMemberAsync();
+                if (currentMember != null && currentMember.Id > 0)
+                    break;
+                await Task.Delay(500);
+            }
+        }
+        var endDefaultDate = DateTime.UtcNow;
+        var startDefaultDate = endDefaultDate;
+
+        var clubSetting = _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount, BusinessSettingsMetaKey.ClubService);
+        var reservationsSetting = _settingsViewModel.GetBusinessSettingAsync(currentMember.Id, BusinessSettingsMetaNamespace.BusinessAccount, BusinessSettingsMetaKey.ReservationsService);
+
+        //Get Default Date Range
+        var DefaultDateRangeResponse = await _userViewModel.GetUserMetafieldListAsync(loggedInUser.Id, currentMember.Id, UserMetafieldNamespace.UserPrefDateRange);
+        if (DefaultDateRangeResponse?.data?.FirstOrDefault()?.MetaValue != null)
+        {
+            //var dateRangeEnumVal = Convert.ToInt32(DefaultDateRangeResponse.data.FirstOrDefault().MetaValue);
+            var dateRangeEnumVal = 2; //set default as LastTenDays
+            dateRange = (DateRange)dateRangeEnumVal;
+            var getDateRanges = DateTimeHelper.GetDateRange(dateRange);
+            endDefaultDate = getDateRanges.enddate;
+            startDefaultDate = getDateRanges.startDate;
+        }
+
+        var businessWeatherFeedData = _businessViewModel.GetBusinessWeatherFeedData(currentMember.Id);
+
+        var systemUpdatesData = _systemUpdatesViewModel.GetSystemUpdates();
+
+        var endDate = DateTime.Now;
+        var startDate = endDate.AddDays(-10); //default last 10 days
+        var getCustomerTrendsData = _customerViewModel.GetBusinessCustomerTrends(currentMember.Id, startDate, endDate);
+
+        var businessWeatherFeedResponse = await businessWeatherFeedData;
+        if (businessWeatherFeedResponse.success)
+        {
+            businessWeatherFeed = businessWeatherFeedResponse.data;
+
+            var getWeatherFeedResponse = await _weatherFeedViewModel.GetWeatherFeed(businessWeatherFeed.WeatherFeedZipCode, businessWeatherFeed.WeatherFeedLatitude, businessWeatherFeed.WeatherFeedLongitude, _noOfDaysOfWeatherInfo);
+            if (getWeatherFeedResponse.success)
+            {
+                weatherFeed = getWeatherFeedResponse.data;
+            }
+        }
+
+        var clubServiceSetting = await clubSetting;
+
+        isClubServiceSettingsSaved = !string.IsNullOrEmpty(clubServiceSetting?.data?.MetaValue ?? string.Empty);
+        if (isClubServiceSettingsSaved)
+        {
+            //Get ClubService Configuration
+            var businessClubServiceConfigurationResponse = await _businessViewModel.GetBusinessConfigurationOptionDetail(BusinessConfigurationNamespace.ClubService, clubServiceSetting.data.MetaValue);
+            clubServiceSettingName = businessClubServiceConfigurationResponse?.data?.SettingName ?? string.Empty;
+        }
+
+        var reservationsServiceSetting = await reservationsSetting;
+
+        isReservationsServiceSettingsSaved = !string.IsNullOrEmpty(reservationsServiceSetting?.data?.MetaValue ?? string.Empty);
+        if (isReservationsServiceSettingsSaved)
+        {
+            //Get Reservations Configuration
+            var businessReservationsServiceConfigurationResponse = await _businessViewModel.GetBusinessConfigurationOptionDetail(BusinessConfigurationNamespace.ReservationsService, reservationsServiceSetting.data.MetaValue);
+            reservationsServiceSettingName = businessReservationsServiceConfigurationResponse?.data?.SettingName ?? string.Empty;
+        }
+
+        MessageViewModel.SendMessage(reservationsServiceSettingName);
+
+        var businessData = _businessViewModel.GetBusinessRecentOrdersAndMembersData(currentMember.Id, startDefaultDate, endDefaultDate, clubServiceSettingName == _synergyCommerce, reservationsServiceSettingName == _synergyCommerce);
+
+        var result = await systemUpdatesData;
+        if (result.success)
+        {
+            systemUpdates = result.data.OrderByDescending(x => x.ArticlePublishDate).ToList();
+        }
+
+        var getCustomerTrendsResponse = await getCustomerTrendsData;
+        if (getCustomerTrendsResponse.success)
+        {
+            customerTrends = getCustomerTrendsResponse.data;
+        }
+
+        var getBusinessDataResponse = await businessData;
+        if (getBusinessDataResponse.success)
+        {
+            var data = getBusinessDataResponse.data;
+            newCustomersCount = data.NewCustomers;
+            recentOrdersCount = data.RecentOrders;
+            newClubMembersCount = data.NewClubMembers;
+            newReservationsCount = data.NewReservations;
+        }
+
+        SpinnerVisibility = false;
+    }
+
+    private string GetWidthSpacing()
+    {
+        if (reservationsServiceSettingName == _synergyCommerce && clubServiceSettingName == _synergyCommerce)
+        {
+            return "col-lg-3";
+        }
+        else if (reservationsServiceSettingName != _synergyCommerce && clubServiceSettingName != _synergyCommerce)
+        {
+            return "col-lg-6";
+        }
+        else
+        {
+            return "col-lg-4";
+        }
+    }
+
+    private void DisplayRecentOrders()
+    {
+        var query = new Dictionary<string, string> { };
+        query.Add("RecentOrders", dateRange.ToString());
+        NavigationManager.NavigateTo(QueryHelpers.AddQueryString("/store/orders", query));
+    }
+
+    private void DisplayNewCustomers()
+    {
+        var query = new Dictionary<string, string> { };
+        query.Add("NewCustomers", dateRange.ToString());
+        NavigationManager.NavigateTo(QueryHelpers.AddQueryString("/people/customers", query));
+    }
+
+    private void DisplayNewClubMembers()
+    {
+        var query = new Dictionary<string, string> { };
+        query.Add("NewClubMembers", dateRange.ToString());
+        NavigationManager.NavigateTo(QueryHelpers.AddQueryString("/settings/club-members", query));
+    }
+}

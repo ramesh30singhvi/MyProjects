@@ -1,0 +1,230 @@
+﻿@page "/sa/content/system-notification-edit/{type:int}"
+@layout SaLayout
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Client.ViewModels.SA
+@using CellarPassAppAdmin.Shared.Models.RequestModel.SA
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Syncfusion.Blazor.RichTextEditor
+@using AutoMapper
+@using System.Text.RegularExpressions
+@using Blazored.LocalStorage
+@inject IMapper _mapper
+@inject ToastService toastService
+@inject ILocalStorageService localStorage
+@inject ISaSystemNotificationsViewModel _saSystemNotificationsViewModel
+@attribute [Authorize]
+
+<style>
+    .e-richtexteditor .e-rte-srctextarea {
+        height: calc(100vh - 370px);
+    }
+
+    main#main-authorized .vh-100 {
+        height: calc(100vh - 70px) !important;
+    }
+</style>
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+@if (IsNotificationTypeDefined)
+{
+    <EditForm Model="@cPNotification" Context="formContext">
+        <DataAnnotationsValidator />
+        <div class="pt-3">
+            <div class="row justify-content-between">
+                <div class="col-md-auto mb-4 mb-md-0"><h5><a href="sa/content/system-notifications" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><i class="fa-regular fa-envelope-open-text me-2"></i>@heading</h5></div>
+                <div class="col-md-auto">
+                    <button type="button" @onclick="@(() => SaveCPNotification(formContext))" class="btn btn-sm btn-primary">Save</button>
+                </div>
+            </div>
+            <hr />
+        </div>
+
+        <div class="">
+            <ul class="nav nav-tabs border-bottom-0 nav-fill">
+                <li class="nav-item border-bottom">
+                    <button class="nav-link text-uppercase active " id="email-tab" data-bs-toggle="tab" data-bs-target="#tabEmail" type="button" role="tab" aria-controls="tabActive">Email</button>
+                </li>
+                <li class="nav-item border-bottom">
+                    <button class="nav-link text-uppercase" id="sms-tab" data-bs-toggle="tab" data-bs-target="#tabSms" type="button" role="tab" aria-controls="tabInactive">SMS</button>
+                </li>
+            </ul>
+            <div class="tab-content pt-4" id="tabContent">
+                <div class="tab-pane fade show active" id="tabEmail" role="tabpanel" aria-labelledby="email-tab">
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-3">
+                            <label for="inputPreviewEmail" class="form-label">Preview Email</label>
+                            <InputText @bind-Value="previewEmail" type="text" class="form-control" id="inputPreviewEmail" placeholder="Preview Email"></InputText>
+                        </div>
+                        <div class="col-md-6 mb-3 d-flex align-items-end">
+                            <button @onclick="@(() => PreviewEmail())" type="button" class="btn btn-sm btn-outline-primary mb-1">Preview Email</button>
+                        </div>
+                    </div>
+                    <hr />
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-3">
+                            <label for="inputSenderEmailAddress" class="form-label">Sender Email Address</label>
+                            <InputText type="text" @bind-Value="cPNotification.EmailSender" class="form-control" id="inputSenderEmailAddress" placeholder="Sender Email Address"></InputText>
+                            <ValidationMessage For="@(() => cPNotification.EmailSender)" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="inputEmailSubject" class="form-label">Email Subject</label>
+                            <InputText @bind-Value="cPNotification.EmailSubject" type="text" class="form-control" id="inputEmailSubject" placeholder="Email Subject"></InputText>
+                            <ValidationMessage For="@(() => cPNotification.EmailSubject)" />
+                        </div>
+                    </div>
+                    <SfRichTextEditor @ref="@RteObj" @bind-Value="Content">
+                        <RichTextEditorToolbarSettings Items="@tools" Type="ToolbarType.MultiRow">
+                            <RichTextEditorCustomToolbarItems>
+                                <RichTextEditorCustomToolbarItem Name="Tags">
+                                    <Template>
+                                        <SfDropDownList TValue="string" TItem="ReplacementTag" DataSource="replacementTags" Placeholder="Replacement Tags">
+                                            <DropDownListFieldSettings Value="Name" Text="Name"></DropDownListFieldSettings>
+                                            <DropDownListEvents ValueChange="OnTagClick" TItem="ReplacementTag" TValue="string"></DropDownListEvents>
+                                        </SfDropDownList>
+                                    </Template>
+                                </RichTextEditorCustomToolbarItem>
+                            </RichTextEditorCustomToolbarItems>
+                        </RichTextEditorToolbarSettings>
+                        <RichTextEditorFormat Items="@SfRichTextEditorHelper.FormatItems" />
+                    </SfRichTextEditor>
+                </div>
+                <div class="tab-pane fade" id="tabSms" role="tabpanel" aria-labelledby="sms-tab">
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-3">
+                            <label for="inputPreviewSms" class="form-label">Preview SMS</label>
+                            <input type="text" class="form-control" id="inputPreviewSms" placeholder="Mobile Number">
+                        </div>
+                        <div class="col-md-6 mb-3 d-flex align-items-end">
+                            <button type="button" class="btn btn-sm btn-outline-primary mb-1">Preview SMS</button>
+                        </div>
+                    </div>
+                    <hr />
+                    <div class="row mb-3">
+                        <div class="col-md-6 mb-3">
+                            <label for="inputSmsSender" class="form-label">SMS Sender Number</label>
+                            <InputText @bind-Value="cPNotification.SmsSender" type="text" class="form-control" id="inputSmsSender" placeholder="Sender Number"></InputText>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="inputSmsContent" class="form-label">SMS Content</label>
+                        <InputTextArea @bind-Value="cPNotification.SmsMessage" class="form-control" id="inputSmsContent" rows="6"></InputTextArea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </EditForm>
+}
+@code
+{
+    [Parameter]
+    public int? type { get; set; }
+    private string title = "System Notification | Synergy Commerce Super Admin Panel";
+    private bool SpinnerVisibility { get; set; } = false;
+    private bool IsNotificationTypeDefined { get; set; } = false;
+    private string Content { get; set; }
+    private string heading { get; set; }
+    private string previewEmail { get; set; }
+    SfRichTextEditor RteObj;
+    CPNotificationRequestModel cPNotification = new CPNotificationRequestModel();
+    private List<ToolbarItemModel> tools = new List<ToolbarItemModel>();
+    private NotificationsTypes? NotificationsType { get; set; }
+    private List<ReplacementTag> replacementTags = new List<ReplacementTag>();
+    protected override async Task OnInitializedAsync()
+    {
+        if (type > 0 && Enum.IsDefined(typeof(NotificationsTypes), type))
+        {
+            IsNotificationTypeDefined = true;
+        }
+        else
+        {
+            return;
+        }
+        SpinnerVisibility = true;
+        tools.AddRange(SfRichTextEditorHelper.Tools);
+        tools.Add(new ToolbarItemModel() { Name = "Tags", TooltipText = "Replacement Tags" });
+        if (type != null && Enum.IsDefined(typeof(NotificationsTypes), type))
+            NotificationsType = (NotificationsTypes)Enum.ToObject(typeof(NotificationsTypes), type);
+        if (NotificationsType != null)
+            heading = Helper.GetDisplayName(NotificationsType);
+
+        var cPNotificationResponse = await _saSystemNotificationsViewModel.GetCPNotificationListAsync(null, null, type);
+        if (cPNotificationResponse?.data?.FirstOrDefault() != null)
+        {
+            cPNotification = _mapper.Map<CPNotificationRequestModel>(cPNotificationResponse?.data?.FirstOrDefault());
+            Content = cPNotification?.EmailContent ?? string.Empty;
+        }
+        replacementTags = NotificationReplacemnetTags.GetReplacementTags(NotificationsType.Value);
+
+        var getUserData = await localStorage.GetItemAsync<UserDetailViewModel>("user");
+        previewEmail = getUserData?.Email ?? string.Empty;
+        SpinnerVisibility = false;
+    }
+    protected async Task SaveCPNotification(EditContext editContext)
+    {
+        if (editContext.Validate() && NotificationsType != null)
+        {
+            SpinnerVisibility = true;
+            if (NotificationsType == NotificationsTypes.ForgotPassword)
+            {
+                cPNotification.EmailEnabled = true;
+                cPNotification.SmsEnabled = true;
+            }
+            cPNotification.EmailContent = Content;
+            cPNotification.NotificationType = type.Value;
+            cPNotification.NotificationName = Helper.GetDisplayName(NotificationsType);
+            var cPNotificationResponse = await _saSystemNotificationsViewModel.AddUpdateCPNotificationAsync(cPNotification);
+            SpinnerVisibility = false;
+            if (cPNotificationResponse.success)
+            {
+                toastService.ShowToast(Constants.UpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(cPNotificationResponse.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+
+    //Insert replacement tag to text editor's text area on cursor postion
+    private async Task OnTagClick(ChangeEventArgs<string, ReplacementTag> args)
+    {
+        if (!string.IsNullOrEmpty(args?.Value ?? null))
+            await this.RteObj.ExecuteCommandAsync(CommandName.InsertText, args.Value);
+    }
+
+    protected async Task PreviewEmail()
+    {
+        if (string.IsNullOrEmpty(previewEmail))
+        {
+            toastService.ShowToast("Please enter Preview Email.", ToastLevel.Error);
+            return;
+        }
+        if (!Regex.IsMatch(previewEmail, @"^([\w\.\-]+)@([\w\.\-]+)((\.(\w){2,3})+)$"))
+        {
+            toastService.ShowToast("Please enter valid Preview Email address.", ToastLevel.Error);
+            return;
+        }
+        SpinnerVisibility = true;
+        var response = await _saSystemNotificationsViewModel.SendPreviewEmailToBusQueue(new PreviewEmailRequestModel
+        {
+            IsPreviewEmail = true,
+            Email = previewEmail,
+            RefId = string.Empty,
+            NotificationType = type.Value
+        });
+        SpinnerVisibility = false;
+        if (response.success)
+        {
+            toastService.ShowToast("Preview email sent.", ToastLevel.Success);
+        }
+        else
+        {
+            toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+        }
+    }
+}
+
+

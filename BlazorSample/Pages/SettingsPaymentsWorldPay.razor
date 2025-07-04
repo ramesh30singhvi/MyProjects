@@ -1,0 +1,112 @@
+﻿@layout AuthorizedLayout
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using CellarPassAppAdmin.Shared.Enums
+@using Blazored.LocalStorage
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject IMemberViewModel _memberViewModel
+@inject ILoginViewModel _loginViewModel
+@inject ITicketViewModel _ticketViewModel
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@inject ILocalStorageService localStorage
+@inject ISettingsViewModel _settingsViewModel
+@inject ToastService toastService
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="SpinnerVisibility"></SfSpinner>
+<EditForm @ref="WorldPayForm" Model="@worldPay" Context="formContext" Class="row g-3">
+    <DataAnnotationsValidator />
+    <div class="card shadow-none border-dashed">
+        @*<div class="card-header border-bottom" hidden="@hide">
+            <div class="row justify-content-between">
+                <div class="col-md-auto">
+                    <h5 class="mb-0"><a href="settings/integrated-partners" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="fa-regular fa-credit-card me-2"></span>WorldPay</h5>
+                </div>
+                <div class="col-md-auto">
+                    @if (!IsActivePaymentGateway)
+                    {
+                        <button class="btn btn-sm btn-outline-secondary me-2 disabled">Save</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-sm btn-primary" @onclick="@(() => SaveWorldPay(formContext))">Save</button>
+                    }
+                </div>
+            </div>
+        </div>*@
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="inputWorldPayAccountId" class="form-label">Account ID</label>
+                <InputText class="form-control" @bind-Value="@data.Where(x => x.MetaKey == BusinessSettingsMetaKey.WorldPayAccountId).FirstOrDefault().MetaValue" id="inputWorldPayAccountId" type="text" placeholder="Account ID"></InputText>
+                <ValidationMessage For="@(() => worldPay.AccountId)" />
+            </div>
+            <div class="mb-3">
+                <label for="inputWorldPayAccountToken" class="form-label">Account Token</label>
+                <InputText class="form-control" @bind-Value="@data.Where(x => x.MetaKey == BusinessSettingsMetaKey.WorldPayAccountToken).FirstOrDefault().MetaValue" id="inputWorldPayAccountToken" type="text" placeholder="Account Token"></InputText>
+                <ValidationMessage For="@(() => worldPay.AccountToken)" />
+            </div>
+            <div class="mb-3">
+                <label for="inputWorldPayAcceptorId" class="form-label">Acceptor ID</label>
+                <InputText class="form-control" @bind-Value="@data.Where(x => x.MetaKey == BusinessSettingsMetaKey.WorldPayAcceptorId).FirstOrDefault().MetaValue" id="inputWorldPayAcceptorId" type="text" placeholder="Acceptor ID"></InputText>
+                <ValidationMessage For="@(() => worldPay.AcceptorId)" />
+            </div>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+    //[Parameter]
+    //public bool? hide { get; set; }
+    [Parameter]
+    public List<BusinessPaymentProviderProfileSettingsViewModel>? data { get; set; }
+    private string title = "WorldPay | Synergy Commerce Admin Panel";
+    public EditForm WorldPayForm { get; set; }
+    private bool SpinnerVisibility { get; set; } = false;
+    private bool IsActivePaymentGateway { get; set; } = false;
+    Member currentMember = new Member();
+    WorldPayRequestModel worldPay = new WorldPayRequestModel();
+    List<string> worldPayMetaKeys = new List<string>(){
+        BusinessSettingsMetaKey.WorldPayAccountId,
+        BusinessSettingsMetaKey.WorldPayAccountToken,
+        BusinessSettingsMetaKey.WorldPayAcceptorId
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        SpinnerVisibility = true;
+
+        if (data.Count == 0 || data[0].MetaNamespace != BusinessSettingsMetaNamespace.WorldPay)
+        {
+            worldPay = new WorldPayRequestModel
+            {
+                AcceptorId = data.Where(x => x.MetaKey == BusinessSettingsMetaKey.WorldPayAcceptorId).FirstOrDefault().MetaValue,
+                AccountId = data.Where(x => x.MetaKey == BusinessSettingsMetaKey.WorldPayAccountId).FirstOrDefault().MetaValue,
+                AccountToken = data.Where(x => x.MetaKey == BusinessSettingsMetaKey.WorldPayAccountToken).FirstOrDefault().MetaValue,
+            };
+        }
+        SpinnerVisibility = false;
+
+    }
+
+    public async Task SaveWorldPay(EditContext editContext)
+    {
+        if (editContext.Validate())
+        {
+            SpinnerVisibility = true;
+            var businessSettings = await Helper.BusinessSettingsMapping(worldPay, currentMember.Id, BusinessSettingsMetaNamespace.WorldPay, worldPayMetaKeys);
+            var response = await _settingsViewModel.CreateBusinessSettingListAsync(businessSettings);
+            SpinnerVisibility = false;
+            if (response.success)
+            {
+                toastService.ShowToast(Constants.SettingsUpdateMessage, ToastLevel.Success);
+            }
+            else
+            {
+                toastService.ShowToast(response.error_info.description, ToastLevel.Error);
+            }
+        }
+    }
+}

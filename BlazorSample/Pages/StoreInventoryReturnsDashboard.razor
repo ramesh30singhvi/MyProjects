@@ -1,0 +1,120 @@
+﻿@page "/store/returns-dashboard"
+@layout AuthorizedLayout
+@using CellarPassAppAdmin.Shared.Services
+@using CellarPassAppAdmin.Client.ViewModels
+@using CellarPassAppAdmin.Shared.Enums
+@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.RequestModel
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+@using Microsoft.AspNetCore.Components.Web.Extensions.Head
+@inject ToastService toastService
+@inject AuthenticationStateProvider _authenticationStateProvider
+@inject ICellarPassAuthenticationStateProvider _cellarPassAuthenticationStateProvider
+@attribute [Authorize]
+
+<Title Value="@title"></Title>
+<SfSpinner @bind-Visible="isLoading"></SfSpinner>
+<div class="card shadow-none border">
+    <div class="card-header border-bottom">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-md">
+                <h5 class="mb-3 mb-md-0"><a href="/store/inventory" class="btn btn-falcon-default btn-sm px-2 me-3" title="Back"><span class="far fa-arrow-left me-1"></span></a><span class="far fa-store me-2"></span>Product Returns Dashboard</h5>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="px-2 ms-2 mt-2">
+            <div class="row">
+                <div class="col-12 col-md-5"></div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label" for="inputCollectionName">Search</label>
+                </div>
+                <div class="col-12 col-md-3"></div>
+            </div>
+            <div class="row">
+                <div class="col-12 col-md-5">
+                    <div class="input-group mb-3">
+                        <label class="input-group-text mb-0 fs--1" for="selBulkActions">1 Item(s) selected</label>
+                        <select class="form-select fs--1" id="selBulkActions">
+                            <option selected>Bulk Actions</option>
+                            <option value="1">Mark Pending</option>
+                            <option value="2">Mark Complete</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white" id="inputGroupSearch"><span class="far fa-search"></span></span>
+                        <input type="text" class="form-control" placeholder="Search orders" aria-label="Search Orders" aria-describedby="inputGroupSearch">
+                    </div>
+                </div>
+                <div class="col-12 col-md-3">
+                    <select class="form-select fs--1" id="selLastDays">
+                        <option value="1" selected>Last 7 Days</option>
+                        <option value="2">Last 30 Days</option>
+                        <option value="2">Last 60 Days</option>
+                        <option value="2">Last 90 Days</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="min-vh-75 sf-grid">
+            <SfGrid DataSource="@inventory" AllowPaging="true" Width="100%">
+                <GridFilterSettings Mode="FilterBarMode.Immediate"></GridFilterSettings>
+                <GridPageSettings PageSize="50"></GridPageSettings>
+                <GridTemplates>
+                    <EmptyRecordTemplate>
+                        @if (!isLoading && inventory.Count <= 0)
+                        {
+                            <div class=" min-vh-75 font-weight-black fs-8 text-center my-4">
+                                <h6><span class="fa-regular fa-exclamation-triangle me-2"></span>No Inventory Available</h6>
+                                <button type="button" class="btn btn-outline-primary">Get Started</button>
+                            </div>
+                        }
+                    </EmptyRecordTemplate>
+                </GridTemplates>
+                <GridColumns>
+                    <GridColumn Field=@nameof(InventoryModel.IsActive) HeaderText="" TextAlign="TextAlign.Center" DisplayAsCheckBox="true" Width="80px"></GridColumn>
+                    <GridColumn HeaderText="Printer Name" TextAlign="TextAlign.Left" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="150px">
+                        <Template>
+                            @{
+                                var productName = (context as InventoryModel).ProductName;
+                                <a href="javascript:void();">@($"{productName}")</a>
+                            }
+                        </Template>
+                    </GridColumn>
+                    <GridColumn Field=@nameof(InventoryModel.Sku) HeaderText="Sku" TextAlign="TextAlign.Center" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="100px" />
+                    <GridColumn Field=@nameof(InventoryModel.Order) HeaderText="Order" TextAlign="TextAlign.Center" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="100px" />
+                    <GridColumn Field=@nameof(InventoryModel.OrderDate) HeaderText="Order Date" TextAlign="TextAlign.Center" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="100px" />
+                    <GridColumn Field=@nameof(InventoryModel.QtyReturned) HeaderText="Qty Returned" TextAlign="TextAlign.Center" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="100px" />
+                    <GridColumn Field=@nameof(InventoryModel.Status) HeaderText="Status" TextAlign="TextAlign.Center" FilterSettings="@(new FilterSettings{ Operator = Syncfusion.Blazor.Operator.Contains })" Width="100px" />
+                </GridColumns>
+            </SfGrid>
+        </div>
+    </div>
+    <div class="card-footer">
+    </div>
+</div>
+
+@code
+{
+    private string title = "Product Returns Dashboard | Synergy Commerce Admin Panel";
+    private Boolean isLoading = false;
+    private class InventoryModel
+    {
+        public bool IsActive { get; set; }
+        public string ProductName { get; set; }
+        public string Sku { get; set; }
+        public string Order { get; set; }
+        public string OrderDate { get; set; }
+        public string QtyReturned { get; set; }
+        public string Status { get; set; }
+    }
+    private List<InventoryModel> inventory = new List<InventoryModel>() {
+        new InventoryModel(){ IsActive= false, ProductName= "2018 Autumn Sky Pinot Nair", Sku= "ABC125425", Order="STR-2525", QtyReturned="12", Status="Pending Return", OrderDate="10/22/2021" },
+        new InventoryModel(){ IsActive= false, ProductName= "2019 Autumn Sky Pinot Nair", Sku= "1243125", Order="SEA-252542", QtyReturned="12", Status="Pending Return", OrderDate="10/22/2021" },
+        new InventoryModel(){ IsActive= false, ProductName= "2020 Autumn Sky Pinot Nair", Sku= "123774", Order="SEA-252545", QtyReturned="12", Status="Pending Return", OrderDate="10/22/2021" },
+        new InventoryModel(){ IsActive= false, ProductName= "2020 Butter Toast", Sku= "2345779", Order="SEA-252542", QtyReturned="12", Status="Pending Return", OrderDate="10/22/2021" },
+        new InventoryModel(){ IsActive= false, ProductName= "2020 Butter Toast 1.5L", Sku= "95685", Order="SEA-252542", QtyReturned="12", Status="Pending Return", OrderDate="10/22/2021" },
+    };
+}

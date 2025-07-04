@@ -1,0 +1,110 @@
+﻿@using CellarPassAppAdmin.Shared.Models
+@using CellarPassAppAdmin.Shared.Models.ViewModel
+
+<SfDialog IsModal="true" Width="500px" ShowCloseIcon="true" @bind-Visible="NoteModalVisibility">
+    <DialogTemplates>
+        <Header><h5 class="modal-title" id="modalLabel">@((CalendarNote.Id> 0)? "Update Note":"Add Note")</h5></Header>
+        <Content>
+            <EditForm Model="CalendarNote" OnValidSubmit="@OnSubmit" Class="row g-3">
+                <DataAnnotationsValidator />
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label" for="sfddBusinessProperty">Business Profie</label>
+                        <SfDropDownList id="sfddBusinessProperty" TValue="int" TItem="BusinessPropertyModel" @bind-Value="CalendarNote.PropertyId" DataSource="BusinessProperties">
+                            <DropDownListEvents TItem="BusinessPropertyModel" TValue="int"></DropDownListEvents>
+                            <DropDownListFieldSettings Value="Id" Text="PropertyName"></DropDownListFieldSettings>
+                        </SfDropDownList>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label" for="dpNoteDate">Start Date</label>
+                        <SfDatePicker id="dpNoteDateStart" TValue="DateTime?" @bind-Value="CalendarNote.StartDate" Placeholder="Choose Start Date">
+                            <DatePickerEvents TValue="DateTime?" ValueChange="DateValueChange"></DatePickerEvents>
+                        </SfDatePicker>
+                        <ValidationMessage For="() => CalendarNote.StartDate" />
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label" for="dpNoteDate">End Date</label>
+                        <SfDatePicker id="dpNoteDateEnd" TValue="DateTime?" Min="@((CalendarNote.StartDate.HasValue)?CalendarNote.StartDate.Value.Date:DateTime.Today)" @bind-Value="CalendarNote.EndDate" Placeholder="Choose End Date">
+                            <DatePickerEvents TValue="DateTime?" ValueChange="DateValueChange"></DatePickerEvents>
+                        </SfDatePicker>
+                        <ValidationMessage For="() => CalendarNote.EndDate" />
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label" for="tpNoteStartTime">Start Time</label>
+
+                        <SfTimePicker id="tpNoteStartTime" TValue="DateTime" Min="StartTimeMinVal" @bind-Value="@CalendarNote.StartTime" Placeholder="Select Start Time">
+                            <TimePickerEvents TValue="DateTime"></TimePickerEvents>
+                        </SfTimePicker>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label" for="tpNoteEndTime">End Time</label>
+                        <SfTimePicker id="tpNoteEndTime" Min="EndTimeMinVal" TValue="DateTime" @bind-Value="@CalendarNote.EndTime" Placeholder="Select End Time">
+                        </SfTimePicker>
+                        <ValidationMessage For="() => CalendarNote.EndTime" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="inputSubject">Subject</label>
+                        <InputText id="inputSubject" @bind-Value="CalendarNote.Subject" class="form-control" placeholder="Subject" />
+                        <ValidationMessage For="() => CalendarNote.Subject" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="inputNote">Note</label>
+                        <SfTextBox Multiline="true" @bind-Value="CalendarNote.InternalNotes" id="inputNote" class="form-control" placeholder="Calendar Note" rows="4"></SfTextBox>
+                        @*<ValidationMessage For="() => CalendarNote.InternalNotes" />*@
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @onclick="@CloseNoteModal">Close</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </div>
+
+            </EditForm>
+        </Content>
+    </DialogTemplates>
+    <DialogEvents Closed="@ClosedHandler"></DialogEvents>
+</SfDialog>
+
+@code {
+    [Parameter]
+    public bool NoteModalVisibility { get; set; }
+
+    [Parameter]
+    public CalendarNoteModel CalendarNote { get; set; } = new CalendarNoteModel();
+
+    [Parameter]
+    public List<BusinessPropertyModel> BusinessProperties { get; set; }
+
+    [Parameter]
+    public DateTime StartTimeMinVal { get; set; }
+
+    [Parameter]
+    public DateTime EndTimeMinVal { get; set; }
+
+    [Parameter]
+    public EventCallback OnValidSubmit { get; set; }
+    [Parameter]
+    public EventCallback OnDialogClose { get; set; }
+
+    private string calendarNoteHeader { get; set; }
+
+    protected async Task CloseNoteModal()
+    {
+        await OnDialogClose.InvokeAsync();
+    }
+
+    protected async Task OnSubmit()
+    {
+        await OnValidSubmit.InvokeAsync();
+    }
+
+    private async Task ClosedHandler(CloseEventArgs args)
+    {
+        await CloseNoteModal();
+    }
+
+    private void DateValueChange(ChangedEventArgs<DateTime?> args)
+    {
+        CalendarNote.EndDate = (DateTime)args.Value;
+        StateHasChanged();
+    }
+}
